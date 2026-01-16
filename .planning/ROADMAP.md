@@ -16,7 +16,7 @@ None
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Core Agent Framework** - Single agent with safety guardrails and code generation
+- [x] **Phase 1: Core Agent Framework** - Single agent with safety guardrails and code generation
 - [ ] **Phase 2: Execution Environment** - Sandboxed Docker execution for agent code
 - [ ] **Phase 3: Linear Integration** - Read/update tasks via webhooks
 - [ ] **Phase 4: GitHub Integration** - Branches, commits, and PRs
@@ -46,7 +46,7 @@ Plans:
 - [x] 01-02: Agent State Schema & Code Generation Tool
 - [x] 01-03: Agent Definition & Configuration
 - [x] 01-04: Safety Guardrails (Iteration Limits & Timeouts)
-- [ ] 01-05: Integration Test & Phase Validation
+- [x] 01-05: Integration Test & Phase Validation
 
 ### Phase 2: Execution Environment
 **Goal**: Agent code runs in sandboxed container with test execution
@@ -171,7 +171,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Agent Framework | 4/5 | In progress | - |
+| 1. Core Agent Framework | 5/5 | Complete | 2026-01-16 |
 | 2. Execution Environment | 0/TBD | Not started | - |
 | 3. Linear Integration | 0/TBD | Not started | - |
 | 4. GitHub Integration | 0/TBD | Not started | - |

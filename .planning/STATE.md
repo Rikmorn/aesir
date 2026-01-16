@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-16)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** Phase 1 — Core Agent Framework
+**Current focus:** Phase 1 Complete — Ready for Phase 2
 
 ## Current Position
 
 Phase: 1 of 9 (Core Agent Framework)
-Plan: 4 of 5 in current phase
-Status: In progress
-Last activity: 2026-01-16 — Completed 01-04-PLAN.md
+Plan: 5 of 5 in current phase
+Status: Phase complete
+Last activity: 2026-01-16 — Completed 01-05-PLAN.md
 
-Progress: ████░░░░░░ 44%
+Progress: █████░░░░░ 55%
 
 ## Phase 1 Plans
 
@@ -24,24 +24,24 @@ Progress: ████░░░░░░ 44%
 | 01-02 | Agent State Schema & Code Generation Tool | Complete |
 | 01-03 | Agent Definition & Configuration | Complete |
 | 01-04 | Safety Guardrails (Iteration Limits & Timeouts) | Complete |
-| 01-05 | Integration Test & Phase Validation | Pending |
+| 01-05 | Integration Test & Phase Validation | Complete |
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 3.25 min
-- Total execution time: 13 min
+- Total plans completed: 5
+- Average duration: 4 min
+- Total execution time: 20 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1 | 4/5 | 13 min | 3.25 min |
+| 1 | 5/5 | 20 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (3 min), 01-02 (4 min), 01-03 (3 min), 01-04 (3 min)
-- Trend: Stable
+- Last 5 plans: 01-01 (3 min), 01-02 (4 min), 01-03 (3 min), 01-04 (3 min), 01-05 (7 min)
+- Trend: Stable (01-05 longer due to integration test complexity)
 
 ## Accumulated Context
 
@@ -63,6 +63,8 @@ Recent decisions affecting current work:
 | 01-03 | SqliteSaver in-memory default | Development flexibility with optional persistence |
 | 01-04 | Combined runner with timeout | AbortController timeout naturally part of runner function |
 | 01-04 | Guards for custom graphs | createReactAgent manages own flow; guards for custom StateGraph |
+| 01-05 | Avoid direct dev-agent import in tests | ChatAnthropic requires API key at module load |
+| 01-05 | File content verification for tests | Verify module structure without triggering API key requirement |
 
 ### Pending Todos
 
@@ -74,6 +76,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-01-16T12:34:24Z
-Stopped at: Completed 01-04-PLAN.md
+Last session: 2026-01-16T12:43:02Z
+Stopped at: Completed 01-05-PLAN.md (Phase 1 Complete)
 Resume file: None
