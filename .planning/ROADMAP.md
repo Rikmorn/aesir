@@ -76,7 +76,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: Linear Client Foundation
+- [x] 03-01: Linear Client Foundation
 - [ ] 03-02: Webhooks & Agent Activities
 
 ### Phase 4: GitHub Integration
@@ -175,7 +175,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 |-------|----------------|--------|-----------|
 | 1. Core Agent Framework | 5/5 | Complete | 2026-01-16 |
 | 2. Execution Environment | 2/2 | Complete | 2026-01-16 |
-| 3. Linear Integration | 0/TBD | Not started | - |
+| 3. Linear Integration | 1/2 | In progress | - |
 | 4. GitHub Integration | 0/TBD | Not started | - |
 | 5. Dev Agent | 0/TBD | Not started | - |
 | 6. Observability | 0/TBD | Not started | - |
