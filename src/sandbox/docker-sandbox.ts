@@ -7,6 +7,8 @@
 
 import Docker from "dockerode"
 import type { Container } from "dockerode"
+import * as tar from "tar-stream"
+import * as path from "path"
 import { createLogger, type Logger } from "../logging/logger.js"
 import type { Sandbox, ExecutionResult, TestResult } from "./types.js"
 
@@ -158,19 +160,97 @@ export class DockerSandbox implements Sandbox {
 
   /**
    * Write a file to the sandbox filesystem.
-   * @param _path - Absolute path in the sandbox
-   * @param _content - File content (string)
+   *
+   * Uses Docker's putArchive API with tar format for efficient file transfer.
+   *
+   * @param filePath - Absolute path in the sandbox (e.g., '/app/index.ts')
+   * @param content - File content (string)
    */
-  async writeFile(_path: string, _content: string): Promise<void> {
-    throw new Error("Not implemented - see plan 02-02")
+  async writeFile(filePath: string, content: string): Promise<void> {
+    if (this.isCleanedUp) {
+      throw new Error("Sandbox has been cleaned up")
+    }
+
+    const timedLog = this.logger.startTimer("file_write", {
+      context: { path: filePath },
+    })
+
+    try {
+      const fileName = path.basename(filePath)
+      const dirName = path.dirname(filePath)
+
+      // Create tar archive with single file
+      const pack = tar.pack()
+      pack.entry({ name: fileName }, content)
+      pack.finalize()
+
+      // Write tar archive to container
+      await this.container.putArchive(pack, { path: dirName })
+
+      timedLog.success()
+    } catch (error) {
+      timedLog.failure({ message: String(error) })
+      throw error
+    }
   }
 
   /**
    * Read a file from the sandbox filesystem.
-   * @param _path - Absolute path in the sandbox
+   *
+   * Uses Docker's getArchive API which returns tar format.
+   * Extracts the file content from the tar stream.
+   *
+   * @param filePath - Absolute path in the sandbox
+   * @returns File content as string
+   * @throws Error if file does not exist
    */
-  async readFile(_path: string): Promise<string> {
-    throw new Error("Not implemented - see plan 02-02")
+  async readFile(filePath: string): Promise<string> {
+    if (this.isCleanedUp) {
+      throw new Error("Sandbox has been cleaned up")
+    }
+
+    const timedLog = this.logger.startTimer("file_read", {
+      context: { path: filePath },
+    })
+
+    try {
+      const stream = await this.container.getArchive({ path: filePath })
+
+      // Extract file content from tar stream
+      const content = await this.extractFileFromTar(stream)
+
+      timedLog.success()
+      return content
+    } catch (error) {
+      timedLog.failure({ message: String(error) })
+      throw error
+    }
+  }
+
+  /**
+   * Extract file content from a tar stream.
+   * @internal
+   */
+  private extractFileFromTar(tarStream: NodeJS.ReadableStream): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const extract = tar.extract()
+      const chunks: Buffer[] = []
+
+      extract.on("entry", (_header, stream, next) => {
+        stream.on("data", (chunk: Buffer) => chunks.push(chunk))
+        stream.on("end", next)
+        stream.resume()
+      })
+
+      extract.on("finish", () => {
+        resolve(Buffer.concat(chunks).toString("utf-8"))
+      })
+
+      extract.on("error", reject)
+      tarStream.on("error", reject)
+
+      tarStream.pipe(extract)
+    })
   }
 
   /**
