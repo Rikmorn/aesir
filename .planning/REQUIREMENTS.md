@@ -31,10 +31,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Linear Integration
 
-- [ ] **LIN-01**: Agent can read tasks from Linear
-- [ ] **LIN-02**: Agent can update task status in Linear (in-progress, done, etc.)
-- [ ] **LIN-03**: Webhooks trigger agent when tasks are created/updated (not polling)
-- [ ] **LIN-04**: Agent appears as a coworker/team member in Linear
+- [x] **LIN-01**: Agent can read tasks from Linear
+- [x] **LIN-02**: Agent can update task status in Linear (in-progress, done, etc.)
+- [x] **LIN-03**: Webhooks trigger agent when tasks are created/updated (not polling)
+- [x] **LIN-04**: Agent appears as a coworker/team member in Linear
 
 ### GitHub Integration
 
@@ -55,9 +55,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Execution Environment
 
-- [ ] **EXEC-01**: Agent code runs in Docker container (sandboxed)
-- [ ] **EXEC-02**: Agent can execute tests within sandbox
-- [ ] **EXEC-03**: Test results are captured and returned to agent
+- [x] **EXEC-01**: Agent code runs in Docker container (sandboxed)
+- [x] **EXEC-02**: Agent can execute tests within sandbox
+- [x] **EXEC-03**: Test results are captured and returned to agent
 
 ### Observability
 
@@ -124,13 +124,13 @@ Which phases cover which requirements. Updated by create-roadmap.
 | CORE-03 | Phase 1 | Complete |
 | CORE-04 | Phase 1 | Complete |
 | CORE-05 | Phase 1 | Complete |
-| EXEC-01 | Phase 2 | Pending |
-| EXEC-02 | Phase 2 | Pending |
-| EXEC-03 | Phase 2 | Pending |
-| LIN-01 | Phase 3 | Pending |
-| LIN-02 | Phase 3 | Pending |
-| LIN-03 | Phase 3 | Pending |
-| LIN-04 | Phase 3 | Pending |
+| EXEC-01 | Phase 2 | Complete |
+| EXEC-02 | Phase 2 | Complete |
+| EXEC-03 | Phase 2 | Complete |
+| LIN-01 | Phase 3 | Complete |
+| LIN-02 | Phase 3 | Complete |
+| LIN-03 | Phase 3 | Complete |
+| LIN-04 | Phase 3 | Complete |
 | GH-01 | Phase 4 | Pending |
 | GH-02 | Phase 4 | Pending |
 | GH-03 | Phase 4 | Pending |
