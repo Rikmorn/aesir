@@ -38,10 +38,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### GitHub Integration
 
-- [ ] **GH-01**: Agent can create feature branches
-- [ ] **GH-02**: Agent can commit code changes
-- [ ] **GH-03**: Agent can open pull requests with description/context
-- [ ] **GH-04**: Agent can respond to PR feedback (read comments, make changes)
+- [x] **GH-01**: Agent can create feature branches
+- [x] **GH-02**: Agent can commit code changes
+- [x] **GH-03**: Agent can open pull requests with description/context
+- [x] **GH-04**: Agent can respond to PR feedback (read comments, make changes)
 
 ### Slack Integration
 
@@ -131,10 +131,10 @@ Which phases cover which requirements. Updated by create-roadmap.
 | LIN-02 | Phase 3 | Complete |
 | LIN-03 | Phase 3 | Complete |
 | LIN-04 | Phase 3 | Complete |
-| GH-01 | Phase 4 | Pending |
-| GH-02 | Phase 4 | Pending |
-| GH-03 | Phase 4 | Pending |
-| GH-04 | Phase 4 | Pending |
+| GH-01 | Phase 4 | Complete |
+| GH-02 | Phase 4 | Complete |
+| GH-03 | Phase 4 | Complete |
+| GH-04 | Phase 4 | Complete |
 | DEV-01 | Phase 5 | Pending |
 | DEV-02 | Phase 5 | Pending |
 | DEV-03 | Phase 5 | Pending |
@@ -158,4 +158,4 @@ Which phases cover which requirements. Updated by create-roadmap.
 
 ---
 *Requirements defined: 2026-01-16*
-*Last updated: 2026-01-16 after roadmap creation*
+*Last updated: 2026-01-16 after Phase 4 completion*
