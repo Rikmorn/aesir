@@ -89,10 +89,11 @@ Plans:
   3. Agent can open PRs with meaningful descriptions
   4. Agent can read PR comments and make follow-up changes
 **Research**: Unlikely (GitHub integration patterns are ubiquitous)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: TBD
+- [x] 04-01: GitHub Client & Branch Operations
+- [ ] 04-02: Commits & Pull Requests
 
 ### Phase 5: Dev Agent
 **Goal**: Complete Dev Agent workflow picks tasks, writes code, runs tests
@@ -176,7 +177,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 1. Core Agent Framework | 5/5 | Complete | 2026-01-16 |
 | 2. Execution Environment | 2/2 | Complete | 2026-01-16 |
 | 3. Linear Integration | 2/2 | Complete | 2026-01-16 |
-| 4. GitHub Integration | 0/TBD | Not started | - |
+| 4. GitHub Integration | 1/2 | In progress | - |
 | 5. Dev Agent | 0/TBD | Not started | - |
 | 6. Observability | 0/TBD | Not started | - |
 | 7. Slack Integration | 0/TBD | Not started | - |
