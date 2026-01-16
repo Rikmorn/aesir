@@ -35,11 +35,13 @@
     "dockerode": "^4.0.9",
     "dotenv": "^16.4.0",
     "langsmith": "^0.3.0",
+    "tar-stream": "^3.1.7",
     "zod": "3.25.67"
   },
   "devDependencies": {
     "@types/dockerode": "^4.0.0",
     "@types/node": "^22.0.0",
+    "@types/tar-stream": "^3.1.4",
     "tsx": "^4.0.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
