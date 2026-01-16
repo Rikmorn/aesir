@@ -10,11 +10,21 @@ See: .planning/PROJECT.md (updated 2026-01-16)
 ## Current Position
 
 Phase: 1 of 9 (Core Agent Framework)
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-01-16 — Project initialized
+Plan: 01-01 (next to execute)
+Status: Ready to execute
+Last activity: 2026-01-16 — Phase 1 planning complete
 
 Progress: ░░░░░░░░░░ 0%
+
+## Phase 1 Plans
+
+| Plan | Title | Status |
+|------|-------|--------|
+| 01-01 | Project Scaffold & Logging Infrastructure | Ready |
+| 01-02 | Agent State Schema & Code Generation Tool | Pending |
+| 01-03 | Agent Definition & Configuration | Pending |
+| 01-04 | Safety Guardrails (Iteration Limits & Timeouts) | Pending |
+| 01-05 | Integration Test & Phase Validation | Pending |
 
 ## Performance Metrics
 
