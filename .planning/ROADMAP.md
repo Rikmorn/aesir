@@ -43,7 +43,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 01-01: Project Scaffold & Logging Infrastructure
-- [ ] 01-02: Agent State Schema & Code Generation Tool
+- [x] 01-02: Agent State Schema & Code Generation Tool
 - [ ] 01-03: Agent Definition & Configuration
 - [ ] 01-04: Safety Guardrails (Iteration Limits & Timeouts)
 - [ ] 01-05: Integration Test & Phase Validation
@@ -171,7 +171,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Agent Framework | 1/5 | In progress | - |
+| 1. Core Agent Framework | 2/5 | In progress | - |
 | 2. Execution Environment | 0/TBD | Not started | - |
 | 3. Linear Integration | 0/TBD | Not started | - |
 | 4. GitHub Integration | 0/TBD | Not started | - |

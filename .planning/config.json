@@ -4,9 +4,9 @@
   "parallelization": {
     "enabled": true,
     "plan_level": true,
-    "task_level": false,
+    "task_level": true,
     "skip_checkpoints": true,
-    "max_concurrent_agents": 3,
+    "max_concurrent_agents": 1,
     "min_plans_for_parallel": 2
   },
   "gates": {
