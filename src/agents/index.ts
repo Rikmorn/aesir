@@ -10,3 +10,9 @@ export {
   agentLogger,
   type DevAgent,
 } from "./dev-agent.js";
+
+export {
+  runAgentWithGuardrails,
+  type AgentResult,
+  type TerminationReason,
+} from "./run-agent.js";
