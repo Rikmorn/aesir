@@ -15,3 +15,5 @@ export {
   type LoggerOptions,
   type Timer,
 } from "./logger.js";
+
+export { TraceStore, createTraceStore } from "./trace-store.js";

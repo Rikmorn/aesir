@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { TraceStore, createTraceStore } from "./trace-store.js";
-import { Logger, createLogger, type LogEntry } from "./logger.js";
+import { createLogger, type LogEntry } from "./logger.js";
 
 /**
  * Helper to create a LogEntry for testing
@@ -103,9 +103,10 @@ describe("TraceStore", () => {
       store.append(entry3);
 
       const entries = store.getByTaskId("TASK-001");
-      expect(entries[0].action).toBe("first");
-      expect(entries[1].action).toBe("second");
-      expect(entries[2].action).toBe("third");
+      expect(entries).toHaveLength(3);
+      expect(entries[0]?.action).toBe("first");
+      expect(entries[1]?.action).toBe("second");
+      expect(entries[2]?.action).toBe("third");
     });
   });
 
@@ -205,8 +206,8 @@ describe("TraceStore", () => {
 
       const entries = store.getByTaskId("TASK-100");
       expect(entries).toHaveLength(2);
-      expect(entries[0].action).toBe("node_start");
-      expect(entries[1].action).toBe("node_end");
+      expect(entries[0]?.action).toBe("node_start");
+      expect(entries[1]?.action).toBe("node_end");
     });
 
     it("Child logger with taskId produces queryable entries", () => {
@@ -230,8 +231,8 @@ describe("TraceStore", () => {
       expect(workflowEntries).toHaveLength(2);
 
       // Verify context is preserved
-      expect(taskEntries[0].context.taskId).toBe("TASK-200");
-      expect(taskEntries[0].context.workflowId).toBe("WF-001");
+      expect(taskEntries[0]?.context.taskId).toBe("TASK-200");
+      expect(taskEntries[0]?.context.workflowId).toBe("WF-001");
     });
   });
 
