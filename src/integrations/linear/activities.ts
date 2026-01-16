@@ -125,8 +125,7 @@ export async function updateSessionPlan(
   sessionId: string,
   plan: AgentPlanItem[]
 ): Promise<void> {
-  await client.agentSessionUpdate({
-    id: sessionId,
-    plan,
+  await client.updateAgentSession(sessionId, {
+    plan: plan as unknown as Record<string, unknown>,
   });
 }

@@ -20,7 +20,7 @@ import type { AgentPlanItem } from "./types.js";
 function createMockClient() {
   return {
     createAgentActivity: vi.fn().mockResolvedValue(undefined),
-    agentSessionUpdate: vi.fn().mockResolvedValue(undefined),
+    updateAgentSession: vi.fn().mockResolvedValue(undefined),
   } as unknown as LinearClient;
 }
 
@@ -150,7 +150,7 @@ describe("updateSessionPlan", () => {
     client = createMockClient();
   });
 
-  it("should call agentSessionUpdate with plan array", async () => {
+  it("should call updateAgentSession with plan array", async () => {
     const sessionId = "session-123";
     const plan: AgentPlanItem[] = [
       { content: "Read task requirements", status: "completed" },
@@ -161,8 +161,7 @@ describe("updateSessionPlan", () => {
 
     await updateSessionPlan(client, sessionId, plan);
 
-    expect(client.agentSessionUpdate).toHaveBeenCalledWith({
-      id: sessionId,
+    expect(client.updateAgentSession).toHaveBeenCalledWith(sessionId, {
       plan,
     });
   });
@@ -172,15 +171,14 @@ describe("updateSessionPlan", () => {
 
     await updateSessionPlan(client, "session", plan);
 
-    expect(client.agentSessionUpdate).toHaveBeenCalledWith({
-      id: "session",
+    expect(client.updateAgentSession).toHaveBeenCalledWith("session", {
       plan: [],
     });
   });
 
   it("should propagate errors from SDK", async () => {
     const error = new Error("Session not found");
-    vi.mocked(client.agentSessionUpdate).mockRejectedValue(error);
+    vi.mocked(client.updateAgentSession).mockRejectedValue(error);
 
     await expect(
       updateSessionPlan(client, "session", [])
@@ -196,7 +194,7 @@ describe("updateSessionPlan", () => {
 
     await updateSessionPlan(client, "session", plan);
 
-    const call = vi.mocked(client.agentSessionUpdate).mock.calls[0]![0];
-    expect(call.plan).toEqual(plan);
+    const call = vi.mocked(client.updateAgentSession).mock.calls[0]!;
+    expect(call[1].plan).toEqual(plan);
   });
 });

@@ -1,22 +1,34 @@
 /**
  * Linear Integration Module
  *
- * Provides Linear SDK client factory with OAuth token management
- * and helpers for issue operations.
+ * Provides Linear SDK client factory with OAuth token management,
+ * webhook signature verification, and agent activity emitters.
  *
  * @example
  * ```typescript
- * import { createLinearClient, readIssue, updateIssueStatus } from './integrations/linear';
+ * import {
+ *   createLinearClient,
+ *   verifyWebhookSignature,
+ *   parseWebhookPayload,
+ *   isAgentSessionEvent,
+ *   emitThought,
+ * } from './integrations/linear';
  *
- * const client = await createLinearClient(config);
- * const issue = await readIssue(client, 'ABC-123');
- * await updateIssueStatus(client, 'ABC-123', 'In Progress');
+ * // Verify webhook
+ * if (verifyWebhookSignature(signature, rawBody, secret)) {
+ *   const payload = parseWebhookPayload(rawBody);
+ *   if (isAgentSessionEvent(payload)) {
+ *     const client = await createLinearClient(config);
+ *     await emitThought(client, payload.data.id, 'Processing...');
+ *   }
+ * }
  * ```
  */
 
 // Types
 export type {
   LinearConfig,
+  WebhookPayloadBase,
   WebhookPayload,
   AgentSessionPayload,
   AgentActivityType,
@@ -38,3 +50,22 @@ export {
   readIssue,
   updateIssueStatus,
 } from "./client.js";
+
+// Webhook signature verification and payload parsing
+export {
+  verifyWebhookSignature,
+  validateWebhookTimestamp,
+  parseWebhookPayload,
+  isAgentSessionEvent,
+  isIssueEvent,
+} from "./webhooks.js";
+
+// Agent activity emitters
+export {
+  emitThought,
+  emitAction,
+  emitResponse,
+  emitError,
+  emitElicitation,
+  updateSessionPlan,
+} from "./activities.js";

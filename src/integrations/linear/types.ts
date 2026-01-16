@@ -19,11 +19,9 @@ export interface LinearConfig {
 }
 
 /**
- * Generic webhook payload from Linear
+ * Base webhook payload fields from Linear
  */
-export interface WebhookPayload {
-  /** Action that triggered the webhook */
-  action: "create" | "update" | "remove";
+export interface WebhookPayloadBase {
   /** Type of resource that changed */
   type: string;
   /** Resource data */
@@ -35,10 +33,18 @@ export interface WebhookPayload {
 }
 
 /**
+ * Generic webhook payload from Linear
+ */
+export interface WebhookPayload extends WebhookPayloadBase {
+  /** Action that triggered the webhook */
+  action: "create" | "update" | "remove";
+}
+
+/**
  * Agent session webhook payload
  * Received when an agent is delegated work or receives follow-up prompts
  */
-export interface AgentSessionPayload {
+export interface AgentSessionPayload extends WebhookPayloadBase {
   /** Action type: 'created' for new delegation, 'prompted' for follow-up */
   action: "created" | "prompted";
   /** Resource type is always 'AgentSession' */

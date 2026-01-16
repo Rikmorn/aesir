@@ -13,7 +13,7 @@ import {
   isAgentSessionEvent,
   isIssueEvent,
 } from "./webhooks.js";
-import type { WebhookPayload, AgentSessionPayload } from "./types.js";
+import type { WebhookPayload, WebhookPayloadBase, AgentSessionPayload } from "./types.js";
 
 describe("verifyWebhookSignature", () => {
   const secret = "test-webhook-secret";
@@ -135,9 +135,8 @@ describe("parseWebhookPayload", () => {
 
 describe("isAgentSessionEvent", () => {
   it("should return true for AgentSession type", () => {
-    const payload: WebhookPayload = {
+    const payload: WebhookPayloadBase = {
       type: "AgentSession",
-      action: "create",
       data: { id: "123", issueId: "456" },
       webhookTimestamp: Date.now(),
       webhookId: "abc",
@@ -147,9 +146,8 @@ describe("isAgentSessionEvent", () => {
   });
 
   it("should return false for Issue type", () => {
-    const payload: WebhookPayload = {
+    const payload: WebhookPayloadBase = {
       type: "Issue",
-      action: "create",
       data: {},
       webhookTimestamp: Date.now(),
       webhookId: "abc",
@@ -159,9 +157,8 @@ describe("isAgentSessionEvent", () => {
   });
 
   it("should narrow type correctly for AgentSession", () => {
-    const payload: WebhookPayload = {
+    const payload: WebhookPayloadBase = {
       type: "AgentSession",
-      action: "create",
       data: { id: "123", issueId: "456" },
       webhookTimestamp: Date.now(),
       webhookId: "abc",
@@ -177,9 +174,8 @@ describe("isAgentSessionEvent", () => {
 
 describe("isIssueEvent", () => {
   it("should return true for Issue type", () => {
-    const payload: WebhookPayload = {
+    const payload: WebhookPayloadBase = {
       type: "Issue",
-      action: "create",
       data: {},
       webhookTimestamp: Date.now(),
       webhookId: "abc",
@@ -189,9 +185,8 @@ describe("isIssueEvent", () => {
   });
 
   it("should return false for AgentSession type", () => {
-    const payload: WebhookPayload = {
+    const payload: WebhookPayloadBase = {
       type: "AgentSession",
-      action: "create",
       data: { id: "123", issueId: "456" },
       webhookTimestamp: Date.now(),
       webhookId: "abc",
@@ -201,9 +196,8 @@ describe("isIssueEvent", () => {
   });
 
   it("should return false for other types", () => {
-    const payload: WebhookPayload = {
+    const payload: WebhookPayloadBase = {
       type: "Comment",
-      action: "create",
       data: {},
       webhookTimestamp: Date.now(),
       webhookId: "abc",
