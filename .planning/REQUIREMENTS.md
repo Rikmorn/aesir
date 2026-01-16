@@ -23,11 +23,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Dev Agent
 
-- [ ] **DEV-01**: Dev Agent can pick up assigned tasks from Linear
-- [ ] **DEV-02**: Dev Agent writes code to implement task requirements
-- [ ] **DEV-03**: Dev Agent can edit multiple files in a single task
-- [ ] **DEV-04**: Dev Agent runs tests and interprets results
-- [ ] **DEV-05**: Dev Agent iterates on code based on test feedback
+- [x] **DEV-01**: Dev Agent can pick up assigned tasks from Linear
+- [x] **DEV-02**: Dev Agent writes code to implement task requirements
+- [x] **DEV-03**: Dev Agent can edit multiple files in a single task
+- [x] **DEV-04**: Dev Agent runs tests and interprets results
+- [x] **DEV-05**: Dev Agent iterates on code based on test feedback
 
 ### Linear Integration
 
@@ -61,9 +61,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Observability
 
-- [ ] **OBS-01**: All agent actions are logged with timestamp and context
-- [ ] **OBS-02**: Logs indicate which workflow/task each action belongs to
-- [ ] **OBS-03**: Logs are queryable (can find actions for specific task)
+- [x] **OBS-01**: All agent actions are logged with timestamp and context
+- [x] **OBS-02**: Logs indicate which workflow/task each action belongs to
+- [x] **OBS-03**: Logs are queryable (can find actions for specific task)
 
 ## v2 Requirements
 
@@ -135,14 +135,14 @@ Which phases cover which requirements. Updated by create-roadmap.
 | GH-02 | Phase 4 | Complete |
 | GH-03 | Phase 4 | Complete |
 | GH-04 | Phase 4 | Complete |
-| DEV-01 | Phase 5 | Pending |
-| DEV-02 | Phase 5 | Pending |
-| DEV-03 | Phase 5 | Pending |
-| DEV-04 | Phase 5 | Pending |
-| DEV-05 | Phase 5 | Pending |
-| OBS-01 | Phase 6 | Pending |
-| OBS-02 | Phase 6 | Pending |
-| OBS-03 | Phase 6 | Pending |
+| DEV-01 | Phase 5 | Complete |
+| DEV-02 | Phase 5 | Complete |
+| DEV-03 | Phase 5 | Complete |
+| DEV-04 | Phase 5 | Complete |
+| DEV-05 | Phase 5 | Complete |
+| OBS-01 | Phase 6 | Complete |
+| OBS-02 | Phase 6 | Complete |
+| OBS-03 | Phase 6 | Complete |
 | SLACK-01 | Phase 7 | Pending |
 | SLACK-02 | Phase 7 | Pending |
 | HITL-01 | Phase 8 | Pending |
@@ -158,4 +158,4 @@ Which phases cover which requirements. Updated by create-roadmap.
 
 ---
 *Requirements defined: 2026-01-16*
-*Last updated: 2026-01-16 after Phase 4 completion*
+*Last updated: 2026-01-16 after Phase 6 completion*
