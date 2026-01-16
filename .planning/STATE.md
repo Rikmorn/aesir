@@ -9,12 +9,19 @@ See: .planning/PROJECT.md (updated 2026-01-16)
 
 ## Current Position
 
-Phase: 2 of 9 (Execution Environment)
-Plan: 2 of 2 complete
-Status: Phase 2 complete, ready for Phase 3
-Last activity: 2026-01-16 — Completed Phase 2
+Phase: 3 of 9 (Linear Integration)
+Plan: 0 of 2 planned
+Status: Phase 3 planned, ready for execution
+Last activity: 2026-01-16 — Planned Phase 3
 
 Progress: ██░░░░░░░░ 22%
+
+## Phase 3 Plans
+
+| Plan | Title | Wave | Status |
+|------|-------|------|--------|
+| 03-01 | Linear Client Foundation | 1 | Planned |
+| 03-02 | Webhooks & Agent Activities | 2 | Planned |
 
 ## Phase 2 Plans
 

@@ -72,11 +72,12 @@ Plans:
   2. Agent can update task status in Linear
   3. Webhooks trigger agent when Linear tasks change (no polling)
   4. Agent appears as team member in Linear activity
-**Research**: Unlikely (Linear API is well-documented, MCP patterns established)
-**Plans**: TBD
+**Research**: Complete (see 03-RESEARCH.md)
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: TBD
+- [ ] 03-01: Linear Client Foundation
+- [ ] 03-02: Webhooks & Agent Activities
 
 ### Phase 4: GitHub Integration
 **Goal**: Agent can create branches, commit code, open PRs
