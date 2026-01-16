@@ -9,11 +9,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Core Agent Framework
 
-- [ ] **CORE-01**: Agent can generate code from natural language task descriptions
-- [ ] **CORE-02**: Agent execution loop has iteration limits to prevent infinite loops
-- [ ] **CORE-03**: Agent execution loop has wall-clock timeout to prevent runaway execution
-- [ ] **CORE-04**: Agent activity is logged (what action, when, why, outcome)
-- [ ] **CORE-05**: Agents are defined via code/config files (not UI)
+- [x] **CORE-01**: Agent can generate code from natural language task descriptions
+- [x] **CORE-02**: Agent execution loop has iteration limits to prevent infinite loops
+- [x] **CORE-03**: Agent execution loop has wall-clock timeout to prevent runaway execution
+- [x] **CORE-04**: Agent activity is logged (what action, when, why, outcome)
+- [x] **CORE-05**: Agents are defined via code/config files (not UI)
 
 ### Product Agent
 
@@ -119,11 +119,11 @@ Which phases cover which requirements. Updated by create-roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CORE-01 | Phase 1 | Pending |
-| CORE-02 | Phase 1 | Pending |
-| CORE-03 | Phase 1 | Pending |
-| CORE-04 | Phase 1 | Pending |
-| CORE-05 | Phase 1 | Pending |
+| CORE-01 | Phase 1 | Complete |
+| CORE-02 | Phase 1 | Complete |
+| CORE-03 | Phase 1 | Complete |
+| CORE-04 | Phase 1 | Complete |
+| CORE-05 | Phase 1 | Complete |
 | EXEC-01 | Phase 2 | Pending |
 | EXEC-02 | Phase 2 | Pending |
 | EXEC-03 | Phase 2 | Pending |
