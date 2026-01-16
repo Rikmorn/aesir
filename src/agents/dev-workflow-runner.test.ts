@@ -17,13 +17,46 @@ vi.mock("../integrations/linear/index.js", () => ({
   emitError: vi.fn(),
 }));
 
-// Mock logger
-vi.mock("../logging/logger.js", () => ({
-  createLogger: vi.fn(() => ({
+// Mock logging module
+vi.mock("../logging/index.js", () => {
+  const mockChildLogger = {
     info: vi.fn(),
     debug: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
+    child: vi.fn(),
+  };
+  mockChildLogger.child.mockReturnValue(mockChildLogger);
+
+  return {
+    createLogger: vi.fn(() => ({
+      info: vi.fn(),
+      debug: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      child: vi.fn().mockReturnValue(mockChildLogger),
+    })),
+    createTraceStore: vi.fn(() => ({
+      append: vi.fn(),
+      getByTaskId: vi.fn().mockReturnValue([]),
+      getByWorkflowId: vi.fn().mockReturnValue([]),
+      clear: vi.fn(),
+      size: vi.fn().mockReturnValue(0),
+    })),
+  };
+});
+
+// Mock tracing module
+vi.mock("./tracing/index.js", () => ({
+  createLangGraphTracer: vi.fn(() => ({
+    name: "LangGraphTracer",
+    handleChainStart: vi.fn(),
+    handleChainEnd: vi.fn(),
+    handleChainError: vi.fn(),
+    handleLLMStart: vi.fn(),
+    handleLLMEnd: vi.fn(),
+    handleToolStart: vi.fn(),
+    handleToolEnd: vi.fn(),
   })),
 }));
 
@@ -159,6 +192,7 @@ describe("runDevWorkflow", () => {
       {
         configurable: { thread_id: "ABC-123" },
         recursionLimit: 100,
+        callbacks: expect.any(Array),
       }
     );
   });

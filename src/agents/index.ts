@@ -40,3 +40,9 @@ export {
   runDevWorkflow,
   type DevWorkflowResult,
 } from "./dev-workflow-runner.js";
+
+// Tracing exports
+export {
+  LangGraphTracer,
+  createLangGraphTracer,
+} from "./tracing/index.js";

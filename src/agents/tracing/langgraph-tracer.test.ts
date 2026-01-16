@@ -1,16 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { LangGraphTracer, createLangGraphTracer } from "./langgraph-tracer.js";
-import { createLogger, type Logger, type LogEntry } from "../../logging/logger.js";
+import { createLogger, type Logger } from "../../logging/logger.js";
 import { createTraceStore, type TraceStore } from "../../logging/trace-store.js";
+import type { Serialized } from "@langchain/core/load/serializable";
 
 /**
  * Helper to create a mock Serialized object for chain/llm/tool
  */
-function createMockSerialized(name: string) {
+function createMockSerialized(name: string): Serialized {
   return {
     lc: 1,
-    type: "constructor",
+    type: "constructor" as const,
     id: ["langchain", "chains", name],
+    kwargs: {},
   };
 }
 
@@ -232,7 +234,7 @@ describe("LangGraphTracer", () => {
 
     it("handles missing tokenUsage gracefully", () => {
       tracer.handleLLMEnd(
-        { generations: [], llmOutput: null },
+        { generations: [] },
         "run-123"
       );
 

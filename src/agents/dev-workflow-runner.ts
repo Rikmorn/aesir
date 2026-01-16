@@ -7,6 +7,7 @@
  * - Error handling and Linear status updates on failure
  * - Sandbox cleanup in finally block (always runs)
  * - Result formatting
+ * - LangGraph event tracing for debugging
  *
  * This is the primary entry point for running the Dev Agent workflow.
  */
@@ -20,7 +21,8 @@ import {
   DEFAULT_DEV_WORKFLOW_CONFIG,
 } from "../state/dev-workflow-state.js";
 import { updateIssueStatus, emitError } from "../integrations/linear/index.js";
-import { createLogger } from "../logging/logger.js";
+import { createLogger, createTraceStore, type LogEntry } from "../logging/index.js";
+import { createLangGraphTracer } from "./tracing/index.js";
 
 const logger = createLogger({
   defaultContext: { module: "dev-workflow-runner" },
@@ -40,6 +42,8 @@ export interface DevWorkflowResult {
   error?: string;
   /** Total workflow duration in milliseconds */
   durationMs: number;
+  /** Workflow execution traces for debugging */
+  traces?: LogEntry[];
 }
 
 /**
@@ -64,6 +68,11 @@ export async function runDevWorkflow(
 ): Promise<DevWorkflowResult> {
   const startTime = Date.now();
 
+  // Create trace store and tracer for this workflow run
+  const traceStore = createTraceStore();
+  const taskLogger = logger.child({ taskId });
+  const tracer = createLangGraphTracer(taskLogger, traceStore);
+
   logger.info("dev_workflow_start", {
     message: `Starting dev workflow for task ${taskId}`,
     context: { taskId },
@@ -73,12 +82,13 @@ export async function runDevWorkflow(
     // Create the workflow with all dependencies
     const workflow = createDevWorkflow({ deps, config });
 
-    // Invoke the workflow with initial state
+    // Invoke the workflow with initial state and tracer callbacks
     const result = await workflow.invoke(
       { taskId, status: "pending" },
       {
         configurable: { thread_id: taskId },
         recursionLimit: config.recursionLimit,
+        callbacks: [tracer],
       }
     );
 
@@ -95,6 +105,7 @@ export async function runDevWorkflow(
       success: result.status === "complete",
       status: result.status,
       durationMs,
+      traces: traceStore.getByTaskId(taskId),
     };
   } catch (error) {
     const durationMs = Date.now() - startTime;
@@ -135,6 +146,7 @@ export async function runDevWorkflow(
       status: "failed",
       error: errorMessage,
       durationMs,
+      traces: traceStore.getByTaskId(taskId),
     };
   } finally {
     // ALWAYS clean up sandbox, regardless of success or failure
