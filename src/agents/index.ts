@@ -16,3 +16,11 @@ export {
   type AgentResult,
   type TerminationReason,
 } from "./run-agent.js";
+
+export {
+  createLoopGuard,
+  incrementLoopCount,
+  hasExceededLimit,
+  type LoopGuardState,
+  type GuardRouting,
+} from "./guards.js";
