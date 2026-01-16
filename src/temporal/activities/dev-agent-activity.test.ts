@@ -25,9 +25,11 @@ describe("executeDevWorkflow", () => {
     linearClient: {} as DevWorkflowDependencies["linearClient"],
     octokit: {} as DevWorkflowDependencies["octokit"],
     sandbox: {} as DevWorkflowDependencies["sandbox"],
-    repoOwner: "test-owner",
-    repoName: "test-repo",
-    baseBranch: "main",
+    githubConfig: {
+      owner: "test-owner",
+      repo: "test-repo",
+      baseBranch: "main",
+    },
   };
 
   beforeEach(() => {
