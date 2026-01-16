@@ -124,3 +124,22 @@ export interface CreatePROptions {
   /** Base branch (the branch to merge into) */
   base: string;
 }
+
+/**
+ * A comment on a pull request
+ *
+ * Represents both review comments (on specific lines of code)
+ * and issue comments (in the conversation thread).
+ */
+export interface PRComment {
+  /** Comment ID */
+  id: number;
+  /** Comment body/content */
+  body: string;
+  /** Username of the commenter */
+  user: string;
+  /** When the comment was created (ISO 8601 format) */
+  createdAt: string;
+  /** File path for review comments (undefined for issue comments) */
+  path?: string;
+}
