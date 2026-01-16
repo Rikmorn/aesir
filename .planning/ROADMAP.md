@@ -148,12 +148,14 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Workflow pauses before PR merge until human approves
   2. Human can approve or reject agent work
-**Research**: Likely (async handoff patterns with Temporal)
-**Research topics**: Temporal signal patterns, workflow suspension, approval state management, timeout handling for human responses
-**Plans**: TBD
+**Research**: Complete (see 08-RESEARCH.md)
+**Plans**: 4 plans
 
 Plans:
-- [ ] 08-01: TBD
+- [ ] 08-01: Temporal Foundation (types, signals, worker, client)
+- [ ] 08-02: GitHub Merge & Temporal Activities
+- [ ] 08-03: Approval Workflow with Signal Handling
+- [ ] 08-04: GitHub Webhook Handler for PR Reviews
 
 ### Phase 9: Product Agent
 **Goal**: Product Agent gathers requirements and creates Linear tasks
@@ -184,7 +186,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 5. Dev Agent | 3/3 | Complete | 2026-01-16 |
 | 6. Observability | 2/2 | Complete | 2026-01-16 |
 | 7. Slack Integration | 1/1 | Complete | 2026-01-16 |
-| 8. Human-in-the-Loop | 0/TBD | Not started | - |
+| 8. Human-in-the-Loop | 0/4 | Planned | - |
 | 9. Product Agent | 0/TBD | Not started | - |
 
 ---
