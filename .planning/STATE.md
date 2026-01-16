@@ -5,24 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-01-16)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** Phase 8 — Human-in-the-Loop (Plan 01 complete, Plan 02 ready)
+**Current focus:** Phase 8 — Human-in-the-Loop (Plan 02 complete, Plan 03 ready)
 
 ## Current Position
 
 Phase: 8 of 9 (Human-in-the-Loop)
-Plan: 1 of 3 in current phase
-Status: Plan 08-01 complete
-Last activity: 2026-01-16 — Completed 08-01-PLAN.md (Temporal Infrastructure)
+Plan: 2 of 4 in current phase
+Status: In progress
+Last activity: 2026-01-16 — Completed 08-02-PLAN.md (Activities & GitHub Merge)
 
-Progress: ██████████████░ 75%
+Progress: ██████████████░ 78%
 
 ## Phase 8 Plans
 
 | Plan | Title | Wave | Status |
 |------|-------|------|--------|
 | 08-01 | Temporal Infrastructure | 1 | Complete |
-| 08-02 | Approval Workflow Definition | 2 | Ready |
-| 08-03 | GitHub Webhook Integration | 3 | Not Started |
+| 08-02 | GitHub Merge & Temporal Activities | 2 | Complete |
+| 08-03 | Approval Workflow with Signal Handling | 3 | Ready |
+| 08-04 | GitHub Webhook Handler for PR Reviews | 4 | Not Started |
 
 ## Phase 7 Plans
 
@@ -79,9 +80,9 @@ Progress: ██████████████░ 75%
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18
-- Average duration: 6.9 min
-- Total execution time: 124 min
+- Total plans completed: 19
+- Average duration: 7.6 min
+- Total execution time: 144 min
 
 **By Phase:**
 
@@ -94,11 +95,11 @@ Progress: ██████████████░ 75%
 | 5 | 3/3 | 26 min | 8.7 min |
 | 6 | 2/2 | 9 min | 4.5 min |
 | 7 | 1/1 | 4 min | 4 min |
-| 8 | 1/3 | 19 min | 19 min |
+| 8 | 2/4 | 39 min | 19.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-03 (16 min), 06-01 (3 min), 06-02 (6 min), 07-01 (4 min), 08-01 (19 min)
-- Trend: Temporal infrastructure established with durable workflow foundation
+- Last 5 plans: 06-01 (3 min), 06-02 (6 min), 07-01 (4 min), 08-01 (19 min), 08-02 (20 min)
+- Trend: Temporal activities wrap existing integrations cleanly
 
 ## Accumulated Context
 
@@ -157,6 +158,9 @@ Recent decisions affecting current work:
 | 08-01 | Environment variable defaults for Temporal | TEMPORAL_ADDRESS/NAMESPACE with localhost:7233/default fallback |
 | 08-01 | Client connection caching | Avoid reconnecting on every call for performance |
 | 08-01 | Configurable completionStatus in WorkflowConfig | Support different Linear workflows per project |
+| 08-02 | Activities wrap existing code | Clean separation - activities only handle Temporal concerns |
+| 08-02 | Linear status as parameter | Not hardcoded - caller decides status (configurable) |
+| 08-02 | Default squash merge | Cleaner git history, standard practice |
 
 ### Pending Todos
 
@@ -169,6 +173,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-16
-Stopped at: Completed 08-01-PLAN.md (Temporal Infrastructure)
+Stopped at: Completed 08-02-PLAN.md (Activities & GitHub Merge)
 Resume file: None
-Next action: Execute 08-02-PLAN.md (Approval Workflow Definition)
+Next action: Execute 08-03-PLAN.md (Approval Workflow with Signal Handling)

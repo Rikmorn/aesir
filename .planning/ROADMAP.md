@@ -152,8 +152,8 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 08-01: Temporal Foundation (types, signals, worker, client)
-- [ ] 08-02: GitHub Merge & Temporal Activities
+- [x] 08-01: Temporal Foundation (types, signals, worker, client)
+- [x] 08-02: GitHub Merge & Temporal Activities
 - [ ] 08-03: Approval Workflow with Signal Handling
 - [ ] 08-04: GitHub Webhook Handler for PR Reviews
 
@@ -186,7 +186,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 5. Dev Agent | 3/3 | Complete | 2026-01-16 |
 | 6. Observability | 2/2 | Complete | 2026-01-16 |
 | 7. Slack Integration | 1/1 | Complete | 2026-01-16 |
-| 8. Human-in-the-Loop | 0/4 | Planned | - |
+| 8. Human-in-the-Loop | 2/4 | In progress | - |
 | 9. Product Agent | 0/TBD | Not started | - |
 
 ---
