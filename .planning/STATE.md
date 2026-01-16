@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-16)
 ## Current Position
 
 Phase: 1 of 9 (Core Agent Framework)
-Plan: 3 of 5 in current phase
+Plan: 4 of 5 in current phase
 Status: In progress
-Last activity: 2026-01-16 — Completed 01-03-PLAN.md
+Last activity: 2026-01-16 — Completed 01-04-PLAN.md
 
-Progress: ███░░░░░░░ 33%
+Progress: ████░░░░░░ 44%
 
 ## Phase 1 Plans
 
@@ -23,24 +23,24 @@ Progress: ███░░░░░░░ 33%
 | 01-01 | Project Scaffold & Logging Infrastructure | Complete |
 | 01-02 | Agent State Schema & Code Generation Tool | Complete |
 | 01-03 | Agent Definition & Configuration | Complete |
-| 01-04 | Safety Guardrails (Iteration Limits & Timeouts) | Pending |
+| 01-04 | Safety Guardrails (Iteration Limits & Timeouts) | Complete |
 | 01-05 | Integration Test & Phase Validation | Pending |
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 3.3 min
-- Total execution time: 10 min
+- Total plans completed: 4
+- Average duration: 3.25 min
+- Total execution time: 13 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1 | 3/5 | 10 min | 3.3 min |
+| 1 | 4/5 | 13 min | 3.25 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (3 min), 01-02 (4 min), 01-03 (3 min)
+- Last 5 plans: 01-01 (3 min), 01-02 (4 min), 01-03 (3 min), 01-04 (3 min)
 - Trend: Stable
 
 ## Accumulated Context
@@ -61,6 +61,8 @@ Recent decisions affecting current work:
 | 01-03 | createReactAgent prebuilt | Standard ReAct loop with built-in checkpointing |
 | 01-03 | recursionLimit on invoke() | Known bug where withConfig() ignores this setting |
 | 01-03 | SqliteSaver in-memory default | Development flexibility with optional persistence |
+| 01-04 | Combined runner with timeout | AbortController timeout naturally part of runner function |
+| 01-04 | Guards for custom graphs | createReactAgent manages own flow; guards for custom StateGraph |
 
 ### Pending Todos
 
@@ -72,6 +74,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-01-16T12:28:53Z
-Stopped at: Completed 01-03-PLAN.md
+Last session: 2026-01-16T12:34:24Z
+Stopped at: Completed 01-04-PLAN.md
 Resume file: None
