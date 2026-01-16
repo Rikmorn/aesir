@@ -12,6 +12,7 @@ import {
   getPullRequest,
   listPRComments,
   addPRComment,
+  mergePullRequest,
 } from "./pull-requests.js";
 
 // Helper to get mock from Octokit methods
@@ -382,5 +383,130 @@ describe("addPRComment", () => {
     );
 
     expect(result.body).toBe("");
+  });
+});
+
+describe("mergePullRequest", () => {
+  let mockOctokit: Octokit;
+
+  beforeEach(() => {
+    mockOctokit = {
+      rest: {
+        pulls: {
+          merge: vi.fn().mockResolvedValue({
+            data: {
+              sha: "abc123def456",
+              merged: true,
+            },
+          }),
+        },
+      },
+    } as unknown as Octokit;
+  });
+
+  it("returns correct merge result on success", async () => {
+    const result = await mergePullRequest(
+      mockOctokit,
+      "test-owner",
+      "test-repo",
+      42
+    );
+
+    expect(result).toEqual({
+      sha: "abc123def456",
+      merged: true,
+    });
+  });
+
+  it("calls pulls.merge with correct parameters", async () => {
+    await mergePullRequest(mockOctokit, "owner", "repo", 123);
+
+    expect(mockOctokit.rest.pulls.merge).toHaveBeenCalledWith({
+      owner: "owner",
+      repo: "repo",
+      pull_number: 123,
+      merge_method: "squash",
+    });
+  });
+
+  it("defaults to squash merge method", async () => {
+    await mergePullRequest(mockOctokit, "owner", "repo", 42);
+
+    expect(mockOctokit.rest.pulls.merge).toHaveBeenCalledWith(
+      expect.objectContaining({
+        merge_method: "squash",
+      })
+    );
+  });
+
+  it("uses custom merge method when provided", async () => {
+    await mergePullRequest(mockOctokit, "owner", "repo", 42, {
+      mergeMethod: "rebase",
+    });
+
+    expect(mockOctokit.rest.pulls.merge).toHaveBeenCalledWith(
+      expect.objectContaining({
+        merge_method: "rebase",
+      })
+    );
+  });
+
+  it("includes commit title when provided", async () => {
+    await mergePullRequest(mockOctokit, "owner", "repo", 42, {
+      commitTitle: "Custom merge title",
+    });
+
+    expect(mockOctokit.rest.pulls.merge).toHaveBeenCalledWith(
+      expect.objectContaining({
+        commit_title: "Custom merge title",
+      })
+    );
+  });
+
+  it("includes commit message when provided", async () => {
+    await mergePullRequest(mockOctokit, "owner", "repo", 42, {
+      commitMessage: "Custom merge message with details",
+    });
+
+    expect(mockOctokit.rest.pulls.merge).toHaveBeenCalledWith(
+      expect.objectContaining({
+        commit_message: "Custom merge message with details",
+      })
+    );
+  });
+
+  it("includes both title and message when provided", async () => {
+    await mergePullRequest(mockOctokit, "owner", "repo", 42, {
+      mergeMethod: "squash",
+      commitTitle: "feat: Add new feature",
+      commitMessage: "Detailed description of the change",
+    });
+
+    expect(mockOctokit.rest.pulls.merge).toHaveBeenCalledWith({
+      owner: "owner",
+      repo: "repo",
+      pull_number: 42,
+      merge_method: "squash",
+      commit_title: "feat: Add new feature",
+      commit_message: "Detailed description of the change",
+    });
+  });
+
+  it("propagates error when merge fails", async () => {
+    const error = new Error("Pull request is not mergeable");
+    asMock(mockOctokit.rest.pulls.merge).mockRejectedValue(error);
+
+    await expect(
+      mergePullRequest(mockOctokit, "owner", "repo", 42)
+    ).rejects.toThrow("Pull request is not mergeable");
+  });
+
+  it("propagates error on conflicts", async () => {
+    const error = new Error("Head branch was modified");
+    asMock(mockOctokit.rest.pulls.merge).mockRejectedValue(error);
+
+    await expect(
+      mergePullRequest(mockOctokit, "owner", "repo", 42)
+    ).rejects.toThrow("Head branch was modified");
   });
 });
