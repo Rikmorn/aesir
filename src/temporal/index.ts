@@ -49,3 +49,12 @@ export {
   sendChangesRequestedSignal,
   type ClientConfig,
 } from "./client.js";
+
+// Workflows (for worker registration and type-safe invocation)
+export {
+  prApprovalWorkflow,
+  approvalStatusQuery,
+  type ApprovalWorkflowInput,
+  type ApprovalWorkflowResult,
+  type ApprovalQueryStatus,
+} from "./workflows/index.js";
