@@ -5,8 +5,16 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { routeAfterTest, createDevWorkflow, type AfterTestRoute } from "./dev-workflow.js";
-import type { DevWorkflowStateType, DevWorkflowConfig } from "../state/dev-workflow-state.js";
+import {
+  routeAfterTest,
+  createDevWorkflow,
+  type AfterTestRoute,
+  type DevWorkflowDependencies,
+} from "./dev-workflow.js";
+import type {
+  DevWorkflowStateType,
+  DevWorkflowConfig,
+} from "../state/dev-workflow-state.js";
 import { DEFAULT_DEV_WORKFLOW_CONFIG } from "../state/dev-workflow-state.js";
 import type { Sandbox, TestResult } from "../sandbox/types.js";
 
@@ -21,6 +29,19 @@ vi.mock("../logging/index.js", () => ({
       info: vi.fn(),
     }),
   },
+}));
+
+// Mock the nodes (they have their own tests)
+vi.mock("./nodes/pickup-task.js", () => ({
+  createPickupTaskNode: vi.fn(() => vi.fn().mockResolvedValue({})),
+}));
+
+vi.mock("./nodes/create-branch.js", () => ({
+  createBranchNode: vi.fn(() => vi.fn().mockResolvedValue({})),
+}));
+
+vi.mock("./nodes/commit-pr.js", () => ({
+  createCommitPRNode: vi.fn(() => vi.fn().mockResolvedValue({})),
 }));
 
 /**
@@ -82,9 +103,25 @@ function createMockSandbox(testResult: TestResult): Sandbox {
   };
 }
 
+/**
+ * Create mock dependencies for testing
+ */
+function createMockDependencies(sandbox: Sandbox): DevWorkflowDependencies {
+  return {
+    linearClient: {} as DevWorkflowDependencies["linearClient"],
+    octokit: {} as DevWorkflowDependencies["octokit"],
+    sandbox,
+    githubConfig: {
+      owner: "test-owner",
+      repo: "test-repo",
+      baseBranch: "main",
+    },
+  };
+}
+
 describe("routeAfterTest", () => {
-  describe("routing to commit", () => {
-    it("returns 'commit' when tests pass", () => {
+  describe("routing to commit_pr", () => {
+    it("returns 'commit_pr' when tests pass", () => {
       const state = createBaseState({
         testResult: createPassingTestResult(),
         testAttempts: 1,
@@ -92,10 +129,10 @@ describe("routeAfterTest", () => {
 
       const result = routeAfterTest(state);
 
-      expect(result).toBe("commit");
+      expect(result).toBe("commit_pr");
     });
 
-    it("returns 'commit' when tests pass regardless of attempt count", () => {
+    it("returns 'commit_pr' when tests pass regardless of attempt count", () => {
       const state = createBaseState({
         testResult: createPassingTestResult(),
         testAttempts: 4, // Near limit but tests passed
@@ -103,7 +140,7 @@ describe("routeAfterTest", () => {
 
       const result = routeAfterTest(state);
 
-      expect(result).toBe("commit");
+      expect(result).toBe("commit_pr");
     });
   });
 
@@ -237,8 +274,9 @@ describe("createDevWorkflow", () => {
 
   it("creates a compiled workflow", () => {
     const mockSandbox = createMockSandbox(createPassingTestResult());
+    const mockDeps = createMockDependencies(mockSandbox);
 
-    const workflow = createDevWorkflow({ sandbox: mockSandbox });
+    const workflow = createDevWorkflow({ deps: mockDeps });
 
     expect(workflow).toBeDefined();
     // Compiled workflows have an invoke method
@@ -247,8 +285,9 @@ describe("createDevWorkflow", () => {
 
   it("workflow has correct node structure", () => {
     const mockSandbox = createMockSandbox(createPassingTestResult());
+    const mockDeps = createMockDependencies(mockSandbox);
 
-    const workflow = createDevWorkflow({ sandbox: mockSandbox });
+    const workflow = createDevWorkflow({ deps: mockDeps });
 
     // The workflow should have the expected nodes
     // We can verify this by checking the graph builder before compile
@@ -257,16 +296,18 @@ describe("createDevWorkflow", () => {
   });
 
   describe("workflow compilation", () => {
-    it("compiles without errors with valid sandbox", () => {
+    it("compiles without errors with valid dependencies", () => {
       const mockSandbox = createMockSandbox(createPassingTestResult());
+      const mockDeps = createMockDependencies(mockSandbox);
 
       expect(() => {
-        createDevWorkflow({ sandbox: mockSandbox });
+        createDevWorkflow({ deps: mockDeps });
       }).not.toThrow();
     });
 
     it("accepts custom config", () => {
       const mockSandbox = createMockSandbox(createPassingTestResult());
+      const mockDeps = createMockDependencies(mockSandbox);
       const customConfig: DevWorkflowConfig = {
         maxTestAttempts: 3,
         testCommand: ["npm", "run", "test:unit"],
@@ -275,7 +316,7 @@ describe("createDevWorkflow", () => {
       };
 
       expect(() => {
-        createDevWorkflow({ sandbox: mockSandbox, config: customConfig });
+        createDevWorkflow({ deps: mockDeps, config: customConfig });
       }).not.toThrow();
     });
   });
@@ -283,7 +324,7 @@ describe("createDevWorkflow", () => {
   describe("routing integration", () => {
     it("routeAfterTest is compatible with StateGraph conditional edges", () => {
       // The routing function must return one of the valid destinations
-      const validRoutes: AfterTestRoute[] = ["commit", "fail", "fix_code"];
+      const validRoutes: AfterTestRoute[] = ["commit_pr", "fail", "fix_code"];
 
       // Test all possible routes
       const passingState = createBaseState({
@@ -310,18 +351,28 @@ describe("createDevWorkflow", () => {
 describe("workflow edge verification", () => {
   it("defines expected node names", () => {
     // This test documents the expected workflow structure
-    const expectedNodes = ["generate_code", "run_tests", "fix_code"];
-    const expectedRoutes: AfterTestRoute[] = ["commit", "fail", "fix_code"];
+    const expectedNodes = [
+      "pickup_task",
+      "create_branch",
+      "generate_code",
+      "run_tests",
+      "fix_code",
+      "commit_pr",
+    ];
+    const expectedRoutes: AfterTestRoute[] = ["commit_pr", "fail", "fix_code"];
 
     // The workflow should support these transitions:
-    // __start__ -> generate_code
+    // __start__ -> pickup_task
+    // pickup_task -> create_branch
+    // create_branch -> generate_code
     // generate_code -> run_tests
-    // run_tests -> commit (END)
+    // run_tests -> commit_pr (END)
     // run_tests -> fail (END)
     // run_tests -> fix_code
     // fix_code -> run_tests
+    // commit_pr -> END
 
-    expect(expectedNodes).toHaveLength(3);
+    expect(expectedNodes).toHaveLength(6);
     expect(expectedRoutes).toHaveLength(3);
   });
 
@@ -331,21 +382,30 @@ describe("workflow edge verification", () => {
     // Collect all possible routes
     routes.add(
       routeAfterTest(
-        createBaseState({ testResult: createPassingTestResult(), testAttempts: 1 })
+        createBaseState({
+          testResult: createPassingTestResult(),
+          testAttempts: 1,
+        })
       )
     );
     routes.add(
       routeAfterTest(
-        createBaseState({ testResult: createFailingTestResult(), testAttempts: 1 })
+        createBaseState({
+          testResult: createFailingTestResult(),
+          testAttempts: 1,
+        })
       )
     );
     routes.add(
       routeAfterTest(
-        createBaseState({ testResult: createFailingTestResult(), testAttempts: 5 })
+        createBaseState({
+          testResult: createFailingTestResult(),
+          testAttempts: 5,
+        })
       )
     );
 
-    expect(routes.has("commit")).toBe(true);
+    expect(routes.has("commit_pr")).toBe(true);
     expect(routes.has("fix_code")).toBe(true);
     expect(routes.has("fail")).toBe(true);
   });
