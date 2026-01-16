@@ -45,8 +45,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Slack Integration
 
-- [ ] **SLACK-01**: Agent sends notifications when human approval is needed
-- [ ] **SLACK-02**: Humans can see agent status updates in Slack
+- [x] **SLACK-01**: Agent sends notifications when human approval is needed
+- [x] **SLACK-02**: Humans can see agent status updates in Slack
 
 ### Human-in-the-Loop
 
@@ -143,8 +143,8 @@ Which phases cover which requirements. Updated by create-roadmap.
 | OBS-01 | Phase 6 | Complete |
 | OBS-02 | Phase 6 | Complete |
 | OBS-03 | Phase 6 | Complete |
-| SLACK-01 | Phase 7 | Pending |
-| SLACK-02 | Phase 7 | Pending |
+| SLACK-01 | Phase 7 | Complete |
+| SLACK-02 | Phase 7 | Complete |
 | HITL-01 | Phase 8 | Pending |
 | HITL-02 | Phase 8 | Pending |
 | PROD-01 | Phase 9 | Pending |
@@ -158,4 +158,4 @@ Which phases cover which requirements. Updated by create-roadmap.
 
 ---
 *Requirements defined: 2026-01-16*
-*Last updated: 2026-01-16 after Phase 6 completion*
+*Last updated: 2026-01-16 after Phase 7 completion*
