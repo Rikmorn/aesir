@@ -1,0 +1,227 @@
+/**
+ * Linear Client Factory
+ *
+ * Creates LinearClient instances with OAuth token management.
+ * Handles token refresh when tokens are near expiration.
+ */
+
+import { LinearClient, Issue, WorkflowState } from "@linear/sdk";
+import { createLogger } from "../../logging/logger.js";
+import type { LinearConfig, IssueStatus } from "./types.js";
+
+const logger = createLogger({ defaultContext: { module: "linear-client" } });
+
+/**
+ * Response from Linear's OAuth token refresh endpoint
+ */
+interface TokenRefreshResponse {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  token_type: string;
+  scope: string;
+}
+
+/**
+ * Refresh an OAuth token using the refresh token
+ *
+ * @param refreshToken - The refresh token to use
+ * @returns New token data including access token and expiration
+ * @throws Error if token refresh fails
+ */
+export async function refreshOAuthToken(refreshToken: string): Promise<{
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+}> {
+  const clientId = process.env["LINEAR_CLIENT_ID"];
+  const clientSecret = process.env["LINEAR_CLIENT_SECRET"];
+
+  if (!clientId || !clientSecret) {
+    throw new Error(
+      "LINEAR_CLIENT_ID and LINEAR_CLIENT_SECRET must be set for token refresh"
+    );
+  }
+
+  logger.info("linear_token_refresh", {
+    message: "Refreshing OAuth token",
+  });
+
+  const response = await fetch("https://api.linear.app/oauth/token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+      client_id: clientId,
+      client_secret: clientSecret,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    logger.error("linear_token_refresh_failed", {
+      outcome: "failure",
+      message: `Token refresh failed: ${response.status} ${errorText}`,
+      context: { status: response.status },
+    });
+    throw new Error(
+      `Failed to refresh Linear OAuth token: ${response.status} ${errorText}`
+    );
+  }
+
+  const data = (await response.json()) as TokenRefreshResponse;
+
+  logger.info("linear_token_refresh_success", {
+    outcome: "success",
+    message: "OAuth token refreshed successfully",
+    context: { expiresIn: data.expires_in },
+  });
+
+  return {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    expiresIn: data.expires_in,
+  };
+}
+
+/**
+ * Create a LinearClient with OAuth token management
+ *
+ * Checks if the token needs refresh (within 60 seconds of expiration)
+ * and refreshes it automatically if needed.
+ *
+ * @param config - OAuth configuration with tokens and expiration
+ * @param onTokenRefresh - Optional callback when tokens are refreshed
+ * @returns LinearClient instance with valid access token
+ */
+export async function createLinearClient(
+  config: LinearConfig,
+  onTokenRefresh?: (newConfig: LinearConfig) => Promise<void>
+): Promise<LinearClient> {
+  // Check if token needs refresh (within 60 seconds of expiration)
+  const now = Date.now();
+  const bufferMs = 60_000; // 60 seconds buffer
+
+  if (now >= config.expiresAt - bufferMs) {
+    logger.debug("linear_token_expiring", {
+      message: "Token expiring soon, refreshing",
+      context: {
+        expiresAt: new Date(config.expiresAt).toISOString(),
+        now: new Date(now).toISOString(),
+      },
+    });
+
+    const refreshed = await refreshOAuthToken(config.refreshToken);
+
+    // Update config with new tokens
+    config.accessToken = refreshed.accessToken;
+    config.refreshToken = refreshed.refreshToken;
+    config.expiresAt = now + refreshed.expiresIn * 1000;
+
+    // Notify caller to persist updated config
+    if (onTokenRefresh) {
+      await onTokenRefresh(config);
+    }
+  }
+
+  return new LinearClient({ accessToken: config.accessToken });
+}
+
+/**
+ * Create a LinearClient directly with an access token
+ *
+ * Use this for testing or when token management is handled externally.
+ * Does not handle token refresh.
+ *
+ * @param accessToken - Valid Linear access token
+ * @returns LinearClient instance
+ */
+export function getLinearClient(accessToken: string): LinearClient {
+  return new LinearClient({ accessToken });
+}
+
+/**
+ * Read an issue from Linear by ID or identifier
+ *
+ * @param client - LinearClient instance
+ * @param issueId - Issue ID (UUID) or identifier (e.g., "ABC-123")
+ * @returns Issue data including title, description, state, and team
+ * @throws Error if issue not found
+ */
+export async function readIssue(
+  client: LinearClient,
+  issueId: string
+): Promise<Issue> {
+  logger.debug("linear_read_issue", {
+    message: `Reading issue ${issueId}`,
+    context: { issueId },
+  });
+
+  const issue = await client.issue(issueId);
+
+  if (!issue) {
+    throw new Error(`Issue not found: ${issueId}`);
+  }
+
+  return issue;
+}
+
+/**
+ * Update an issue's status in Linear
+ *
+ * Finds the workflow state matching the status name for the issue's team
+ * and updates the issue with that state.
+ *
+ * @param client - LinearClient instance
+ * @param issueId - Issue ID or identifier
+ * @param statusName - Target status name (e.g., "In Progress", "Done")
+ * @throws Error if issue not found or status not found for team
+ */
+export async function updateIssueStatus(
+  client: LinearClient,
+  issueId: string,
+  statusName: IssueStatus
+): Promise<void> {
+  logger.debug("linear_update_status", {
+    message: `Updating issue ${issueId} to ${statusName}`,
+    context: { issueId, statusName },
+  });
+
+  // Get the issue to find its team
+  const issue = await client.issue(issueId);
+  if (!issue) {
+    throw new Error(`Issue not found: ${issueId}`);
+  }
+
+  // Get the team's workflow states
+  const team = await issue.team;
+  if (!team) {
+    throw new Error(`Team not found for issue: ${issueId}`);
+  }
+
+  const states = await team.states();
+  const targetState = states.nodes.find(
+    (state: WorkflowState) => state.name === statusName
+  );
+
+  if (!targetState) {
+    const availableStates = states.nodes.map((s: WorkflowState) => s.name);
+    throw new Error(
+      `State "${statusName}" not found for team. Available states: ${availableStates.join(", ")}`
+    );
+  }
+
+  // Update the issue with the new state
+  await client.updateIssue(issueId, {
+    stateId: targetState.id,
+  });
+
+  logger.info("linear_status_updated", {
+    outcome: "success",
+    message: `Issue ${issueId} updated to ${statusName}`,
+    context: { issueId, statusName, stateId: targetState.id },
+  });
+}
