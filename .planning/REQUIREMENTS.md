@@ -50,8 +50,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Human-in-the-Loop
 
-- [ ] **HITL-01**: Workflow pauses for human approval before PR merge
-- [ ] **HITL-02**: Human can approve or reject agent work
+- [x] **HITL-01**: Workflow pauses for human approval before PR merge
+- [x] **HITL-02**: Human can approve or reject agent work
 
 ### Execution Environment
 
@@ -145,8 +145,8 @@ Which phases cover which requirements. Updated by create-roadmap.
 | OBS-03 | Phase 6 | Complete |
 | SLACK-01 | Phase 7 | Complete |
 | SLACK-02 | Phase 7 | Complete |
-| HITL-01 | Phase 8 | Pending |
-| HITL-02 | Phase 8 | Pending |
+| HITL-01 | Phase 8 | Complete |
+| HITL-02 | Phase 8 | Complete |
 | PROD-01 | Phase 9 | Pending |
 | PROD-02 | Phase 9 | Pending |
 | PROD-03 | Phase 9 | Pending |
@@ -158,4 +158,4 @@ Which phases cover which requirements. Updated by create-roadmap.
 
 ---
 *Requirements defined: 2026-01-16*
-*Last updated: 2026-01-16 after Phase 7 completion*
+*Last updated: 2026-01-16 after Phase 8 completion*
