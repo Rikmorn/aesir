@@ -23,7 +23,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Dev Agent** - Complete task-to-code workflow
 - [x] **Phase 6: Observability** - Logging and queryable agent actions
 - [x] **Phase 7: Slack Integration** - Notifications and status updates
-- [ ] **Phase 8: Human-in-the-Loop** - Approval gates before PR merge
+- [x] **Phase 8: Human-in-the-Loop** - Approval gates before PR merge
 - [ ] **Phase 9: Product Agent** - Requirements gathering and task creation
 
 ## Phase Details
@@ -154,7 +154,7 @@ Plans:
 Plans:
 - [x] 08-01: Temporal Foundation (types, signals, worker, client)
 - [x] 08-02: GitHub Merge & Temporal Activities
-- [ ] 08-03: Approval Workflow with Signal Handling
+- [x] 08-03: Approval Workflow with Signal Handling
 - [x] 08-04: GitHub Webhook Handler for PR Reviews
 
 ### Phase 9: Product Agent
@@ -186,7 +186,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 5. Dev Agent | 3/3 | Complete | 2026-01-16 |
 | 6. Observability | 2/2 | Complete | 2026-01-16 |
 | 7. Slack Integration | 1/1 | Complete | 2026-01-16 |
-| 8. Human-in-the-Loop | 3/4 | In progress | - |
+| 8. Human-in-the-Loop | 4/4 | Complete | 2026-01-16 |
 | 9. Product Agent | 0/TBD | Not started | - |
 
 ---

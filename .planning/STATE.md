@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-16)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** Phase 8 — Human-in-the-Loop (Plan 04 complete, Plan 03 pending)
+**Current focus:** Phase 8 — Human-in-the-Loop (Complete)
 
 ## Current Position
 
 Phase: 8 of 9 (Human-in-the-Loop)
-Plan: 3 of 4 in current phase
-Status: In progress
-Last activity: 2026-01-16 — Completed 08-04-PLAN.md (GitHub Webhook Handler)
+Plan: 4 of 4 in current phase
+Status: Phase complete
+Last activity: 2026-01-16 — Completed 08-03-PLAN.md (Approval Workflow with Signal Handling)
 
-Progress: ███████████████░ 83%
+Progress: ████████████████░ 87%
 
 ## Phase 8 Plans
 
@@ -22,7 +22,7 @@ Progress: ███████████████░ 83%
 |------|-------|------|--------|
 | 08-01 | Temporal Infrastructure | 1 | Complete |
 | 08-02 | GitHub Merge & Temporal Activities | 2 | Complete |
-| 08-03 | Approval Workflow with Signal Handling | 3 | Pending |
+| 08-03 | Approval Workflow with Signal Handling | 3 | Complete |
 | 08-04 | GitHub Webhook Handler for PR Reviews | 4 | Complete |
 
 ## Phase 7 Plans
@@ -80,9 +80,9 @@ Progress: ███████████████░ 83%
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 20
-- Average duration: 7.6 min
-- Total execution time: 152 min
+- Total plans completed: 21
+- Average duration: 8.1 min
+- Total execution time: 171 min
 
 **By Phase:**
 
@@ -95,11 +95,11 @@ Progress: ███████████████░ 83%
 | 5 | 3/3 | 26 min | 8.7 min |
 | 6 | 2/2 | 9 min | 4.5 min |
 | 7 | 1/1 | 4 min | 4 min |
-| 8 | 3/4 | 47 min | 15.7 min |
+| 8 | 4/4 | 66 min | 16.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 06-02 (6 min), 07-01 (4 min), 08-01 (19 min), 08-02 (20 min), 08-04 (8 min)
-- Trend: Webhook handler integrated cleanly with existing Temporal client
+- Last 5 plans: 07-01 (4 min), 08-01 (19 min), 08-02 (20 min), 08-04 (8 min), 08-03 (19 min)
+- Trend: Phase 8 complete with durable approval workflow
 
 ## Accumulated Context
 
@@ -163,6 +163,9 @@ Recent decisions affecting current work:
 | 08-02 | Default squash merge | Cleaner git history, standard practice |
 | 08-04 | Timing-safe signature comparison | Prevents timing attacks on webhook verification |
 | 08-04 | Multiple task ID patterns | Supports "Task: ABC-123", "[ABC-123]", "Linear: ABC-123" formats |
+| 08-03 | State object pattern for workflow | Signal handlers need mutable access; TypeScript narrowing in loops |
+| 08-03 | Explicit type annotations for narrowing | TypeScript control flow doesn't narrow object properties well |
+| 08-03 | wf.allHandlersFinished before return | Ensure clean exits by waiting for signal handlers to complete |
 
 ### Pending Todos
 
@@ -175,6 +178,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-16
-Stopped at: Completed 08-04-PLAN.md (GitHub Webhook Handler)
+Stopped at: Completed 08-03-PLAN.md (Approval Workflow with Signal Handling)
 Resume file: None
-Next action: Execute 08-03-PLAN.md (Approval Workflow with Signal Handling)
+Next action: Phase 8 complete. Next is Phase 9 (Product Agent).
