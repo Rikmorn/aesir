@@ -6,7 +6,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createRunTestsNode } from "./run-tests.js";
-import type { Sandbox, TestResult, ExecutionResult } from "../../sandbox/types.js";
+import type { Sandbox, TestResult } from "../../sandbox/types.js";
 import type { DevWorkflowStateType } from "../../state/dev-workflow-state.js";
 
 // Mock the logger
