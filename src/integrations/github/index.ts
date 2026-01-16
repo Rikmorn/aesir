@@ -78,4 +78,5 @@ export {
   getPullRequest,
   listPRComments,
   addPRComment,
+  mergePullRequest,
 } from "./pull-requests.js";

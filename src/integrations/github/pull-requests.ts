@@ -212,3 +212,57 @@ export async function addPRComment(
     createdAt: comment.created_at,
   };
 }
+
+/**
+ * Merge a pull request
+ *
+ * Merges using the squash method by default for cleaner history.
+ *
+ * @param octokit - Authenticated Octokit instance
+ * @param owner - Repository owner
+ * @param repo - Repository name
+ * @param pullNumber - Pull request number to merge
+ * @param options - Optional merge configuration
+ * @returns Merge result with SHA
+ * @throws Error if PR cannot be merged (not mergeable, conflicts, etc.)
+ */
+export async function mergePullRequest(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  pullNumber: number,
+  options?: {
+    mergeMethod?: "merge" | "squash" | "rebase";
+    commitTitle?: string;
+    commitMessage?: string;
+  }
+): Promise<{ sha: string; merged: boolean }> {
+  logger.debug("github_merge_pr_start", {
+    message: `Merging PR #${pullNumber}`,
+    context: { owner, repo, pullNumber, method: options?.mergeMethod ?? "squash" },
+  });
+
+  // Build request params, only including optional fields if defined (exactOptionalPropertyTypes)
+  const params: Parameters<typeof octokit.rest.pulls.merge>[0] = {
+    owner,
+    repo,
+    pull_number: pullNumber,
+    merge_method: options?.mergeMethod ?? "squash",
+  };
+  if (options?.commitTitle !== undefined) {
+    params.commit_title = options.commitTitle;
+  }
+  if (options?.commitMessage !== undefined) {
+    params.commit_message = options.commitMessage;
+  }
+
+  const { data } = await octokit.rest.pulls.merge(params);
+
+  logger.info("github_pr_merged", {
+    outcome: "success",
+    message: `PR #${pullNumber} merged`,
+    context: { owner, repo, pullNumber, sha: data.sha },
+  });
+
+  return { sha: data.sha, merged: data.merged };
+}
