@@ -10,3 +10,12 @@ export {
   type CodeGenerationOutput,
   type GenerateCodeNodeOptions,
 } from "./generate-code.js";
+
+export { createRunTestsNode } from "./run-tests.js";
+
+export {
+  fixCodeNode,
+  FixCodeOutputSchema,
+  type FixCodeOutput,
+  type FixCodeNodeOptions,
+} from "./fix-code.js";
