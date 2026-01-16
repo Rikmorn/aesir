@@ -19,3 +19,15 @@ export {
   type FixCodeOutput,
   type FixCodeNodeOptions,
 } from "./fix-code.js";
+
+export { createPickupTaskNode } from "./pickup-task.js";
+
+export {
+  createBranchNode,
+  type CreateBranchConfig,
+} from "./create-branch.js";
+
+export {
+  createCommitPRNode,
+  type CommitPRConfig,
+} from "./commit-pr.js";
