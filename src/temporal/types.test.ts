@@ -57,13 +57,15 @@ describe("Temporal Types", () => {
     it("should represent awaiting state", () => {
       const status: ApprovalStatus = {
         taskId: "LIN-123",
-        awaiting: true,
+        prNumber: 42,
+        status: "awaiting_approval",
         decision: null,
         changesRequested: null,
       };
 
       expect(status.taskId).toBe("LIN-123");
-      expect(status.awaiting).toBe(true);
+      expect(status.prNumber).toBe(42);
+      expect(status.status).toBe("awaiting_approval");
       expect(status.decision).toBeNull();
       expect(status.changesRequested).toBeNull();
     });
@@ -71,7 +73,8 @@ describe("Temporal Types", () => {
     it("should represent approved state", () => {
       const status: ApprovalStatus = {
         taskId: "LIN-456",
-        awaiting: false,
+        prNumber: 43,
+        status: "approved",
         decision: {
           approved: true,
           reviewer: "approver",
@@ -80,14 +83,15 @@ describe("Temporal Types", () => {
       };
 
       expect(status.taskId).toBe("LIN-456");
-      expect(status.awaiting).toBe(false);
+      expect(status.status).toBe("approved");
       expect(status.decision?.approved).toBe(true);
     });
 
     it("should represent changes requested state", () => {
       const status: ApprovalStatus = {
         taskId: "LIN-789",
-        awaiting: true,
+        prNumber: 44,
+        status: "running",
         decision: null,
         changesRequested: {
           reviewer: "reviewer",
@@ -96,6 +100,31 @@ describe("Temporal Types", () => {
       };
 
       expect(status.changesRequested?.feedback).toBe("Fix the bug");
+    });
+
+    it("should represent pending state with no PR yet", () => {
+      const status: ApprovalStatus = {
+        taskId: "LIN-100",
+        prNumber: undefined,
+        status: "pending",
+        decision: null,
+        changesRequested: null,
+      };
+
+      expect(status.prNumber).toBeUndefined();
+      expect(status.status).toBe("pending");
+    });
+
+    it("should represent timeout state", () => {
+      const status: ApprovalStatus = {
+        taskId: "LIN-101",
+        prNumber: 50,
+        status: "timeout",
+        decision: null,
+        changesRequested: null,
+      };
+
+      expect(status.status).toBe("timeout");
     });
   });
 
@@ -143,6 +172,38 @@ describe("Temporal Types", () => {
 
       expect(config1.completionStatus).toBe("Done");
       expect(config2.completionStatus).toBe("Merged");
+    });
+
+    it("should accept optional timeout and iteration settings", () => {
+      const config: WorkflowConfig = {
+        taskId: "LIN-3",
+        prNumber: 3,
+        prUrl: "https://github.com/org/repo/pull/3",
+        completionStatus: "Done",
+        owner: "org",
+        repo: "repo",
+        branch: "main",
+        approvalTimeoutDays: 14,
+        maxFeedbackIterations: 5,
+      };
+
+      expect(config.approvalTimeoutDays).toBe(14);
+      expect(config.maxFeedbackIterations).toBe(5);
+    });
+
+    it("should have undefined optional fields when not specified", () => {
+      const config: WorkflowConfig = {
+        taskId: "LIN-4",
+        prNumber: 4,
+        prUrl: "https://github.com/org/repo/pull/4",
+        completionStatus: "Done",
+        owner: "org",
+        repo: "repo",
+        branch: "main",
+      };
+
+      expect(config.approvalTimeoutDays).toBeUndefined();
+      expect(config.maxFeedbackIterations).toBeUndefined();
     });
   });
 

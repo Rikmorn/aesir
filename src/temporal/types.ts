@@ -32,8 +32,16 @@ export interface ChangesRequested {
 export interface ApprovalStatus {
   /** External task identifier (Linear task ID) */
   taskId: string;
-  /** Whether still awaiting decision */
-  awaiting: boolean;
+  /** PR number if created (undefined if not yet created) */
+  prNumber: number | undefined;
+  /** Current workflow status */
+  status:
+    | "pending"
+    | "running"
+    | "awaiting_approval"
+    | "approved"
+    | "rejected"
+    | "timeout";
   /** The decision if one has been made */
   decision: ApprovalDecision | null;
   /** Whether changes have been requested */
@@ -58,6 +66,10 @@ export interface WorkflowConfig {
   repo: string;
   /** Git branch name */
   branch: string;
+  /** Days to wait for approval before timeout (default: 7) */
+  approvalTimeoutDays?: number;
+  /** Max iterations for changes-requested feedback loop (default: 3) */
+  maxFeedbackIterations?: number;
 }
 
 /**
