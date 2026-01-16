@@ -32,14 +32,19 @@ export async function createPullRequest(
     context: { owner, repo, head, base },
   });
 
-  const { data: pr } = await octokit.rest.pulls.create({
+  // Build request params, only including body if defined (exactOptionalPropertyTypes)
+  const params: Parameters<typeof octokit.rest.pulls.create>[0] = {
     owner,
     repo,
     title,
-    body,
     head,
     base,
-  });
+  };
+  if (body !== undefined) {
+    params.body = body;
+  }
+
+  const { data: pr } = await octokit.rest.pulls.create(params);
 
   logger.info("github_pr_created", {
     outcome: "success",

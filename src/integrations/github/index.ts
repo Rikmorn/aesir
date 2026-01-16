@@ -11,7 +11,8 @@
  *   getOctokit,
  *   getBranch,
  *   createBranch,
- *   listBranches,
+ *   createCommit,
+ *   createPullRequest,
  * } from './integrations/github';
  *
  * // Create client with config
@@ -21,13 +22,30 @@
  * const octokit = getOctokit(process.env.GITHUB_TOKEN);
  *
  * // Branch operations
- * const branch = await getBranch(octokit, 'owner', 'repo', 'main');
- * const branches = await listBranches(octokit, 'owner', 'repo');
  * const newBranch = await createBranch(octokit, {
  *   owner: 'owner',
  *   repo: 'repo',
  *   branchName: 'feature/new-feature',
  *   baseBranch: 'main',
+ * });
+ *
+ * // Commit changes
+ * const commit = await createCommit(octokit, {
+ *   owner: 'owner',
+ *   repo: 'repo',
+ *   branch: 'feature/new-feature',
+ *   message: 'Add new feature',
+ *   files: [{ path: 'src/feature.ts', content: 'export const x = 1;' }],
+ * });
+ *
+ * // Open pull request
+ * const pr = await createPullRequest(octokit, {
+ *   owner: 'owner',
+ *   repo: 'repo',
+ *   title: 'Add new feature',
+ *   body: 'This PR adds a new feature',
+ *   head: 'feature/new-feature',
+ *   base: 'main',
  * });
  * ```
  */
@@ -42,6 +60,7 @@ export type {
   CreateCommitOptions,
   PullRequestInfo,
   CreatePROptions,
+  PRComment,
 } from "./types.js";
 
 // Client factory
@@ -49,3 +68,14 @@ export { createGitHubClient, getOctokit } from "./client.js";
 
 // Branch operations
 export { getBranch, listBranches, createBranch } from "./branches.js";
+
+// Commit operations
+export { createCommit } from "./commits.js";
+
+// Pull request operations
+export {
+  createPullRequest,
+  getPullRequest,
+  listPRComments,
+  addPRComment,
+} from "./pull-requests.js";

@@ -233,10 +233,10 @@ describe("listPRComments", () => {
 
     expect(result).toHaveLength(4);
     // Verify sorted by createdAt
-    expect(result[0].createdAt).toBe("2026-01-15T10:00:00Z"); // First review
-    expect(result[1].createdAt).toBe("2026-01-15T11:00:00Z"); // Issue comment
-    expect(result[2].createdAt).toBe("2026-01-15T12:00:00Z"); // Second review
-    expect(result[3].createdAt).toBe("2026-01-15T13:00:00Z"); // Issue reply
+    expect(result[0]!.createdAt).toBe("2026-01-15T10:00:00Z"); // First review
+    expect(result[1]!.createdAt).toBe("2026-01-15T11:00:00Z"); // Issue comment
+    expect(result[2]!.createdAt).toBe("2026-01-15T12:00:00Z"); // Second review
+    expect(result[3]!.createdAt).toBe("2026-01-15T13:00:00Z"); // Issue reply
   });
 
   it("review comments have path, issue comments do not", async () => {
@@ -296,7 +296,7 @@ describe("listPRComments", () => {
 
     const result = await listPRComments(mockOctokit, "owner", "repo", 42);
 
-    expect(result[0].user).toBe("unknown");
+    expect(result[0]!.user).toBe("unknown");
   });
 });
 
