@@ -33,6 +33,7 @@
     "@langchain/langgraph": "^0.2.0",
     "@langchain/langgraph-checkpoint-sqlite": "^0.1.0",
     "@linear/sdk": "^70.0.0",
+    "@octokit/rest": "^22.0.1",
     "dockerode": "^4.0.9",
     "dotenv": "^16.4.0",
     "langsmith": "^0.3.0",
