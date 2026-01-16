@@ -121,11 +121,12 @@ Plans:
   1. All agent actions logged with timestamp and context
   2. Logs identify which workflow/task each action belongs to
   3. Logs can be queried to find actions for a specific task
-**Research**: Unlikely (structured logging is standard)
-**Plans**: TBD
+**Research**: Complete (see 06-RESEARCH.md)
+**Plans**: 2 plans
 
 Plans:
-- [ ] 06-01: TBD
+- [x] 06-01: TraceStore for Task ID Indexing
+- [ ] 06-02: LangGraphTracer Callback Handler
 
 ### Phase 7: Slack Integration
 **Goal**: Agent sends notifications and status updates to Slack
@@ -181,7 +182,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 3. Linear Integration | 2/2 | Complete | 2026-01-16 |
 | 4. GitHub Integration | 2/2 | Complete | 2026-01-16 |
 | 5. Dev Agent | 3/3 | Complete | 2026-01-16 |
-| 6. Observability | 0/TBD | Not started | - |
+| 6. Observability | 1/2 | In progress | - |
 | 7. Slack Integration | 0/TBD | Not started | - |
 | 8. Human-in-the-Loop | 0/TBD | Not started | - |
 | 9. Product Agent | 0/TBD | Not started | - |
