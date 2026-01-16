@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Core Agent Framework** - Single agent with safety guardrails and code generation
 - [x] **Phase 2: Execution Environment** - Sandboxed Docker execution for agent code
 - [x] **Phase 3: Linear Integration** - Read/update tasks via webhooks
-- [ ] **Phase 4: GitHub Integration** - Branches, commits, and PRs
+- [x] **Phase 4: GitHub Integration** - Branches, commits, and PRs
 - [ ] **Phase 5: Dev Agent** - Complete task-to-code workflow
 - [ ] **Phase 6: Observability** - Logging and queryable agent actions
 - [ ] **Phase 7: Slack Integration** - Notifications and status updates
@@ -93,7 +93,7 @@ Plans:
 
 Plans:
 - [x] 04-01: GitHub Client & Branch Operations
-- [ ] 04-02: Commits & Pull Requests
+- [x] 04-02: Commits & Pull Requests
 
 ### Phase 5: Dev Agent
 **Goal**: Complete Dev Agent workflow picks tasks, writes code, runs tests
@@ -177,7 +177,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 1. Core Agent Framework | 5/5 | Complete | 2026-01-16 |
 | 2. Execution Environment | 2/2 | Complete | 2026-01-16 |
 | 3. Linear Integration | 2/2 | Complete | 2026-01-16 |
-| 4. GitHub Integration | 1/2 | In progress | - |
+| 4. GitHub Integration | 2/2 | Complete | 2026-01-16 |
 | 5. Dev Agent | 0/TBD | Not started | - |
 | 6. Observability | 0/TBD | Not started | - |
 | 7. Slack Integration | 0/TBD | Not started | - |
