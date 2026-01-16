@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-16)
 ## Current Position
 
 Phase: 5 of 9 (Dev Agent)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-01-16 — Completed 05-01-PLAN.md
+Last activity: 2026-01-16 — Completed 05-02-PLAN.md
 
-Progress: ███████░░░ 48%
+Progress: █████████░ 52%
 
 ## Phase 5 Plans
 
 | Plan | Title | Wave | Status |
 |------|-------|------|--------|
 | 05-01 | State Schema & Code Generation | 1 | Complete |
-| 05-02 | Fix Code & Test Feedback | 2 | Pending |
+| 05-02 | Fix Code & Test Feedback | 2 | Complete |
 | 05-03 | Workflow Orchestration | 3 | Pending |
 
 ## Phase 4 Plans
@@ -58,9 +58,9 @@ Progress: ███████░░░ 48%
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
-- Average duration: 5.9 min
-- Total execution time: 71 min
+- Total plans completed: 13
+- Average duration: 5.8 min
+- Total execution time: 76 min
 
 **By Phase:**
 
@@ -70,11 +70,11 @@ Progress: ███████░░░ 48%
 | 2 | 2/2 | 23 min | 11.5 min |
 | 3 | 2/2 | 15 min | 7.5 min |
 | 4 | 2/2 | 8 min | 4 min |
-| 5 | 1/3 | 5 min | 5 min |
+| 5 | 2/3 | 10 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-01 (8 min), 03-02 (7 min), 04-01 (3 min), 04-02 (5 min), 05-01 (5 min)
-- Trend: Dev Agent phase starting with state schema foundation (5 min)
+- Last 5 plans: 03-02 (7 min), 04-01 (3 min), 04-02 (5 min), 05-01 (5 min), 05-02 (5 min)
+- Trend: Dev Agent phase continuing with test loop implementation (5 min)
 
 ## Accumulated Context
 
@@ -116,6 +116,9 @@ Recent decisions affecting current work:
 | 05-01 | FileChange operation as enum | Explicit create/update/delete vs implicit for clearer intent |
 | 05-01 | testAttempts in state | Allows iteration limit enforcement in workflow routing |
 | 05-01 | LLM injection for testing | generateCodeNode accepts llm option for mock injection |
+| 05-02 | Factory for runTestsNode | createRunTestsNode(sandbox) enables DI for testability |
+| 05-02 | Node wrapper pattern | Nodes with options wrapped in closures for LangGraph compatibility |
+| 05-02 | routeAfterTest exported separately | Unit testable routing without full workflow instantiation |
 
 ### Pending Todos
 
@@ -128,5 +131,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-16
-Stopped at: Completed 05-01-PLAN.md
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None
