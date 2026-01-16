@@ -119,43 +119,43 @@ Which phases cover which requirements. Updated by create-roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CORE-01 | — | Pending |
-| CORE-02 | — | Pending |
-| CORE-03 | — | Pending |
-| CORE-04 | — | Pending |
-| CORE-05 | — | Pending |
-| PROD-01 | — | Pending |
-| PROD-02 | — | Pending |
-| PROD-03 | — | Pending |
-| DEV-01 | — | Pending |
-| DEV-02 | — | Pending |
-| DEV-03 | — | Pending |
-| DEV-04 | — | Pending |
-| DEV-05 | — | Pending |
-| LIN-01 | — | Pending |
-| LIN-02 | — | Pending |
-| LIN-03 | — | Pending |
-| LIN-04 | — | Pending |
-| GH-01 | — | Pending |
-| GH-02 | — | Pending |
-| GH-03 | — | Pending |
-| GH-04 | — | Pending |
-| SLACK-01 | — | Pending |
-| SLACK-02 | — | Pending |
-| HITL-01 | — | Pending |
-| HITL-02 | — | Pending |
-| EXEC-01 | — | Pending |
-| EXEC-02 | — | Pending |
-| EXEC-03 | — | Pending |
-| OBS-01 | — | Pending |
-| OBS-02 | — | Pending |
-| OBS-03 | — | Pending |
+| CORE-01 | Phase 1 | Pending |
+| CORE-02 | Phase 1 | Pending |
+| CORE-03 | Phase 1 | Pending |
+| CORE-04 | Phase 1 | Pending |
+| CORE-05 | Phase 1 | Pending |
+| EXEC-01 | Phase 2 | Pending |
+| EXEC-02 | Phase 2 | Pending |
+| EXEC-03 | Phase 2 | Pending |
+| LIN-01 | Phase 3 | Pending |
+| LIN-02 | Phase 3 | Pending |
+| LIN-03 | Phase 3 | Pending |
+| LIN-04 | Phase 3 | Pending |
+| GH-01 | Phase 4 | Pending |
+| GH-02 | Phase 4 | Pending |
+| GH-03 | Phase 4 | Pending |
+| GH-04 | Phase 4 | Pending |
+| DEV-01 | Phase 5 | Pending |
+| DEV-02 | Phase 5 | Pending |
+| DEV-03 | Phase 5 | Pending |
+| DEV-04 | Phase 5 | Pending |
+| DEV-05 | Phase 5 | Pending |
+| OBS-01 | Phase 6 | Pending |
+| OBS-02 | Phase 6 | Pending |
+| OBS-03 | Phase 6 | Pending |
+| SLACK-01 | Phase 7 | Pending |
+| SLACK-02 | Phase 7 | Pending |
+| HITL-01 | Phase 8 | Pending |
+| HITL-02 | Phase 8 | Pending |
+| PROD-01 | Phase 9 | Pending |
+| PROD-02 | Phase 9 | Pending |
+| PROD-03 | Phase 9 | Pending |
 
 **Coverage:**
 - v1 requirements: 31 total
-- Mapped to phases: 0 (pending create-roadmap)
-- Unmapped: 31
+- Mapped to phases: 31
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-01-16*
-*Last updated: 2026-01-16 after initial definition*
+*Last updated: 2026-01-16 after roadmap creation*
