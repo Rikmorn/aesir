@@ -20,8 +20,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Execution Environment** - Sandboxed Docker execution for agent code
 - [x] **Phase 3: Linear Integration** - Read/update tasks via webhooks
 - [x] **Phase 4: GitHub Integration** - Branches, commits, and PRs
-- [ ] **Phase 5: Dev Agent** - Complete task-to-code workflow
-- [ ] **Phase 6: Observability** - Logging and queryable agent actions
+- [x] **Phase 5: Dev Agent** - Complete task-to-code workflow
+- [x] **Phase 6: Observability** - Logging and queryable agent actions
 - [ ] **Phase 7: Slack Integration** - Notifications and status updates
 - [ ] **Phase 8: Human-in-the-Loop** - Approval gates before PR merge
 - [ ] **Phase 9: Product Agent** - Requirements gathering and task creation
@@ -126,7 +126,7 @@ Plans:
 
 Plans:
 - [x] 06-01: TraceStore for Task ID Indexing
-- [ ] 06-02: LangGraphTracer Callback Handler
+- [x] 06-02: LangGraphTracer Callback Handler
 
 ### Phase 7: Slack Integration
 **Goal**: Agent sends notifications and status updates to Slack
@@ -182,7 +182,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 3. Linear Integration | 2/2 | Complete | 2026-01-16 |
 | 4. GitHub Integration | 2/2 | Complete | 2026-01-16 |
 | 5. Dev Agent | 3/3 | Complete | 2026-01-16 |
-| 6. Observability | 1/2 | In progress | - |
+| 6. Observability | 2/2 | Complete | 2026-01-16 |
 | 7. Slack Integration | 0/TBD | Not started | - |
 | 8. Human-in-the-Loop | 0/TBD | Not started | - |
 | 9. Product Agent | 0/TBD | Not started | - |
