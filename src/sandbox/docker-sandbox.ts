@@ -255,10 +255,24 @@ export class DockerSandbox implements Sandbox {
 
   /**
    * Run tests in the sandbox.
-   * @param _command - Test command (e.g., ['npm', 'test'])
+   *
+   * Wraps execute() with test-specific result parsing.
+   * A test run is considered passing if exitCode === 0.
+   *
+   * @param command - Test command (e.g., ['npm', 'test'])
+   * @returns TestResult with passed boolean and summary
    */
-  async runTests(_command: string[]): Promise<TestResult> {
-    throw new Error("Not implemented - see plan 02-02")
+  async runTests(command: string[]): Promise<TestResult> {
+    const result = await this.execute(command)
+
+    return {
+      ...result,
+      passed: result.exitCode === 0,
+      summary:
+        result.exitCode === 0
+          ? "All tests passed"
+          : `Tests failed with exit code ${result.exitCode}`,
+    }
   }
 
   /**
