@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 08-human-in-the-loop
 source: [08-01-SUMMARY.md, 08-02-SUMMARY.md, 08-03-SUMMARY.md, 08-04-SUMMARY.md]
 started: 2026-01-16T23:50:00Z
@@ -33,6 +33,7 @@ expected: `import { runDevAgentActivity, mergePullRequestActivity } from './src/
 result: issue
 reported: "those do not seem to be exported"
 severity: major
+root_cause: Test expectation error - activities exist with different names (executeDevWorkflow, mergePRActivity). Not a code bug.
 
 ### 6. mergePullRequest Function
 expected: `mergePullRequest` is exported from `src/integrations/github` and has the correct signature (octokit, owner, repo, prNumber, options?).
@@ -53,3 +54,4 @@ skipped: 0
 ## Issues for /gsd:plan-fix
 
 - UAT-001: Activities not exported from src/temporal/activities (major) - Test 5
+  root_cause: Test expectation error - activities exist with different names (executeDevWorkflow, mergePRActivity). Not a code bug - no fix needed.
