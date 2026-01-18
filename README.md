@@ -297,6 +297,69 @@ Press Ctrl+C to stop.
    - After gathering enough info, creates Linear tasks
    - Confirms task creation with Linear identifiers
 
+## Running the Dev Agent
+
+The Dev Agent processes Linear tasks and creates pull requests. It requires Temporal to be running.
+
+### Prerequisites
+
+1. **Infrastructure running**: `npm run infra:up`
+2. **Environment configured**:
+   - `LINEAR_ACCESS_TOKEN`: Linear API key or OAuth token
+   - `GITHUB_TOKEN`: GitHub PAT with `repo` and `workflow` scopes
+   - `GITHUB_REPO`: Repository in `owner/repo` format
+   - `ANTHROPIC_API_KEY`: Anthropic API key
+
+### Starting the Dev Agent
+
+```bash
+npm run dev-agent
+```
+
+You should see:
+```
+Starting Dev Agent...
+
+Dev Agent is running!
+
+Configuration:
+   Temporal: localhost:7233
+   Namespace: default
+   Task Queue: dev-agent
+   GitHub Repo: your-org/your-repo
+
+The Dev Agent processes tasks from Linear:
+   1. Delegate an issue to the Dev Agent in Linear
+   2. The agent will read the issue, generate code, and create a PR
+   3. Track progress in Linear's agent activity panel
+
+View Temporal UI at http://localhost:8080
+
+Press Ctrl+C to stop.
+```
+
+### Dev Agent Workflow
+
+1. **Task Assignment**: Delegate a Linear issue to the Dev Agent
+2. **Code Generation**: Agent reads requirements and generates code
+3. **Testing**: Code runs in Docker sandbox, tests execute
+4. **PR Creation**: Agent creates a branch and pull request
+5. **Approval**: Human reviews PR via GitHub review
+6. **Merge**: After approval signal, agent merges the PR
+
+### Troubleshooting
+
+**"Failed to connect to Temporal server"**
+- Ensure infrastructure is running: `npm run infra:up`
+- Wait for Temporal to initialize (30-60 seconds)
+- Check Temporal UI at http://localhost:8080
+
+**"Invalid GITHUB_REPO format"**
+- Format must be `owner/repo`, e.g., `myorg/myproject`
+
+**"Missing required environment variables"**
+- Check all required variables are set in `.env.local`
+
 ## Project Structure
 
 ```
