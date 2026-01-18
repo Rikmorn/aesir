@@ -5,16 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-01-16)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** Phase 9 — Product Agent (UAT fixes applied)
+**Current focus:** Phase 9.1 — Infrastructure & Local Dev (INSERTED)
 
 ## Current Position
 
-Phase: 9 of 9 (Product Agent)
-Plan: FIX (UAT issues)
-Status: UAT fixes applied, ready for re-verification
-Last activity: 2026-01-18 — Completed 09-FIX.md (UAT issue fixes)
+Phase: 9.1 of 9.1 (Infrastructure & Local Dev)
+Plan: 3 plans created (9.1-01, 9.1-02, 9.1-03)
+Status: Planned, ready for execution
+Last activity: 2026-01-18 — Created 3 plans for Phase 9.1
 
-Progress: ████████████████████ 100%
+Progress: ████████████████████░ 95%
+
+## Phase 9.1 Plans
+
+| Plan | Title | Wave | Status |
+|------|-------|------|--------|
+| 9.1-01 | Linear OAuth Authorization Script | 1 | Not started |
+| 9.1-02 | Docker Compose & Dev Agent Entry Point | 1-2 | Not started |
+| 9.1-03 | README Documentation & E2E Verification | 3 | Not started |
 
 ## Phase 9 Plans
 
@@ -193,6 +201,11 @@ Recent decisions affecting current work:
 | 09-FIX | Allowlist for ignored subtypes | Explicit list of subtypes to ignore instead of blocking all subtypes |
 | 09-FIX | Dynamic bot user ID fetch | Fetch via auth.test API on startup instead of env var |
 
+### Roadmap Evolution
+
+- Phase 9.1 inserted after Phase 9: Infrastructure & Local Dev (URGENT)
+  - Reason: Discovered during milestone verification that Linear OAuth, Docker Compose, and README completeness need addressing before v1.0 MVP
+
 ### Pending Todos
 
 None.
@@ -204,6 +217,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-18
-Stopped at: Completed 09-FIX.md (UAT issue fixes) - Ready for re-verification
+Stopped at: Inserted Phase 9.1 for pre-release infrastructure polish
 Resume file: None
-Next action: Run /gsd:verify-work 9 to re-verify UAT issues are fixed
+Next action: Run /gsd:execute-plan .planning/phases/9.1-infrastructure-local-dev/9.1-01-PLAN.md

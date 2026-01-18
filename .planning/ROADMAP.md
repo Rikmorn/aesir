@@ -25,6 +25,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 7: Slack Integration** - Notifications and status updates
 - [x] **Phase 8: Human-in-the-Loop** - Approval gates before PR merge
 - [x] **Phase 9: Product Agent** - Requirements gathering and task creation
+- [ ] **Phase 9.1: Infrastructure & Local Dev** - Linear OAuth, Docker Compose, README, Dev Agent entry point (INSERTED)
 
 ## Phase Details
 
@@ -174,10 +175,35 @@ Plans:
 - [x] 09-03: Conversation Graph
 - [x] 09-04: Message Handlers
 
+### Phase 9.1: Infrastructure & Local Dev (INSERTED)
+**Goal**: Production-ready local development setup with proper OAuth and containerized services
+**Depends on**: Phase 9
+**Requirements**: Linear OAuth flow, Docker Compose, README completeness, Dev Agent entry point
+**Success Criteria** (what must be TRUE):
+  1. Linear OAuth flow works end-to-end (authorization, token exchange, refresh)
+  2. Docker Compose starts all required services (Temporal, etc.) with one command
+  3. README documents complete local setup including OAuth and Docker Compose
+  4. Dev Agent has entry point script like Product Agent
+  5. Full E2E test passes on real repository
+**Research**: Complete (9.1-RESEARCH.md)
+**Plans**: 3 plans
+
+Plans:
+- [ ] 9.1-01: Linear OAuth Authorization Script (Wave 1)
+- [ ] 9.1-02: Docker Compose & Dev Agent Entry Point (Wave 1-2)
+- [ ] 9.1-03: README Documentation & E2E Verification (Wave 3)
+
+**Details:**
+Urgent insertion to address gaps discovered during milestone verification:
+- Linear currently uses personal API key instead of OAuth app identity
+- Temporal setup not documented in README
+- No docker-compose.yml for local services
+- Dev Agent lacks start script entry point
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 9.1
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -190,6 +216,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 7. Slack Integration | 1/1 | Complete | 2026-01-16 |
 | 8. Human-in-the-Loop | 4/4 | Complete | 2026-01-16 |
 | 9. Product Agent | 4/4 | Complete | 2026-01-18 |
+| 9.1 Infrastructure & Local Dev | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-01-16*
