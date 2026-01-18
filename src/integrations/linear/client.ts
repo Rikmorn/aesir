@@ -146,17 +146,31 @@ export async function createLinearClient(
 }
 
 /**
- * Create a LinearClient directly with an access token
+ * Create a LinearClient directly with a token
+ *
+ * Automatically detects token type:
+ * - API keys (lin_api_...) → uses apiKey option
+ * - OAuth tokens → uses accessToken option
  *
  * Use this for testing or when token management is handled externally.
  * Does not handle token refresh.
  *
- * @param accessToken - Valid Linear access token (with or without "Bearer " prefix)
+ * @param token - Valid Linear API key or OAuth access token
  * @returns LinearClient instance
  */
-export function getLinearClient(accessToken: string): LinearClient {
-  // Strip Bearer prefix from token (common copy-paste mistake)
-  return new LinearClient({ accessToken: stripBearerPrefix(accessToken) });
+export function getLinearClient(token: string): LinearClient {
+  // Strip Bearer prefix if present (common copy-paste mistake)
+  const cleanToken = stripBearerPrefix(token);
+
+  // Detect token type: API keys start with "lin_api_"
+  // OAuth tokens don't have this prefix
+  if (cleanToken.startsWith("lin_api_")) {
+    // API key: use apiKey option (no Bearer prefix added)
+    return new LinearClient({ apiKey: cleanToken });
+  }
+
+  // OAuth token: use accessToken option (Bearer prefix added by SDK)
+  return new LinearClient({ accessToken: cleanToken });
 }
 
 /**
