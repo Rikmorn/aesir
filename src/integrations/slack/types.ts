@@ -67,3 +67,27 @@ export interface NotificationResult {
   /** Error message if failed */
   error?: string;
 }
+
+/**
+ * Configuration for Bolt app with Socket Mode
+ *
+ * Socket Mode enables real-time communication via WebSocket,
+ * which is ideal for development and doesn't require a public URL.
+ *
+ * @example
+ * ```typescript
+ * const config: BoltAppConfig = {
+ *   botToken: process.env.SLACK_BOT_TOKEN!,  // xoxb-...
+ *   appToken: process.env.SLACK_APP_TOKEN!,  // xapp-...
+ *   socketMode: true,
+ * };
+ * ```
+ */
+export interface BoltAppConfig {
+  /** Bot User OAuth Token (starts with xoxb-) */
+  botToken: string;
+  /** App-Level Token with connections:write scope (starts with xapp-) */
+  appToken: string;
+  /** Always true for Socket Mode */
+  socketMode: true;
+}
