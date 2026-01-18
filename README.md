@@ -152,6 +152,64 @@ In Slack, invite the bot to channels where you want to use it:
 /invite @YourBotName
 ```
 
+## Linear OAuth Setup
+
+Linear supports two authentication methods:
+
+| Method | Best For | Token Type |
+|--------|----------|------------|
+| Personal API Key | Quick start, personal use | `lin_api_...` |
+| OAuth App | Production, shared workspace | `lin_oauth_...` |
+
+### Quick Start: Personal API Key
+
+For getting started quickly, use a personal API key:
+
+1. Go to Linear > Settings > API > Personal API keys
+2. Create a new key
+3. Set `LINEAR_ACCESS_TOKEN=lin_api_your-key` in `.env.local`
+
+### Production: OAuth App Authorization
+
+For production use, OAuth is recommended. Actions appear as the app identity rather than a personal user.
+
+#### 1. Create a Linear OAuth Application
+
+1. Go to [linear.app/settings/api/applications](https://linear.app/settings/api/applications)
+2. Click **Create new OAuth application**
+3. Fill in:
+   - **Name**: Aesir (or your preferred name)
+   - **Redirect URI**: `http://localhost:3333/callback`
+4. Copy the **Client ID** and **Client Secret**
+
+#### 2. Configure Environment Variables
+
+Add to `.env.local`:
+
+```bash
+LINEAR_CLIENT_ID=your-client-id
+LINEAR_CLIENT_SECRET=your-client-secret
+```
+
+#### 3. Run Authorization Flow
+
+```bash
+npm run linear-oauth
+```
+
+This will:
+1. Open a browser to Linear's OAuth consent screen
+2. After authorization, exchange the code for tokens
+3. Save tokens to `.linear-tokens.json` (auto-created)
+
+The token store handles automatic refresh — no manual intervention needed.
+
+#### 4. Verify Authorization
+
+The OAuth flow will display your authorized workspace and user. Tokens are now ready for use.
+
+**Note:** `.linear-tokens.json` is gitignored. Each developer runs their own OAuth flow.
+
 ## Infrastructure Setup
 
 The Dev Agent requires Temporal for approval workflows. Start the infrastructure services before running agents.
