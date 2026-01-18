@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Git
+.git/
+.gitignore
+
+# Environment files (contain secrets)
+.env
+.env.*
+.env.local
+
+# IDE and editor configs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Test coverage
+coverage/
+
+# Logs
+*.log
+logs/
+
+# Planning artifacts (development only)
+.planning/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporal local data (if using file-based persistence)
+temporal.db
+
+# Token storage (local development secrets)
+.linear-tokens.json
+
+# Build and package manager caches
+.yarn/
+.npm/
+.pnp.*
