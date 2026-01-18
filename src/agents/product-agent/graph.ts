@@ -5,7 +5,7 @@
  * Routes between analysis, clarification, and task creation nodes.
  *
  * Graph structure:
- * START -> analyze -> (route) -> clarify -> analyze (loop)
+ * START -> analyze -> (route) -> clarify -> END (return question to user)
  *                            -> createTasks -> END
  *
  * Key design decisions:
@@ -81,8 +81,11 @@ export interface ProductAgentGraphOptions {
  *                     clarify    createTasks
  *                        |           |
  *                        v           v
- *                     analyze       END
+ *                       END         END
  * ```
+ *
+ * Note: clarify goes to END so the question is returned to the user.
+ * Next user message re-invokes graph with checkpointer preserving state.
  *
  * @param options - Graph options with dependencies
  * @returns Compiled StateGraph workflow
@@ -130,8 +133,9 @@ export function createProductAgentGraph(options: ProductAgentGraphOptions) {
       createTasks: "createTasks",
     })
 
-    // After clarification, loop back to analysis
-    .addEdge("clarify", "analyze")
+    // After clarification, end turn - return question to user
+    // Next user message will re-invoke graph with checkpointer state
+    .addEdge("clarify", "__end__")
 
     // After task creation, workflow is complete
     .addEdge("createTasks", "__end__");
