@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-16)
 ## Current Position
 
 Phase: 9.1 of 9.1 (Infrastructure & Local Dev)
-Plan: 3 plans created (9.1-01, 9.1-02, 9.1-03)
-Status: Planned, ready for execution
-Last activity: 2026-01-18 — Created 3 plans for Phase 9.1
+Plan: 2 of 3 (9.1-02 complete)
+Status: In progress
+Last activity: 2026-01-18 — Completed 9.1-02-PLAN.md (Docker Compose & Dev Agent Entry Point)
 
-Progress: ████████████████████░ 95%
+Progress: ████████████████████░ 96%
 
 ## Phase 9.1 Plans
 
 | Plan | Title | Wave | Status |
 |------|-------|------|--------|
 | 9.1-01 | Linear OAuth Authorization Script | 1 | Not started |
-| 9.1-02 | Docker Compose & Dev Agent Entry Point | 1-2 | Not started |
+| 9.1-02 | Docker Compose & Dev Agent Entry Point | 1-2 | Complete |
 | 9.1-03 | README Documentation & E2E Verification | 3 | Not started |
 
 ## Phase 9 Plans
@@ -98,9 +98,9 @@ Progress: ████████████████████░ 95%
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 25
+- Total plans completed: 26
 - Average duration: 8.2 min
-- Total execution time: 205 min
+- Total execution time: 213 min
 
 **By Phase:**
 
@@ -115,10 +115,11 @@ Progress: ████████████████████░ 95%
 | 7 | 1/1 | 4 min | 4 min |
 | 8 | 4/4 | 66 min | 16.5 min |
 | 9 | 4/4 | 34 min | 8.5 min |
+| 9.1 | 1/3 | 8 min | 8 min |
 
 **Recent Trend:**
-- Last 5 plans: 09-01 (11 min), 09-02 (4 min), 09-03 (7 min), 09-04 (12 min)
-- Trend: Phase 9 complete (Product Agent)
+- Last 5 plans: 09-03 (7 min), 09-04 (12 min), 09-FIX, 9.1-02 (8 min)
+- Trend: Phase 9.1 in progress (Infrastructure & Local Dev)
 
 ## Accumulated Context
 
@@ -200,6 +201,11 @@ Recent decisions affecting current work:
 | 09-FIX | Defensive Bearer prefix stripping | Linear client strips Bearer prefix from tokens (common copy-paste mistake) |
 | 09-FIX | Allowlist for ignored subtypes | Explicit list of subtypes to ignore instead of blocking all subtypes |
 | 09-FIX | Dynamic bot user ID fetch | Fetch via auth.test API on startup instead of env var |
+| 9.1-02 | PostgreSQL for Temporal persistence | Official Temporal recommendation for local dev |
+| 9.1-02 | Temporal auto-setup image | Handles schema migration automatically |
+| 9.1-02 | Agents on host, infra in Docker | Easier debugging during development |
+| 9.1-02 | GITHUB_REPO format validation | Prevents cryptic errors from malformed repo strings |
+| 9.1-02 | infra:* npm script namespace | Clear separation from agent scripts |
 
 ### Roadmap Evolution
 
@@ -217,6 +223,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-18
-Stopped at: Inserted Phase 9.1 for pre-release infrastructure polish
+Stopped at: Completed 9.1-02-PLAN.md (Docker Compose & Dev Agent Entry Point)
 Resume file: None
-Next action: Run /gsd:execute-plan .planning/phases/9.1-infrastructure-local-dev/9.1-01-PLAN.md
+Next action: Execute 9.1-01-PLAN.md (Linear OAuth) or 9.1-03-PLAN.md (README & E2E)
