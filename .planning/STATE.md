@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-01-16)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** Phase 9 — Product Agent (Complete)
+**Current focus:** Phase 9 — Product Agent (UAT fixes applied)
 
 ## Current Position
 
 Phase: 9 of 9 (Product Agent)
-Plan: 4 of 4 in current phase
-Status: Phase complete
-Last activity: 2026-01-18 — Completed 09-04-PLAN.md (Message Handlers)
+Plan: FIX (UAT issues)
+Status: UAT fixes applied, ready for re-verification
+Last activity: 2026-01-18 — Completed 09-FIX.md (UAT issue fixes)
 
 Progress: ████████████████████ 100%
 
@@ -24,6 +24,7 @@ Progress: ████████████████████ 100%
 | 09-02 | Bolt App Factory | 1 | Complete |
 | 09-03 | Conversation Graph | 2 | Complete |
 | 09-04 | Message Handlers | 3 | Complete |
+| 09-FIX | UAT Issue Fixes | - | Complete |
 
 ## Phase 8 Plans
 
@@ -188,6 +189,9 @@ Recent decisions affecting current work:
 | 09-04 | thread_ts as thread_id | Using Slack thread timestamp as checkpointer's thread_id enables conversation persistence |
 | 09-04 | Block Kit formatting | Responses use Block Kit sections for rich formatting with task confirmation |
 | 09-04 | Type casting for Bolt middleware | Used 'as any' cast for Bolt's event middleware due to complex generic typing |
+| 09-FIX | Defensive Bearer prefix stripping | Linear client strips Bearer prefix from tokens (common copy-paste mistake) |
+| 09-FIX | Allowlist for ignored subtypes | Explicit list of subtypes to ignore instead of blocking all subtypes |
+| 09-FIX | Dynamic bot user ID fetch | Fetch via auth.test API on startup instead of env var |
 
 ### Pending Todos
 
@@ -200,6 +204,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-18
-Stopped at: Completed 09-04-PLAN.md (Message Handlers) - Phase 9 complete
+Stopped at: Completed 09-FIX.md (UAT issue fixes) - Ready for re-verification
 Resume file: None
-Next action: Milestone complete - run /gsd:complete-milestone to archive.
+Next action: Run /gsd:verify-work 9 to re-verify UAT issues are fixed
