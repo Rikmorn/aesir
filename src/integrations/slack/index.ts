@@ -1,15 +1,13 @@
 /**
  * Slack Integration Module
  *
- * Provides WebClient factory and notification functions
- * for posting approval requests and status updates.
+ * Provides WebClient factory, Bolt app lifecycle, and notification functions
+ * for posting approval requests, status updates, and handling events.
  *
- * @example
+ * @example WebClient Usage (for posting messages)
  * ```typescript
  * import {
  *   createSlackClient,
- *   getSlackClient,
- *   postNotification,
  *   sendApprovalRequest,
  *   sendStatusUpdate,
  *   openDmChannel,
@@ -21,9 +19,6 @@
  *   defaultChannel: 'C1234567890',
  * });
  *
- * // Or create directly with token
- * const client = getSlackClient(process.env.SLACK_BOT_TOKEN);
- *
  * // Send approval request to channel
  * await sendApprovalRequest(client, {
  *   type: 'approval_needed',
@@ -33,17 +28,39 @@
  *   summary: 'Implements JWT-based auth with refresh tokens',
  * }, 'C1234567890');
  *
- * // Send status update
- * await sendStatusUpdate(client, {
- *   type: 'status_update',
- *   taskId: 'ABC-123',
- *   status: 'completed',
- *   details: 'All tests passed',
- * }, 'C1234567890');
- *
  * // Send DM to user
  * const dmChannelId = await openDmChannel(client, 'U1234567890');
  * await sendApprovalRequest(client, notification, dmChannelId);
+ * ```
+ *
+ * @example Bolt App Usage (for receiving events)
+ * ```typescript
+ * import {
+ *   createBoltApp,
+ *   startBoltApp,
+ *   stopBoltApp,
+ * } from './integrations/slack';
+ *
+ * // Create Bolt app with Socket Mode
+ * const app = createBoltApp({
+ *   botToken: process.env.SLACK_BOT_TOKEN!,
+ *   appToken: process.env.SLACK_APP_TOKEN!,
+ *   socketMode: true,
+ * });
+ *
+ * // Add event handlers
+ * app.event('app_mention', async ({ event, say }) => {
+ *   await say(`Hello <@${event.user}>!`);
+ * });
+ *
+ * // Start the app
+ * await startBoltApp(app);
+ *
+ * // Graceful shutdown
+ * process.on('SIGTERM', async () => {
+ *   await stopBoltApp(app);
+ *   process.exit(0);
+ * });
  * ```
  */
 
@@ -55,10 +72,14 @@ export type {
   StatusNotification,
   Notification,
   NotificationResult,
+  BoltAppConfig,
 } from "./types.js";
 
 // Client factory
 export { createSlackClient, getSlackClient } from "./client.js";
+
+// Bolt app lifecycle
+export { createBoltApp, startBoltApp, stopBoltApp } from "./bolt-app.js";
 
 // Notification functions
 export {
