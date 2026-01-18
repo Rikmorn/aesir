@@ -34,3 +34,6 @@ coverage/
 # Temporary files
 tmp/
 temp/
+
+# Linear OAuth tokens
+.linear-tokens.json
