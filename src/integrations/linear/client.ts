@@ -88,6 +88,20 @@ export async function refreshOAuthToken(refreshToken: string): Promise<{
 }
 
 /**
+ * Strip "Bearer " prefix from token if present
+ *
+ * The Linear SDK adds its own "Bearer " prefix, so if the user's token
+ * already has one (common copy-paste mistake from cURL commands), we
+ * need to strip it to avoid "Bearer Bearer ..." being sent.
+ *
+ * @param token - Token that may have "Bearer " prefix
+ * @returns Clean token without prefix
+ */
+function stripBearerPrefix(token: string): string {
+  return token.replace(/^Bearer\s+/i, "");
+}
+
+/**
  * Create a LinearClient with OAuth token management
  *
  * Checks if the token needs refresh (within 60 seconds of expiration)
@@ -116,8 +130,8 @@ export async function createLinearClient(
 
     const refreshed = await refreshOAuthToken(config.refreshToken);
 
-    // Update config with new tokens
-    config.accessToken = refreshed.accessToken;
+    // Update config with new tokens (strip Bearer prefix defensively)
+    config.accessToken = stripBearerPrefix(refreshed.accessToken);
     config.refreshToken = refreshed.refreshToken;
     config.expiresAt = now + refreshed.expiresIn * 1000;
 
@@ -127,7 +141,8 @@ export async function createLinearClient(
     }
   }
 
-  return new LinearClient({ accessToken: config.accessToken });
+  // Strip Bearer prefix from token (common copy-paste mistake)
+  return new LinearClient({ accessToken: stripBearerPrefix(config.accessToken) });
 }
 
 /**
@@ -136,11 +151,12 @@ export async function createLinearClient(
  * Use this for testing or when token management is handled externally.
  * Does not handle token refresh.
  *
- * @param accessToken - Valid Linear access token
+ * @param accessToken - Valid Linear access token (with or without "Bearer " prefix)
  * @returns LinearClient instance
  */
 export function getLinearClient(accessToken: string): LinearClient {
-  return new LinearClient({ accessToken });
+  // Strip Bearer prefix from token (common copy-paste mistake)
+  return new LinearClient({ accessToken: stripBearerPrefix(accessToken) });
 }
 
 /**
