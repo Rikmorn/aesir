@@ -19,21 +19,61 @@ Agentic development platform that automates software development workflows. Agen
 
 ## Quick Start
 
+Get from clone to running in 5 steps:
+
+### 1. Install Dependencies
+
 ```bash
-# Install dependencies
 npm install
-
-# Copy environment template
-cp .env.example .env.local
-
-# Edit .env.local with your credentials (see Environment Setup below)
-
-# Build the project
-npm run build
-
-# Start the Product Agent
-npm run product-agent
 ```
+
+### 2. Configure Environment
+
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local` with your credentials. At minimum you need:
+
+| Variable | Where to Get It |
+|----------|-----------------|
+| `SLACK_BOT_TOKEN` | Slack App > OAuth & Permissions |
+| `SLACK_APP_TOKEN` | Slack App > Basic Information > App-Level Tokens |
+| `LINEAR_ACCESS_TOKEN` | Linear > Settings > API > Personal API keys |
+| `LINEAR_TEAM_ID` | Linear > Settings > Teams > Team settings (URL) |
+| `ANTHROPIC_API_KEY` | console.anthropic.com > API Keys |
+
+See [Environment Setup](#environment-setup) for full configuration.
+
+### 3. Start Infrastructure (for Dev Agent)
+
+```bash
+npm run infra:up
+```
+
+Wait 30-60 seconds for Temporal to initialize. See [Infrastructure Setup](#infrastructure-setup) for details.
+
+### 4. (Optional) Authorize Linear OAuth
+
+For production use, authorize via OAuth instead of personal API key:
+
+```bash
+npm run linear-oauth
+```
+
+See [Linear OAuth Setup](#linear-oauth-setup) for details.
+
+### 5. Start an Agent
+
+```bash
+# Product Agent (Slack bot for requirements gathering)
+npm run product-agent
+
+# Dev Agent (processes Linear tasks, creates PRs)
+npm run dev-agent
+```
+
+You're running! @mention the bot in Slack or delegate a task in Linear.
 
 ## Environment Setup
 
