@@ -14,7 +14,11 @@
     "test:coverage": "vitest run --coverage",
     "lint": "tsc --noEmit",
     "product-agent": "tsx src/scripts/start-product-agent.ts",
-    "linear-oauth": "tsx src/scripts/linear-oauth.ts"
+    "dev-agent": "tsx src/scripts/start-dev-agent.ts",
+    "linear-oauth": "tsx src/scripts/linear-oauth.ts",
+    "infra:up": "docker-compose up -d",
+    "infra:down": "docker-compose down",
+    "infra:logs": "docker-compose logs -f"
   },
   "keywords": [
     "agent",
