@@ -62,6 +62,17 @@ The user has explicitly called out this phase as make-or-break. If requirements 
 
 </notes>
 
+<decisions>
+## Decisions
+
+**Slack as MVP interface (2026-01-18):**
+- Slack has known limitations for requirement gathering: thread context is clunky, long conversations get buried, no native structured state preservation
+- Accepted for MVP to prove the core loop works (conversation → requirements → Linear → Dev Agent)
+- Future milestone will research contemporary alternatives that better balance context preservation with usability
+- The requirement gathering *logic* is the hard part — if it works in Slack, it transfers to other interfaces
+
+</decisions>
+
 ---
 
 *Phase: 09-product-agent*
