@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "tsc --noEmit",
-    "product-agent": "tsx src/scripts/start-product-agent.ts"
+    "product-agent": "tsx src/scripts/start-product-agent.ts",
+    "linear-oauth": "tsx src/scripts/linear-oauth.ts"
   },
   "keywords": [
     "agent",
@@ -55,5 +56,6 @@
     "tsx": "^4.0.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
-  }
+  },
+  "packageManager": "yarn@1.22.19+sha1.4ba7fc5c6e704fce2066ecbfb0b0d8976fe62447"
 }
