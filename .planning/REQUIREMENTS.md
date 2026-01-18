@@ -17,9 +17,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Product Agent
 
-- [ ] **PROD-01**: Product Agent can gather requirements through conversation
-- [ ] **PROD-02**: Product Agent creates structured Linear tasks from requirements
-- [ ] **PROD-03**: Product Agent tracks and organizes tasks into workable units
+- [x] **PROD-01**: Product Agent can gather requirements through conversation
+- [x] **PROD-02**: Product Agent creates structured Linear tasks from requirements
+- [x] **PROD-03**: Product Agent tracks and organizes tasks into workable units
 
 ### Dev Agent
 
@@ -147,9 +147,9 @@ Which phases cover which requirements. Updated by create-roadmap.
 | SLACK-02 | Phase 7 | Complete |
 | HITL-01 | Phase 8 | Complete |
 | HITL-02 | Phase 8 | Complete |
-| PROD-01 | Phase 9 | Pending |
-| PROD-02 | Phase 9 | Pending |
-| PROD-03 | Phase 9 | Pending |
+| PROD-01 | Phase 9 | Complete |
+| PROD-02 | Phase 9 | Complete |
+| PROD-03 | Phase 9 | Complete |
 
 **Coverage:**
 - v1 requirements: 31 total
@@ -158,4 +158,4 @@ Which phases cover which requirements. Updated by create-roadmap.
 
 ---
 *Requirements defined: 2026-01-16*
-*Last updated: 2026-01-16 after Phase 8 completion*
+*Last updated: 2026-01-18 after Phase 9 completion*
