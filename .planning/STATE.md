@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-16)
 ## Current Position
 
 Phase: 9.1 of 9.1 (Infrastructure & Local Dev)
-Plan: 2 of 3 complete (9.1-01, 9.1-02)
-Status: In progress
-Last activity: 2026-01-18 — Completed 9.1-01-PLAN.md (Linear OAuth Authorization Script)
+Plan: 3 of 3 complete (9.1-01, 9.1-02, 9.1-03)
+Status: PHASE COMPLETE
+Last activity: 2026-01-18 — Completed 9.1-03-PLAN.md (README Documentation & E2E Verification)
 
-Progress: ████████████████████░ 97%
+Progress: █████████████████████ 100%
 
 ## Phase 9.1 Plans
 
@@ -22,7 +22,7 @@ Progress: ████████████████████░ 97%
 |------|-------|------|--------|
 | 9.1-01 | Linear OAuth Authorization Script | 1 | Complete |
 | 9.1-02 | Docker Compose & Dev Agent Entry Point | 1-2 | Complete |
-| 9.1-03 | README Documentation & E2E Verification | 3 | Not started |
+| 9.1-03 | README Documentation & E2E Verification | 3 | Complete |
 
 ## Phase 9 Plans
 
@@ -115,11 +115,11 @@ Progress: ████████████████████░ 97%
 | 7 | 1/1 | 4 min | 4 min |
 | 8 | 4/4 | 66 min | 16.5 min |
 | 9 | 4/4 | 34 min | 8.5 min |
-| 9.1 | 2/3 | 10 min | 5 min |
+| 9.1 | 3/3 | 25 min | 8.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 09-04 (12 min), 09-FIX, 9.1-01 (2 min), 9.1-02 (8 min)
-- Trend: Phase 9.1 nearing completion (Infrastructure & Local Dev)
+- Last 5 plans: 09-FIX, 9.1-01 (2 min), 9.1-02 (8 min), 9.1-03 (15 min)
+- Trend: Phase 9.1 COMPLETE (Infrastructure & Local Dev)
 
 ## Accumulated Context
 
@@ -210,6 +210,9 @@ Recent decisions affecting current work:
 | 9.1-01 | actor=app in OAuth URL | Actions appear as app identity, not authorizing user |
 | 9.1-01 | Restrictive file permissions (0600) | Token file security without encryption complexity |
 | 9.1-01 | Custom error types with setup instructions | TokenFileNotFoundError points to npm run linear-oauth |
+| 9.1-03 | 5-step Quick Start documentation | Minimal friction clone-to-running experience |
+| 9.1-03 | OAuth vs API key documentation | OAuth for production, API key for quick start - clear guidance |
+| 9.1-03 | Infrastructure section before agents | Dependency order in documentation |
 
 ### Roadmap Evolution
 
@@ -227,6 +230,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-18
-Stopped at: Completed 9.1-01-PLAN.md (Linear OAuth Authorization Script)
+Stopped at: Completed 9.1-03-PLAN.md (README Documentation & E2E Verification)
 Resume file: None
-Next action: Execute 9.1-03-PLAN.md (README Documentation & E2E Verification)
+Next action: v1.0 milestone verification complete - all phases done
