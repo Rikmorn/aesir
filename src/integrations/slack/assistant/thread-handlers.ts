@@ -34,6 +34,8 @@ export interface ThreadHandlerOptions {
   teamId: string;
   /** Checkpointer for conversation persistence */
   checkpointer: SqliteSaver;
+  /** Bot user ID for detecting @mentions in channel threads (optional - fetched on startup) */
+  botUserId?: string;
 }
 
 /**
@@ -368,6 +370,21 @@ export function handleDirectMessage(options: ThreadHandlerOptions) {
 }
 
 /**
+ * Subtypes that should be ignored for message processing
+ * Thread replies have subtype: undefined, so they pass through
+ */
+const IGNORED_SUBTYPES = new Set([
+  "message_changed",
+  "message_deleted",
+  "channel_join",
+  "channel_leave",
+  "channel_topic",
+  "channel_purpose",
+  "channel_name",
+  "file_share", // Could be enabled later if we want to handle file uploads
+]);
+
+/**
  * Register Product Agent handlers with a Bolt app
  *
  * Sets up event handlers for app_mention and direct messages.
@@ -387,6 +404,7 @@ export function handleDirectMessage(options: ThreadHandlerOptions) {
  *   linearClient: getLinearClient(token),
  *   teamId: 'team-123',
  *   checkpointer: SqliteSaver.fromConnString(':memory:'),
+ *   botUserId: 'U1234567890', // Fetched from auth.test on startup
  * });
  *
  * await startBoltApp(app);
@@ -395,33 +413,94 @@ export function handleDirectMessage(options: ThreadHandlerOptions) {
 export function registerHandlers(app: App, options: ThreadHandlerOptions): void {
   logger.info("register_handlers", {
     message: "Registering Product Agent event handlers",
+    context: { botUserId: options.botUserId ?? "not set" },
   });
 
-  // Handle @mentions in channels
+  // Handle @mentions in channels (primary handler)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   app.event("app_mention", handleAppMention(options) as any);
 
-  // Handle direct messages
-  // Note: Bolt's message handler fires for all message events
-  // We filter to only handle DMs (channel_type === 'im')
+  // Handle message events for:
+  // 1. Direct messages (DMs) - all messages including thread replies
+  // 2. Channel thread replies with @mentions (fallback when app_mention doesn't fire)
   app.event("message", async (args) => {
     const { event, client, say } = args;
-    // Type guard for message events with channel_type 'im'
-    if ("channel_type" in event && event.channel_type === "im") {
-      // Ignore bot messages to prevent loops
-      if ("bot_id" in event && event.bot_id) {
-        return;
-      }
-      // Ignore message subtypes (edits, deletes, etc.)
-      if ("subtype" in event && event.subtype) {
-        return;
-      }
+
+    // Extract event properties for logging
+    const channelType = "channel_type" in event ? event.channel_type : undefined;
+    const subtype = "subtype" in event ? event.subtype : undefined;
+    const threadTs = "thread_ts" in event ? event.thread_ts : undefined;
+    const hasBotId = "bot_id" in event && Boolean(event.bot_id);
+    const messageText = "text" in event ? event.text : undefined;
+
+    logger.debug("message_event_received", {
+      message: "Processing message event",
+      context: {
+        channelType,
+        subtype: subtype ?? "none",
+        hasThreadTs: Boolean(threadTs),
+        hasBotId,
+        channel: "channel" in event ? event.channel : undefined,
+      },
+    });
+
+    // Ignore bot messages to prevent loops
+    if (hasBotId) {
+      logger.debug("message_event_filtered", {
+        message: "Ignoring bot message (loop prevention)",
+        context: { reason: "bot_id present" },
+      });
+      return;
+    }
+
+    // Ignore specific message subtypes (edits, deletes, joins, etc.)
+    if (subtype && IGNORED_SUBTYPES.has(subtype)) {
+      logger.debug("message_event_filtered", {
+        message: `Ignoring message with subtype: ${subtype}`,
+        context: { reason: "ignored_subtype", subtype },
+      });
+      return;
+    }
+
+    // Case 1: Direct messages (including thread replies in DMs)
+    if (channelType === "im") {
+      logger.debug("message_event_routing", {
+        message: "Routing to DM handler",
+        context: { channelType, isThreadReply: Boolean(threadTs) },
+      });
       await handleDirectMessage(options)({
         event: event as GenericMessageEvent,
         client,
         say,
       });
+      return;
     }
+
+    // Case 2: Channel thread replies with @mentions
+    // Slack sometimes sends thread replies with @mentions as message events
+    // instead of app_mention events. Handle this as a fallback.
+    if (threadTs && options.botUserId && messageText) {
+      const mentionPattern = `<@${options.botUserId}>`;
+      if (messageText.includes(mentionPattern)) {
+        logger.debug("message_event_routing", {
+          message: "Routing thread @mention to app_mention handler (fallback)",
+          context: { channelType, threadTs, botUserId: options.botUserId },
+        });
+        // Process as app mention equivalent
+        await handleAppMention(options)({
+          event: event as unknown as AppMentionEvent,
+          client,
+          say,
+        });
+        return;
+      }
+    }
+
+    // Message doesn't match any handler criteria
+    logger.debug("message_event_unhandled", {
+      message: "Message event not routed (not DM, not @mention in thread)",
+      context: { channelType, hasThreadTs: Boolean(threadTs), hasBotUserId: Boolean(options.botUserId) },
+    });
   });
 
   logger.info("handlers_registered", {

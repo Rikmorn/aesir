@@ -19,48 +19,52 @@
  *   npm run product-agent
  */
 
-import "dotenv/config";
-import { ChatAnthropic } from "@langchain/anthropic";
-import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
-import {
-  createBoltApp,
-  startBoltApp,
-  stopBoltApp,
-  registerHandlers,
-} from "../integrations/slack/index.js";
-import { getLinearClient } from "../integrations/linear/index.js";
-import { createLogger } from "../logging/logger.js";
+import dotenv from "dotenv";
 
-const logger = createLogger({ defaultContext: { module: "product-agent-main" } });
+// Load environment variables BEFORE importing modules that use them
+// .env.local takes precedence (loaded first), .env provides defaults
+dotenv.config({ path: ".env.local" });
+dotenv.config({ path: ".env" });
 
-/**
- * Validate required environment variables
- */
-function validateEnv(): void {
-  const required = [
-    "SLACK_BOT_TOKEN",
-    "SLACK_APP_TOKEN",
-    "LINEAR_ACCESS_TOKEN",
-    "LINEAR_TEAM_ID",
-    "ANTHROPIC_API_KEY",
-  ];
+// Now dynamically import modules that depend on env vars
+async function bootstrap(): Promise<void> {
+  const { ChatAnthropic } = await import("@langchain/anthropic");
+  const { SqliteSaver } = await import("@langchain/langgraph-checkpoint-sqlite");
+  const {
+    createBoltApp,
+    startBoltApp,
+    stopBoltApp,
+    registerHandlers,
+  } = await import("../integrations/slack/index.js");
+  const { getLinearClient } = await import("../integrations/linear/index.js");
+  const { createLogger } = await import("../logging/logger.js");
 
-  const missing = required.filter((key) => !process.env[key]);
+  const logger = createLogger({ defaultContext: { module: "product-agent-main" } });
 
-  if (missing.length > 0) {
-    console.error("\n❌ Missing required environment variables:\n");
-    for (const key of missing) {
-      console.error(`   - ${key}`);
+  /**
+   * Validate required environment variables
+   */
+  function validateEnv(): void {
+    const required = [
+      "SLACK_BOT_TOKEN",
+      "SLACK_APP_TOKEN",
+      "LINEAR_ACCESS_TOKEN",
+      "LINEAR_TEAM_ID",
+      "ANTHROPIC_API_KEY",
+    ];
+
+    const missing = required.filter((key) => !process.env[key]);
+
+    if (missing.length > 0) {
+      console.error("\n❌ Missing required environment variables:\n");
+      for (const key of missing) {
+        console.error(`   - ${key}`);
+      }
+      console.error("\nSee README.md for setup instructions.\n");
+      process.exit(1);
     }
-    console.error("\nSee README.md for setup instructions.\n");
-    process.exit(1);
   }
-}
 
-/**
- * Main entry point
- */
-async function main(): Promise<void> {
   console.log("\n🤖 Starting Product Agent...\n");
 
   // Validate environment
@@ -91,14 +95,40 @@ async function main(): Promise<void> {
     socketMode: true,
   });
 
+  // Fetch bot user ID for @mention detection in threads
+  // Using auth.test API to dynamically get the bot's user ID
+  logger.info("fetch_bot_user_id", { message: "Fetching bot user ID from Slack" });
+  let botUserId: string | undefined;
+  try {
+    const authResult = await app.client.auth.test();
+    botUserId = authResult.user_id;
+    logger.info("bot_user_id_fetched", {
+      outcome: "success",
+      message: `Bot user ID: ${botUserId}`,
+      context: { botUserId, botName: authResult.user },
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    logger.warn("bot_user_id_fetch_failed", {
+      message: `Failed to fetch bot user ID: ${errorMessage}. Thread @mention fallback will be disabled.`,
+    });
+  }
+
   // Register event handlers
   logger.info("register_handlers", { message: "Registering event handlers" });
-  registerHandlers(app, {
+
+  // Build options conditionally for exactOptionalPropertyTypes compliance
+  const handlerOptions: Parameters<typeof registerHandlers>[1] = {
     llm,
     linearClient,
     teamId,
     checkpointer,
-  });
+  };
+  if (botUserId) {
+    handlerOptions.botUserId = botUserId;
+  }
+
+  registerHandlers(app, handlerOptions);
 
   // Handle graceful shutdown
   const shutdown = async (signal: string): Promise<void> => {
@@ -122,12 +152,8 @@ async function main(): Promise<void> {
   console.log("Press Ctrl+C to stop.\n");
 }
 
-// Run
-main().catch((error) => {
-  logger.error("startup_failed", {
-    outcome: "failure",
-    message: `Failed to start Product Agent: ${error.message}`,
-  });
+// Run bootstrap
+bootstrap().catch((error) => {
   console.error("\n❌ Failed to start Product Agent:", error.message);
   process.exit(1);
 });
