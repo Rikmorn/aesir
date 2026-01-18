@@ -25,7 +25,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 7: Slack Integration** - Notifications and status updates
 - [x] **Phase 8: Human-in-the-Loop** - Approval gates before PR merge
 - [x] **Phase 9: Product Agent** - Requirements gathering and task creation
-- [ ] **Phase 9.1: Infrastructure & Local Dev** - Linear OAuth, Docker Compose, README, Dev Agent entry point (INSERTED)
+- [x] **Phase 9.1: Infrastructure & Local Dev** - Linear OAuth, Docker Compose, README, Dev Agent entry point (INSERTED)
 
 ## Phase Details
 
@@ -189,9 +189,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 9.1-01: Linear OAuth Authorization Script (Wave 1)
-- [ ] 9.1-02: Docker Compose & Dev Agent Entry Point (Wave 1-2)
-- [ ] 9.1-03: README Documentation & E2E Verification (Wave 3)
+- [x] 9.1-01: Linear OAuth Authorization Script (Wave 1)
+- [x] 9.1-02: Docker Compose & Dev Agent Entry Point (Wave 1-2)
+- [x] 9.1-03: README Documentation & E2E Verification (Wave 3)
 
 **Details:**
 Urgent insertion to address gaps discovered during milestone verification:
@@ -216,7 +216,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 7. Slack Integration | 1/1 | Complete | 2026-01-16 |
 | 8. Human-in-the-Loop | 4/4 | Complete | 2026-01-16 |
 | 9. Product Agent | 4/4 | Complete | 2026-01-18 |
-| 9.1 Infrastructure & Local Dev | 0/? | Not started | - |
+| 9.1 Infrastructure & Local Dev | 3/3 | Complete | 2026-01-18 |
 
 ---
 *Roadmap created: 2026-01-16*
