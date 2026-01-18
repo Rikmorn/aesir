@@ -20,25 +20,24 @@ import { createLogger } from "../../../logging/logger.js";
 const logger = createLogger({ defaultContext: { module: "analyze-requirements" } });
 
 /**
- * Schema for extracted requirements
- */
-const ExtractedRequirementsSchema = z.object({
-  what: z.string().nullable().describe("What needs to be built (null if not yet clear)"),
-  why: z.string().nullable().describe("Why it's needed - business value (null if not stated)"),
-  who: z.string().nullable().describe("Who it's for - user persona (null if not specified)"),
-  acceptanceCriteria: z.array(z.string()).describe("Criteria for when it's done"),
-  constraints: z.array(z.string()).describe("Technical constraints or considerations"),
-});
-
-/**
  * Schema for requirement analysis output
+ *
+ * Note: Schema is intentionally flat (not nested) because LLMs are more reliable
+ * with flat structured output. Nested objects can cause parsing failures.
  */
 export const RequirementAnalysisSchema = z.object({
+  // Analysis fields
   isComplete: z.boolean().describe("Are requirements sufficient to create tasks?"),
   missingElements: z.array(z.string()).describe("What information is still needed"),
   nextQuestion: z.string().nullable().describe("Best next question to ask (null if complete)"),
   confidence: z.enum(["high", "medium", "low"]).describe("Confidence in understanding"),
-  extractedRequirements: ExtractedRequirementsSchema.describe("Extracted requirement information"),
+
+  // Extracted requirements (flat, not nested)
+  extractedWhat: z.string().nullable().describe("What needs to be built (null if not yet clear)"),
+  extractedWhy: z.string().nullable().describe("Why it's needed - business value (null if not stated)"),
+  extractedWho: z.string().nullable().describe("Who it's for - user persona (null if not specified)"),
+  extractedAcceptanceCriteria: z.array(z.string()).describe("Criteria for when it's done"),
+  extractedConstraints: z.array(z.string()).describe("Technical constraints or considerations"),
 });
 
 export type RequirementAnalysis = z.infer<typeof RequirementAnalysisSchema>;
@@ -109,23 +108,22 @@ export function analyzeRequirementsNode(options: AnalyzeRequirementsNodeOptions 
       // Build requirements update from extraction
       // The reducer handles partial updates via Partial<Requirements>
       const requirementsUpdate: Partial<Requirements> = {};
-      const extracted = analysis.extractedRequirements;
 
-      // Only update fields that have values
-      if (extracted.what !== null) {
-        requirementsUpdate.what = extracted.what;
+      // Only update fields that have values (flat schema)
+      if (analysis.extractedWhat !== null) {
+        requirementsUpdate.what = analysis.extractedWhat;
       }
-      if (extracted.why !== null) {
-        requirementsUpdate.why = extracted.why;
+      if (analysis.extractedWhy !== null) {
+        requirementsUpdate.why = analysis.extractedWhy;
       }
-      if (extracted.who !== null) {
-        requirementsUpdate.who = extracted.who;
+      if (analysis.extractedWho !== null) {
+        requirementsUpdate.who = analysis.extractedWho;
       }
-      if (extracted.acceptanceCriteria.length > 0) {
-        requirementsUpdate.acceptanceCriteria = extracted.acceptanceCriteria;
+      if (analysis.extractedAcceptanceCriteria.length > 0) {
+        requirementsUpdate.acceptanceCriteria = analysis.extractedAcceptanceCriteria;
       }
-      if (extracted.constraints.length > 0) {
-        requirementsUpdate.constraints = extracted.constraints;
+      if (analysis.extractedConstraints.length > 0) {
+        requirementsUpdate.constraints = analysis.extractedConstraints;
       }
 
       return {
