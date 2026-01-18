@@ -421,7 +421,9 @@ src/
 ├── observability/          # Tracing and metrics
 ├── sandbox/                # Docker sandbox for code execution
 ├── scripts/
-│   └── start-product-agent.ts  # Entry point
+│   ├── start-product-agent.ts  # Product Agent entry point
+│   ├── start-dev-agent.ts      # Dev Agent entry point
+│   └── linear-oauth.ts         # Linear OAuth authorization
 └── temporal/               # Temporal workflows for approvals
 ```
 
@@ -434,7 +436,12 @@ src/
 | `npm run test` | Run tests |
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run lint` | Type-check without emitting |
-| `npm run product-agent` | Start Product Agent |
+| `npm run product-agent` | Start Product Agent (Slack bot) |
+| `npm run dev-agent` | Start Dev Agent (Temporal worker) |
+| `npm run linear-oauth` | Authorize Linear OAuth app |
+| `npm run infra:up` | Start infrastructure (Temporal, PostgreSQL) |
+| `npm run infra:down` | Stop infrastructure |
+| `npm run infra:logs` | View infrastructure logs (follow mode) |
 
 ## Architecture
 
