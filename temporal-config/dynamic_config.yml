@@ -1,0 +1,19 @@
+# Temporal Dynamic Configuration
+#
+# This file configures Temporal server behavior at runtime.
+# For local development, we use minimal configuration.
+# See: https://docs.temporal.io/references/dynamic-configuration
+#
+# Note: Changes to this file require a Temporal server restart.
+
+# Enable all new features for local development
+frontend.enableUpdateWorkflowExecution:
+  - value: true
+
+# Allow larger workflow histories for complex dev workflows
+limit.historyCount:
+  - value: 10000
+
+# Increase search attributes limit for debugging
+limit.searchAttributesSize:
+  - value: 262144
