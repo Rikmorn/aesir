@@ -152,6 +152,53 @@ In Slack, invite the bot to channels where you want to use it:
 /invite @YourBotName
 ```
 
+## Infrastructure Setup
+
+The Dev Agent requires Temporal for approval workflows. Start the infrastructure services before running agents.
+
+### Starting Infrastructure
+
+```bash
+# Start all infrastructure services (PostgreSQL, Temporal, Temporal UI)
+npm run infra:up
+
+# Check services are running
+docker ps
+
+# View logs (follow mode)
+npm run infra:logs
+```
+
+### Service Endpoints
+
+| Service | URL | Purpose |
+|---------|-----|---------|
+| Temporal gRPC | localhost:7233 | Agent-to-Temporal communication |
+| Temporal UI | http://localhost:8080 | Web interface for monitoring workflows |
+
+### Health Verification
+
+Temporal can take 30-60 seconds to initialize. Verify it's healthy:
+
+```bash
+# Check Temporal is responding (should show cluster info)
+docker exec aesir-temporal tctl cluster health
+```
+
+Or open http://localhost:8080 — if the Temporal UI loads, services are ready.
+
+### Stopping Infrastructure
+
+```bash
+# Stop all services (preserves data)
+npm run infra:down
+
+# Stop and remove all data (clean slate)
+docker-compose down -v
+```
+
+Data persists in Docker volumes between restarts. Use `-v` flag to reset.
+
 ## Running the Product Agent
 
 ```bash
