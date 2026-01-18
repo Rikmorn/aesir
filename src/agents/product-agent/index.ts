@@ -1,16 +1,22 @@
 /**
  * Product Agent Module
  *
- * Provides the Product Agent state schema and helpers for gathering
- * requirements through conversation and creating Linear issues.
+ * Provides the Product Agent conversation graph for gathering requirements
+ * through natural dialogue and creating Linear issues.
  *
  * @example
  * ```typescript
  * import {
+ *   createProductAgentGraph,
  *   ProductAgentStateAnnotation,
  *   createProductAgentInitialState,
- *   hasMinimumRequirements,
  * } from './agents/product-agent';
+ *
+ * // Create the conversation graph
+ * const graph = createProductAgentGraph({
+ *   linearClient,
+ *   teamId: "team-123",
+ * });
  *
  * // Create initial state for a new conversation
  * const state = createProductAgentInitialState({
@@ -19,12 +25,41 @@
  *   userId: "U12345678",
  * });
  *
- * // Check if we have enough info to create a task
- * if (hasMinimumRequirements(state.requirements)) {
- *   // Ready to create Linear issue
- * }
+ * // Invoke the graph
+ * const result = await graph.invoke(state);
  * ```
  */
+
+// Graph factory and routing
+export {
+  createProductAgentGraph,
+  routeAfterAnalysis,
+  type ProductAgentGraph,
+  type ProductAgentGraphOptions,
+  type AfterAnalysisRoute,
+} from "./graph.js";
+
+// Conversation nodes
+export {
+  analyzeRequirementsNode,
+  generateClarificationNode,
+  createTasksNode,
+  RequirementAnalysisSchema,
+  TaskListSchema,
+  type RequirementAnalysis,
+  type TaskList,
+  type GeneratedTask,
+  type AnalyzeRequirementsNodeOptions,
+  type GenerateClarificationNodeOptions,
+  type CreateTasksNodeOptions,
+} from "./nodes/index.js";
+
+// Prompts
+export {
+  ANALYZE_REQUIREMENTS_PROMPT,
+  GENERATE_CLARIFICATION_PROMPT,
+  CREATE_TASKS_PROMPT,
+} from "./prompts.js";
 
 // State schema and types
 export {
