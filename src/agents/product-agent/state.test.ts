@@ -355,7 +355,7 @@ describe("ProductAgentStateAnnotation", () => {
       const result = tasksChannel.operator(current, incoming);
 
       expect(result).toHaveLength(2);
-      expect(result[1].identifier).toBe("ABC-2");
+      expect(result[1]?.identifier).toBe("ABC-2");
     });
 
     it("starts with empty array", () => {

@@ -5,7 +5,7 @@
  * Used by the Product Agent to create tasks from gathered requirements.
  */
 
-import type { LinearClient, Issue, Team, IssueLabel } from "@linear/sdk";
+import type { LinearClient, Team, IssueLabel } from "@linear/sdk";
 import { createLogger } from "../../logging/logger.js";
 
 const logger = createLogger({ defaultContext: { module: "linear-issues" } });
@@ -83,13 +83,26 @@ export async function createIssue(
     context: { teamId, title, hasPriority: priority !== undefined, labelCount: labelIds?.length ?? 0 },
   });
 
-  const createResult = await client.createIssue({
-    teamId,
-    title,
-    description,
-    priority,
-    labelIds,
-  });
+  // Build params object, only including defined values for exactOptionalPropertyTypes
+  const createParams: {
+    teamId: string;
+    title: string;
+    description?: string;
+    priority?: 0 | 1 | 2 | 3 | 4;
+    labelIds?: string[];
+  } = { teamId, title };
+
+  if (description !== undefined) {
+    createParams.description = description;
+  }
+  if (priority !== undefined) {
+    createParams.priority = priority;
+  }
+  if (labelIds !== undefined) {
+    createParams.labelIds = labelIds;
+  }
+
+  const createResult = await client.createIssue(createParams);
 
   if (!createResult.success) {
     throw new Error(`Failed to create issue: ${title}`);

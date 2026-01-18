@@ -69,3 +69,14 @@ export {
   emitElicitation,
   updateSessionPlan,
 } from "./activities.js";
+
+// Issue management
+export {
+  createIssue,
+  listTeams,
+  listLabels,
+  type CreateIssueParams,
+  type CreateIssueResult,
+  type TeamInfo,
+  type LabelInfo,
+} from "./issues.js";
