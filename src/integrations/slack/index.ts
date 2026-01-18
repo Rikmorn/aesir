@@ -90,3 +90,11 @@ export {
   sendStatusUpdate,
   openDmChannel,
 } from "./notifications.js";
+
+// Product Agent event handlers
+export {
+  registerHandlers,
+  handleAppMention,
+  handleDirectMessage,
+  type ThreadHandlerOptions,
+} from "./assistant/index.js";
