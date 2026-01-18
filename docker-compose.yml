@@ -37,7 +37,7 @@ services:
       postgresql:
         condition: service_healthy
     environment:
-      - DB=postgresql
+      - DB=postgres12
       - DB_PORT=5432
       - POSTGRES_USER=temporal
       - POSTGRES_PWD=temporal
@@ -46,7 +46,7 @@ services:
     ports:
       - "7233:7233"  # gRPC Frontend
     volumes:
-      - ./temporal-config:/etc/temporal
+      - ./temporal-config/dynamic_config.yml:/etc/temporal/dynamic_config.yml:ro
     networks:
       - aesir-network
     healthcheck:
