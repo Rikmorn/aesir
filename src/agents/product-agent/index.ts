@@ -83,3 +83,11 @@ export {
   CreatedTaskSchema,
   ProductAgentStateSchema,
 } from "./state.js";
+
+// Runner for Slack integration
+export {
+  runProductAgent,
+  type RunProductAgentInput,
+  type RunProductAgentOutput,
+  type RunProductAgentOptions,
+} from "./runner.js";
