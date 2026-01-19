@@ -22,6 +22,8 @@ services:
       POSTGRES_DB: temporal
     volumes:
       - temporal-postgresql:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"  # Expose for LangGraph checkpointer
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "temporal"]
       interval: 5s
