@@ -30,7 +30,7 @@ services:
     volumes:
       - temporal-postgresql:/var/lib/postgresql/data
     ports:
-      - "5432:5432"  # Expose for LangGraph checkpointer
+      - "5432:5432" # Expose for LangGraph checkpointer
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "temporal"]
       interval: 5s
@@ -53,7 +53,7 @@ services:
       - POSTGRES_SEEDS=postgresql
       - DYNAMIC_CONFIG_FILE_PATH=/etc/temporal/dynamic_config.yml
     ports:
-      - "7233:7233"  # gRPC Frontend
+      - "7233:7233" # gRPC Frontend
     volumes:
       - ./temporal-config/dynamic_config.yml:/etc/temporal/dynamic_config.yml:ro
     networks:
@@ -63,7 +63,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 30s
+      start_period: 60s
 
   temporal-ui:
     image: temporalio/ui:2.26.2
@@ -86,7 +86,7 @@ services:
     container_name: aesir-dev-agent
     depends_on:
       temporal:
-        condition: service_started  # Temporal binds to network IP, not localhost
+        condition: service_started # Temporal binds to network IP, not localhost
       postgresql:
         condition: service_healthy
     environment:
@@ -98,6 +98,8 @@ services:
       # API Keys (from .env file)
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - LINEAR_ACCESS_TOKEN=${LINEAR_ACCESS_TOKEN}
+      - LINEAR_CLIENT_ID=${LINEAR_CLIENT_ID}
+      - LINEAR_CLIENT_SECRET=${LINEAR_CLIENT_SECRET}
       - LINEAR_WEBHOOK_SECRET=${LINEAR_WEBHOOK_SECRET}
       - GITHUB_TOKEN=${GITHUB_TOKEN}
       - GITHUB_REPO=${GITHUB_REPO}
@@ -109,7 +111,9 @@ services:
       - LANGSMITH_API_KEY=${LANGSMITH_API_KEY:-}
       - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-aesir-agents}
     ports:
-      - "3001:3001"  # Webhook endpoint
+      - "3001:3001" # Webhook endpoint
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     command: ["node", "dist/scripts/start-dev-agent.js"]
     networks:
       - aesir-network
@@ -130,6 +134,8 @@ services:
       # API Keys (from .env file)
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - LINEAR_ACCESS_TOKEN=${LINEAR_ACCESS_TOKEN}
+      - LINEAR_CLIENT_ID=${LINEAR_CLIENT_ID}
+      - LINEAR_CLIENT_SECRET=${LINEAR_CLIENT_SECRET}
       - LINEAR_TEAM_ID=${LINEAR_TEAM_ID}
       - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
       - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
@@ -171,7 +177,7 @@ services:
     depends_on:
       - cloudflared
     healthcheck:
-      test: ['CMD-SHELL', 'curl -fsS http://cloudflared:2000/ready']
+      test: ["CMD-SHELL", "curl -fsS http://cloudflared:2000/ready"]
       interval: 1s
       timeout: 2s
       retries: 60
@@ -179,6 +185,29 @@ services:
       - aesir-network
     profiles:
       - tunnel
+
+  # OAuth Authorization - runs Linear OAuth flow in container
+  # Usage: docker compose run --rm oauth
+  # Requires: OAUTH_CALLBACK_URL pointing to a Cloudflare tunnel
+  oauth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aesir-oauth
+    environment:
+      - LINEAR_CLIENT_ID=${LINEAR_CLIENT_ID}
+      - LINEAR_CLIENT_SECRET=${LINEAR_CLIENT_SECRET}
+      - OAUTH_CALLBACK_URL=${OAUTH_CALLBACK_URL}
+    ports:
+      - "3000:3000"
+    command: ["node", "dist/scripts/linear-oauth.js"]
+    volumes:
+      # Mount tokens file to host so other services can access it
+      - ./.linear-tokens.json:/app/.linear-tokens.json
+    networks:
+      - aesir-network
+    profiles:
+      - oauth
 
 volumes:
   temporal-postgresql:
