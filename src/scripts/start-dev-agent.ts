@@ -42,6 +42,9 @@ async function bootstrap(): Promise<void> {
   const { linearWebhookHandler } = await import(
     "../api/webhooks/linear-agent-session.js"
   );
+  const { prReviewWebhookHandler } = await import(
+    "../api/webhooks/github-pr-review.js"
+  );
   const { getLinearClient } = await import("../integrations/linear/index.js");
   const { Octokit } = await import("@octokit/rest");
   const { WebClient } = await import("@slack/web-api");
@@ -170,8 +173,8 @@ async function bootstrap(): Promise<void> {
         return;
       }
 
-      // Only handle POST /webhooks/linear
-      if (req.method !== "POST" || req.url !== "/webhooks/linear") {
+      // Only handle POST requests to webhook endpoints
+      if (req.method !== "POST") {
         res.writeHead(404, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Not found" }));
         return;
@@ -184,7 +187,7 @@ async function bootstrap(): Promise<void> {
       }
       const rawBody = Buffer.concat(chunks).toString("utf8");
 
-      // Create adapter objects for webhook handler
+      // Create adapter objects for webhook handlers
       const webhookReq = {
         headers: req.headers as Record<string, string | undefined>,
         rawBody,
@@ -198,7 +201,26 @@ async function bootstrap(): Promise<void> {
         }),
       };
 
-      await linearWebhookHandler(webhookReq, webhookRes, webhookConfig, webhookSecret);
+      // Route to appropriate handler
+      if (req.url === "/webhooks/linear") {
+        await linearWebhookHandler(webhookReq, webhookRes, webhookConfig, webhookSecret);
+        return;
+      }
+
+      if (req.url === "/webhooks/github") {
+        try {
+          const body = JSON.parse(rawBody);
+          await prReviewWebhookHandler({ ...webhookReq, body }, webhookRes);
+        } catch {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Invalid JSON body" }));
+        }
+        return;
+      }
+
+      // Unknown endpoint
+      res.writeHead(404, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Not found" }));
     }
   );
 
@@ -209,12 +231,14 @@ async function bootstrap(): Promise<void> {
     console.log(`   Namespace: ${temporalNamespace}`);
     console.log(`   Task Queue: ${taskQueue}`);
     console.log(`   GitHub Repo: ${owner}/${repo}`);
-    console.log(`   Webhook endpoint: http://localhost:${port}/webhooks/linear`);
+    console.log(`   Webhooks: http://localhost:${port}/webhooks/linear`);
+    console.log(`             http://localhost:${port}/webhooks/github`);
     console.log("\nThe Dev Agent processes tasks from Linear:");
     console.log("   1. Configure Linear webhook to POST to /webhooks/linear");
-    console.log("   2. Delegate an issue to the Dev Agent in Linear");
-    console.log("   3. The agent will read the issue, generate code, and create a PR");
-    console.log("   4. Track progress in Linear's agent activity panel");
+    console.log("   2. Configure GitHub webhook to POST to /webhooks/github");
+    console.log("   3. Delegate an issue to the Dev Agent in Linear");
+    console.log("   4. The agent will read the issue, generate code, and create a PR");
+    console.log("   5. Track progress in Linear's agent activity panel");
     console.log("\nView Temporal UI at http://localhost:8080");
     console.log("\nPress Ctrl+C to stop.\n");
   });
