@@ -1,0 +1,35 @@
+# Large build artifacts
+cdk.out/
+node_modules/
+dist/
+build/
+
+# Generated files (read _generated/ directly if needed)
+# _generated/
+
+# Test artifacts
+coverage/
+.nyc_output/
+
+# IDE and editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Yarn
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*

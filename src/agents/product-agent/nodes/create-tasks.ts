@@ -146,8 +146,8 @@ export function createTasksNode(options: CreateTasksNodeOptions) {
         options.llm ??
         new ChatAnthropic({ model: options.model ?? "claude-sonnet-4-20250514" });
 
-      // Bind structured output schema
-      const structuredLlm = llm.withStructuredOutput(TaskListSchema);
+      // Bind structured output schema (explicit type breaks infinite inference)
+      const structuredLlm = llm.withStructuredOutput<TaskList>(TaskListSchema);
 
       // Build context from requirements
       const requirementsContext = buildRequirementsContext(state);

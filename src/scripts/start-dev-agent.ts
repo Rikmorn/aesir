@@ -88,8 +88,8 @@ async function bootstrap(): Promise<void> {
   console.log("\nStarting Dev Agent...\n");
   validateEnv();
 
-  // Parse GITHUB_REPO
-  const [owner, repo] = process.env["GITHUB_REPO"]!.split("/");
+  // Parse GITHUB_REPO (already validated format in validateEnv)
+  const [owner, repo] = process.env["GITHUB_REPO"]!.split("/") as [string, string];
 
   // Initialize dependencies
   logger.info("init_dependencies", { message: "Initializing dependencies" });

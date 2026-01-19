@@ -82,11 +82,9 @@ ${commentSyntax} Implementation placeholder
  * orchestration layer, which has access to the full conversation context.
  */
 export const codeGenTool = tool(
-  async ({
-    taskDescription,
-    language,
-    context,
-  }: CodeGenInput): Promise<CodeGenOutput> => {
+  async (rawInput): Promise<CodeGenOutput> => {
+    // Schema handles validation; cast for TypeScript
+    const { taskDescription, language, context } = rawInput as CodeGenInput;
     // Create a child logger with tool context
     const toolLogger = logger.child({
       tool: "generate_code",
@@ -131,7 +129,8 @@ export const codeGenTool = tool(
     name: "generate_code",
     description:
       "Generate code based on a task description. Use this to create new code files or functions. Returns generated code with explanation.",
-    schema: CodeGenInputSchema,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    schema: CodeGenInputSchema as any,
   }
 );
 

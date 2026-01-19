@@ -103,8 +103,8 @@ export async function fixCodeNode(
       options.llm ??
       new ChatAnthropic({ model: options.model ?? "claude-sonnet-4-20250514" });
 
-    // Bind structured output schema
-    const structuredLlm = llm.withStructuredOutput(FixCodeOutputSchema);
+    // Bind structured output schema (explicit type breaks infinite inference)
+    const structuredLlm = llm.withStructuredOutput<FixCodeOutput>(FixCodeOutputSchema);
 
     // Build prompt and invoke
     const prompt = buildFixCodePrompt(state);

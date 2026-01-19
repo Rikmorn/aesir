@@ -95,8 +95,8 @@ export async function generateCodeNode(
     const llm =
       options.llm ?? new ChatAnthropic({ model: options.model ?? "claude-sonnet-4-20250514" });
 
-    // Bind structured output schema
-    const structuredLlm = llm.withStructuredOutput(CodeGenerationOutputSchema);
+    // Bind structured output schema (explicit type breaks infinite inference)
+    const structuredLlm = llm.withStructuredOutput<CodeGenerationOutput>(CodeGenerationOutputSchema);
 
     // Build prompt and invoke
     const prompt = buildCodeGenPrompt(state.taskDescription);
