@@ -1,41 +1,20 @@
-# Roadmap: Aesir
+# Milestone v1: MVP
+
+**Status:** SHIPPED 2026-01-19
+**Phases:** 1-9, 9.1-9.3, e2e-verification
+**Total Plans:** 34
 
 ## Overview
 
 Aesir is an internal agentic development platform that automates software development workflows. The roadmap progresses from foundational agent infrastructure through tool integrations, culminating in a complete Product Agent + Dev Agent workflow with human-in-the-loop approval. Each phase builds on the previous, delivering incremental value while maintaining safety guardrails throughout.
 
-## Domain Expertise
-
-None
-
 ## Phases
-
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
-
-Decimal phases appear between their surrounding integers in numeric order.
-
-- [x] **Phase 1: Core Agent Framework** - Single agent with safety guardrails and code generation
-- [x] **Phase 2: Execution Environment** - Sandboxed Docker execution for agent code
-- [x] **Phase 3: Linear Integration** - Read/update tasks via webhooks
-- [x] **Phase 4: GitHub Integration** - Branches, commits, and PRs
-- [x] **Phase 5: Dev Agent** - Complete task-to-code workflow
-- [x] **Phase 6: Observability** - Logging and queryable agent actions
-- [x] **Phase 7: Slack Integration** - Notifications and status updates
-- [x] **Phase 8: Human-in-the-Loop** - Approval gates before PR merge
-- [x] **Phase 9: Product Agent** - Requirements gathering and task creation
-- [x] **Phase 9.1: Infrastructure & Local Dev** - Linear OAuth, Docker Compose, README, Dev Agent entry point (INSERTED)
-- [x] **Phase 9.2: Integration Gap Closure** - Fix integration issues blocking E2E flows (INSERTED)
-- [x] **Phase 9.3: Webhook API Exposure** - Cloudflare tunnel for local dev webhook access (INSERTED)
-
-## Phase Details
 
 ### Phase 1: Core Agent Framework
 **Goal**: Single agent can execute code generation with safety guardrails
 **Depends on**: Nothing (first phase)
 **Requirements**: CORE-01, CORE-02, CORE-03, CORE-04, CORE-05
-**Success Criteria** (what must be TRUE):
+**Success Criteria**:
   1. Agent can receive a task description and generate code
   2. Agent execution stops after N iterations (iteration limit works)
   3. Agent execution stops after X seconds (timeout works)
@@ -55,7 +34,7 @@ Plans:
 **Goal**: Agent code runs in sandboxed container with test execution
 **Depends on**: Phase 1
 **Requirements**: EXEC-01, EXEC-02, EXEC-03
-**Success Criteria** (what must be TRUE):
+**Success Criteria**:
   1. Agent code execution happens inside Docker container
   2. Agent can run tests inside the sandbox
   3. Test results are captured and returned to agent for feedback
@@ -70,7 +49,7 @@ Plans:
 **Goal**: Agent can read/update tasks in Linear via webhooks
 **Depends on**: Phase 1
 **Requirements**: LIN-01, LIN-02, LIN-03, LIN-04
-**Success Criteria** (what must be TRUE):
+**Success Criteria**:
   1. Agent can read task details from Linear
   2. Agent can update task status in Linear
   3. Webhooks trigger agent when Linear tasks change (no polling)
@@ -86,7 +65,7 @@ Plans:
 **Goal**: Agent can create branches, commit code, open PRs
 **Depends on**: Phase 1
 **Requirements**: GH-01, GH-02, GH-03, GH-04
-**Success Criteria** (what must be TRUE):
+**Success Criteria**:
   1. Agent can create feature branches from tasks
   2. Agent can commit code changes to branches
   3. Agent can open PRs with meaningful descriptions
@@ -102,7 +81,7 @@ Plans:
 **Goal**: Complete Dev Agent workflow picks tasks, writes code, runs tests
 **Depends on**: Phase 2, Phase 3, Phase 4
 **Requirements**: DEV-01, DEV-02, DEV-03, DEV-04, DEV-05
-**Success Criteria** (what must be TRUE):
+**Success Criteria**:
   1. Dev Agent picks up assigned tasks from Linear
   2. Dev Agent writes code implementing task requirements
   3. Dev Agent can modify multiple files in one task
@@ -120,7 +99,7 @@ Plans:
 **Goal**: All agent actions are logged and queryable
 **Depends on**: Phase 1
 **Requirements**: OBS-01, OBS-02, OBS-03
-**Success Criteria** (what must be TRUE):
+**Success Criteria**:
   1. All agent actions logged with timestamp and context
   2. Logs identify which workflow/task each action belongs to
   3. Logs can be queried to find actions for a specific task
@@ -135,7 +114,7 @@ Plans:
 **Goal**: Agent sends notifications and status updates to Slack
 **Depends on**: Phase 1
 **Requirements**: SLACK-01, SLACK-02
-**Success Criteria** (what must be TRUE):
+**Success Criteria**:
   1. Agent sends Slack notification when human approval needed
   2. Agent status updates appear in Slack channel
 **Research**: Complete (see 07-RESEARCH.md)
@@ -148,7 +127,7 @@ Plans:
 **Goal**: Workflow pauses for human approval before PR merge
 **Depends on**: Phase 4, Phase 7
 **Requirements**: HITL-01, HITL-02
-**Success Criteria** (what must be TRUE):
+**Success Criteria**:
   1. Workflow pauses before PR merge until human approves
   2. Human can approve or reject agent work
 **Research**: Complete (see 08-RESEARCH.md)
@@ -164,7 +143,7 @@ Plans:
 **Goal**: Product Agent gathers requirements and creates Linear tasks
 **Depends on**: Phase 3, Phase 5
 **Requirements**: PROD-01, PROD-02, PROD-03
-**Success Criteria** (what must be TRUE):
+**Success Criteria**:
   1. Product Agent gathers requirements through conversation
   2. Product Agent creates structured Linear tasks from requirements
   3. Product Agent organizes tasks into workable units
@@ -181,7 +160,7 @@ Plans:
 **Goal**: Production-ready local development setup with proper OAuth and containerized services
 **Depends on**: Phase 9
 **Requirements**: Linear OAuth flow, Docker Compose, README completeness, Dev Agent entry point
-**Success Criteria** (what must be TRUE):
+**Success Criteria**:
   1. Linear OAuth flow works end-to-end (authorization, token exchange, refresh)
   2. Docker Compose starts all required services (Temporal, etc.) with one command
   3. README documents complete local setup including OAuth and Docker Compose
@@ -207,7 +186,7 @@ Urgent insertion to address gaps discovered during milestone verification:
 **Depends on**: Phase 9.1
 **Requirements**: None (all requirements satisfied; integration broken)
 **Gap Closure**: Audit gaps 1-4 from v1-MILESTONE-AUDIT.md
-**Success Criteria** (what must be TRUE):
+**Success Criteria**:
   1. prNumber is propagated from commit-pr node through to workflow result
   2. Temporal activities receive properly configured client instances via DI
   3. Linear webhook handler triggers Dev Agent workflow on task delegation
@@ -232,7 +211,7 @@ Urgent insertion to close integration gaps found by `/gsd:audit-milestone`:
 **Goal**: Expose webhook endpoints for Linear/GitHub external access via Cloudflare tunnel for local development
 **Depends on**: Phase 9.2
 **Requirements**: None (integration gap - webhooks exist but unreachable externally)
-**Success Criteria** (what must be TRUE):
+**Success Criteria**:
   1. Cloudflare tunnel exposes dev-agent webhook endpoint to internet
   2. Linear can reach /webhooks/linear to trigger Dev Agent workflows
   3. GitHub can reach /webhooks/github for PR review events
@@ -251,25 +230,52 @@ Critical gap: webhook handlers exist but Linear/GitHub cannot reach them:
 - `localhost:3001/webhooks/github` - unreachable from GitHub servers
 - Cloudflare tunnel provides secure, stable URLs for local development
 
-## Progress
+### Phase e2e-verification: E2E Gap Closure
+**Goal**: Fix E2E verification gaps by properly containerizing the OAuth flow
+**Depends on**: Phase 9.3
+**Success Criteria**:
+  1. OAuth flow runs in a Docker container, not on the host
+  2. OAuth callback URL is configurable via environment variable
+  3. External services reach OAuth via Cloudflare tunnel, not localhost
+  4. Dev Agent starts and connects to Temporal
+  5. Linear tasks show app identity when OAuth tokens exist
+  6. All Docker containers show healthy status
+**Plans**: 1 plan
 
-**Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 9.1 -> 9.2 -> 9.3
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Core Agent Framework | 5/5 | Complete | 2026-01-16 |
-| 2. Execution Environment | 2/2 | Complete | 2026-01-16 |
-| 3. Linear Integration | 2/2 | Complete | 2026-01-16 |
-| 4. GitHub Integration | 2/2 | Complete | 2026-01-16 |
-| 5. Dev Agent | 3/3 | Complete | 2026-01-16 |
-| 6. Observability | 2/2 | Complete | 2026-01-16 |
-| 7. Slack Integration | 1/1 | Complete | 2026-01-16 |
-| 8. Human-in-the-Loop | 4/4 | Complete | 2026-01-16 |
-| 9. Product Agent | 4/4 | Complete | 2026-01-18 |
-| 9.1 Infrastructure & Local Dev | 3/3 | Complete | 2026-01-18 |
-| 9.2 Integration Gap Closure | 3/3 | Complete | 2026-01-19 |
-| 9.3 Webhook API Exposure | 1/1 | Complete | 2026-01-19 |
+Plans:
+- [x] e2e-FIX: E2E Gap Closure
 
 ---
-*Roadmap created: 2026-01-16*
+
+## Milestone Summary
+
+**Decimal Phases:**
+- Phase 9.1: Infrastructure & Local Dev (inserted after Phase 9 for OAuth/Docker setup)
+- Phase 9.2: Integration Gap Closure (inserted after Phase 9.1 for wiring fixes)
+- Phase 9.3: Webhook API Exposure (inserted after Phase 9.2 for external access)
+
+**Key Decisions:**
+- LangGraph for agent orchestration (StateGraph + checkpointing)
+- Temporal for durable approval workflows (signals, retries, activity binding)
+- Docker sandbox for code execution (isolated, reproducible)
+- PostgreSQL shared for Temporal and LangGraph persistence
+- Cloudflare tunnels for local development webhook access
+- Linear OAuth with actor=app for app identity
+
+**Issues Resolved:**
+- prNumber propagation from commit-pr node to workflow result
+- Temporal activity DI (makeActivities factory pattern)
+- Linear webhook handler for task delegation
+- PostgreSQL checkpointer replacing in-memory SQLite
+- GitHub webhook route wired into dev-agent HTTP server
+- OAuth containerization with configurable callback URL
+
+**Technical Debt:**
+- TypeScript memory optimization (tsconfig tweaks)
+- LangChain tool schema requires `as any` cast due to exactOptionalPropertyTypes
+- Phases 2-8 missing VERIFICATION.md (completed before protocol established)
+
+---
+
+*For current project status, see .planning/ROADMAP.md*
+*Archived: 2026-01-19 as part of v1 milestone completion*

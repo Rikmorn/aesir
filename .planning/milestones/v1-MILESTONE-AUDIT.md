@@ -1,11 +1,11 @@
 ---
 milestone: v1
-audited: 2026-01-19T20:30:00Z
+audited: 2026-01-19T21:15:00Z
 status: passed
 scores:
   requirements: 31/31
   phases: 13/13
-  integration: 23/23
+  integration: 24/24
   flows: 4/4
 gaps:
   requirements: []
@@ -17,7 +17,7 @@ tech_debt:
       - "TypeScript memory issues fixed via tsconfig (noUnused* disabled, incremental enabled)"
       - "LangChain tool schema requires `as any` cast due to exactOptionalPropertyTypes conflict"
 previous_audits:
-  - date: 2026-01-19T19:30:00Z
+  - date: 2026-01-19T20:30:00Z
     status: passed
     note: "Pre-final audit"
   - date: 2026-01-19T03:10:00Z
@@ -31,13 +31,13 @@ previous_audits:
 # v1 Milestone Audit Report
 
 **Milestone:** v1
-**Audited:** 2026-01-19T20:30:00Z
+**Audited:** 2026-01-19T21:15:00Z
 **Status:** PASSED
 **Tests:** 604 passed, 7 todo
 
 ## Executive Summary
 
-All 31 v1 requirements are satisfied. All 12 phases complete with verified deliverables. Cross-phase integration verified with 24 exports properly wired. All 4 E2E flows work end-to-end.
+All 31 v1 requirements are satisfied. All 13 phases complete with verified deliverables. Cross-phase integration verified with 24 exports properly wired. All 4 E2E flows work end-to-end.
 
 **Key milestones:**
 - Core agent framework with safety guardrails
@@ -144,26 +144,43 @@ All 31 v1 requirements are satisfied. All 12 phases complete with verified deliv
 | 9. Product Agent | Complete | Plans complete, tests pass |
 | 9.1 Infrastructure & Local Dev | Complete | 9.1-VERIFICATION.md (passed) |
 | 9.2 Integration Gap Closure | Complete | 9.2-VERIFICATION.md (passed) |
-| 9.3 Webhook API Exposure | Complete | Verified via integration check |
+| 9.3 Webhook API Exposure | Complete | 9.3-VERIFICATION.md gap resolved |
 | e2e-verification | Complete | e2e-FIX-VERIFICATION.md (passed) |
 
-**Note:** Phase 9.3-VERIFICATION.md contained a stale gap (GitHub webhook not wired) that was subsequently fixed in commit `23c054b`. Integration checker confirmed all routes are now wired.
+**Note:** Phase 9.3-VERIFICATION.md contained a stale gap (GitHub webhook not wired) that was subsequently fixed. Integration checker confirmed all routes are now wired.
 
 ## Cross-Phase Integration
 
 **Connected Exports:** 24/24
 
 All phase exports are properly imported and used:
-- Phase 1 → Phase 5 (agent framework → dev workflow)
-- Phase 2 → Phase 5 (sandbox → test execution)
-- Phase 3 → Phase 5, 8, 9 (Linear → tasks, status, webhooks)
-- Phase 4 → Phase 5, 8 (GitHub → commits, PRs, merge)
-- Phase 5 → Phase 8 (dev workflow → Temporal activities)
-- Phase 6 → All phases (logging throughout)
-- Phase 7 → Phase 8, 9 (Slack → approval notifications, Product Agent)
-- Phase 8 → Phase 9.2, 9.3 (Temporal → webhook triggers)
-- Phase 9 → Phase 3, 7 (Product Agent → Linear, Slack)
-- Phase 9.3 → Phase 8 (GitHub webhook → Temporal signals)
+
+| Export | Phase | Used By | Status |
+|--------|-------|---------|--------|
+| `linearWebhookHandler` | Phase 3 | `start-dev-agent.ts` | CONNECTED |
+| `prReviewWebhookHandler` | Phase 4 | `start-dev-agent.ts` | CONNECTED |
+| `startApprovalWorkflow` | Phase 8 | `linear-agent-session.ts` | CONNECTED |
+| `sendApprovalSignal` | Phase 8 | `github-pr-review.ts` | CONNECTED |
+| `sendChangesRequestedSignal` | Phase 8 | `github-pr-review.ts` | CONNECTED |
+| `makeActivities` | Phase 8 | `worker.ts`, `start-dev-agent.ts` | CONNECTED |
+| `BoundActivities` | Phase 8 | `approval-workflow.ts` | CONNECTED |
+| `createTemporalWorker` | Phase 8 | `start-dev-agent.ts` | CONNECTED |
+| `getLinearClient` | Phase 3 | Multiple entry points | CONNECTED |
+| `createBranch` | Phase 4 | `create-branch.ts` node | CONNECTED |
+| `createCommit` | Phase 4 | `commit-pr.ts` node | CONNECTED |
+| `createPullRequest` | Phase 4 | `commit-pr.ts` node | CONNECTED |
+| `mergePullRequest` | Phase 4 | `github-activities.ts` | CONNECTED |
+| `runProductAgent` | Phase 9 | `thread-handlers.ts` | CONNECTED |
+| `createProductAgentGraph` | Phase 9 | `runner.ts` | CONNECTED |
+| `createTasksNode` | Phase 9 | `graph.ts` | CONNECTED |
+| `createIssue` | Phase 3 | `create-tasks.ts` | CONNECTED |
+| `runDevWorkflow` | Phase 5 | `dev-agent-activity.ts` | CONNECTED |
+| `createDevWorkflow` | Phase 5 | `dev-workflow-runner.ts` | CONNECTED |
+| `DockerSandbox` | Phase 2 | `start-dev-agent.ts` | CONNECTED |
+| `createLogger` | Phase 6 | All modules | CONNECTED |
+| `registerHandlers` | Phase 7/9 | `start-product-agent.ts` | CONNECTED |
+| `sendApprovalRequestActivity` | Phase 7/8 | `approval-workflow.ts` | CONNECTED |
+| `updateLinearStatusActivity` | Phase 3/8 | `approval-workflow.ts` | CONNECTED |
 
 **Key wiring verified:**
 - `/webhooks/linear` → `linearWebhookHandler` → `startApprovalWorkflow`
@@ -212,10 +229,10 @@ The following items benefit from manual testing but are not blockers:
 
 **Milestone v1 is COMPLETE.**
 
-All 31 requirements satisfied. All 12 phases complete. All 4 E2E flows verified. Test suite passes (604 tests).
+All 31 requirements satisfied. All 13 phases complete. All 4 E2E flows verified. Test suite passes (604 tests).
 
 The system is ready for production deployment with the documented human verification steps.
 
 ---
-*Audit completed: 2026-01-19T20:30:00Z*
+*Audit completed: 2026-01-19T21:15:00Z*
 *Auditor: Claude (gsd-audit-milestone)*

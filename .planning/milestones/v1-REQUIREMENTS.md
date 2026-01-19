@@ -1,3 +1,13 @@
+# Requirements Archive: v1 MVP
+
+**Archived:** 2026-01-19
+**Status:** SHIPPED
+
+This is the archived requirements specification for v1.
+For current requirements, see `.planning/REQUIREMENTS.md` (created for next milestone).
+
+---
+
 # Requirements: Aesir
 
 **Defined:** 2026-01-16
@@ -154,8 +164,18 @@ Which phases cover which requirements. Updated by create-roadmap.
 **Coverage:**
 - v1 requirements: 31 total
 - Mapped to phases: 31
-- Unmapped: 0 ✓
+- Completed: 31
+- Unmapped: 0
 
 ---
-*Requirements defined: 2026-01-16*
-*Last updated: 2026-01-18 after Phase 9 completion*
+
+## Milestone Summary
+
+**Shipped:** 31 of 31 v1 requirements
+**Adjusted:** None
+**Dropped:** None
+
+All v1 requirements were shipped as originally defined. No scope changes during implementation.
+
+---
+*Archived: 2026-01-19 as part of v1 milestone completion*
