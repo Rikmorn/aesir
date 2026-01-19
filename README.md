@@ -12,7 +12,7 @@ Agentic development platform that automates software development workflows. Agen
 ## Prerequisites
 
 - Node.js 20+
-- Docker (for Dev Agent sandbox execution)
+- Docker Desktop running (all services run containerized)
 - Slack workspace with admin access to create apps
 - Linear workspace
 - Anthropic API key
@@ -219,34 +219,65 @@ For production use, OAuth is recommended. Actions appear as the app identity rat
 2. Click **Create new OAuth application**
 3. Fill in:
    - **Name**: Aesir (or your preferred name)
-   - **Redirect URI**: `http://localhost:3333/callback`
+   - **Redirect URI**: Your OAuth tunnel URL (e.g., `https://oauth.your-domain.com/oauth/callback`)
 4. Copy the **Client ID** and **Client Secret**
 
-#### 2. Configure Environment Variables
+**Important:** Do NOT use `localhost` for the Redirect URI. The OAuth flow runs in a Docker container and receives callbacks via Cloudflare tunnel.
+
+#### 2. Create OAuth Tunnel in Cloudflare
+
+You need a dedicated tunnel for the OAuth callback (separate from the webhooks tunnel):
+
+1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) and select Zero Trust
+2. Navigate to: **Networks** > **Tunnels**
+3. Click **Create a tunnel** (or use existing and add a public hostname)
+4. Add a public hostname:
+
+| Field | Value |
+|-------|-------|
+| Subdomain | `oauth` (or your choice) |
+| Domain | `your-cloudflare-domain.com` |
+| Path | (leave empty) |
+| Service Type | HTTP |
+| URL | `oauth:3000` |
+
+This routes `https://oauth.your-domain.com/*` to the OAuth container.
+
+#### 3. Configure Environment Variables
 
 Add to `.env.local`:
 
 ```bash
 LINEAR_CLIENT_ID=your-client-id
 LINEAR_CLIENT_SECRET=your-client-secret
+OAUTH_CALLBACK_URL=https://oauth.your-domain.com/oauth/callback
 ```
 
-#### 3. Run Authorization Flow
+The `OAUTH_CALLBACK_URL` must exactly match the Redirect URI configured in your Linear OAuth application.
+
+#### 4. Run Authorization Flow
 
 ```bash
-npm run linear-oauth
+# Build if needed
+npm run docker:build
+
+# Start the OAuth flow (runs in container)
+docker compose --profile oauth run --rm oauth
 ```
 
 This will:
-1. Open a browser to Linear's OAuth consent screen
-2. After authorization, exchange the code for tokens
-3. Save tokens to `.linear-tokens.json` (auto-created)
+1. Start a container listening for the OAuth callback
+2. Display a URL to open in your browser
+3. After authorization, exchange the code for tokens
+4. Save tokens to `.linear-tokens.json`
 
-The token store handles automatic refresh — no manual intervention needed.
+#### 5. Verify Authorization
 
-#### 4. Verify Authorization
+The OAuth flow displays your authorized workspace and user. The `.linear-tokens.json` file is created in the project root.
 
-The OAuth flow will display your authorized workspace and user. Tokens are now ready for use.
+**Note:** You need the Cloudflare tunnel running to receive the callback. Either:
+- Run `docker compose --profile tunnel up -d` first
+- Or have the tunnel configured to route even when containers aren't running
 
 **Note:** `.linear-tokens.json` is gitignored. Each developer runs their own OAuth flow.
 
@@ -523,6 +554,12 @@ External services (Linear, GitHub) cannot reach `localhost:3001` to deliver webh
 
 - Cloudflare account (free tier is sufficient)
 - Domain added to Cloudflare (for custom subdomain)
+
+**Note:** You may need two tunnels:
+- **Webhooks tunnel**: Routes to `dev-agent:3001` for Linear/GitHub webhooks
+- **OAuth tunnel**: Routes to `oauth:3000` for OAuth callbacks (only needed during authorization)
+
+These can be separate tunnels or separate public hostnames on the same tunnel.
 
 ### 1. Create Tunnel in Zero Trust Dashboard
 
