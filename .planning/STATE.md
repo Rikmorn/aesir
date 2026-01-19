@@ -269,7 +269,8 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None.
+1. **Run dev-agent container as non-root** (infrastructure)
+   - File: `.planning/todos/pending/2026-01-19-dev-agent-container-root-user.md`
 
 ### Blockers/Concerns
 
