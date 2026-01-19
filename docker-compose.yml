@@ -114,6 +114,7 @@ services:
       - "3001:3001" # Webhook endpoint
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./.linear-tokens.json:/app/.linear-tokens.json:ro
     command: ["node", "dist/scripts/start-dev-agent.js"]
     networks:
       - aesir-network
