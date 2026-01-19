@@ -103,7 +103,7 @@ describe("runDevWorkflow", () => {
     };
     mockCreateDevWorkflow.mockReturnValue(mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>);
 
-    const result = await runDevWorkflow("ABC-123", mockDeps);
+    const result = await runDevWorkflow("ABC-123", "session-abc", mockDeps);
 
     expect(result.success).toBe(true);
     expect(result.status).toBe("complete");
@@ -119,7 +119,7 @@ describe("runDevWorkflow", () => {
     };
     mockCreateDevWorkflow.mockReturnValue(mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>);
 
-    await runDevWorkflow("ABC-123", mockDeps);
+    await runDevWorkflow("ABC-123", "session-abc", mockDeps);
 
     expect(mockSandbox.cleanup).toHaveBeenCalledTimes(1);
   });
@@ -132,7 +132,7 @@ describe("runDevWorkflow", () => {
     mockUpdateIssueStatus.mockResolvedValue(undefined);
     mockEmitError.mockResolvedValue(undefined);
 
-    await runDevWorkflow("ABC-123", mockDeps);
+    await runDevWorkflow("ABC-123", "session-abc", mockDeps);
 
     expect(mockSandbox.cleanup).toHaveBeenCalledTimes(1);
   });
@@ -145,7 +145,7 @@ describe("runDevWorkflow", () => {
     mockUpdateIssueStatus.mockResolvedValue(undefined);
     mockEmitError.mockResolvedValue(undefined);
 
-    await runDevWorkflow("ABC-123", mockDeps);
+    await runDevWorkflow("ABC-123", "session-abc", mockDeps);
 
     expect(mockUpdateIssueStatus).toHaveBeenCalledWith(
       mockLinearClient,
@@ -167,7 +167,7 @@ describe("runDevWorkflow", () => {
     mockUpdateIssueStatus.mockResolvedValue(undefined);
     mockEmitError.mockResolvedValue(undefined);
 
-    const result = await runDevWorkflow("ABC-123", mockDeps);
+    const result = await runDevWorkflow("ABC-123", "session-abc", mockDeps);
 
     expect(result.success).toBe(false);
     expect(result.status).toBe("failed");
@@ -185,7 +185,7 @@ describe("runDevWorkflow", () => {
     mockCreateDevWorkflow.mockReturnValue(mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>);
 
     const customConfig = { ...DEFAULT_DEV_WORKFLOW_CONFIG, recursionLimit: 100 };
-    await runDevWorkflow("ABC-123", mockDeps, customConfig);
+    await runDevWorkflow("ABC-123", "session-abc", mockDeps, customConfig);
 
     expect(mockWorkflow.invoke).toHaveBeenCalledWith(
       { taskId: "ABC-123", status: "pending" },
@@ -206,7 +206,7 @@ describe("runDevWorkflow", () => {
     };
     mockCreateDevWorkflow.mockReturnValue(mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>);
 
-    const result = await runDevWorkflow("ABC-123", mockDeps);
+    const result = await runDevWorkflow("ABC-123", "session-abc", mockDeps);
 
     expect(result.success).toBe(false);
     expect(result.status).toBe("failed");
@@ -220,7 +220,7 @@ describe("runDevWorkflow", () => {
     mockUpdateIssueStatus.mockRejectedValue(new Error("Linear API error"));
 
     // Should not throw, just log the warning
-    const result = await runDevWorkflow("ABC-123", mockDeps);
+    const result = await runDevWorkflow("ABC-123", "session-abc", mockDeps);
 
     expect(result.success).toBe(false);
     expect(result.error).toBe("Workflow error");
@@ -239,7 +239,7 @@ describe("runDevWorkflow", () => {
     (mockSandbox.cleanup as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("Cleanup failed"));
 
     // Should not throw, just log the error
-    const result = await runDevWorkflow("ABC-123", mockDeps);
+    const result = await runDevWorkflow("ABC-123", "session-abc", mockDeps);
 
     expect(result.success).toBe(true);
     expect(result.status).toBe("complete");
@@ -255,7 +255,7 @@ describe("runDevWorkflow", () => {
     };
     mockCreateDevWorkflow.mockReturnValue(mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>);
 
-    await runDevWorkflow("ABC-123", mockDeps);
+    await runDevWorkflow("ABC-123", "session-abc", mockDeps);
 
     expect(mockCreateDevWorkflow).toHaveBeenCalledWith({
       deps: mockDeps,
@@ -276,7 +276,7 @@ describe("runDevWorkflow", () => {
       ...DEFAULT_DEV_WORKFLOW_CONFIG,
       maxTestAttempts: 10,
     };
-    await runDevWorkflow("ABC-123", mockDeps, customConfig);
+    await runDevWorkflow("ABC-123", "session-abc", mockDeps, customConfig);
 
     expect(mockCreateDevWorkflow).toHaveBeenCalledWith({
       deps: mockDeps,

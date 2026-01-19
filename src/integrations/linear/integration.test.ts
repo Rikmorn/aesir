@@ -37,20 +37,22 @@ describe("Linear Integration - Complete Webhook to Activity Flow", () => {
     vi.clearAllMocks();
   });
 
-  it("should process AgentSession webhook and emit activities", async () => {
-    // 1. Simulate incoming AgentSession webhook
+  it("should process AgentSessionEvent webhook and emit activities", async () => {
+    // 1. Simulate incoming AgentSessionEvent webhook (Linear's actual format)
     const sessionId = "session-abc123";
     const issueId = "issue-xyz789";
     const webhookPayload = {
-      type: "AgentSession",
+      type: "AgentSessionEvent",
       action: "created",
-      data: {
+      agentSession: {
         id: sessionId,
         issueId: issueId,
-        promptContext: "Implement the login feature as described in the issue.",
+        status: "pending",
+        url: "https://linear.app/test/issue/TEST-1#agent-session-abc123",
       },
       webhookTimestamp: Date.now(),
       webhookId: "webhook-001",
+      data: {}, // Linear still sends data field but we use agentSession
     };
     const rawBody = JSON.stringify(webhookPayload);
 
@@ -69,18 +71,17 @@ describe("Linear Integration - Complete Webhook to Activity Flow", () => {
 
     // 5. Parse payload only after verification
     const payload = parseWebhookPayload<WebhookPayloadBase>(rawBody);
-    expect(payload.type).toBe("AgentSession");
+    expect(payload.type).toBe("AgentSessionEvent");
     expect(payload.webhookId).toBe("webhook-001");
 
     // 6. Type guard to handle specific event types
     if (isAgentSessionEvent(payload)) {
       // TypeScript now knows this is AgentSessionPayload
-      expect(payload.data.id).toBe(sessionId);
-      expect(payload.data.issueId).toBe(issueId);
-      expect(payload.data.promptContext).toContain("login feature");
+      expect(payload.agentSession.id).toBe(sessionId);
+      expect(payload.agentSession.issueId).toBe(issueId);
 
       // 7. Emit activity using client (acknowledge immediately)
-      await emitThought(mockClient, payload.data.id, "Analyzing task requirements...");
+      await emitThought(mockClient, payload.agentSession.id, "Analyzing task requirements...");
 
       expect(mockClient.createAgentActivity).toHaveBeenCalledWith({
         agentSessionId: sessionId,
@@ -88,7 +89,7 @@ describe("Linear Integration - Complete Webhook to Activity Flow", () => {
       });
 
       // 8. Emit action for tool use
-      await emitAction(mockClient, payload.data.id, "Reading", "linked issue description");
+      await emitAction(mockClient, payload.agentSession.id, "Reading", "linked issue description");
 
       expect(mockClient.createAgentActivity).toHaveBeenCalledTimes(2);
       expect(mockClient.createAgentActivity).toHaveBeenLastCalledWith({
@@ -102,19 +103,19 @@ describe("Linear Integration - Complete Webhook to Activity Flow", () => {
         { content: "Generate implementation", status: "inProgress" },
         { content: "Run tests", status: "pending" },
       ];
-      await updateSessionPlan(mockClient, payload.data.id, plan);
+      await updateSessionPlan(mockClient, payload.agentSession.id, plan);
 
       expect(mockClient.updateAgentSession).toHaveBeenCalledWith(sessionId, {
         plan,
       });
 
       // 10. Emit final response
-      await emitResponse(mockClient, payload.data.id, "Login feature implemented. PR #42 created.");
+      await emitResponse(mockClient, payload.agentSession.id, "Login feature implemented. PR #42 created.");
 
       expect(mockClient.createAgentActivity).toHaveBeenCalledTimes(3);
     } else {
       // This branch shouldn't be reached
-      expect.fail("Expected AgentSession event");
+      expect.fail("Expected AgentSessionEvent event");
     }
   });
 

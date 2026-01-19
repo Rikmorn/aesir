@@ -37,7 +37,7 @@ export interface LinearWebhookConfig {
   /** Slack channel ID for notifications */
   slackChannel: string;
   /** Linear status to set after successful merge */
-  completionStatus: "Todo" | "In Progress" | "Done" | "Canceled";
+  completionStatus: "Triage" | "Ready" | "Backlog" | "In Progress" | "Done" | "Canceled" | "Duplicate";
 }
 
 /**
@@ -66,12 +66,13 @@ export async function handleAgentSessionWebhook(
   payload: AgentSessionPayload,
   config: LinearWebhookConfig
 ): Promise<HandleAgentSessionResult> {
-  const { action, data } = payload;
-  const taskId = data.issueId;
+  const { action, agentSession } = payload;
+  const taskId = agentSession.issueId;
+  const sessionId = agentSession.id;
 
   logger.info("linear_agent_session_received", {
     message: `AgentSession ${action} for issue ${taskId}`,
-    context: { action, taskId, sessionId: data.id },
+    context: { action, taskId, sessionId },
   });
 
   // Only handle 'created' action (new delegation)
@@ -91,6 +92,7 @@ export async function handleAgentSessionWebhook(
     // Build workflow input
     const workflowInput: ApprovalWorkflowInput = {
       taskId,
+      sessionId,
       owner: config.owner,
       repo: config.repo,
       slackChannel: config.slackChannel,
@@ -163,6 +165,10 @@ export async function linearWebhookHandler(
     return;
   }
 
+  logger.info("linear_webhook_signature_valid", {
+    message: "Webhook signature verified",
+  });
+
   // Parse payload
   const payload = parseWebhookPayload<WebhookPayloadBase>(req.rawBody);
 
@@ -178,13 +184,21 @@ export async function linearWebhookHandler(
 
   // Only handle AgentSession events
   if (!isAgentSessionEvent(payload)) {
-    logger.debug("linear_webhook_not_agent_session", {
+    logger.info("linear_webhook_not_agent_session", {
       message: `Ignoring webhook type: ${payload.type}`,
       context: { type: payload.type },
     });
     res.status(200).json({ action: "ignored", reason: "not_agent_session" });
     return;
   }
+
+  // Log the payload structure for debugging
+  logger.info("linear_webhook_payload", {
+    message: "AgentSession payload received",
+    context: {
+      payload: JSON.stringify(payload).substring(0, 1000),
+    },
+  });
 
   // Handle the AgentSession event
   const result = await handleAgentSessionWebhook(payload, config);

@@ -110,6 +110,7 @@ describe("FixCodeOutputSchema", () => {
 describe("fixCodeNode", () => {
   const baseState: DevWorkflowStateType = {
     taskId: "TEST-123",
+      sessionId: "session-test",
     taskDescription: "Create a utility function that returns 'hello'",
     repositoryUrl: "owner/repo",
     branchName: "feat/test-123",

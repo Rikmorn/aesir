@@ -41,6 +41,7 @@ describe("createCommitPRNode", () => {
   // Base state for tests
   const baseState: DevWorkflowStateType = {
     taskId: "ABC-123",
+      sessionId: "session-test",
     taskDescription: "Implement feature X\n\nDetailed description here",
     repositoryUrl: null,
     branchName: "dev-agent/ABC-123",

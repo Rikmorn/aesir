@@ -86,7 +86,8 @@ export function createCommitPRNode(
     await updateIssueStatus(linearClient, state.taskId, "Done");
 
     // Emit response with PR link in Linear UI
-    await emitResponse(linearClient, state.taskId, `Opened PR: ${pr.url}`);
+    // Use sessionId (AgentSession ID) not taskId (Issue ID)
+    await emitResponse(linearClient, state.sessionId, `Opened PR: ${pr.url}`);
 
     // Return state update with PR number for downstream consumers
     return {

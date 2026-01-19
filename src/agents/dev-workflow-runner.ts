@@ -56,13 +56,15 @@ export interface DevWorkflowResult {
  * 4. ALWAYS cleans up sandbox in finally block
  * 5. Returns structured result
  *
- * @param taskId - Linear task ID to work on
+ * @param taskId - Linear Issue ID to work on
+ * @param sessionId - Linear AgentSession ID for emitting activities
  * @param deps - All workflow dependencies (Linear, GitHub, Sandbox)
  * @param config - Optional workflow configuration
  * @returns Workflow result with success status and optional PR number
  */
 export async function runDevWorkflow(
   taskId: string,
+  sessionId: string,
   deps: DevWorkflowDependencies,
   config: DevWorkflowConfig = DEFAULT_DEV_WORKFLOW_CONFIG
 ): Promise<DevWorkflowResult> {
@@ -84,7 +86,7 @@ export async function runDevWorkflow(
 
     // Invoke the workflow with initial state and tracer callbacks
     const result = await workflow.invoke(
-      { taskId, status: "pending" },
+      { taskId, sessionId, status: "pending" },
       {
         configurable: { thread_id: taskId },
         recursionLimit: config.recursionLimit,
@@ -126,10 +128,10 @@ export async function runDevWorkflow(
 
     // Update Linear status to indicate failure
     try {
-      await updateIssueStatus(deps.linearClient, taskId, "Todo");
+      await updateIssueStatus(deps.linearClient, taskId, "Ready");
       await emitError(
         deps.linearClient,
-        taskId,
+        sessionId,  // Use sessionId for agent activities, not taskId
         `Dev workflow failed: ${errorMessage}`
       );
     } catch (linearError) {

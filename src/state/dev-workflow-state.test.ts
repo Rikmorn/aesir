@@ -139,7 +139,7 @@ describe("DEFAULT_DEV_WORKFLOW_CONFIG", () => {
 describe("DevWorkflowState defaults", () => {
   it("has correct default values via createDevWorkflowInitialState", () => {
     // Test defaults through the initial state factory function
-    const state = createDevWorkflowInitialState("", "");
+    const state = createDevWorkflowInitialState("task-123", "session-123", "Test task");
 
     expect(state.taskId).toBe("");
     expect(state.taskDescription).toBe("");
@@ -158,6 +158,7 @@ describe("hasExceededTestLimit", () => {
   it("returns false when under limit", () => {
     const state: DevWorkflowStateType = {
       taskId: "test-1",
+      sessionId: "session-test",
       taskDescription: "Test task",
       repositoryUrl: null,
       branchName: null,
@@ -175,6 +176,7 @@ describe("hasExceededTestLimit", () => {
   it("returns true when at limit", () => {
     const state: DevWorkflowStateType = {
       taskId: "test-1",
+      sessionId: "session-test",
       taskDescription: "Test task",
       repositoryUrl: null,
       branchName: null,
@@ -192,6 +194,7 @@ describe("hasExceededTestLimit", () => {
   it("returns true when over limit", () => {
     const state: DevWorkflowStateType = {
       taskId: "test-1",
+      sessionId: "session-test",
       taskDescription: "Test task",
       repositoryUrl: null,
       branchName: null,
@@ -209,6 +212,7 @@ describe("hasExceededTestLimit", () => {
   it("uses custom config when provided", () => {
     const state: DevWorkflowStateType = {
       taskId: "test-1",
+      sessionId: "session-test",
       taskDescription: "Test task",
       repositoryUrl: null,
       branchName: null,
@@ -229,6 +233,7 @@ describe("didTestsPass", () => {
   it("returns true when tests passed", () => {
     const state: DevWorkflowStateType = {
       taskId: "test-1",
+      sessionId: "session-test",
       taskDescription: "Test task",
       repositoryUrl: null,
       branchName: null,
@@ -252,6 +257,7 @@ describe("didTestsPass", () => {
   it("returns false when tests failed", () => {
     const state: DevWorkflowStateType = {
       taskId: "test-1",
+      sessionId: "session-test",
       taskDescription: "Test task",
       repositoryUrl: null,
       branchName: null,
@@ -275,6 +281,7 @@ describe("didTestsPass", () => {
   it("returns false when no test result", () => {
     const state: DevWorkflowStateType = {
       taskId: "test-1",
+      sessionId: "session-test",
       taskDescription: "Test task",
       repositoryUrl: null,
       branchName: null,
@@ -292,7 +299,7 @@ describe("didTestsPass", () => {
 
 describe("createDevWorkflowInitialState", () => {
   it("creates initial state with required fields", () => {
-    const state = createDevWorkflowInitialState("TASK-123", "Implement feature X");
+    const state = createDevWorkflowInitialState("task-123", "session-123", "Test task");
 
     expect(state.taskId).toBe("TASK-123");
     expect(state.taskDescription).toBe("Implement feature X");

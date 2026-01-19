@@ -79,9 +79,18 @@ export const DEFAULT_DEV_WORKFLOW_CONFIG: DevWorkflowConfig = {
  */
 export const DevWorkflowState = Annotation.Root({
   /**
-   * Linear task ID being worked on
+   * Linear task ID (Issue ID) being worked on
    */
   taskId: Annotation<string>({
+    reducer: (_current, incoming) => incoming,
+    default: () => "",
+  }),
+
+  /**
+   * Linear AgentSession ID for emitting activities
+   * Different from taskId - this is the session created when work is delegated
+   */
+  sessionId: Annotation<string>({
     reducer: (_current, incoming) => incoming,
     default: () => "",
   }),
@@ -197,11 +206,13 @@ export function didTestsPass(state: DevWorkflowStateType): boolean {
  */
 export function createDevWorkflowInitialState(
   taskId: string,
+  sessionId: string,
   taskDescription: string,
   repositoryUrl?: string
 ): Partial<DevWorkflowStateType> {
   return {
     taskId,
+    sessionId,
     taskDescription,
     repositoryUrl: repositoryUrl ?? null,
     branchName: null,

@@ -27,8 +27,10 @@ import type { BoundActivities } from "../activities/index.js";
  * Workflow input configuration
  */
 export interface ApprovalWorkflowInput {
-  /** Linear task ID */
+  /** Linear task ID (Issue ID) */
   taskId: string;
+  /** Linear AgentSession ID (for emitting activities) */
+  sessionId: string;
   /** GitHub repository owner */
   owner: string;
   /** GitHub repository name */
@@ -121,6 +123,7 @@ export async function prApprovalWorkflow(
 ): Promise<ApprovalWorkflowResult> {
   const {
     taskId,
+    sessionId,
     owner,
     repo,
     slackChannel,
@@ -176,8 +179,8 @@ export async function prApprovalWorkflow(
 
     try {
       // Dependencies are bound at worker startup via makeActivities()
-      // The bound activity only needs taskId
-      const devResult = await executeDevWorkflow(taskId);
+      // Pass both taskId (issue) and sessionId (for agent activities)
+      const devResult = await executeDevWorkflow(taskId, sessionId);
 
       if (!devResult.success || devResult.prNumber === undefined) {
         wf.log.error("Dev workflow failed to create PR", {
@@ -346,9 +349,9 @@ export async function prApprovalWorkflow(
         );
         state.currentStatus = "rejected";
 
-        // Update Linear back to Todo on rejection
+        // Update Linear back to Ready on rejection
         try {
-          await updateLinearStatusActivity(taskId, "Todo");
+          await updateLinearStatusActivity(taskId, "Ready");
         } catch (error) {
           wf.log.warn("Failed to update Linear status on rejection", { error });
         }

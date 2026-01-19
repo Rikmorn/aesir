@@ -96,20 +96,23 @@ export function makeActivities(deps: ActivityDependencies) {
 
     /**
      * Execute dev workflow - bound with all required dependencies
+     * @param taskId - Linear Issue ID
+     * @param sessionId - Linear AgentSession ID for emitting activities
      */
-    executeDevWorkflow: (taskId: string) =>
-      executeDevWorkflow(taskId, {
+    executeDevWorkflow: (taskId: string, sessionId: string) => {
+      // Parse GITHUB_REPO in owner/repo format
+      const [owner, repo] = (process.env["GITHUB_REPO"] ?? "/").split("/");
+      return executeDevWorkflow(taskId, sessionId, {
         linearClient: deps.linearClient,
         octokit: deps.octokit,
         sandbox: deps.sandbox,
-        // githubConfig is required by DevWorkflowDependencies
-        // but should be passed from environment at worker level
         githubConfig: {
-          owner: process.env["GITHUB_OWNER"] ?? "",
-          repo: process.env["GITHUB_REPO"]?.split("/")[1] ?? "",
+          owner: owner || "",
+          repo: repo || "",
           baseBranch: process.env["GITHUB_BASE_BRANCH"] ?? "main",
         },
-      }),
+      });
+    },
   };
 }
 

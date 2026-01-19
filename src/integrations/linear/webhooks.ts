@@ -80,7 +80,8 @@ export function parseWebhookPayload<T = WebhookPayloadBase>(rawBody: string): T 
 export function isAgentSessionEvent(
   payload: WebhookPayloadBase
 ): payload is AgentSessionPayload {
-  return payload.type === "AgentSession";
+  // Linear sends "AgentSessionEvent" as the type for agent session webhooks
+  return payload.type === "AgentSessionEvent";
 }
 
 /**

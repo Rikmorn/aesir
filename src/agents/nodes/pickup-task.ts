@@ -39,9 +39,10 @@ export function createPickupTaskNode(linearClient: LinearClient) {
     await updateIssueStatus(linearClient, state.taskId, "In Progress");
 
     // Emit thought activity to show progress in Linear UI
+    // Use sessionId (AgentSession ID) not taskId (Issue ID)
     await emitThought(
       linearClient,
-      state.taskId,
+      state.sessionId,
       `Starting work on: ${issue.title}`
     );
 

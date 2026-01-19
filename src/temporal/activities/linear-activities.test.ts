@@ -53,7 +53,7 @@ describe("updateLinearStatusActivity", () => {
   it("supports all standard issue statuses", async () => {
     vi.mocked(updateIssueStatus).mockResolvedValue();
 
-    const statuses: IssueStatus[] = ["Todo", "In Progress", "Done", "Canceled"];
+    const statuses: IssueStatus[] = ["Ready", "In Progress", "Done", "Canceled"];
 
     for (const status of statuses) {
       vi.clearAllMocks();

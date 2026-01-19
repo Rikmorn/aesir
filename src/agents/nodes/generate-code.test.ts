@@ -108,6 +108,7 @@ describe("CodeGenerationOutputSchema", () => {
 describe("generateCodeNode", () => {
   const baseState: DevWorkflowStateType = {
     taskId: "TEST-123",
+      sessionId: "session-test",
     taskDescription: "Create a utility function that adds two numbers",
     repositoryUrl: "owner/repo",
     branchName: null,

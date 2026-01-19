@@ -29,6 +29,7 @@ describe("createBranchNode", () => {
   // Base state for tests
   const baseState: DevWorkflowStateType = {
     taskId: "ABC-123",
+      sessionId: "session-test",
     taskDescription: "Test task description",
     repositoryUrl: null,
     branchName: null,
@@ -111,6 +112,7 @@ describe("createBranchNode", () => {
     const stateWithDifferentTask = {
       ...baseState,
       taskId: "TASK-999",
+      sessionId: "session-test",
     };
 
     const createBranchNodeFn = createBranchNode(mockOctokit, config);

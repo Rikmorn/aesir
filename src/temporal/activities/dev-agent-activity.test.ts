@@ -44,9 +44,9 @@ describe("executeDevWorkflow", () => {
     };
     vi.mocked(runDevWorkflow).mockResolvedValue(mockResult);
 
-    await executeDevWorkflow("TASK-123", mockDeps);
+    await executeDevWorkflow("TASK-123", "session-123", mockDeps);
 
-    expect(runDevWorkflow).toHaveBeenCalledWith("TASK-123", mockDeps);
+    expect(runDevWorkflow).toHaveBeenCalledWith("TASK-123", "session-123", mockDeps);
   });
 
   it("returns result unchanged on success", async () => {
@@ -58,7 +58,7 @@ describe("executeDevWorkflow", () => {
     };
     vi.mocked(runDevWorkflow).mockResolvedValue(mockResult);
 
-    const result = await executeDevWorkflow("TASK-123", mockDeps);
+    const result = await executeDevWorkflow("TASK-123", "session-123", mockDeps);
 
     expect(result).toEqual(mockResult);
     expect(result.success).toBe(true);
@@ -74,7 +74,7 @@ describe("executeDevWorkflow", () => {
     };
     vi.mocked(runDevWorkflow).mockResolvedValue(mockResult);
 
-    const result = await executeDevWorkflow("TASK-456", mockDeps);
+    const result = await executeDevWorkflow("TASK-456", "session-456", mockDeps);
 
     expect(result).toEqual(mockResult);
     expect(result.success).toBe(false);
@@ -85,7 +85,7 @@ describe("executeDevWorkflow", () => {
     const error = new Error("Workflow crashed");
     vi.mocked(runDevWorkflow).mockRejectedValue(error);
 
-    await expect(executeDevWorkflow("TASK-789", mockDeps)).rejects.toThrow(
+    await expect(executeDevWorkflow("TASK-789", "session-789", mockDeps)).rejects.toThrow(
       "Workflow crashed"
     );
   });

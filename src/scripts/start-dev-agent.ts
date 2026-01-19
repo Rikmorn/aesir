@@ -186,6 +186,20 @@ async function bootstrap(): Promise<void> {
 
   const server = createServer(
     async (req: IncomingMessage, res: ServerResponse) => {
+      // Log all incoming requests for debugging
+      logger.info("http_request_received", {
+        message: `${req.method} ${req.url}`,
+        context: {
+          method: req.method,
+          url: req.url,
+          headers: {
+            "content-type": req.headers["content-type"],
+            "linear-signature": req.headers["linear-signature"] ? "[present]" : "[missing]",
+            "user-agent": req.headers["user-agent"],
+          },
+        },
+      });
+
       // Health check endpoint
       if (req.method === "GET" && req.url === "/health") {
         res.writeHead(200, { "Content-Type": "application/json" });
@@ -223,7 +237,22 @@ async function bootstrap(): Promise<void> {
 
       // Route to appropriate handler
       if (req.url === "/webhooks/linear") {
-        await linearWebhookHandler(webhookReq, webhookRes, webhookConfig, webhookSecret);
+        try {
+          logger.debug("linear_webhook_routing", {
+            message: "Routing to Linear webhook handler",
+            context: { bodyLength: rawBody.length },
+          });
+          await linearWebhookHandler(webhookReq, webhookRes, webhookConfig, webhookSecret);
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          logger.error("linear_webhook_handler_error", {
+            outcome: "failure",
+            message: `Unhandled error in Linear webhook handler: ${errorMessage}`,
+            context: { error: errorMessage, stack: err instanceof Error ? err.stack : undefined },
+          });
+          res.writeHead(500, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Internal server error" }));
+        }
         return;
       }
 

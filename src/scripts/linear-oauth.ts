@@ -32,7 +32,12 @@ const REDIRECT_URI = process.env["OAUTH_CALLBACK_URL"];
 const TOKEN_FILE = ".tokens/linear.json";
 
 // Scopes required for agent functionality
-const SCOPES = "read,write,issues:create,comments:create";
+// Scopes for agent functionality:
+// - read,write: Basic API access
+// - issues:create,comments:create: Create issues and comments
+// - app:assignable: App appears as assignable entity in Linear
+// - app:mentionable: App can be @mentioned in comments
+const SCOPES = "read,write,issues:create,comments:create,app:assignable,app:mentionable";
 
 /**
  * Validate required environment variables

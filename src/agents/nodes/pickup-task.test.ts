@@ -30,6 +30,7 @@ describe("createPickupTaskNode", () => {
   // Base state for tests
   const baseState: DevWorkflowStateType = {
     taskId: "ABC-123",
+      sessionId: "session-test",
     taskDescription: "",
     repositoryUrl: null,
     branchName: null,

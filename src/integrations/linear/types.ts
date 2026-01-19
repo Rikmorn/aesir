@@ -43,25 +43,29 @@ export interface WebhookPayload extends WebhookPayloadBase {
 /**
  * Agent session webhook payload
  * Received when an agent is delegated work or receives follow-up prompts
+ *
+ * Note: Linear sends "AgentSessionEvent" as the type, with session data
+ * in the "agentSession" field (not "data").
  */
-export interface AgentSessionPayload extends WebhookPayloadBase {
+export interface AgentSessionPayload extends Omit<WebhookPayloadBase, "type"> {
   /** Action type: 'created' for new delegation, 'prompted' for follow-up */
   action: "created" | "prompted";
-  /** Resource type is always 'AgentSession' */
-  type: "AgentSession";
-  /** Session data */
-  data: {
+  /** Resource type is always 'AgentSessionEvent' */
+  type: "AgentSessionEvent";
+  /** Agent session data */
+  agentSession: {
     /** Agent session ID */
     id: string;
     /** ID of the issue this session is for */
     issueId: string;
-    /** Pre-formatted context provided by Linear (for 'created' action) */
-    promptContext?: string;
-  };
-  /** Follow-up activity from user (for 'prompted' action) */
-  agentActivity?: {
-    /** User's follow-up message */
-    body: string;
+    /** Session status */
+    status: "pending" | "active" | "completed";
+    /** URL to the agent session in Linear */
+    url: string;
+    /** Creator information */
+    creator?: {
+      id: string;
+    };
   };
 }
 
@@ -136,7 +140,7 @@ export type AgentActivityContent =
  * Issue status values used in Linear workflows
  * These are the common status names; actual values depend on team configuration
  */
-export type IssueStatus = "Todo" | "In Progress" | "Done" | "Canceled";
+export type IssueStatus = "Triage" | "Ready" | "Backlog" | "In Progress" | "Done" | "Canceled" | "Duplicate";
 
 /**
  * Plan item for multi-step task progress

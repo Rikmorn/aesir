@@ -21,6 +21,7 @@ describe("prApprovalWorkflow", () => {
     it("should have required fields for workflow input", () => {
       const input: ApprovalWorkflowInput = {
         taskId: "LIN-123",
+        sessionId: "session-123",
         owner: "org",
         repo: "repo",
         slackChannel: "C123456",
@@ -37,6 +38,7 @@ describe("prApprovalWorkflow", () => {
     it("should support optional timeout configuration", () => {
       const input: ApprovalWorkflowInput = {
         taskId: "LIN-123",
+        sessionId: "session-123",
         owner: "org",
         repo: "repo",
         slackChannel: "C123456",
@@ -53,6 +55,7 @@ describe("prApprovalWorkflow", () => {
       // Different teams may use different status names
       const input1: ApprovalWorkflowInput = {
         taskId: "LIN-1",
+        sessionId: "session-1",
         owner: "org",
         repo: "repo",
         slackChannel: "C123",
@@ -61,6 +64,7 @@ describe("prApprovalWorkflow", () => {
 
       const input2: ApprovalWorkflowInput = {
         taskId: "LIN-2",
+        sessionId: "session-2",
         owner: "org",
         repo: "repo",
         slackChannel: "C123",

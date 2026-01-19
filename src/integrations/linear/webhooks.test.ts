@@ -117,15 +117,14 @@ describe("parseWebhookPayload", () => {
     expect(result.webhookId).toBe("abc");
   });
 
-  it("should parse AgentSession payload", () => {
-    const rawBody = '{"type":"AgentSession","action":"created","data":{"id":"session-123","issueId":"issue-456","promptContext":"test context"},"webhookTimestamp":1234567890,"webhookId":"abc"}';
+  it("should parse AgentSessionEvent payload", () => {
+    const rawBody = '{"type":"AgentSessionEvent","action":"created","agentSession":{"id":"session-123","issueId":"issue-456","status":"pending","url":"https://linear.app/test"},"webhookTimestamp":1234567890,"webhookId":"abc"}';
     const result = parseWebhookPayload<AgentSessionPayload>(rawBody);
 
-    expect(result.type).toBe("AgentSession");
+    expect(result.type).toBe("AgentSessionEvent");
     expect(result.action).toBe("created");
-    expect(result.data.id).toBe("session-123");
-    expect(result.data.issueId).toBe("issue-456");
-    expect(result.data.promptContext).toBe("test context");
+    expect(result.agentSession.id).toBe("session-123");
+    expect(result.agentSession.issueId).toBe("issue-456");
   });
 
   it("should throw for invalid JSON", () => {
@@ -134,10 +133,10 @@ describe("parseWebhookPayload", () => {
 });
 
 describe("isAgentSessionEvent", () => {
-  it("should return true for AgentSession type", () => {
+  it("should return true for AgentSessionEvent type", () => {
     const payload: WebhookPayloadBase = {
-      type: "AgentSession",
-      data: { id: "123", issueId: "456" },
+      type: "AgentSessionEvent",
+      data: {},
       webhookTimestamp: Date.now(),
       webhookId: "abc",
     };
@@ -156,18 +155,21 @@ describe("isAgentSessionEvent", () => {
     expect(isAgentSessionEvent(payload)).toBe(false);
   });
 
-  it("should narrow type correctly for AgentSession", () => {
-    const payload: WebhookPayloadBase = {
-      type: "AgentSession",
-      data: { id: "123", issueId: "456" },
+  it("should narrow type correctly for AgentSessionEvent", () => {
+    // Use the actual Linear payload structure
+    const payload = {
+      type: "AgentSessionEvent",
+      action: "created",
+      agentSession: { id: "123", issueId: "456", status: "pending", url: "https://linear.app/test" },
       webhookTimestamp: Date.now(),
       webhookId: "abc",
-    };
+      data: {},
+    } as WebhookPayloadBase;
 
     if (isAgentSessionEvent(payload)) {
       // TypeScript should know payload is AgentSessionPayload here
-      expect(payload.data.id).toBe("123");
-      expect(payload.data.issueId).toBe("456");
+      expect(payload.agentSession.id).toBe("123");
+      expect(payload.agentSession.issueId).toBe("456");
     }
   });
 });
@@ -184,10 +186,10 @@ describe("isIssueEvent", () => {
     expect(isIssueEvent(payload)).toBe(true);
   });
 
-  it("should return false for AgentSession type", () => {
+  it("should return false for AgentSessionEvent type", () => {
     const payload: WebhookPayloadBase = {
-      type: "AgentSession",
-      data: { id: "123", issueId: "456" },
+      type: "AgentSessionEvent",
+      data: {},
       webhookTimestamp: Date.now(),
       webhookId: "abc",
     };

@@ -52,6 +52,7 @@ function createBaseState(
 ): DevWorkflowStateType {
   return {
     taskId: "TEST-123",
+      sessionId: "session-test",
     taskDescription: "Create a utility function",
     repositoryUrl: "owner/repo",
     branchName: null,

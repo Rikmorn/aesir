@@ -58,6 +58,7 @@ function createFailingTestResult(): TestResult {
 describe("createRunTestsNode", () => {
   const baseState: DevWorkflowStateType = {
     taskId: "TEST-123",
+      sessionId: "session-test",
     taskDescription: "Create a utility function",
     repositoryUrl: "owner/repo",
     branchName: "feat/test-123",
