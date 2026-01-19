@@ -5,11 +5,16 @@
  * Used by API endpoints and webhook handlers to interact with running workflows.
  */
 
-import { Client, Connection } from "@temporalio/client";
+import { Client, Connection, type WorkflowHandle } from "@temporalio/client";
 
 import { createLogger } from "../logging/logger.js";
 import { approvalSignal, changesRequestedSignal } from "./signals.js";
 import type { ApprovalDecision, ChangesRequested } from "./types.js";
+import { prApprovalWorkflow } from "./workflows/approval-workflow.js";
+import type {
+  ApprovalWorkflowInput,
+  ApprovalWorkflowResult,
+} from "./workflows/approval-workflow.js";
 
 const logger = createLogger({ defaultContext: { module: "temporal-client" } });
 
@@ -123,3 +128,37 @@ export async function sendChangesRequestedSignal(
     },
   });
 }
+
+/** Default task queue for approval workflows */
+const APPROVAL_TASK_QUEUE = "dev-agent-queue";
+
+/**
+ * Start a new PR approval workflow
+ *
+ * This is called when a Linear AgentSession webhook is received,
+ * indicating a task has been delegated to the Dev Agent.
+ *
+ * @param workflowId - Unique workflow ID (convention: approval-{taskId})
+ * @param input - Workflow input configuration
+ * @returns Workflow handle for querying status or signaling
+ */
+export async function startApprovalWorkflow(
+  workflowId: string,
+  input: ApprovalWorkflowInput
+): Promise<WorkflowHandle<typeof prApprovalWorkflow>> {
+  const client = await getTemporalClient();
+
+  logger.info("temporal_start_approval_workflow", {
+    message: `Starting approval workflow ${workflowId}`,
+    context: { workflowId, taskId: input.taskId },
+  });
+
+  return client.workflow.start(prApprovalWorkflow, {
+    workflowId,
+    taskQueue: APPROVAL_TASK_QUEUE,
+    args: [input],
+  });
+}
+
+// Re-export types for external use
+export type { ApprovalWorkflowInput, ApprovalWorkflowResult };
