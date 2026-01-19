@@ -27,6 +27,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 9: Product Agent** - Requirements gathering and task creation
 - [x] **Phase 9.1: Infrastructure & Local Dev** - Linear OAuth, Docker Compose, README, Dev Agent entry point (INSERTED)
 - [x] **Phase 9.2: Integration Gap Closure** - Fix integration issues blocking E2E flows (INSERTED)
+- [ ] **Phase 9.3: Webhook API Exposure** - Cloudflare tunnel for local dev webhook access (INSERTED)
 
 ## Phase Details
 
@@ -227,10 +228,33 @@ Urgent insertion to close integration gaps found by `/gsd:audit-milestone`:
 - Gap 3: No Linear webhook to trigger Dev Agent (blocks automation)
 - Gap 4: SQLite in-memory loses state on restart (blocks persistence)
 
+### Phase 9.3: Webhook API Exposure (INSERTED)
+**Goal**: Expose webhook endpoints for Linear/GitHub external access via Cloudflare tunnel for local development
+**Depends on**: Phase 9.2
+**Requirements**: None (integration gap - webhooks exist but unreachable externally)
+**Success Criteria** (what must be TRUE):
+  1. Cloudflare tunnel exposes dev-agent webhook endpoint to internet
+  2. Linear can reach /webhooks/linear to trigger Dev Agent workflows
+  3. GitHub can reach /webhooks/github for PR review events
+  4. Tunnel configuration documented in README
+  5. Docker Compose includes cloudflared service for local dev
+  6. Webhook URLs configurable via environment variables
+**Research**: Complete (see 09.3-RESEARCH.md)
+**Plans**: 1 plan
+
+Plans:
+- [ ] 9.3-01: Cloudflare Tunnel Integration (Wave 1)
+
+**Details:**
+Critical gap: webhook handlers exist but Linear/GitHub cannot reach them:
+- `localhost:3001/webhooks/linear` - unreachable from Linear servers
+- `localhost:3001/webhooks/github` - unreachable from GitHub servers
+- Cloudflare tunnel provides secure, stable URLs for local development
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 9.1 → 9.2
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 9.1 -> 9.2 -> 9.3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -245,6 +269,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 9. Product Agent | 4/4 | Complete | 2026-01-18 |
 | 9.1 Infrastructure & Local Dev | 3/3 | Complete | 2026-01-18 |
 | 9.2 Integration Gap Closure | 3/3 | Complete | 2026-01-19 |
+| 9.3 Webhook API Exposure | 0/1 | Pending | - |
 
 ---
 *Roadmap created: 2026-01-16*
