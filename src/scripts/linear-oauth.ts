@@ -27,7 +27,7 @@ dotenv.config({ path: ".env" });
 
 const CLIENT_ID = process.env["LINEAR_CLIENT_ID"];
 const CLIENT_SECRET = process.env["LINEAR_CLIENT_SECRET"];
-const REDIRECT_URI = "http://localhost:3000/oauth/callback";
+const REDIRECT_URI = process.env["OAUTH_CALLBACK_URL"];
 const TOKEN_FILE = ".linear-tokens.json";
 
 // Scopes required for agent functionality
@@ -37,13 +37,15 @@ const SCOPES = "read,write,issues:create,comments:create";
  * Validate required environment variables
  */
 function validateEnv(): void {
-  if (!CLIENT_ID || !CLIENT_SECRET) {
-    console.error("\n❌ Missing required environment variables:\n");
+  if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
+    console.error("\n[ERROR] Missing required environment variables:\n");
     if (!CLIENT_ID) console.error("   - LINEAR_CLIENT_ID");
     if (!CLIENT_SECRET) console.error("   - LINEAR_CLIENT_SECRET");
+    if (!REDIRECT_URI) console.error("   - OAUTH_CALLBACK_URL");
     console.error(
       "\nCreate a Linear OAuth application at: https://linear.app/settings/api"
     );
+    console.error("Set OAUTH_CALLBACK_URL to your Cloudflare tunnel URL for OAuth.");
     console.error("Then add the credentials to .env.local\n");
     process.exit(1);
   }
@@ -238,10 +240,11 @@ async function main(): Promise<void> {
       }
     });
 
-    server.listen(3000, () => {
-      console.log("\n🔐 Linear OAuth Authorization\n");
+    server.listen(3000, "0.0.0.0", () => {
+      console.log("\n[INFO] Linear OAuth Authorization\n");
       console.log("Open this URL in your browser to authorize:\n");
       console.log(`  ${authUrl.toString()}\n`);
+      console.log(`Callback URL configured: ${REDIRECT_URI}`);
       console.log("Waiting for authorization callback on port 3000...\n");
     });
 
