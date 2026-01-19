@@ -82,6 +82,7 @@ describe("helper", () => {
     testAttempts: 0,
     status: "testing",
     error: null,
+    prNumber: null,
   };
 
   beforeEach(() => {

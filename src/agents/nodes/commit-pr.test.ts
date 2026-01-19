@@ -52,6 +52,7 @@ describe("createCommitPRNode", () => {
     testAttempts: 1,
     status: "testing",
     error: null,
+    prNumber: null,
   };
 
   beforeEach(() => {
@@ -244,6 +245,7 @@ describe("createCommitPRNode", () => {
 
     expect(result).toEqual({
       status: "complete",
+      prNumber: 42,
     });
   });
 

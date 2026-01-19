@@ -38,6 +38,7 @@ describe("createPickupTaskNode", () => {
     testAttempts: 0,
     status: "pending",
     error: null,
+    prNumber: null,
   };
 
   beforeEach(() => {

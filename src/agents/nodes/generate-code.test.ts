@@ -116,6 +116,7 @@ describe("generateCodeNode", () => {
     testAttempts: 0,
     status: "coding",
     error: null,
+    prNumber: null,
   };
 
   beforeEach(() => {

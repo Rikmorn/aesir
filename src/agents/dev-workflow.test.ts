@@ -60,6 +60,7 @@ function createBaseState(
     testAttempts: 0,
     status: "testing",
     error: null,
+    prNumber: null,
     ...overrides,
   };
 }

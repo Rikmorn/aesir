@@ -88,9 +88,10 @@ export function createCommitPRNode(
     // Emit response with PR link in Linear UI
     await emitResponse(linearClient, state.taskId, `Opened PR: ${pr.url}`);
 
-    // Return state update
+    // Return state update with PR number for downstream consumers
     return {
       status: "complete",
+      prNumber: pr.number,
     };
   };
 }

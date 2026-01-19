@@ -101,12 +101,17 @@ export async function runDevWorkflow(
       durationMs,
     });
 
-    return {
+    // Build result with conditional prNumber to satisfy exactOptionalPropertyTypes
+    const workflowResult: DevWorkflowResult = {
       success: result.status === "complete",
       status: result.status,
       durationMs,
       traces: traceStore.getByTaskId(taskId),
     };
+    if (result.prNumber != null) {
+      workflowResult.prNumber = result.prNumber;
+    }
+    return workflowResult;
   } catch (error) {
     const durationMs = Date.now() - startTime;
     const errorMessage =

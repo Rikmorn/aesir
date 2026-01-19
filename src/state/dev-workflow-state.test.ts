@@ -150,6 +150,7 @@ describe("DevWorkflowState defaults", () => {
     expect(state.testAttempts).toBe(0);
     expect(state.status).toBe("pending");
     expect(state.error).toBe(null);
+    expect(state.prNumber).toBe(null);
   });
 });
 
@@ -165,6 +166,7 @@ describe("hasExceededTestLimit", () => {
       testAttempts: 3,
       status: "testing",
       error: null,
+      prNumber: null,
     };
 
     expect(hasExceededTestLimit(state)).toBe(false);
@@ -181,6 +183,7 @@ describe("hasExceededTestLimit", () => {
       testAttempts: 5,
       status: "testing",
       error: null,
+      prNumber: null,
     };
 
     expect(hasExceededTestLimit(state)).toBe(true);
@@ -197,6 +200,7 @@ describe("hasExceededTestLimit", () => {
       testAttempts: 10,
       status: "testing",
       error: null,
+      prNumber: null,
     };
 
     expect(hasExceededTestLimit(state)).toBe(true);
@@ -213,6 +217,7 @@ describe("hasExceededTestLimit", () => {
       testAttempts: 3,
       status: "testing",
       error: null,
+      prNumber: null,
     };
 
     const customConfig = { ...DEFAULT_DEV_WORKFLOW_CONFIG, maxTestAttempts: 3 };
@@ -238,6 +243,7 @@ describe("didTestsPass", () => {
       testAttempts: 1,
       status: "testing",
       error: null,
+      prNumber: null,
     };
 
     expect(didTestsPass(state)).toBe(true);
@@ -260,6 +266,7 @@ describe("didTestsPass", () => {
       testAttempts: 1,
       status: "testing",
       error: null,
+      prNumber: null,
     };
 
     expect(didTestsPass(state)).toBe(false);
@@ -276,6 +283,7 @@ describe("didTestsPass", () => {
       testAttempts: 0,
       status: "pending",
       error: null,
+      prNumber: null,
     };
 
     expect(didTestsPass(state)).toBe(false);
@@ -295,6 +303,7 @@ describe("createDevWorkflowInitialState", () => {
     expect(state.testAttempts).toBe(0);
     expect(state.status).toBe("pending");
     expect(state.error).toBe(null);
+    expect(state.prNumber).toBe(null);
   });
 
   it("creates initial state with optional repository URL", () => {

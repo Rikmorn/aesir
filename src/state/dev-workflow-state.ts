@@ -154,6 +154,15 @@ export const DevWorkflowState = Annotation.Root({
     reducer: (_current, incoming) => incoming,
     default: () => null,
   }),
+
+  /**
+   * PR number if a pull request was created
+   * Propagated from commitPRNode after PR creation
+   */
+  prNumber: Annotation<number | null>({
+    reducer: (_current, incoming) => incoming,
+    default: () => null,
+  }),
 });
 
 /**
@@ -201,5 +210,6 @@ export function createDevWorkflowInitialState(
     testAttempts: 0,
     status: "pending" as DevWorkflowStatus,
     error: null,
+    prNumber: null,
   };
 }
