@@ -269,17 +269,19 @@ This will:
 1. Start a container listening for the OAuth callback
 2. Display a URL to open in your browser
 3. After authorization, exchange the code for tokens
-4. Save tokens to `.linear-tokens.json`
+4. Save tokens to `.tokens/linear.json`
 
 #### 5. Verify Authorization
 
-The OAuth flow displays your authorized workspace and user. The `.linear-tokens.json` file is created in the project root.
+The OAuth flow displays your authorized workspace and user. The `.tokens/linear.json` file is created in the `.tokens/` directory.
 
 **Note:** You need the Cloudflare tunnel running to receive the callback. Either:
 - Run `docker compose --profile tunnel up -d` first
 - Or have the tunnel configured to route even when containers aren't running
 
-**Note:** `.linear-tokens.json` is gitignored. Each developer runs their own OAuth flow.
+**Note:** `.tokens/` is gitignored. Each developer runs their own OAuth flow.
+
+**Note:** Linear OAuth tokens are long-lived (~10 years) and don't include refresh tokens. This is Linear's design - tokens don't need renewal during normal use.
 
 ## Infrastructure Setup
 

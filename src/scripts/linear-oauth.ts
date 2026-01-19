@@ -3,7 +3,7 @@
  * Linear OAuth Authorization Script
  *
  * Performs the OAuth authorization flow to obtain access and refresh tokens
- * for the Linear API. Tokens are persisted to .linear-tokens.json for use
+ * for the Linear API. Tokens are persisted to .tokens/linear.json for use
  * by the application.
  *
  * Required environment variables:
@@ -18,7 +18,8 @@
  */
 
 import * as http from "node:http";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
+import * as path from "node:path";
 import * as dotenv from "dotenv";
 
 // Load environment variables
@@ -28,7 +29,7 @@ dotenv.config({ path: ".env" });
 const CLIENT_ID = process.env["LINEAR_CLIENT_ID"];
 const CLIENT_SECRET = process.env["LINEAR_CLIENT_SECRET"];
 const REDIRECT_URI = process.env["OAUTH_CALLBACK_URL"];
-const TOKEN_FILE = ".linear-tokens.json";
+const TOKEN_FILE = ".tokens/linear.json";
 
 // Scopes required for agent functionality
 const SCOPES = "read,write,issues:create,comments:create";
@@ -82,13 +83,17 @@ async function exchangeCodeForTokens(code: string): Promise<{
 
   const data = (await response.json()) as {
     access_token: string;
-    refresh_token: string;
+    refresh_token?: string;
     expires_in: number;
   };
 
+  // Linear tokens are long-lived (~10 years) and don't include refresh tokens by design
+  const expiresDate = new Date(Date.now() + data.expires_in * 1000);
+  console.log(`   Token valid until: ${expiresDate.toISOString().split("T")[0]} (~${Math.floor(data.expires_in / 86400 / 365)} years)`);
+
   return {
     accessToken: data.access_token,
-    refreshToken: data.refresh_token,
+    refreshToken: data.refresh_token ?? "",
     expiresAt: Date.now() + data.expires_in * 1000,
   };
 }
@@ -101,6 +106,8 @@ async function saveTokens(tokens: {
   refreshToken: string;
   expiresAt: number;
 }): Promise<void> {
+  // Ensure directory exists
+  await mkdir(path.dirname(TOKEN_FILE), { recursive: true });
   await writeFile(TOKEN_FILE, JSON.stringify(tokens, null, 2) + "\n", {
     mode: 0o600, // Restrictive permissions: owner read/write only
   });

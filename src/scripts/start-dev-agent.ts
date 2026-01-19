@@ -106,7 +106,7 @@ async function bootstrap(): Promise<void> {
   try {
     linearClient = await createLinearClientFromFile();
     logger.info("linear_client_init", {
-      message: "Using OAuth tokens from .linear-tokens.json (app identity)"
+      message: "Using OAuth tokens from .tokens/linear.json (app identity)"
     });
   } catch (err) {
     if (err instanceof TokenFileNotFoundError) {

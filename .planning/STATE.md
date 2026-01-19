@@ -250,6 +250,8 @@ Recent decisions affecting current work:
 | e2e-FIX | OAUTH_CALLBACK_URL env var | Allows configurable tunnel URLs for containerized OAuth |
 | e2e-FIX | oauth profile in docker-compose | Service runs on-demand, not with regular docker compose up |
 | e2e-FIX | OAuth token preference | Try OAuth tokens first (app identity), fall back to LINEAR_ACCESS_TOKEN (user identity) |
+| e2e-FIX | Linear tokens no refresh | Linear OAuth tokens last ~10 years and don't include refresh_token by design - no renewal needed |
+| e2e-FIX | OAuth as long-running service | Removed profile constraint so oauth container starts with docker compose up for reliable DNS resolution |
 
 ### Roadmap Evolution
 

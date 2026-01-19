@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: e2e-verification
 source: Full milestone E2E flow verification
 started: 2026-01-19T19:45:00Z
-updated: 2026-01-19T20:10:00Z
+updated: 2026-01-19T20:15:00Z
 ---
 
 ## Current Test
@@ -88,30 +88,51 @@ skipped: 5
   reason: "User reported: temporal ui is accessible, 3 containers running, temporal container showing as unhealthy"
   severity: minor
   test: 1
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Health check `tctl cluster health` fails during startup due to localhost binding timing - known Temporal Docker issue. Container is functionally healthy."
+  artifacts:
+    - path: "docker-compose.yml"
+      issue: "Health check start_period too short (lines 62-66)"
+  missing:
+    - "Increase start_period to 60s or use simpler health check"
+  debug_session: ".planning/debug/e2e-uat-diagnosis.md"
 
 - truth: "Linear OAuth flow works with tokens saved to .linear-tokens.json"
   status: failed
-  reason: "User reported: invalid redirect_uri error - OAuth script not containerized, callback URL not configurable. Architectural requirement missed: user specified all scripts/dependencies should be containerized. Also .env.example still shows LINEAR_ACCESS_TOKEN instead of LINEAR_CLIENT_ID/LINEAR_CLIENT_SECRET"
+  reason: "User reported: invalid redirect_uri error - OAuth script not containerized, callback URL not configurable. Also .env.example still shows LINEAR_ACCESS_TOKEN instead of LINEAR_CLIENT_ID/LINEAR_CLIENT_SECRET"
   severity: blocker
   test: 2
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Redirect URI mismatch: code uses localhost:3000/oauth/callback but README documents localhost:3333/callback. User configured wrong URI in Linear OAuth app."
+  artifacts:
+    - path: "src/scripts/linear-oauth.ts"
+      issue: "Line 30: hardcoded redirect URI http://localhost:3000/oauth/callback"
+    - path: "README.md"
+      issue: "Line 222: documents wrong URI http://localhost:3333/callback"
+    - path: ".env.example"
+      issue: "Confusing OAuth vs personal token documentation"
+  missing:
+    - "Update README to document correct redirect URI"
+    - "Update .env.example with LINEAR_CLIENT_ID and LINEAR_CLIENT_SECRET"
+    - "Consider containerizing OAuth flow for consistency"
+  debug_session: ".planning/debug/e2e-uat-diagnosis.md"
 
 - truth: "Dev Agent starts and connects to Temporal, displays config, listens on port 3001"
   status: failed
   reason: "User reported: 1) Env vars not documented (especially Linear). 2) Container run fails with 'connect ENOENT /var/run/docker.sock' - Docker socket not accessible. 3) Local run fails with 'No such image: node:20-alpine' - required image not present/not pulled."
   severity: blocker
   test: 3
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Three issues: A) docker-compose.yml dev-agent service missing Docker socket mount. B) node:20-alpine must be pulled locally. C) LINEAR_WEBHOOK_SECRET and SLACK_CHANNEL_ID not documented."
+  artifacts:
+    - path: "docker-compose.yml"
+      issue: "Lines 81-118: dev-agent service missing /var/run/docker.sock volume mount"
+    - path: "src/scripts/start-dev-agent.ts"
+      issue: "Line 109: uses node:20-alpine image"
+    - path: ".env.example"
+      issue: "Missing LINEAR_WEBHOOK_SECRET and SLACK_CHANNEL_ID documentation"
+  missing:
+    - "Add Docker socket volume to dev-agent service in docker-compose.yml"
+    - "Document prerequisite: docker pull node:20-alpine"
+    - "Document LINEAR_WEBHOOK_SECRET and SLACK_CHANNEL_ID in .env.example"
+  debug_session: ".planning/debug/e2e-uat-diagnosis.md"
 
 - truth: "Linear task activity shows app identity (not user)"
   status: failed
@@ -119,7 +140,11 @@ skipped: 5
   severity: major
   test: 7
   depends_on: test 2
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Downstream of Issue 2. Without OAuth tokens, start-dev-agent.ts line 100 uses LINEAR_ACCESS_TOKEN (personal token) which creates tasks as user identity."
+  artifacts:
+    - path: "src/scripts/start-dev-agent.ts"
+      issue: "Line 100: getLinearClient(process.env['LINEAR_ACCESS_TOKEN']!) - no OAuth fallback"
+  missing:
+    - "Fix Issue 2 first"
+    - "Add token preference logic: check OAuth tokens first, fall back to personal token with warning"
+  debug_session: ".planning/debug/e2e-uat-diagnosis.md"

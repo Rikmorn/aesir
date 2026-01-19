@@ -63,6 +63,15 @@ End-to-end automated development workflow where agents handle routine developmen
 - **Multi-LLM**: Must support multiple providers (Claude, GPT-4, etc.) — avoids vendor lock-in
 - **Tool Integration**: Must work with Linear, GitHub, Slack — these are non-negotiable existing tools
 - **Coworker UX**: Agents appear in existing tools, not a separate system to learn
+- **Full Containerization**: ALL services, scripts, and dependencies MUST run in Docker containers
+  - No reliance on host machine setup beyond Docker and environment variables
+  - Includes: agents, OAuth flows, webhook handlers, infrastructure services
+  - External access via Cloudflare tunnels, NOT localhost URLs
+  - Rationale: Reproducible environments, consistent execution, no "works on my machine" issues
+- **Tunnel-First External Access**: External services (Linear, GitHub, Slack) reach our services via Cloudflare tunnels
+  - Dashboard-configured tunnels (not config files) for simplicity
+  - Separate tunnels per service acceptable for deployment flexibility
+  - No localhost callback URLs in OAuth or webhook configurations
 
 ## Key Decisions
 
@@ -72,6 +81,9 @@ End-to-end automated development workflow where agents handle routine developmen
 | Agent creation via code/config | Start simple, add UI later when patterns are clear | — Pending |
 | Webhooks over polling | Cost and load considerations for async handoffs | — Pending |
 | MVP = single workflow | Prove the loop before scaling concurrency | — Pending |
+| Full containerization | Reproducible environments, no host dependencies | Adopted |
+| Cloudflare tunnels for external access | External services can't reach localhost; tunnels provide stable URLs | Adopted |
+| Dashboard-configured tunnels | Simpler setup, deployment flexibility with separate tunnels per service | Adopted |
 
 ---
-*Last updated: 2025-01-15 after initialization*
+*Last updated: 2026-01-19 after E2E UAT — added containerization and tunnel constraints*

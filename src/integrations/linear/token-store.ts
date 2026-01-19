@@ -6,12 +6,13 @@
  * refresh and persistence.
  */
 
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import * as path from "node:path";
 import { LinearClient } from "@linear/sdk";
 import { createLinearClient } from "./client.js";
 import type { LinearConfig } from "./types.js";
 
-const DEFAULT_TOKEN_FILE = ".linear-tokens.json";
+const DEFAULT_TOKEN_FILE = ".tokens/linear.json";
 
 /**
  * Error thrown when token file is missing
@@ -39,7 +40,7 @@ export class InvalidTokenFileError extends Error {
 /**
  * Load Linear OAuth tokens from a JSON file
  *
- * @param tokenFile - Path to the token file (default: .linear-tokens.json)
+ * @param tokenFile - Path to the token file (default: .tokens/linear.json)
  * @returns LinearConfig with access token, refresh token, and expiration
  * @throws TokenFileNotFoundError if file doesn't exist
  * @throws InvalidTokenFileError if file format is invalid
@@ -76,29 +77,29 @@ export async function loadLinearTokens(
     throw new InvalidTokenFileError(tokenFile, "Missing or invalid accessToken");
   }
 
-  if (typeof obj["refreshToken"] !== "string" || !obj["refreshToken"]) {
-    throw new InvalidTokenFileError(
-      tokenFile,
-      "Missing or invalid refreshToken"
-    );
-  }
-
+  // refreshToken is optional - Linear may not return one depending on app config
   if (typeof obj["expiresAt"] !== "number" || obj["expiresAt"] <= 0) {
     throw new InvalidTokenFileError(tokenFile, "Missing or invalid expiresAt");
   }
 
-  return {
+  // Build config object conditionally to satisfy exactOptionalPropertyTypes
+  const config: LinearConfig = {
     accessToken: obj["accessToken"],
-    refreshToken: obj["refreshToken"],
     expiresAt: obj["expiresAt"],
   };
+
+  if (typeof obj["refreshToken"] === "string" && obj["refreshToken"]) {
+    config.refreshToken = obj["refreshToken"];
+  }
+
+  return config;
 }
 
 /**
  * Save Linear OAuth tokens to a JSON file
  *
  * @param config - Token configuration to save
- * @param tokenFile - Path to the token file (default: .linear-tokens.json)
+ * @param tokenFile - Path to the token file (default: .tokens/linear.json)
  */
 export async function saveLinearTokens(
   config: LinearConfig,
@@ -110,6 +111,8 @@ export async function saveLinearTokens(
     expiresAt: config.expiresAt,
   };
 
+  // Ensure directory exists
+  await mkdir(path.dirname(tokenFile), { recursive: true });
   await writeFile(tokenFile, JSON.stringify(data, null, 2) + "\n", {
     mode: 0o600, // Restrictive permissions: owner read/write only
   });
@@ -122,7 +125,7 @@ export async function saveLinearTokens(
  * - Refreshes tokens when they're about to expire
  * - Persists refreshed tokens back to the file
  *
- * @param tokenFile - Path to the token file (default: .linear-tokens.json)
+ * @param tokenFile - Path to the token file (default: .tokens/linear.json)
  * @returns LinearClient instance with valid access token
  * @throws TokenFileNotFoundError if file doesn't exist
  * @throws InvalidTokenFileError if file format is invalid

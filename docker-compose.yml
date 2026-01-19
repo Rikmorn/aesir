@@ -84,6 +84,9 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: aesir-dev-agent
+    # Run as root to access Docker socket for sandbox execution
+    # The container is already isolated; Docker access is required for code sandboxing
+    user: root
     depends_on:
       temporal:
         condition: service_started # Temporal binds to network IP, not localhost
@@ -114,7 +117,7 @@ services:
       - "3001:3001" # Webhook endpoint
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./.linear-tokens.json:/app/.linear-tokens.json:ro
+      - ./.tokens:/app/.tokens:ro
     command: ["node", "dist/scripts/start-dev-agent.js"]
     networks:
       - aesir-network
@@ -203,12 +206,13 @@ services:
       - "3000:3000"
     command: ["node", "dist/scripts/linear-oauth.js"]
     volumes:
-      # Mount tokens file to host so other services can access it
-      - ./.linear-tokens.json:/app/.linear-tokens.json
+      # Mount tokens directory to host so other services can access it
+      - ./.tokens:/app/.tokens
     networks:
-      - aesir-network
-    profiles:
-      - oauth
+      aesir-network:
+        aliases:
+          - oauth
+    # No profile - runs as long-running service for OAuth callbacks
 
 volumes:
   temporal-postgresql:

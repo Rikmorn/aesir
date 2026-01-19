@@ -16,9 +16,15 @@
     "product-agent": "tsx src/scripts/start-product-agent.ts",
     "dev-agent": "tsx src/scripts/start-dev-agent.ts",
     "linear-oauth": "tsx src/scripts/linear-oauth.ts",
-    "infra:up": "docker compose up -d",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:dev-agent": "docker compose up -d dev-agent && docker compose logs -f dev-agent",
+    "docker:product-agent": "docker compose up -d product-agent && docker compose logs -f product-agent",
+    "infra:up": "docker compose up -d postgresql temporal temporal-ui",
     "infra:down": "docker compose down",
-    "infra:logs": "docker compose logs -f"
+    "infra:logs": "docker compose logs -f postgresql temporal temporal-ui"
   },
   "keywords": [
     "agent",

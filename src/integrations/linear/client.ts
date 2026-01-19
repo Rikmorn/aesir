@@ -120,24 +120,35 @@ export async function createLinearClient(
   const bufferMs = 60_000; // 60 seconds buffer
 
   if (now >= config.expiresAt - bufferMs) {
-    logger.debug("linear_token_expiring", {
-      message: "Token expiring soon, refreshing",
-      context: {
-        expiresAt: new Date(config.expiresAt).toISOString(),
-        now: new Date(now).toISOString(),
-      },
-    });
+    if (!config.refreshToken) {
+      // Linear tokens are long-lived (~10 years) and don't include refresh tokens
+      // This is expected - just log and continue
+      logger.warn("linear_token_expiring_no_refresh", {
+        message: "Linear token expiring. Linear doesn't provide refresh tokens - re-run OAuth flow.",
+        context: {
+          expiresAt: new Date(config.expiresAt).toISOString(),
+        },
+      });
+    } else {
+      logger.debug("linear_token_expiring", {
+        message: "Token expiring soon, refreshing",
+        context: {
+          expiresAt: new Date(config.expiresAt).toISOString(),
+          now: new Date(now).toISOString(),
+        },
+      });
 
-    const refreshed = await refreshOAuthToken(config.refreshToken);
+      const refreshed = await refreshOAuthToken(config.refreshToken);
 
-    // Update config with new tokens (strip Bearer prefix defensively)
-    config.accessToken = stripBearerPrefix(refreshed.accessToken);
-    config.refreshToken = refreshed.refreshToken;
-    config.expiresAt = now + refreshed.expiresIn * 1000;
+      // Update config with new tokens (strip Bearer prefix defensively)
+      config.accessToken = stripBearerPrefix(refreshed.accessToken);
+      config.refreshToken = refreshed.refreshToken;
+      config.expiresAt = now + refreshed.expiresIn * 1000;
 
-    // Notify caller to persist updated config
-    if (onTokenRefresh) {
-      await onTokenRefresh(config);
+      // Notify caller to persist updated config
+      if (onTokenRefresh) {
+        await onTokenRefresh(config);
+      }
     }
   }
 

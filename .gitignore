@@ -37,4 +37,7 @@ tmp/
 temp/
 
 # Linear OAuth tokens
-.linear-tokens.json
+.tokens/
+
+# Cloudflare Tunnel
+cloudflared.yml
