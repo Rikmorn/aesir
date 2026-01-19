@@ -1,541 +1,731 @@
-# Architecture Research
+# Architecture Research: v2.0 3-Layer Agentic Platform
 
-**Domain:** Agentic Development Platform / AI Agent Orchestration System
-**Researched:** 2026-01-16
-**Overall Confidence:** MEDIUM (patterns are well-established, but async human-in-loop is still evolving)
+**Domain:** Agentic Development Platform - Internal Tooling
+**Researched:** 2026-01-19
+**Overall Confidence:** HIGH (patterns well-established, MCP is industry standard)
 
-## Standard Architecture
+## Executive Summary
 
-### System Overview
+This document outlines the architecture for restructuring Aesir into a 3-layer platform: Platform, Integrations, and Agents. The key architectural decision is **how agents communicate with integrations** - the recommendation is a **hybrid approach: MCP for LLM tool calls + internal TypeScript interfaces for direct service communication**.
+
+MCP (Model Context Protocol) has become the industry standard for agent-to-tool communication in 2025-2026, adopted by OpenAI, Anthropic, Google, and all major frameworks. However, MCP is designed for LLM-initiated tool calls, not for all service-to-service communication. The architecture preserves direct TypeScript interfaces where appropriate.
+
+## System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                              EVENT INGESTION LAYER                               │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
-│  │   Linear    │  │   GitHub    │  │    Slack    │  │  Other      │            │
-│  │  Webhooks   │  │  Webhooks   │  │  Webhooks   │  │  Sources    │            │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘            │
-│         │                │                │                │                    │
-│         └────────────────┴────────────────┴────────────────┘                    │
-│                                    │                                            │
-│                          ┌─────────▼─────────┐                                  │
-│                          │   Event Gateway   │ (validation, routing, idempotency)│
-│                          └─────────┬─────────┘                                  │
-├────────────────────────────────────┼────────────────────────────────────────────┤
-│                              ORCHESTRATION LAYER                                 │
-├────────────────────────────────────┼────────────────────────────────────────────┤
-│                          ┌─────────▼─────────┐                                  │
-│                          │  Workflow Engine  │ (Temporal / Custom State Machine) │
-│                          │  ┌─────────────┐  │                                  │
-│                          │  │ State Store │  │                                  │
-│                          │  └─────────────┘  │                                  │
-│                          └─────────┬─────────┘                                  │
-│                                    │                                            │
-│           ┌────────────────────────┼────────────────────────────────┐           │
-│           │                        │                                │           │
-│  ┌────────▼────────┐    ┌─────────▼─────────┐    ┌─────────────────▼────┐      │
-│  │  Agent Router   │    │ Human-in-the-Loop │    │ Checkpoint Manager   │      │
-│  │  (Coordinator)  │    │     Service       │    │ (Interrupt/Resume)   │      │
-│  └────────┬────────┘    └─────────┬─────────┘    └──────────────────────┘      │
-├───────────┼───────────────────────┼─────────────────────────────────────────────┤
-│                              AGENT EXECUTION LAYER                               │
-├───────────┼───────────────────────┼─────────────────────────────────────────────┤
-│           │                       │                                             │
-│  ┌────────▼────────┐    ┌────────▼────────┐    ┌─────────────────────┐        │
-│  │  Product Agent  │    │   Dev Agent     │    │   Future Agents     │        │
-│  │  ┌───────────┐  │    │  ┌───────────┐  │    │   (QA, Deploy, etc) │        │
-│  │  │  LLM A    │  │    │  │  LLM B    │  │    │                     │        │
-│  │  └───────────┘  │    │  └───────────┘  │    │                     │        │
-│  └────────┬────────┘    └────────┬────────┘    └─────────────────────┘        │
-│           │                      │                                             │
-│           └──────────────────────┴──────────────────────────────────────┐      │
-│                                                                          │      │
-│                                    ┌─────────────────────────────────────▼─┐    │
-│                                    │         Tool Abstraction Layer        │    │
-│                                    └─────────────────────────────────────┬─┘    │
-├──────────────────────────────────────────────────────────────────────────┼──────┤
-│                              TOOL INTEGRATION LAYER                       │      │
-├──────────────────────────────────────────────────────────────────────────┼──────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │      │
-│  │   Linear    │  │   GitHub    │  │    Slack    │  │  Other      │◄────┘      │
-│  │    API      │  │    API      │  │    API      │  │   APIs      │            │
-│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘            │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                              OBSERVABILITY LAYER                                 │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                 │
-│  │    Tracing      │  │    Metrics      │  │    Logging      │                 │
-│  │  (LangSmith /   │  │  (Prometheus /  │  │  (Structured    │                 │
-│  │   OpenTelemetry)│  │   Grafana)      │  │   JSON)         │                 │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘                 │
-└─────────────────────────────────────────────────────────────────────────────────┘
+                              EXTERNAL EVENTS
+                    ┌─────────────┬─────────────┬─────────────┐
+                    │   Linear    │   GitHub    │    Slack    │
+                    │  Webhooks   │  Webhooks   │   Events    │
+                    └──────┬──────┴──────┬──────┴──────┬──────┘
+                           │             │             │
+                           └─────────────┴─────────────┘
+                                         │
+┌────────────────────────────────────────┼────────────────────────────────────────┐
+│                              PLATFORM LAYER                                      │
+├──────────────────────────────────────────────────────────────────────────────────┤
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                  │
+│  │  Event Gateway  │  │    Temporal     │  │   PostgreSQL    │                  │
+│  │  (webhook rx,   │  │  (durable exec, │  │  (state store,  │                  │
+│  │   validation)   │  │   activities)   │  │   checkpoints)  │                  │
+│  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘                  │
+│           │                    │                    │                           │
+│  ┌────────┴───────────────────┴───────────────────┴────────┐                   │
+│  │                   Platform Services API                  │                   │
+│  │  (secrets, config, observability, orchestration hooks)   │                   │
+│  └──────────────────────────┬───────────────────────────────┘                   │
+├─────────────────────────────┼───────────────────────────────────────────────────┤
+│                    INTEGRATIONS LAYER                                            │
+├─────────────────────────────┼───────────────────────────────────────────────────┤
+│           ┌─────────────────┼─────────────────┐                                 │
+│           │                 │                 │                                 │
+│  ┌────────▼────────┐ ┌──────▼──────┐ ┌───────▼───────┐                         │
+│  │  Linear Service │ │GitHub Service│ │ Slack Service │   (each independent,    │
+│  │  ┌────────────┐ │ │┌────────────┐│ │┌────────────┐ │    own lifecycle,       │
+│  │  │MCP Server  │ │ ││MCP Server  ││ ││MCP Server  │ │    swappable)           │
+│  │  │(tools)     │ │ ││(tools)     ││ ││(tools)     │ │                         │
+│  │  └────────────┘ │ │└────────────┘│ │└────────────┘ │                         │
+│  │  ┌────────────┐ │ │┌────────────┐│ │┌────────────┐ │                         │
+│  │  │Direct API  │ │ ││Direct API  ││ ││Direct API  │ │                         │
+│  │  │(internal)  │ │ ││(internal)  ││ ││(internal)  │ │                         │
+│  │  └────────────┘ │ │└────────────┘│ │└────────────┘ │                         │
+│  │  ┌────────────┐ │ │┌────────────┐│ │┌────────────┐ │                         │
+│  │  │Auth/Config │ │ ││Auth/Config ││ ││Auth/Config │ │                         │
+│  │  └────────────┘ │ │└────────────┘│ │└────────────┘ │                         │
+│  └─────────────────┘ └──────────────┘ └───────────────┘                         │
+│           │                 │                 │                                 │
+│           └─────────────────┴─────────────────┘                                 │
+│                             │                                                   │
+│                    ┌────────▼────────┐                                          │
+│                    │  Integration    │ (normalized interface for agents)        │
+│                    │  Protocol Layer │                                          │
+│                    │  (MCP + Direct) │                                          │
+│                    └────────┬────────┘                                          │
+├─────────────────────────────┼───────────────────────────────────────────────────┤
+│                       AGENTS LAYER                                               │
+├─────────────────────────────┼───────────────────────────────────────────────────┤
+│           ┌─────────────────┼─────────────────┐                                 │
+│           │                 │                 │                                 │
+│  ┌────────▼────────┐ ┌──────▼──────┐ ┌───────▼───────┐                         │
+│  │  Product Agent  │ │  Dev Agent  │ │ Future Agents │                         │
+│  │  ┌────────────┐ │ │┌────────────┐│ │               │                         │
+│  │  │ LangGraph  │ │ ││ LangGraph  ││ │               │                         │
+│  │  │ Workflow   │ │ ││ Workflow   ││ │               │                         │
+│  │  └────────────┘ │ │└────────────┘│ │               │                         │
+│  │  ┌────────────┐ │ │┌────────────┐│ │               │                         │
+│  │  │MCP Client  │ │ ││MCP Client  ││ │               │                         │
+│  │  │(tools)     │ │ ││(tools)     ││ │               │                         │
+│  │  └────────────┘ │ │└────────────┘│ │               │                         │
+│  └─────────────────┘ └──────────────┘ └───────────────┘                         │
+├──────────────────────────────────────────────────────────────────────────────────┤
+│                          OBSERVABILITY (cross-cutting)                           │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                  │
+│  │   Structured    │  │   LangSmith/    │  │    Metrics      │                  │
+│  │   Logging       │  │   Tracing       │  │    (future)     │                  │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘                  │
+└──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Component Responsibilities
+## Component Responsibilities
 
-| Component | Responsibility | Typical Implementation |
-|-----------|----------------|------------------------|
-| Event Gateway | Receives webhooks, validates signatures, deduplicates, routes to workflows | Custom service + message queue (Redis/Kafka) |
-| Workflow Engine | Orchestrates agent execution, manages state persistence, handles failures | Temporal (recommended) or custom state machine |
-| Agent Router | Dispatches tasks to appropriate agents based on type/context | Coordinator pattern with routing logic |
-| Human-in-the-Loop Service | Manages approval requests, collects responses, resumes workflows | Slack/email integration + checkpoint system |
-| Checkpoint Manager | Persists workflow state at interrupt points, enables resume | Part of workflow engine or custom store |
-| Agent (Product/Dev) | Executes domain-specific tasks using LLM and tools | LangGraph agent or custom agent loop |
-| Tool Abstraction Layer | Provides unified interface to external tools | LangChain-style tool definitions |
-| Observability Layer | Traces agent decisions, monitors latency/costs, alerts on failures | LangSmith + Grafana + structured logs |
+### Platform Layer
+
+| Component | Responsibility | Implementation |
+|-----------|----------------|----------------|
+| **Event Gateway** | Receive webhooks, validate signatures, deduplicate, route to workflows | Express/Hono HTTP server |
+| **Temporal** | Durable workflow execution, activity scheduling, retry policies | Temporal.io cluster |
+| **PostgreSQL** | State persistence, LangGraph checkpoints, integration credentials | PostgreSQL 15+ |
+| **Platform Services API** | Secrets access, configuration, orchestration hooks | Internal TypeScript module |
+| **Observability** | Structured logging (pino), tracing (LangSmith), metrics | Cross-cutting concern |
+
+### Integrations Layer
+
+| Component | Responsibility | Implementation |
+|-----------|----------------|----------------|
+| **Linear Service** | All Linear API operations, OAuth token management, webhook handling | Independent service module |
+| **GitHub Service** | All GitHub API operations (via Octokit), webhook handling | Independent service module |
+| **Slack Service** | Bolt app, event handling, notifications, OAuth | Independent service module |
+| **MCP Servers** | Expose integration capabilities as MCP tools for LLM use | @modelcontextprotocol/sdk |
+| **Direct API** | TypeScript interfaces for non-LLM callers (Temporal activities, etc.) | Typed exports |
+| **Auth/Config** | Per-integration credential management, config isolation | Scoped config module |
+
+### Agents Layer
+
+| Component | Responsibility | Implementation |
+|-----------|----------------|----------------|
+| **Product Agent** | Requirement gathering, task creation in Linear | LangGraph StateGraph |
+| **Dev Agent** | Code generation, testing, PR creation | LangGraph StateGraph |
+| **MCP Clients** | Connect to integration MCP servers for tool use | @modelcontextprotocol/sdk |
+| **Agent Config** | LLM model selection, prompts, tool subsets | Config files |
 
 ## Recommended Project Structure
 
 ```
-src/
-├── agents/                 # Agent definitions and implementations
-│   ├── product/            # Product Agent
-│   │   ├── agent.ts        # Agent configuration and loop
-│   │   ├── prompts.ts      # System prompts and templates
-│   │   └── tools.ts        # Product-specific tools
-│   ├── dev/                # Dev Agent
-│   │   ├── agent.ts
-│   │   ├── prompts.ts
-│   │   └── tools.ts
-│   └── shared/             # Shared agent utilities
-│       ├── base-agent.ts   # Base agent class/interface
-│       └── llm-client.ts   # Multi-LLM client abstraction
-├── workflows/              # Workflow definitions (Temporal or custom)
-│   ├── feature-request.ts  # Feature request → shipped code workflow
-│   ├── code-review.ts      # Code review workflow
-│   └── activities/         # Workflow activities (non-deterministic operations)
-│       ├── agent-execution.ts
-│       └── human-approval.ts
-├── tools/                  # Tool implementations
-│   ├── linear/             # Linear API tools
-│   ├── github/             # GitHub API tools
-│   ├── slack/              # Slack API tools
-│   └── registry.ts         # Tool registry for agents
-├── events/                 # Webhook handlers and event processing
-│   ├── handlers/           # Per-source webhook handlers
-│   │   ├── linear.ts
-│   │   ├── github.ts
-│   │   └── slack.ts
-│   ├── gateway.ts          # Event validation and routing
-│   └── types.ts            # Event type definitions
-├── hitl/                   # Human-in-the-loop components
-│   ├── approval-service.ts # Approval request/response management
-│   ├── channels/           # Notification channels (Slack, email)
-│   └── state.ts            # HITL state persistence
-├── observability/          # Monitoring and tracing
-│   ├── tracing.ts          # Trace instrumentation
-│   ├── metrics.ts          # Metrics collection
-│   └── logging.ts          # Structured logging
-├── config/                 # Configuration management
-│   ├── agents.ts           # Agent-specific configs (LLM models, etc.)
-│   └── tools.ts            # Tool configurations and credentials
-└── lib/                    # Shared utilities
-    ├── llm/                # LLM client wrappers
-    └── storage/            # State persistence utilities
+aesir/
+├── packages/                        # Monorepo packages (pnpm workspaces)
+│   │
+│   ├── platform/                    # Platform Layer
+│   │   ├── package.json
+│   │   └── src/
+│   │       ├── index.ts             # Public API exports
+│   │       ├── gateway/             # Event gateway (webhooks)
+│   │       │   ├── index.ts
+│   │       │   ├── router.ts        # Route webhooks to handlers
+│   │       │   ├── validation.ts    # Signature verification
+│   │       │   └── idempotency.ts   # Deduplication
+│   │       ├── temporal/            # Temporal integration
+│   │       │   ├── index.ts
+│   │       │   ├── client.ts        # Temporal client factory
+│   │       │   ├── worker.ts        # Worker configuration
+│   │       │   └── activities/      # Shared activities
+│   │       ├── state/               # State management
+│   │       │   ├── index.ts
+│   │       │   ├── checkpointer.ts  # LangGraph PostgreSQL checkpointer
+│   │       │   └── migrations/      # DB migrations
+│   │       ├── config/              # Configuration management
+│   │       │   ├── index.ts
+│   │       │   ├── loader.ts        # Config loading (dotenv-flow)
+│   │       │   └── schema.ts        # Config validation (zod)
+│   │       ├── secrets/             # Secrets management
+│   │       │   ├── index.ts
+│   │       │   └── provider.ts      # Secret provider interface
+│   │       └── observability/       # Logging, tracing, metrics
+│   │           ├── index.ts
+│   │           ├── logger.ts        # pino logger
+│   │           ├── tracing.ts       # LangSmith/OpenTelemetry
+│   │           └── context.ts       # Correlation IDs
+│   │
+│   ├── integrations/                # Integrations Layer
+│   │   │
+│   │   ├── linear/                  # Linear integration (independent package)
+│   │   │   ├── package.json
+│   │   │   └── src/
+│   │   │       ├── index.ts         # Public API
+│   │   │       ├── client.ts        # LinearClient factory
+│   │   │       ├── auth.ts          # OAuth token management
+│   │   │       ├── issues.ts        # Issue operations
+│   │   │       ├── webhooks.ts      # Webhook handlers
+│   │   │       ├── types.ts         # Linear-specific types
+│   │   │       ├── mcp-server.ts    # MCP server exposing Linear tools
+│   │   │       └── activities.ts    # Temporal activities (thin wrapper)
+│   │   │
+│   │   ├── github/                  # GitHub integration (independent package)
+│   │   │   ├── package.json
+│   │   │   └── src/
+│   │   │       ├── index.ts
+│   │   │       ├── client.ts        # Octokit factory
+│   │   │       ├── auth.ts          # Token management
+│   │   │       ├── branches.ts
+│   │   │       ├── commits.ts
+│   │   │       ├── pull-requests.ts
+│   │   │       ├── webhooks.ts
+│   │   │       ├── types.ts
+│   │   │       ├── mcp-server.ts    # MCP server exposing GitHub tools
+│   │   │       └── activities.ts
+│   │   │
+│   │   ├── slack/                   # Slack integration (independent package)
+│   │   │   ├── package.json
+│   │   │   └── src/
+│   │   │       ├── index.ts
+│   │   │       ├── app.ts           # Bolt app setup
+│   │   │       ├── auth.ts          # OAuth
+│   │   │       ├── notifications.ts
+│   │   │       ├── assistant.ts     # Slack assistant handler
+│   │   │       ├── types.ts
+│   │   │       ├── mcp-server.ts    # MCP server exposing Slack tools
+│   │   │       └── activities.ts
+│   │   │
+│   │   └── shared/                  # Shared integration utilities
+│   │       ├── package.json
+│   │       └── src/
+│   │           ├── index.ts
+│   │           ├── mcp-utils.ts     # MCP server helpers
+│   │           └── types.ts         # Common integration types
+│   │
+│   ├── agents/                      # Agents Layer
+│   │   ├── package.json
+│   │   └── src/
+│   │       ├── index.ts             # Public API
+│   │       ├── product-agent/       # Product Agent
+│   │       │   ├── index.ts
+│   │       │   ├── graph.ts         # LangGraph StateGraph
+│   │       │   ├── state.ts         # Agent state definition
+│   │       │   ├── prompts.ts       # System prompts
+│   │       │   ├── tools.ts         # MCP tool configuration
+│   │       │   └── nodes/           # Graph nodes
+│   │       ├── dev-agent/           # Dev Agent
+│   │       │   ├── index.ts
+│   │       │   ├── graph.ts
+│   │       │   ├── state.ts
+│   │       │   ├── prompts.ts
+│   │       │   ├── tools.ts
+│   │       │   └── nodes/
+│   │       └── shared/              # Shared agent utilities
+│   │           ├── base-agent.ts    # Base agent patterns
+│   │           ├── mcp-client.ts    # MCP client setup
+│   │           └── llm-client.ts    # Multi-LLM abstraction
+│   │
+│   └── sandbox/                     # Code execution sandbox
+│       ├── package.json
+│       └── src/
+│           ├── index.ts
+│           ├── docker-sandbox.ts
+│           └── types.ts
+│
+├── apps/                            # Deployable applications
+│   ├── api/                         # Main API server
+│   │   ├── package.json
+│   │   └── src/
+│   │       ├── index.ts             # Server entry
+│   │       └── routes/              # HTTP routes
+│   │
+│   └── worker/                      # Temporal worker
+│       ├── package.json
+│       └── src/
+│           ├── index.ts
+│           └── workflows/           # Workflow definitions
+│
+├── docker-compose.yml               # Local development
+├── pnpm-workspace.yaml              # Workspace configuration
+├── tsconfig.base.json               # Shared TypeScript config
+└── biome.json                       # Linting/formatting
 ```
 
 ### Structure Rationale
 
-- **agents/**: Each agent is self-contained with its own prompts, tools, and configuration. This supports the "specialized agents with different models" requirement.
-- **workflows/**: Separates orchestration logic from agent implementation. Activities encapsulate non-deterministic operations for Temporal's replay safety.
-- **tools/**: Centralized tool definitions that can be shared across agents. Registry pattern allows runtime tool discovery.
-- **events/**: Clean separation of webhook handling from business logic. Gateway pattern provides validation, idempotency, and routing.
-- **hitl/**: Isolated human-in-the-loop logic enables testing approval flows independently of agent execution.
+**Why monorepo with pnpm workspaces:**
+- Each integration is truly independent (own package.json, own dependencies)
+- Clear dependency direction enforced by package boundaries
+- Integrations can be versioned and deployed independently
+- TypeScript project references enable incremental builds
+- pnpm is fastest package manager, handles workspaces well
+
+**Why packages/integrations/{service} structure:**
+- Each integration has own lifecycle (key v2.0 requirement)
+- Can be swapped at runtime (e.g., GitHub -> GitLab)
+- Credentials and config isolated per integration
+- MCP server colocated with integration logic
+- Testing can be done in isolation
+
+**Why separate apps/ from packages/:**
+- packages/ are libraries (reusable)
+- apps/ are deployable (entry points)
+- Clear distinction supports different deployment targets
+- Worker and API can scale independently
 
 ## Architectural Patterns
 
-### Pattern 1: Coordinator-Worker (Recommended for MVP)
+### Pattern 1: MCP for LLM Tool Calls (Recommended)
 
-**What:** A central coordinator agent receives tasks, dispatches to specialized worker agents, and aggregates results.
+**What:** Agents use MCP clients to invoke tools on integration MCP servers. The LLM decides which tools to call based on MCP tool definitions.
 
-**When to use:** When you have 2-5 agents with clear role separation and need straightforward orchestration.
+**When:** Any time an LLM needs to interact with an external service (read issues, create PRs, send messages).
 
-**Trade-offs:**
-- Pros: Simple mental model, easy debugging, deterministic flow
-- Cons: Coordinator can become bottleneck, single point of failure
+**Why this is now the standard:**
+- MCP is industry standard (OpenAI, Anthropic, Google, LangChain all adopted)
+- Tool definitions are structured (JSON Schema) - LLMs understand them
+- Built-in security model (consent, permission boundaries)
+- Ecosystem of tools already exists
+- Future-proof: agent-to-agent communication via MCP coming in 2026
 
-**Confidence:** HIGH - This is Google's recommended starting pattern and aligns with your Product Agent → Dev Agent flow.
-
-**Example:**
-```typescript
-// Simplified coordinator pattern
-async function coordinatorWorkflow(task: FeatureRequest): Promise<WorkflowResult> {
-  // Step 1: Product Agent analyzes and creates spec
-  const spec = await executeAgent('product', {
-    task: 'analyze_and_spec',
-    input: task.description,
-  });
-
-  // Step 2: Human approval checkpoint
-  const approval = await requestHumanApproval({
-    type: 'spec_approval',
-    content: spec,
-    channel: 'slack',
-  });
-
-  if (!approval.approved) {
-    return { status: 'rejected', reason: approval.feedback };
-  }
-
-  // Step 3: Dev Agent implements
-  const implementation = await executeAgent('dev', {
-    task: 'implement',
-    spec: spec,
-  });
-
-  return { status: 'completed', result: implementation };
-}
-```
-
-### Pattern 2: Event-Driven Blackboard
-
-**What:** Agents communicate via a shared "blackboard" (event stream/state store) rather than direct calls. Each agent subscribes to relevant events and publishes results.
-
-**When to use:** When agents need loose coupling, when you want agents to react to changes from multiple sources (webhooks + other agents).
-
-**Trade-offs:**
-- Pros: Highly decoupled, scales well, agents can be added/removed without changing others
-- Cons: Harder to debug, eventual consistency, requires robust event infrastructure
-
-**Confidence:** MEDIUM - Well-established in distributed systems, but adds complexity for MVP.
+**Confidence:** HIGH - MCP is the clear winner, OpenAI deprecated Assistants API in favor of MCP.
 
 **Example:**
+
 ```typescript
-// Event-driven pattern with Kafka/Redis streams
-interface AgentEvent {
-  type: string;
-  workflowId: string;
-  agentId: string;
-  payload: unknown;
-  timestamp: Date;
-}
+// packages/integrations/linear/src/mcp-server.ts
+import { McpServer } from "@modelcontextprotocol/sdk/server";
+import { z } from "zod";
+import { createIssue, updateIssueStatus } from "./issues.js";
 
-// Product Agent subscribes to feature_request events
-productAgent.subscribe('feature_request.created', async (event) => {
-  const spec = await productAgent.analyze(event.payload);
-  await publish({
-    type: 'spec.created',
-    workflowId: event.workflowId,
-    payload: spec,
-  });
-});
+export function createLinearMcpServer(client: LinearClient) {
+  const server = new McpServer({ name: "linear", version: "1.0.0" });
 
-// Dev Agent subscribes to approved specs
-devAgent.subscribe('spec.approved', async (event) => {
-  const implementation = await devAgent.implement(event.payload);
-  await publish({
-    type: 'implementation.completed',
-    workflowId: event.workflowId,
-    payload: implementation,
-  });
-});
-```
-
-### Pattern 3: Durable Execution with Temporal (Recommended for Production)
-
-**What:** Use Temporal's workflow engine to manage agent execution, state persistence, and failure recovery automatically.
-
-**When to use:** When you need reliable execution across async boundaries, human approvals that may take hours/days, and robust failure handling.
-
-**Trade-offs:**
-- Pros: Automatic state persistence, replay on failure, built-in timers, proven at scale (OpenAI uses it for Codex)
-- Cons: Learning curve, operational overhead of running Temporal, requires separating deterministic (workflows) from non-deterministic (activities) code
-
-**Confidence:** HIGH - Temporal is the recommended approach for production agentic systems with async handoffs.
-
-**Example:**
-```typescript
-// Temporal workflow for feature request
-@Workflow()
-export class FeatureRequestWorkflow {
-  @WorkflowMethod()
-  async run(request: FeatureRequest): Promise<WorkflowResult> {
-    // Activity: Non-deterministic agent execution
-    const spec = await this.activities.executeProductAgent(request);
-
-    // Signal: Wait for human approval (can take hours/days)
-    const approval = await this.waitForSignal<ApprovalResult>('approval');
-
-    if (!approval.approved) {
-      return { status: 'rejected', reason: approval.feedback };
+  server.tool(
+    "linear_create_issue",
+    "Create a new issue in Linear",
+    {
+      teamId: z.string().describe("Team ID"),
+      title: z.string().describe("Issue title"),
+      description: z.string().optional().describe("Issue description"),
+      priority: z.number().min(0).max(4).optional(),
+    },
+    async (params) => {
+      const result = await createIssue(client, params);
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
     }
+  );
 
-    // Activity: Dev agent implementation
-    const implementation = await this.activities.executeDevAgent(spec);
+  server.tool(
+    "linear_update_status",
+    "Update issue status",
+    {
+      issueId: z.string(),
+      status: z.enum(["Todo", "In Progress", "Done", "Cancelled"]),
+    },
+    async (params) => {
+      await updateIssueStatus(client, params.issueId, params.status);
+      return { content: [{ type: "text", text: "Status updated" }] };
+    }
+  );
 
-    return { status: 'completed', result: implementation };
+  return server;
+}
+```
+
+```typescript
+// packages/agents/src/product-agent/tools.ts
+import { Client } from "@modelcontextprotocol/sdk/client";
+
+export async function connectToLinear(): Promise<Client> {
+  const client = new Client({ name: "product-agent" });
+  // Connect via stdio or HTTP depending on deployment
+  await client.connect(transport);
+  return client;
+}
+```
+
+### Pattern 2: Direct TypeScript Interfaces for Non-LLM Calls
+
+**What:** Temporal activities and other non-LLM code use direct TypeScript imports from integration packages.
+
+**When:** When a workflow or activity needs to call an integration without LLM involvement (e.g., updating status after PR merge).
+
+**Why:** MCP adds overhead (JSON-RPC, serialization) that's unnecessary for direct service-to-service calls. TypeScript interfaces provide type safety and are simpler.
+
+**Confidence:** HIGH - This is standard software architecture.
+
+**Example:**
+
+```typescript
+// packages/platform/src/temporal/activities/integration-activities.ts
+import { updateIssueStatus } from "@aesir/linear";
+import { mergePullRequest } from "@aesir/github";
+
+// Activities use direct imports - no MCP overhead
+export async function updateLinearStatus(
+  issueId: string,
+  status: IssueStatus
+): Promise<void> {
+  const client = await getLinearClient(); // From secrets/config
+  await updateIssueStatus(client, issueId, status);
+}
+
+export async function mergeGitHubPR(
+  owner: string,
+  repo: string,
+  prNumber: number
+): Promise<{ sha: string }> {
+  const octokit = await getOctokit();
+  return mergePullRequest(octokit, owner, repo, prNumber);
+}
+```
+
+### Pattern 3: Dependency Injection via Factory Functions
+
+**What:** Integration clients are created via factory functions that receive dependencies (config, secrets, logger).
+
+**When:** Everywhere. Every integration client should be created via factory.
+
+**Why:**
+- Testability (inject mocks)
+- Configuration isolation
+- Credential management centralized
+- No global state
+
+**Confidence:** HIGH - This is already partially implemented in v1.
+
+**Example:**
+
+```typescript
+// packages/integrations/linear/src/client.ts
+export interface LinearClientDeps {
+  config: LinearConfig;
+  secrets: SecretsProvider;
+  logger: Logger;
+}
+
+export async function createLinearClient(deps: LinearClientDeps): Promise<LinearClient> {
+  const { accessToken, refreshToken, expiresAt } = await deps.secrets.get("linear");
+
+  if (isTokenExpiring(expiresAt)) {
+    const newTokens = await refreshOAuthToken(refreshToken, deps.config);
+    await deps.secrets.set("linear", newTokens);
+    return new LinearClient({ accessToken: newTokens.accessToken });
   }
 
-  @SignalMethod()
-  async receiveApproval(approval: ApprovalResult): void {
-    // Temporal handles resuming the workflow
+  return new LinearClient({ accessToken });
+}
+```
+
+### Pattern 4: Event-Driven Webhook Processing
+
+**What:** Webhooks are received, validated, and queued for async processing. Temporal workflows handle the actual work.
+
+**When:** All webhook handling.
+
+**Why:**
+- Webhook sources (GitHub, Linear, Slack) have timeout expectations
+- Async processing prevents lost events
+- Idempotency keys handle retries
+- Temporal provides durability
+
+**Confidence:** HIGH - Already implemented in v1, proven pattern.
+
+**Example:**
+
+```typescript
+// packages/platform/src/gateway/router.ts
+import { TemporalClient } from "../temporal/client.js";
+
+export async function handleLinearWebhook(req: Request): Promise<Response> {
+  // 1. Validate signature
+  if (!verifyLinearSignature(req)) {
+    return new Response("Invalid signature", { status: 401 });
+  }
+
+  // 2. Check idempotency
+  const eventId = req.headers.get("x-linear-event-id");
+  if (await isDuplicate(eventId)) {
+    return new Response("Already processed", { status: 200 });
+  }
+
+  // 3. Start Temporal workflow (async)
+  const temporal = await getTemporalClient();
+  await temporal.workflow.start("handleLinearEvent", {
+    taskQueue: "aesir-main",
+    workflowId: `linear-${eventId}`,
+    args: [await req.json()],
+  });
+
+  // 4. Acknowledge immediately
+  return new Response("OK", { status: 200 });
+}
+```
+
+### Pattern 5: LangGraph + Temporal Hybrid
+
+**What:** LangGraph handles the agent reasoning loop (LLM calls, tool use). Temporal handles durable orchestration (human-in-loop, cross-service coordination).
+
+**When:** This is the overall architecture - not one or the other.
+
+**Why:**
+- LangGraph is excellent for agent logic (graph-based, checkpointing, tool integration)
+- Temporal is excellent for long-running workflows (days for human approval)
+- They complement each other
+- LangGraph activities run inside Temporal activities
+
+**Confidence:** HIGH - This pattern is explicitly recommended by both LangChain and Temporal.
+
+**Example:**
+
+```typescript
+// apps/worker/src/workflows/dev-workflow.ts
+import { proxyActivities } from "@temporalio/workflow";
+import type { DevWorkflowActivities } from "../activities.js";
+
+const { runDevAgent, updateLinearStatus, notifySlack } = proxyActivities<DevWorkflowActivities>({
+  startToCloseTimeout: "30m",
+  retry: { maximumAttempts: 3 },
+});
+
+export async function devWorkflow(issueId: string): Promise<void> {
+  // Update Linear status
+  await updateLinearStatus(issueId, "In Progress");
+
+  // Run LangGraph agent (inside Temporal activity for durability)
+  const result = await runDevAgent({ issueId });
+
+  if (result.success) {
+    await updateLinearStatus(issueId, "In Review");
+    await notifySlack(`PR created: ${result.prUrl}`);
+  } else {
+    await updateLinearStatus(issueId, "Blocked");
+    await notifySlack(`Dev agent failed: ${result.error}`);
   }
 }
 ```
 
-### Pattern 4: Human-in-the-Loop Interrupt/Resume
+## Anti-Patterns to Avoid
 
-**What:** Explicit checkpoints in workflow where execution pauses for human input, with state persisted to survive process restarts.
+### Anti-Pattern 1: MCP for Everything
 
-**When to use:** Required for any approval workflow, especially when approvals may take hours or days.
+**What people do:** Use MCP for all service-to-service communication, even non-LLM code.
 
-**Trade-offs:**
-- Pros: Explicit control over approval points, auditable decision trail
-- Cons: Requires robust state persistence, careful handling of workflow timeout/expiry
+**Why it's wrong:** MCP adds JSON-RPC overhead, designed for LLM tool use. Direct function calls are simpler and faster for internal code.
 
-**Confidence:** HIGH - This is essential for your use case. LangGraph's `interrupt()` function and Temporal's signals both implement this pattern.
+**Do instead:** Use MCP for LLM tool calls. Use direct TypeScript imports for activities and non-LLM code.
 
-**Key Implementation Details:**
-- **Checkpointer Required:** State must be persisted (database, Redis, or Temporal's built-in persistence)
-- **Thread ID:** Resume requires the same thread/workflow ID to restore state
-- **Timeout Handling:** Define what happens if approval takes too long (escalate, auto-reject, etc.)
-- **Batched Interrupts:** If multiple approvals needed, batch them in one request
+### Anti-Pattern 2: Mixing Integration Logic with Agent Logic
+
+**What people do:** Put Linear API calls directly in agent nodes.
+
+**Why it's wrong:** Couples agents to specific integrations. Makes testing hard. Prevents integration swapping.
+
+**Do instead:** Agents call integration tools via MCP. Integration logic lives in integration packages.
+
+### Anti-Pattern 3: Shared Global Clients
+
+**What people do:** Create a single LinearClient at startup and reuse everywhere.
+
+**Why it's wrong:** Token refresh becomes global state. Testing requires global mocking. Credential rotation is unsafe.
+
+**Do instead:** Factory functions create clients on demand. Pass clients as dependencies.
+
+### Anti-Pattern 4: Integration Packages Depending on Each Other
+
+**What people do:** Linear package imports from GitHub package.
+
+**Why it's wrong:** Creates coupling between integrations. Prevents independent deployment.
+
+**Do instead:** If integrations need to coordinate, do it at the platform or agent layer. Integration packages only depend on platform packages.
 
 ## Data Flow
 
-### Webhook → Agent Execution Flow
+### Agent Tool Call Flow (via MCP)
 
 ```
-[Linear Webhook: Issue Created]
+┌─────────────────┐
+│    LLM         │ "I need to create an issue in Linear"
+└────────┬────────┘
          │
          ▼
-┌─────────────────────────┐
-│     Event Gateway       │
-│  - Verify signature     │
-│  - Check idempotency    │
-│  - Map to event type    │
-└───────────┬─────────────┘
-            │
-            ▼
-┌─────────────────────────┐
-│    Workflow Engine      │
-│  - Create/resume        │
-│    workflow instance    │
-│  - Load persisted state │
-└───────────┬─────────────┘
-            │
-            ▼
-┌─────────────────────────┐
-│      Agent Router       │
-│  - Select agent by task │
-│  - Load agent config    │
-│  - Select LLM model     │
-└───────────┬─────────────┘
-            │
-            ▼
-┌─────────────────────────┐
-│    Agent Execution      │
-│  - LLM reasoning loop   │
-│  - Tool invocations     │
-│  - Emit observations    │
-└───────────┬─────────────┘
-            │
-            ▼
-┌─────────────────────────┐
-│   HITL Checkpoint?      │───Yes──▶ [Pause, notify human, persist state]
-└───────────┬─────────────┘                          │
-            │No                                       │
-            ▼                                         │
-┌─────────────────────────┐                          │
-│  Continue/Complete      │◀─────[Human responds]────┘
-└─────────────────────────┘
-```
-
-### Human Approval Flow (Async)
-
-```
-[Workflow reaches approval point]
+┌─────────────────┐
+│  LangGraph     │ Receives tool call request
+│  Agent Node    │
+└────────┬────────┘
          │
          ▼
-┌─────────────────────────┐
-│  Checkpoint Manager     │
-│  - Persist full state   │
-│  - Generate resume ID   │
-└───────────┬─────────────┘
-            │
-            ▼
-┌─────────────────────────┐
-│  HITL Service           │
-│  - Create approval req  │
-│  - Send to Slack/email  │
-│  - Store pending state  │
-└─────────────────────────┘
-            │
-   [Hours/days pass]
-            │
-            ▼
-┌─────────────────────────┐
-│  Human Response         │
-│  (Slack button, etc.)   │
-└───────────┬─────────────┘
-            │
-            ▼
-┌─────────────────────────┐
-│  HITL Service           │
-│  - Validate response    │
-│  - Signal workflow      │
-└───────────┬─────────────┘
-            │
-            ▼
-┌─────────────────────────┐
-│  Workflow Engine        │
-│  - Load checkpoint      │
-│  - Resume execution     │
-│  - Continue with result │
-└─────────────────────────┘
+┌─────────────────┐
+│  MCP Client    │ JSON-RPC request: linear_create_issue
+│  (in agent)    │
+└────────┬────────┘
+         │ (stdio or HTTP transport)
+         ▼
+┌─────────────────┐
+│  MCP Server    │ Receives tool call
+│  (Linear pkg)  │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Linear Client  │ createIssue(client, params)
+│ (direct call)  │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Linear API    │ REST API call
+└────────┬────────┘
+         │
+         ▼
+   (result flows back through same path)
 ```
 
-### Key Data Flows
+### Webhook Processing Flow
 
-1. **Webhook Ingestion:** External event → validated event → workflow trigger
-2. **Agent Execution:** Task → LLM reasoning → tool calls → observation → repeat until done
-3. **Human Approval:** Checkpoint → notification → (async wait) → response → resume
-4. **Tool Integration:** Agent decision → tool abstraction → external API → result to agent
-
-## Scaling Considerations
-
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| MVP (1-10 workflows/day) | Single process, SQLite/Redis state, synchronous webhook handling |
-| Growth (10-100 workflows/day) | Temporal or durable workflow engine, PostgreSQL state, async webhook queue |
-| Scale (100+ concurrent workflows) | Temporal cluster, partitioned event streams, horizontal agent workers |
-
-### Scaling Priorities
-
-1. **First bottleneck: State persistence** - In-memory state fails on process restart. Move to durable storage (PostgreSQL or Temporal) early.
-
-2. **Second bottleneck: Webhook processing** - Synchronous webhook handling blocks under load. Add message queue (Redis, SQS) to decouple ingestion from processing.
-
-3. **Third bottleneck: Agent execution** - LLM calls are slow. Run agent workers as separate processes that can scale horizontally.
-
-4. **Fourth bottleneck: Observability** - As workflows increase, debugging without tracing becomes impossible. Invest in LangSmith/OpenTelemetry before scale issues hit.
-
-### MVP → Scale Migration Path
-
-**Confidence:** MEDIUM - This path is based on common patterns but your specific bottlenecks may differ.
-
-1. **MVP:** Start with simple state machine + PostgreSQL. Focus on correct behavior.
-2. **Add Temporal:** When human-approval latency (hours/days) causes reliability issues or process restarts lose state.
-3. **Add Event Queue:** When webhook volume causes timeouts or lost events.
-4. **Horizontal Agents:** When agent execution time dominates and parallelism helps.
-
-## Anti-Patterns
-
-### Anti-Pattern 1: In-Memory State for Long-Running Workflows
-
-**What people do:** Store workflow state in process memory, assuming workflows complete quickly.
-
-**Why it's wrong:** Human approvals can take hours or days. Process restarts, deployments, or crashes lose all in-progress workflows.
-
-**Do this instead:** Use durable storage from day one. Even for MVP, use PostgreSQL or Redis with persistence. Better yet, use Temporal which handles this automatically.
-
-### Anti-Pattern 2: Synchronous Webhook Processing
-
-**What people do:** Process webhooks synchronously in the HTTP handler, making external calls inline.
-
-**Why it's wrong:** Webhook sources (GitHub, Linear) have timeout expectations. Long processing causes retries, duplicates, and lost events.
-
-**Do this instead:** Acknowledge webhook immediately (200 OK), queue for async processing, implement idempotency keys to handle retries.
-
-### Anti-Pattern 3: Tight Coupling Between Agents
-
-**What people do:** Agents directly call each other's methods or share internal state.
-
-**Why it's wrong:** Makes it impossible to run agents in separate processes, use different LLM models per agent, or test agents in isolation.
-
-**Do this instead:** Agents communicate via the workflow engine. The coordinator passes explicit task payloads; agents return structured results.
-
-### Anti-Pattern 4: Monolithic Agent with All Tools
-
-**What people do:** Create one "super agent" with access to all tools (Linear, GitHub, Slack, etc.).
-
-**Why it's wrong:** Too many tools confuse the LLM, increase token costs, and make the agent unpredictable. Different tasks need different tool subsets.
-
-**Do this instead:** Create specialized agents (Product Agent, Dev Agent) with focused tool sets. Use the coordinator to route tasks to the right specialist.
-
-### Anti-Pattern 5: No Idempotency in Webhook Handlers
-
-**What people do:** Process every webhook as if it's the first time seeing it.
-
-**Why it's wrong:** Webhook sources retry on timeout/failure. You'll process the same event multiple times, creating duplicate issues, PRs, or messages.
-
-**Do this instead:** Store event IDs in database, check before processing, use database transactions to ensure idempotent operations.
+```
+┌─────────────────┐
+│ GitHub Webhook │ PR approved event
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Event Gateway  │ Validate signature, check idempotency
+│ (platform)     │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Temporal       │ Start/signal workflow
+│ Client         │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Temporal       │ Execute workflow
+│ Workflow       │
+└────────┬────────┘
+         │
+         ├──────────────────────────────┐
+         ▼                              ▼
+┌─────────────────┐          ┌─────────────────┐
+│ Activity:      │          │ Activity:       │
+│ mergeGitHubPR  │          │ updateLinear    │
+│ (direct call)  │          │ (direct call)   │
+└────────┬────────┘          └────────┬────────┘
+         │                            │
+         ▼                            ▼
+┌─────────────────┐          ┌─────────────────┐
+│ @aesir/github  │          │ @aesir/linear   │
+│ package        │          │ package         │
+└─────────────────┘          └─────────────────┘
+```
 
 ## Integration Points
 
-### External Services
+### Layer Communication
 
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| Linear | Webhooks + REST API | Verify webhook signatures; use Linear SDK for API calls |
-| GitHub | Webhooks + REST/GraphQL API | App installation for org-wide access; webhook secrets per installation |
-| Slack | Events API + Web API | Bot token for posting; use Block Kit for rich approval UIs |
-| LLM Providers | REST API | Abstract behind client interface to support multiple providers |
+| From | To | Mechanism | Why |
+|------|------|-----------|-----|
+| Agents | Integrations | MCP (for LLM tool calls) | Standardized, LLM-friendly |
+| Agents | Integrations | Direct import (for setup) | Type safety, no overhead |
+| Temporal | Integrations | Direct import (activities) | Type safety, no overhead |
+| Gateway | Temporal | Temporal client API | Workflow signaling |
+| Integrations | Platform | Direct import | Config, secrets, logging |
 
-### Internal Boundaries
+### External Service Integration
 
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| Event Gateway → Workflow Engine | Message queue or direct call | Queue recommended for reliability |
-| Workflow → Agent | Activity execution (Temporal) or async task | Agent execution is non-deterministic, must be isolated |
-| Agent → Tools | Synchronous function call | Tools should be stateless, agents handle retries |
-| Workflow → HITL | Signal/event + external notification | Decoupled to allow long wait times |
+| Service | Inbound | Outbound |
+|---------|---------|----------|
+| Linear | Webhooks -> Gateway -> Temporal | LinearClient (SDK) |
+| GitHub | Webhooks -> Gateway -> Temporal | Octokit (SDK) |
+| Slack | Events API -> Gateway -> Temporal | Bolt app + Web API |
 
-### Multi-LLM Configuration
+### MCP Transport Options
 
-| Agent | Recommended Model Tier | Reasoning |
-|-------|------------------------|-----------|
-| Product Agent | High capability (GPT-4, Claude Opus) | Needs strong reasoning for spec creation |
-| Dev Agent | High capability with code focus | Code generation quality matters |
-| Coordinator/Router | Fast + cheap (GPT-4-mini, Haiku) | Simple routing decisions, high frequency |
-| Tool execution | Varies by task | Some tools may need specific model capabilities |
+| Environment | Transport | Reason |
+|-------------|-----------|--------|
+| Local dev (single process) | stdio | Simplest, no network |
+| Local dev (multi-process) | HTTP (localhost) | Service isolation |
+| Containerized | HTTP (internal network) | Container boundaries |
+| Future: remote integrations | HTTP (over tunnel) | External MCP servers |
 
-**Confidence:** MEDIUM - Model selection is highly empirical; test with your specific tasks.
+## Suggested Build Order
 
-## Framework Comparison
+Based on dependency analysis, implement in this order:
 
-| Framework | Strengths | Weaknesses | Best For |
-|-----------|-----------|------------|----------|
-| **LangGraph** | Graph-based workflows, built-in checkpointing, tight LangChain integration | Learning curve, opinionated structure | Complex agent workflows with branching logic |
-| **CrewAI** | Role-based agents, simple API, good for teams of agents | Less flexible routing, synchronous by default | Declarative multi-agent task decomposition |
-| **Temporal** | Production-proven durability, scales massively, language-agnostic | Operational overhead, requires learning workflow/activity separation | Mission-critical workflows with long-running state |
-| **Custom State Machine** | Full control, no dependencies | You build everything, error-prone | Simple workflows where frameworks are overkill |
+### Phase 1: Platform Foundation
+1. **pnpm workspace setup** - Monorepo structure, tsconfig.base.json
+2. **packages/platform/observability** - Logger (pino), tracing setup
+3. **packages/platform/config** - dotenv-flow, config schema
+4. **packages/platform/secrets** - Secret provider interface
 
-**Recommendation for Aesir:**
+*Rationale: Everything depends on logging, config, and secrets.*
 
-**Confidence:** MEDIUM - This is opinionated based on your requirements.
+### Phase 2: Integration Independence
+5. **packages/integrations/shared** - Common integration types
+6. **packages/integrations/linear** - Extract Linear integration
+7. **packages/integrations/github** - Extract GitHub integration
+8. **packages/integrations/slack** - Extract Slack integration
 
-- **MVP:** Custom state machine with PostgreSQL state, to understand your patterns before committing to a framework
-- **Production:** Temporal for workflow orchestration + LangGraph-style agent execution within activities
+*Rationale: Each integration becomes independent package. MCP servers can be added incrementally.*
 
-This gives you:
-1. Temporal's durable execution for async human-in-loop
-2. LangGraph-style agent patterns for the reasoning loops
-3. Flexibility to swap LLM providers per agent
-4. Proven scalability path
+### Phase 3: MCP Layer
+9. **MCP servers** - Add mcp-server.ts to each integration
+10. **packages/agents/shared/mcp-client** - Agent MCP client setup
+
+*Rationale: MCP layer builds on working integrations.*
+
+### Phase 4: Platform Services
+11. **packages/platform/gateway** - Webhook routing
+12. **packages/platform/temporal** - Temporal client, activities
+13. **packages/platform/state** - Checkpointer, state management
+
+*Rationale: Platform services use integrations and observability.*
+
+### Phase 5: Agent Migration
+14. **packages/agents/product-agent** - Migrate with MCP tools
+15. **packages/agents/dev-agent** - Migrate with MCP tools
+
+*Rationale: Agents use MCP layer and platform services.*
+
+### Phase 6: Applications
+16. **apps/api** - HTTP server
+17. **apps/worker** - Temporal worker
+
+*Rationale: Apps compose packages into deployables.*
+
+## Open Questions for Phase-Specific Research
+
+1. **MCP transport for containers:** Should each integration MCP server run in its own container, or embed in the worker?
+2. **Integration swapping mechanism:** Runtime registry or build-time selection?
+3. **Multi-tenant credentials:** How to handle multiple Linear workspaces?
+4. **MCP security boundaries:** Should agents have different tool subsets?
 
 ## Sources
 
-### Primary Sources (HIGH confidence)
-- [Google ADK Multi-Agent Patterns](https://developers.googleblog.com/developers-guide-to-multi-agent-patterns-in-adk/) - Google's eight essential design patterns
-- [Temporal for Multi-Agent Workflows](https://temporal.io/blog/what-are-multi-agent-workflows) - Durable execution for agents
-- [LangGraph Multi-Agent Workflows](https://www.blog.langchain.com/langgraph-multi-agent-workflows/) - Graph-based agent orchestration
-- [Azure AI Agent Design Patterns](https://learn.microsoft.com/en-us/azure/architecture/ai-ml/guide/ai-agent-design-patterns) - Microsoft's agent orchestration patterns
-- [LangChain Human-in-the-Loop](https://docs.langchain.com/oss/python/deepagents/human-in-the-loop) - HITL implementation patterns
+### MCP (Model Context Protocol)
+- [MCP Specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25) - Official specification
+- [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) - Official implementation
+- [Anthropic MCP Introduction](https://www.anthropic.com/news/model-context-protocol) - Protocol rationale
+- [A Year of MCP: 2025 Review](https://www.pento.ai/blog/a-year-of-mcp-2025-review) - Ecosystem adoption
+- [Thoughtworks MCP Impact 2025](https://www.thoughtworks.com/en-us/insights/blog/generative-ai/model-context-protocol-mcp-impact-2025) - Industry analysis
 
-### Secondary Sources (MEDIUM confidence)
-- [Confluent Event-Driven Multi-Agent Systems](https://www.confluent.io/blog/event-driven-multi-agent-systems/) - Event-driven patterns for agents
-- [CrewAI Documentation](https://docs.crewai.com/en/concepts/agents) - Role-based agent orchestration
-- [LangSmith Observability](https://www.langchain.com/langsmith/observability) - Agent tracing and monitoring
-- [Temporal vs Database State](https://temporal.io/blog/from-ai-hype-to-durable-reality-why-agentic-flows-need-distributed-systems) - Why durable execution matters
-- [Permit.io HITL Best Practices](https://www.permit.io/blog/human-in-the-loop-for-ai-agents-best-practices-frameworks-use-cases-and-demo) - Human approval patterns
+### Architecture Patterns
+- [Google Cloud Agentic AI Design Patterns](https://cloud.google.com/architecture/choose-design-pattern-agentic-ai-system) - Pattern selection guide
+- [Salesforce Enterprise Agentic Architecture](https://architect.salesforce.com/fundamentals/enterprise-agentic-architecture) - Enterprise patterns
+- [Temporal for Agentic AI (Grid Dynamics)](https://temporal.io/blog/prototype-to-prod-ready-agentic-ai-grid-dynamics) - LangGraph + Temporal case study
 
-### Supporting Sources (LOW confidence - less directly applicable)
-- [n8n AI Agent Orchestration Frameworks](https://blog.n8n.io/ai-agent-orchestration-frameworks/) - Framework comparison
-- [Pydantic AI Multi-Agent Patterns](https://ai.pydantic.dev/multi-agent-applications/) - Python-focused patterns
-- [LangChain Tools Documentation](https://docs.langchain.com/oss/python/langchain/tools) - Tool integration patterns
+### TypeScript Architecture
+- [Clean Architecture Node.js TypeScript](https://dev.to/evangunawan/clean-architecture-in-nodejs-an-approach-with-typescript-and-dependency-injection-16o) - DI patterns
+- [TypeScript Monorepo Guide](https://dev.to/mxro/the-ultimate-guide-to-typescript-monorepos-5ap7) - Workspace patterns
+- [Feature-Sliced Design Monorepo 2025](https://feature-sliced.design/blog/frontend-monorepo-explained) - Modern structure
+
+### LangGraph
+- [LangGraph 1.0 Announcement](https://www.blog.langchain.com/langchain-langgraph-1dot0/) - Production features
+- [LangGraph Multi-Agent Guide 2025](https://latenode.com/blog/langgraph-ai-framework-2025-complete-architecture-guide-multi-agent-orchestration-analysis) - Architecture guide
 
 ---
-*Architecture research for: Agentic Development Platform*
-*Researched: 2026-01-16*
+*Architecture research for: Aesir v2.0 Foundation*
+*Researched: 2026-01-19*

@@ -1,197 +1,345 @@
-# Feature Research: Agentic Development Platforms
+# Feature Landscape: TypeScript Agentic Platform Foundation
 
-**Domain:** Agentic Development Platform / AI Agent Orchestration System
-**Researched:** 2026-01-16
-**Confidence:** MEDIUM (market rapidly evolving; verified product capabilities where possible)
+**Domain:** Internal agentic development platform (TypeScript/Node.js)
+**Researched:** 2026-01-19
+**Overall Confidence:** HIGH (established patterns, mature tooling)
+**Context:** v2.0 Foundation milestone - platform architecture features, not product features
 
-## Feature Landscape
+---
 
-### Table Stakes (Users Expect These)
+## Table Stakes
 
-Features users assume exist. Missing these = product feels incomplete.
+Features developers expect in a professional TypeScript codebase. Missing = codebase feels amateur or unmaintainable.
+
+### Code Quality Features
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Code generation from natural language | Every AI coding tool does this; users expect it | LOW | Foundation of all AI coding assistants |
-| GitHub integration (PRs, commits, issues) | [GitHub Copilot coding agent](https://docs.github.com/en/copilot/concepts/agents/coding-agent/about-coding-agent) sets the standard | MEDIUM | MCP or native API integration |
-| Multi-file editing | [Cursor](https://cursor.com/features) and [Windsurf Cascade](https://windsurf.com/editor) normalized this | MEDIUM | Single-file-only agents feel broken |
-| Test execution and feedback loop | Agents must verify their work; [Devin](https://cognition.ai/blog/devin-annual-performance-review-2025) does this autonomously | MEDIUM | Run tests, interpret failures, iterate |
-| Codebase context/indexing | [60-70% of dev time is code comprehension](https://www.qodo.ai/features/qodo-context-engine/); context is most-requested capability | HIGH | RAG over codebase, dependency tracking |
-| Sandboxed execution environment | [Security incidents](https://developer.nvidia.com/blog/how-code-execution-drives-key-risks-in-agentic-ai-systems/) have made this non-negotiable | HIGH | gVisor, Firecracker microVMs, or containers |
-| Basic observability (logs, status) | Teams need visibility into what agents are doing | LOW | Activity logs, current task status |
-| Human-in-the-loop approval gates | [LangGraph](https://orkes.io/blog/human-in-the-loop/), [Mastra](https://juniarto-samsudin.medium.com/mastra-agent-workflow-human-in-the-loop-suspend-and-resume-97f99bd443a6) — everyone builds this | MEDIUM | Pause/resume workflows for human decision |
-| Slack integration | [GitHub Agent HQ](https://github.blog/news-insights/company-news/welcome-home-agents/), [Linear Agent](https://linear.app/changelog/2025-10-23-linear-agent-for-slack) — communication channel is essential | LOW | Notifications, task delegation |
+| **Strict TypeScript Configuration** | Catches bugs at compile time, modern standard | Low | Already have `strict: true`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` |
+| **Consistent Error Handling Pattern** | Predictable behavior, debuggable failures | Medium | Current: mixed throw/return patterns. Need unified approach across codebase |
+| **Input Validation at Boundaries** | Prevents invalid data from propagating | Low | Already using Zod, extend to all external boundaries (webhooks, env vars, API responses) |
+| **Linting and Formatting** | Consistent code style, catch common mistakes | Low | Biome planned - correct choice for 2025+ (20x faster than ESLint+Prettier) |
+| **Pre-commit Hooks** | Prevent bad code from entering repo | Low | Husky + lint-staged or Biome's native git hooks |
+| **Centralized Logging** | Debuggable in production, trace correlation | Low | Have custom logger, plan to replace with pino - correct choice |
+| **Type-safe Configuration** | No runtime crashes from missing env vars | Low | Use Zod schemas for all env vars, fail fast on startup |
+| **Module Index Files** | Clean public APIs, encapsulation | Low | Inconsistent currently - each module should export from index.ts |
 
-### Differentiators (Competitive Advantage)
+### Testing Features
 
-Features that set the product apart. Not required, but valuable.
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| **Unit Test Coverage** | Regression prevention, refactoring confidence | Medium | Have Vitest, need coverage targets (aim: 70%+ for core modules) |
+| **Test Fixtures/Factories** | Reduce test boilerplate, consistent test data | Low | Have MockLLM, need factories for domain objects |
+| **Mock/Stub Patterns** | Isolate units, test edge cases | Low | Using vi.mock, need consistent patterns across codebase |
+| **Integration Test Suite** | Verify component interactions | Medium | Have some (phase-1.test.ts), need systematic coverage |
+| **Test Organization** | Findable tests, clear naming | Low | Co-located .test.ts files - good pattern, maintain it |
+| **CI Test Execution** | Tests run on every PR | Low | GitHub Actions required |
+
+### Developer Experience Features
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| **One-Command Local Dev** | Fast onboarding, reproducible environment | Medium | Docker Compose exists, needs simplification and hot reload |
+| **Hot Reload in Development** | Fast iteration, don't restart on every change | Medium | tsx watch for non-containerized, volume mounts for Docker |
+| **IDE Integration** | Autocomplete, go-to-definition, refactoring | Low | TypeScript handles this, ensure tsconfig is correct |
+| **Clear Error Messages** | Developers understand what went wrong | Medium | Requires consistent error types with context |
+| **Debug Configuration** | Attach debugger to running code | Low | VS Code launch.json, Docker debug port exposure |
+
+### Infrastructure Features
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| **Environment Separation** | Don't run prod code against dev data | Medium | dotenv-flow for local/staging/production hierarchy |
+| **Secrets Not in Code** | Security baseline | Low | .env files (gitignored), environment injection in Docker |
+| **Health Check Endpoints** | Know if services are running | Low | HTTP /health endpoint per service |
+| **Graceful Shutdown** | Don't lose work when stopping | Medium | Handle SIGTERM, drain connections, complete in-flight work |
+| **Container Optimization** | Reasonable image sizes, fast builds | Medium | Multi-stage Dockerfile, .dockerignore |
+
+---
+
+## Differentiators
+
+Features that make development significantly better. Not expected, but valued highly by the team.
+
+### Error Handling Patterns
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Native Linear integration | Most tools focus on Jira/GitHub Issues; Linear integration is rarer | MEDIUM | [Linear Agent for Slack](https://linear.app/changelog/2025-10-23-linear-agent-for-slack) exists but full workflow automation is differentiated |
-| Webhook-driven event architecture | Avoids polling; agents wake on events | MEDIUM | [Event-driven agents](https://www.docker.com/blog/beyond-the-chatbot-event-driven-agents-in-action/) are more efficient and responsive |
-| "Coworker" UX (agents in existing tools) | Most platforms have dedicated UIs; embedding in Linear/GitHub/Slack reduces friction | HIGH | Philosophy from PROJECT.md; fewer platforms do this well |
-| Multi-LLM provider support | Avoid vendor lock-in; use best model per task | MEDIUM | [Cursor](https://skywork.ai/blog/cursor-ai-review-2025-agent-refactors-privacy/) and [Windsurf](https://www.eesel.ai/blog/windsurf-overview) offer model selection |
-| Autonomous PR feedback response | [Claude-powered AI teammates](https://deepsense.ai/blog/from-jira-to-pr-claude-powered-ai-agents-that-code-test-and-review-for-you/) reduce review cycles by 28% | HIGH | Agent reads review comments, makes fixes, pushes updates |
-| Product Agent for requirements gathering | Structured task creation from conversation is rare | HIGH | Most tools assume tasks already exist |
-| Agent-to-agent collaboration (review loop) | [Multi-agent patterns](https://learn.microsoft.com/en-us/azure/architecture/ai-ml/guide/ai-agent-design-patterns) are emerging but not common | HIGH | Dev agent + review agent create feedback loop |
-| Config-as-code agent definitions | Programmatic agent setup vs UI-first | MEDIUM | Enables version control, reproducibility |
-| Async handoff with context preservation | Agent pauses, waits for human, resumes with full context | HIGH | [Mastra](https://juniarto-samsudin.medium.com/mastra-agent-workflow-human-in-the-loop-suspend-and-resume-97f99bd443a6) and [LangGraph](https://orkes.io/blog/human-in-the-loop/) support this |
-| Distributed tracing for agent workflows | Enterprise observability beyond basic logs | HIGH | [OpenTelemetry standards](https://opentelemetry.io/blog/2025/ai-agent-observability/) emerging for AI agents |
+| **Result Types (neverthrow)** | Compile-time error handling, explicit failure paths | Medium | Replaces throw/catch with explicit `Result<T, E>` returns. Forces handling errors at call site. Excellent for service boundaries. |
+| **Typed Error Hierarchy** | Distinguish error categories (validation, network, domain) | Low | Custom error classes extending base AppError with error codes |
+| **Error Context Preservation** | Stack traces + business context through call chain | Medium | Wrap errors with context as they propagate up |
+| **eslint-plugin-neverthrow** | Enforce Result handling in CI | Low | Catches missed error handling at lint time |
 
-### Anti-Features (Commonly Requested, Often Problematic)
+**Recommendation:** Use neverthrow at service boundaries (integrations layer, agent-platform communication). Use traditional try/catch within tightly-scoped functions. Don't go full Effect.ts - too much paradigm shift for the benefit.
 
-Features that seem good but create problems.
+### Type Safety Improvements
 
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| Full autonomy / "YOLO mode" | Speed; less human oversight | [95% of AI agent projects fail](https://www.directual.com/blog/ai-agents-in-2025-why-95-of-corporate-projects-fail); [security vulnerabilities](https://developer.nvidia.com/blog/how-code-execution-drives-key-risks-in-agentic-ai-systems/); agents make poor architectural decisions | Configurable autonomy levels with approval gates for high-risk actions |
-| Unlimited context window | "Agent should understand entire codebase" | [40%+ context usage degrades quality](https://latitude-blog.ghost.io/blog/context-engineering-guide-coding-agents/); [large repos break indexing](https://venturebeat.com/ai/why-ai-coding-agents-arent-production-ready-brittle-context-windows-broken) | Intentional context compaction; sub-agents for research |
-| AI-generated architecture decisions | "Agent should design the system" | [Agents lack enterprise context](https://venturebeat.com/ai/why-ai-coding-agents-arent-production-ready-brittle-context-windows-broken); struggle with scalability | Human architects + agent implementation |
-| Real-time everything | "Instant updates everywhere" | Polling tax; complexity without value | Webhook-driven events where latency matters |
-| Universal tool integration | "Connect to everything" | [Integration is #1 failure cause](https://composio.dev/blog/why-ai-agent-pilots-fail-2026-integration-roadmap); each connector adds maintenance | Focus on core tools (Linear, GitHub, Slack); add others only when needed |
-| Self-healing without human review | "Agent should fix its own bugs" | Creates [debug loops that waste time](https://venturebeat.com/ai/why-ai-coding-agents-arent-production-ready-brittle-context-windows-broken); can mask root causes | Bounded retry with human escalation |
-| Agentic QA (full test generation) | "Agent writes all tests" | [67% of devs spend more time debugging AI code](https://speedscale.com/blog/testing-ai-code-in-cicd-made-simple-for-developers/); test quality varies | CI/CD via GitHub Actions; agent assists but humans verify coverage strategy |
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| **Branded Types for IDs** | Prevent mixing LinearIssueId with GitHubPRId | Low | Zod `.brand()` or manual branding. Type-level safety, zero runtime cost. |
+| **Validation at Edges** | Guarantee data shape after boundary crossing | Low | Zod parse at API handlers, webhook receivers, config loading |
+| **Strict Null Checks** | Already enabled | - | `strictNullChecks` included in `strict: true` |
+| **Discriminated Unions for State** | Exhaustive handling of state machine transitions | Medium | Agent state, workflow status as tagged unions |
+
+**Recommendation:** Implement branded types for all cross-service IDs (taskId, prId, threadId). Use Zod `.brand()` for seamless validation-to-branding.
+
+### Module Boundary Patterns
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| **Dependency Injection** | Testability, swappable implementations | Medium | Constructor injection sufficient for this scale. TSyringe if needed later. |
+| **Interface Segregation** | Modules depend on interfaces, not implementations | Medium | Define contracts in shared types, implement in modules |
+| **Layer Enforcement** | Prevent accidental cross-layer imports | Medium | fresh-onion library or custom ESLint rule |
+| **Public API Index Files** | Clear module boundaries | Low | Each module exports only what's intended via index.ts |
+
+**Recommendation:** Start with manual discipline + code review. Add fresh-onion if violations become common. TSyringe is overkill for current codebase size.
+
+### Local Development Excellence
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| **Docker Hot Reload** | Edit code, see changes in container immediately | Medium | Volume mounts + nodemon/tsx in container |
+| **Selective Service Startup** | Don't start what you're not working on | Low | Docker Compose profiles already in use |
+| **Local-First Development** | Most work doesn't need tunnels or external services | Medium | Mock modes for Linear/GitHub/Slack |
+| **Database Seeding** | Consistent test data for local dev | Low | Seed scripts for PostgreSQL |
+| **Service Health Dashboard** | See all services status at a glance | Low | Simple CLI script or web UI showing container states |
+
+### Testing Excellence
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| **Contract Testing** | Verify integration contracts without full E2E | Medium | Pact or similar for agent-integration boundaries |
+| **Fixture Generators** | Generate realistic test data programmatically | Low | Efate or custom factories |
+| **Test Database Isolation** | Each test gets clean database state | Medium | Transaction rollback or database-per-test |
+| **Parallel Test Execution** | Faster CI feedback | Low | Vitest supports parallel by default |
+| **Visual Test Reports** | Easy to see what failed and why | Low | Vitest UI, coverage HTML reports |
+
+### CI/CD Excellence
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| **Dependency Caching** | 50-70% faster CI runs | Low | GitHub Actions cache for node_modules |
+| **Parallel Job Execution** | Faster CI feedback | Low | Matrix builds, separate lint/test/build jobs |
+| **Quality Gates** | PRs blocked until quality bar met | Low | Required status checks in GitHub |
+| **Staged Deployment** | Automatic staging deploy on merge to main | Medium | GitHub Actions + deployment target |
+| **Rollback Capability** | Quick recovery from bad deploys | Medium | Keep previous container images tagged |
+
+### Observability Excellence
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| **Structured Logging with pino** | Fast, queryable logs | Low | Planned - correct choice. 5x faster than alternatives. |
+| **OpenTelemetry Integration** | Distributed tracing across services | Medium | @opentelemetry/instrumentation-pino for trace correlation |
+| **Trace Context Propagation** | Follow requests across service boundaries | Medium | Propagate traceparent headers in webhooks/API calls |
+| **Request Correlation IDs** | Link all logs for a single request | Low | Generate ID at entry point, pass through call chain |
+| **Service Metrics** | Latency, throughput, error rates | Medium | OpenTelemetry metrics or simple counters |
+
+---
+
+## Anti-Features
+
+Features to explicitly NOT build. Common mistakes in this domain that create problems.
+
+### Over-Engineering Traps
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| **Full Effect.ts Adoption** | Massive paradigm shift, steep learning curve, overkill for team size | Use neverthrow for explicit error handling - 80% of benefit, 20% of complexity |
+| **InversifyJS/TSyringe Everywhere** | Adds ceremony, hides dependencies, over-complicates small codebase | Constructor injection with defaults. DI container only if explicit need emerges. |
+| **Microservices Decomposition** | Current code is already service-oriented via Docker. Further splitting adds operational complexity. | Keep logical services in single repo. Separate processes, shared codebase. |
+| **GraphQL for Internal Communication** | Overkill for agent-integration calls. REST is simpler and sufficient. | REST with typed clients (generated from OpenAPI if needed) |
+| **Event Sourcing** | Complex, rarely needed. Current state-based approach is fine. | Simple PostgreSQL state tables. Event sourcing only if audit requirements demand it. |
+
+### Testing Anti-Patterns
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| **100% Code Coverage Target** | Leads to meaningless tests, maintenance burden | Target 70-80% on core logic. 0% is fine for wiring code. |
+| **E2E Tests for Everything** | Slow, flaky, expensive to maintain | Testing pyramid: many unit, some integration, few E2E |
+| **Mocking Everything** | Tests become tautological, don't catch real bugs | Mock only slow/external things. Test real implementations where practical. |
+| **Testing Private Methods** | Implementation coupling, fragile tests | Test through public interface. Refactor if private method is complex enough to need direct tests. |
+| **Snapshot Testing for Logic** | Brittle, hard to review changes | Snapshots only for serialized output (API responses). Explicit assertions for logic. |
+
+### Architecture Anti-Patterns
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| **Shared Mutable State** | Race conditions, unpredictable behavior | Pass state explicitly. Immutable data structures where practical. |
+| **Circular Dependencies** | Build failures, confusing call graphs | Strict layer dependencies. Extract shared types to separate module. |
+| **God Modules** | Hard to understand, hard to test | Single responsibility. Split when module exceeds ~500 lines. |
+| **Premature Abstraction** | Abstractions that don't fit actual use cases | Wait until you have 3 concrete cases before abstracting. |
+| **Configuration Scattered in Code** | Hard to change, inconsistent behavior | All config loaded at startup, validated, passed explicitly. |
+
+### Observability Anti-Patterns
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| **Logging Everything** | Noise drowns signal, performance impact, storage cost | Log at boundaries: entry, exit, errors. Debug level for details. |
+| **console.log in Production** | Unstructured, no correlation, blocks event loop | pino with structured JSON output |
+| **Tracing Every Function** | Performance overhead, unreadable traces | Trace at service boundaries and key operations only |
+| **Alerts on Every Error** | Alert fatigue, ignored alerts | Error budgets. Alert on sustained error rates, not individual errors. |
+
+### Developer Experience Anti-Patterns
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| **Required Tunnel for All Dev** | Slow, fragile, unnecessary for most work | Local-first. Tunnel only for webhook testing. |
+| **Manual Environment Setup** | Onboarding friction, "works on my machine" | Docker Compose for everything. Document the single command. |
+| **Multiple Package Managers** | Dependency confusion, lock file conflicts | npm only (per PROJECT.md - remove yarn.lock) |
+| **Untyped Configuration** | Runtime crashes from typos in env vars | Zod schema for all env vars, validated at startup |
+
+---
 
 ## Feature Dependencies
 
 ```
-[Codebase Indexing]
-    └──requires──> [Sandboxed Execution]
-                       └──enables──> [Test Execution Loop]
-                                         └──enables──> [Autonomous PR Feedback]
-
-[Webhook Events]
-    └──enables──> [Linear Integration] ──enhances──> [Product Agent]
-    └──enables──> [GitHub Integration] ──enhances──> [Dev Agent]
-    └──enables──> [Slack Integration] ──enhances──> [Human-in-the-Loop]
-
-[Human-in-the-Loop]
-    └──requires──> [Async Handoff Architecture]
-    └──conflicts──> [Full Autonomy Mode]
-
-[Multi-Agent Collaboration]
-    └──requires──> [Agent Orchestration Pattern]
-    └──requires──> [Shared State/Context Management]
-    └──enhances──> [Review Loop]
-
-[Observability]
-    └──enhances──> [Human-in-the-Loop] (visibility into what needs approval)
-    └──enhances──> [Multi-Agent Collaboration] (trace agent interactions)
+                    Strict TypeScript Config
+                            |
+                            v
+        +-------------------+-------------------+
+        |                   |                   |
+        v                   v                   v
+   Branded Types      Result Types        Zod Validation
+        |                   |                   |
+        +-------------------+-------------------+
+                            |
+                            v
+                    Module Boundaries
+                            |
+            +---------------+---------------+
+            |               |               |
+            v               v               v
+      Platform Layer  Integrations    Agents Layer
+            |               |               |
+            +---------------+---------------+
+                            |
+                            v
+                    Testing Pyramid
+                            |
+            +---------------+---------------+
+            |               |               |
+            v               v               v
+       Unit Tests    Integration      E2E Tests
+                       Tests
+                            |
+                            v
+                      CI/CD Pipeline
+                            |
+            +---------------+---------------+
+            |               |               |
+            v               v               v
+      Quality Gates     Caching      Deployment
 ```
 
-### Dependency Notes
+### Critical Path Dependencies
 
-- **Sandboxed Execution required for Test Execution:** Cannot safely run tests without isolation; [recent CVEs in Cursor, Codex](https://www.ajeetraina.com/docker-sandboxes-tutorial-and-cheatsheet/) demonstrate risk
-- **Webhook Events enable all tool integrations:** Polling creates cost/load issues; webhook architecture is foundational
-- **Human-in-the-Loop conflicts with Full Autonomy:** These are opposing philosophies; choose autonomy level as a design parameter
-- **Multi-Agent Collaboration requires orchestration:** Can't have Dev Agent + Review Agent without coordination pattern (supervisor, swarm, or adaptive)
-- **Codebase Indexing enables context-aware agents:** Without indexing, agents operate on individual files only
+1. **Strict TypeScript** must be maintained first - it's the foundation
+2. **Error handling pattern** must be decided before module boundaries
+3. **Module boundaries** must be defined before testing strategy
+4. **Testing patterns** must be established before CI/CD quality gates
 
-## MVP Definition
+---
 
-### Launch With (v1)
+## MVP Definition (v2.0 Foundation)
 
-Minimum viable product — what's needed to validate the concept.
+For v2.0 Foundation milestone, prioritize in this order:
 
-- [ ] **Dev Agent with GitHub integration** — picks Linear task, writes code, opens PR (core loop)
-- [ ] **Linear integration** — read tasks, update status (basic, read/write)
-- [ ] **Slack notifications** — notify humans when approval needed
-- [ ] **Human approval gate** — pause before merge, wait for human review
-- [ ] **Basic sandboxed execution** — Docker container for code execution
-- [ ] **Activity logging** — what did agent do, when, why
-- [ ] **Single LLM provider** — start with Claude, add others later
+### Phase 1: Tooling Baseline
+1. **Biome setup** - Replace ESLint/Prettier (table stakes, low complexity)
+2. **npm standardization** - Remove yarn.lock (table stakes, low complexity)
+3. **Pre-commit hooks** - Prevent bad commits (table stakes, low complexity)
+4. **dotenv-flow** - Environment hierarchy (table stakes, low complexity)
 
-### Add After Validation (v1.x)
+### Phase 2: Error Handling & Validation
+5. **neverthrow adoption** - At service boundaries (differentiator, medium complexity)
+6. **Branded types** - For cross-service IDs (differentiator, low complexity)
+7. **Zod validation** - At all external boundaries (table stakes, low complexity)
+8. **Typed error hierarchy** - Consistent error structure (differentiator, low complexity)
 
-Features to add once core is working.
+### Phase 3: Module Architecture
+9. **Layer structure** - Platform/Integrations/Agents (table stakes, medium complexity)
+10. **Index file discipline** - Public APIs only (table stakes, low complexity)
+11. **Dependency direction** - Inner layers don't know outer (table stakes, medium complexity)
 
-- [ ] **Product Agent** — add when requirements gathering becomes bottleneck
-- [ ] **Autonomous PR feedback response** — add when review cycles are too slow
-- [ ] **Multi-LLM support** — add when model-specific capabilities matter or costs need optimization
-- [ ] **Webhook-driven events** — add when polling costs/latency become issues
-- [ ] **Agent-to-agent review loop** — add when human reviewers are overwhelmed
+### Phase 4: Testing Foundation
+12. **Test fixtures/factories** - For domain objects (differentiator, low complexity)
+13. **Coverage reporting** - Know what's tested (table stakes, low complexity)
+14. **Integration test patterns** - Systematic coverage (table stakes, medium complexity)
 
-### Future Consideration (v2+)
+### Phase 5: CI/CD Pipeline
+15. **GitHub Actions setup** - Run tests on PR (table stakes, low complexity)
+16. **Dependency caching** - Fast CI (differentiator, low complexity)
+17. **Quality gates** - Block bad PRs (table stakes, low complexity)
 
-Features to defer until product-market fit is established.
+### Phase 6: Observability
+18. **pino integration** - Replace custom logger (table stakes, low complexity)
+19. **OpenTelemetry basics** - Trace correlation (differentiator, medium complexity)
+20. **Request correlation IDs** - Link logs (differentiator, low complexity)
 
-- [ ] **Distributed tracing** — defer until debugging multi-agent workflows is painful
-- [ ] **Config-as-code agent definitions** — defer until multiple agent types exist
-- [ ] **Full codebase indexing** — defer until context limits cause frequent failures
-- [ ] **Custom tool integrations beyond Linear/GitHub/Slack** — defer until use case is clear
+### Phase 7: Local Dev Excellence
+21. **Docker hot reload** - Fast iteration (differentiator, medium complexity)
+22. **Health check endpoints** - Service status (table stakes, low complexity)
+23. **Documentation update** - .claude files reflect architecture (table stakes, low complexity)
 
-## Feature Prioritization Matrix
+### Defer to Post-v2.0
+- Contract testing (wait for clear integration contracts)
+- Full OpenTelemetry with metrics (wait for observability needs to clarify)
+- Event-driven communication research (defer to architecture research)
+- Production deployment automation (staging first)
 
-| Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| Dev Agent (code gen + PR) | HIGH | HIGH | P1 |
-| Linear integration (read/write) | HIGH | MEDIUM | P1 |
-| GitHub integration (PRs, commits) | HIGH | MEDIUM | P1 |
-| Human approval gate | HIGH | MEDIUM | P1 |
-| Sandboxed execution | HIGH | MEDIUM | P1 |
-| Slack notifications | MEDIUM | LOW | P1 |
-| Activity logging | MEDIUM | LOW | P1 |
-| Test execution loop | HIGH | MEDIUM | P2 |
-| Product Agent | MEDIUM | HIGH | P2 |
-| Multi-LLM support | MEDIUM | MEDIUM | P2 |
-| Webhook-driven events | MEDIUM | MEDIUM | P2 |
-| Autonomous PR feedback | HIGH | HIGH | P2 |
-| Agent-to-agent review | MEDIUM | HIGH | P3 |
-| Distributed tracing | LOW | HIGH | P3 |
-| Full codebase indexing | MEDIUM | HIGH | P3 |
-
-**Priority key:**
-- P1: Must have for launch
-- P2: Should have, add when possible
-- P3: Nice to have, future consideration
-
-## Competitor Feature Analysis
-
-| Feature | Devin | GitHub Copilot | Cursor | Windsurf | Our Approach |
-|---------|-------|----------------|--------|----------|--------------|
-| Autonomous code generation | Yes, end-to-end | Yes, via coding agent | Yes, Agent Mode | Yes, Cascade | Dev Agent handles this |
-| GitHub integration | Yes | Native | Yes | Yes | MCP integration |
-| Linear integration | Unknown | [Announced Oct 2025](https://github.blog/news-insights/company-news/welcome-home-agents/) | No | Unknown | Core requirement |
-| Slack integration | [Yes](https://cognition.ai/blog/devin-annual-performance-review-2025) | [Yes](https://github.com/orgs/community/discussions/177494) | No | [Yes](https://windsurf.com/) | Core requirement |
-| Human-in-the-loop | Yes | Yes (PR review) | Yes (approval) | Yes | Async handoff pattern |
-| Multi-agent orchestration | [Parallel sessions](https://trickle.so/blog/devin-ai-review) | Single agent | [8 parallel agents](https://skywork.ai/blog/cursor-ai-review-2025-agent-refactors-privacy/) | Background agents | Start single, add later |
-| Sandbox execution | [Yes, cloud IDE](https://devin.ai/) | [GitHub Actions](https://docs.github.com/en/copilot/concepts/agents/coding-agent/about-coding-agent) | Local | Cloud | Docker containers |
-| Test execution | Yes, autonomous | Yes | Yes | Yes | CI/CD + agent feedback |
-| Pricing model | [$500/mo](https://trickle.so/blog/devin-ai-review) | [Copilot plans](https://github.com/features/copilot) | [$20/mo](https://cursor.com/) | [$15/mo](https://www.eesel.ai/blog/windsurf-overview) | Internal platform (no pricing) |
-
-### Competitive Positioning
-
-**vs. Devin:** Devin is a general-purpose AI software engineer for any team. Aesir is purpose-built for internal workflows with specific tool integration (Linear). Devin charges $500/mo per seat; Aesir is internal infrastructure.
-
-**vs. GitHub Copilot:** Copilot is deeply integrated with GitHub but Linear integration is new (Oct 2025). Copilot is designed for individual developer productivity; Aesir is designed for workflow automation across the team.
-
-**vs. Cursor/Windsurf:** These are IDE-focused tools for individual developers. Aesir operates as "coworkers" in existing tools (Linear, Slack), not as another IDE to manage.
-
-**Key differentiation opportunity:** "Coworker UX" where agents appear in Linear/GitHub/Slack rather than requiring a dedicated interface. Most competitors are IDE-first or have dedicated dashboards.
+---
 
 ## Sources
 
-### Primary Sources (HIGH Confidence)
-- [GitHub Copilot Coding Agent Docs](https://docs.github.com/en/copilot/concepts/agents/coding-agent/about-coding-agent) — Official documentation
-- [Cursor Features](https://cursor.com/features) — Official product page
-- [Windsurf Editor](https://windsurf.com/editor) — Official product page
-- [OpenTelemetry AI Agent Observability](https://opentelemetry.io/blog/2025/ai-agent-observability/) — Industry standard
-- [GitHub Agent HQ Announcement](https://github.blog/news-insights/company-news/welcome-home-agents/) — Official announcement
-- [Linear Agent for Slack](https://linear.app/changelog/2025-10-23-linear-agent-for-slack) — Official changelog
+### Error Handling
+- [neverthrow GitHub](https://github.com/supermacro/neverthrow) - Result type implementation
+- [Neverthrow Composition Patterns](https://deepwiki.com/supermacro/neverthrow/4.2-composition-patterns)
+- [Error Handling Comparison](https://devalade.me/blog/error-handling-in-typescript-neverthrow-try-catch-and-alternative-like-effec-ts.mdx)
+- [TypeScript Error Handling 2025](https://www.thecandidstartup.org/2025/04/14/typescript-error-handling.html)
 
-### Secondary Sources (MEDIUM Confidence)
-- [Devin 2025 Performance Review](https://cognition.ai/blog/devin-annual-performance-review-2025) — Company blog (marketing may overstate)
-- [Qodo Context Engine](https://www.qodo.ai/features/qodo-context-engine/) — Vendor claims on context importance
-- [Azure AI Agent Design Patterns](https://learn.microsoft.com/en-us/azure/architecture/ai-ml/guide/ai-agent-design-patterns) — Microsoft architecture guidance
-- [AWS Multi-Agent Collaboration](https://aws.amazon.com/blogs/machine-learning/multi-agent-collaboration-patterns-with-strands-agents-and-amazon-nova/) — AWS patterns documentation
+### Type Safety
+- [Zod API Documentation](https://zod.dev/api)
+- [Type Branding with Zod](https://stevekinney.com/courses/full-stack-typescript/type-branding-with-zod)
+- [Branded Types Guide](https://medium.com/@jmytwenty8/stop-treating-all-ids-as-strings-a-guide-to-branded-types-with-zod-beddabd9a065)
+- [Type Branding Techniques](https://dev.to/saleor/branded-types-in-typescript-techniques-340f)
 
-### Tertiary Sources (LOW Confidence — use cautiously)
-- [VentureBeat: AI Agents Not Production Ready](https://venturebeat.com/ai/why-ai-coding-agents-arent-production-ready-brittle-context-windows-broken) — Industry analysis, some claims unverified
-- [Directual: 95% Failure Rate](https://www.directual.com/blog/ai-agents-in-2025-why-95-of-corporate-projects-fail) — Aggregated statistics, methodology unclear
-- [Context Engineering Guide](https://latitude-blog.ghost.io/blog/context-engineering-guide-coding-agents/) — Third-party analysis
-- Various Medium articles and reviews — Individual experiences, not systematic
+### Module Boundaries & DI
+- [TSyringe and InversifyJS Comparison](https://leapcell.io/blog/dependency-injection-beyond-nestjs-a-deep-dive-into-tsyringe-and-inversifyjs)
+- [TSyringe GitHub](https://github.com/microsoft/tsyringe)
+- [DI Best Practices](https://blog.logrocket.com/top-five-typescript-dependency-injection-containers/)
+
+### Testing
+- [Vitest Test Context](https://vitest.dev/guide/test-context)
+- [Testing Pyramid Guide 2025](https://fullscale.io/blog/modern-test-pyramid-guide/)
+- [E2E Testing Best Practices 2025](https://www.bunnyshell.com/blog/best-practices-for-end-to-end-testing-in-2025/)
+- [Integration vs E2E Testing](https://dev.to/michael_burry_00/integration-vs-e2e-system-testing-a-practical-testing-pyramid-playbook-with-real-ci-pipelines-1del)
+
+### CI/CD
+- [GitHub Actions Cache](https://github.com/actions/cache)
+- [CI/CD Quality Gates Guide](https://www.propelcode.ai/blog/continuous-integration-code-quality-gates-setup-guide)
+- [CI Optimization Case Study](https://www.techbuddies.io/2025/12/17/case-study-how-we-optimized-ci-cd-pipelines-in-github-actions-and-gitlab-ci/)
+
+### Observability
+- [Pino + OpenTelemetry Integration](https://dzone.com/articles/observability-nodejs-opentelemetry-pino)
+- [Pino Logger Guide 2026](https://signoz.io/guides/pino-logger/)
+- [@opentelemetry/instrumentation-pino](https://www.npmjs.com/package/@opentelemetry/instrumentation-pino)
+- [Production Logging with Pino](https://www.dash0.com/guides/logging-in-node-js-with-pino)
+
+### Tooling
+- [Biome vs ESLint 2025](https://medium.com/@harryespant/biome-vs-eslint-the-ultimate-2025-showdown-for-javascript-developers-speed-features-and-3e5130be4a3c)
+- [Biome Migration Guide](https://biomejs.dev/guides/migrate-eslint-prettier/)
+- [dotenv-flow GitHub](https://github.com/kerimdzhanov/dotenv-flow)
+
+### Architecture
+- [Clean Architecture with TypeScript](https://medium.com/@deivisonisidoro_94304/revolutionizing-software-development-unveiling-the-power-of-clean-architecture-with-typescript-5ee968357d35)
+- [fresh-onion Layer Enforcement](https://dev.to/remojansen/enforce-clean-architecture-in-your-typescript-projects-with-fresh-onion-45pi)
+- [LangGraph.js for Agents](https://medium.com/@iamanraghuvanshi/agentic-ai-3-top-ai-agent-frameworks-in-2025-langchain-autogen-crewai-beyond-2fc3388e7dec)
+
+### Local Development
+- [Docker + TypeScript Hot Reload](https://dev.to/dariansampare/setting-up-docker-typescript-node-hot-reloading-code-changes-in-a-running-container-2b2f)
+- [Full Stack Live Reload](https://blog.logrocket.com/complete-guide-full-stack-live-reload/)
 
 ---
-*Feature research for: Agentic Development Platform*
-*Researched: 2026-01-16*
+
+*Feature research for v2.0 Foundation - TypeScript Platform Architecture*
+*Researched: 2026-01-19*

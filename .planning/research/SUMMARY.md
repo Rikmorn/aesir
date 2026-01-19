@@ -1,181 +1,229 @@
-# Project Research Summary
+# v2.0 Foundation Research Summary
 
-**Project:** Aesir
-**Domain:** Agentic Development Platform / AI Agent Orchestration System
-**Researched:** 2026-01-16
-**Confidence:** MEDIUM
+**Project:** Aesir - Agentic Development Platform
+**Domain:** TypeScript Agentic Platform / Internal Tooling
+**Researched:** 2026-01-19
+**Confidence:** HIGH
 
 ## Executive Summary
 
-Aesir is building an internal agentic development platform that automates software development workflows from feature request to shipped code. Research across 50+ sources (including real post-mortems, GitHub issues, research studies, and official documentation) reveals that this domain has well-established patterns but significant pitfalls—79% of multi-agent failures come from specification and coordination issues, not infrastructure.
+The v2.0 Foundation milestone restructures Aesir from a "prove it works" prototype to a maintainable, scalable 3-layer platform: Platform, Integrations, and Agents. Research confirms this layered approach is the industry standard for agentic systems, with MCP (Model Context Protocol) emerging as the dominant pattern for agent-integration communication. The key architectural decision is **hybrid communication: MCP for LLM-initiated tool calls, direct TypeScript interfaces for non-LLM service communication**.
 
-The recommended approach is **LangGraph.js for agent orchestration** with **Temporal for durable workflow execution**, integrated via **MCP (Model Context Protocol)** for Linear, GitHub, and Slack. This stack provides TypeScript-native development, multi-LLM support without vendor lock-in, production-proven patterns for async human-in-the-loop workflows, and the ability to deploy on AWS.
+The recommended tooling stack prioritizes speed and simplicity: **Biome** (10-25x faster than ESLint+Prettier), **pino** (5x faster than Winston), and **dotenv-flow** for multi-environment configuration. Testing should follow a proper pyramid with **Vitest** (already in use) and **testcontainers** for integration tests. The biggest migration risk is attempting a big-bang restructure - research strongly recommends incremental migration with each PR being deployable.
 
-The highest-risk pitfalls are: (1) autonomous agents operating in production without guardrails (see: Replit incident where an AI deleted a production database), (2) infinite loops and runaway token costs, and (3) context explosion across agent handoffs. All three must be addressed in Phase 1 as foundational architecture—not optional add-ons.
+Critical pitfalls to address early: (1) environment variable drift and missing validation causing runtime failures, (2) leaky abstractions between layers defeating the purpose of separation, (3) test isolation failures causing flaky CI, and (4) Temporal workflow non-determinism breaking replays. The v1 codebase already exhibits some of these issues, validating the need for this foundation work.
 
 ## Key Findings
 
 ### Recommended Stack
 
-LangGraph.js 1.0 is the recommended orchestration framework based on:
-- **TypeScript-native**: Full JavaScript/TypeScript SDK with Node.js 18+ support
-- **Multi-LLM excellence**: Model-agnostic via LangChain integrations (Claude, GPT-4, Bedrock)
-- **Production maturity**: GA 1.0 released October 2025, used by Replit, Uber, LinkedIn, GitLab
-- **Human-in-the-loop**: Built-in interrupt nodes, state inspection, time-travel debugging
-- **MCP support**: First-class Model Context Protocol integration
+The stack builds on existing choices (TypeScript, Vitest, Temporal) while replacing hand-rolled utilities with production-grade alternatives.
 
-**Core technologies:**
-- **LangGraph.js 1.0+**: Core orchestration — graph-based workflows with checkpointing and HITL
-- **Temporal**: Durable execution for async workflows — recommended for production-grade HITL (OpenAI uses it for Codex)
-- **MCP SDK**: Tool integration standard — adopted by OpenAI in March 2025, Linux Foundation standard
+| Category | Technology | Version | Why |
+|----------|------------|---------|-----|
+| Linting/Formatting | **Biome** | ^2.0.0 | 10-25x faster than ESLint+Prettier, single binary, 425 rules |
+| Logging | **pino** | ^10.2.0 | 5-10x faster than alternatives, JSON-native, redaction, child loggers |
+| Environment Config | **dotenv-flow** | ^4.1.0 | Multi-env support (.env.development, .env.test, .env.production) |
+| Agent Communication | **MCP SDK** | ^1.x | Industry standard (OpenAI, Anthropic, Google), 97M+ monthly downloads |
+| Dependency Injection | **tsyringe** | ^4.8.0 | Microsoft-maintained, lightweight, decorator-based |
+| Integration Testing | **testcontainers** | ^11.11.0 | Isolated PostgreSQL/Docker containers per test |
+| Runtime | **Node.js** | >=22.0.0 | LTS, better ESM support |
 
-**Strong alternative**: AWS Strands Agents (TypeScript SDK, December 2025 preview) if simpler orchestration suffices and tighter Bedrock integration is desired.
+**Do NOT use:** ESLint+Prettier (slower), Winston (slower), plain dotenv (no multi-env), InversifyJS (too heavy), MCP v2 SDK (pre-alpha).
 
-### Expected Features
+### Expected Features (Foundation Focus)
 
-**Must have (table stakes):**
-- Code generation from natural language
-- GitHub integration (PRs, commits, issues)
-- Test execution with feedback loop
-- Human-in-the-loop approval gates
-- Basic sandboxed execution
-- Activity logging/observability
+**Table stakes (must have):**
+- Strict TypeScript configuration (already have, maintain)
+- Consistent error handling pattern at service boundaries
+- Input validation at all external boundaries (Zod)
+- Linting and formatting (Biome)
+- Centralized logging (pino replacing custom logger)
+- Type-safe configuration with startup validation
+- Module index files for public APIs
+- CI test execution with quality gates
 
-**Should have (competitive):**
-- Native Linear integration (underserved market)
-- "Coworker" UX (agents in existing tools, not separate UI)
-- Webhook-driven events (vs. polling)
-- Multi-LLM provider support
+**Differentiators (should have):**
+- Result types (neverthrow) at service boundaries for explicit error handling
+- Branded types for cross-service IDs (LinearIssueId, GitHubPRId)
+- OpenTelemetry integration for trace correlation
+- Docker hot reload for fast local iteration
+- Dependency caching in CI (50-70% faster)
 
-**Defer (v2+):**
-- Full codebase indexing (HIGH complexity, context management is hard)
-- Distributed tracing (add when debugging becomes painful)
-- Agent-to-agent review loop (validate single agent first)
+**Defer to post-v2.0:**
+- Full OpenTelemetry with metrics
+- Contract testing (Pact)
+- Production deployment automation
+- Event-driven architecture research
 
 ### Architecture Approach
 
-The recommended architecture uses a **Coordinator-Worker pattern** for MVP, evolving to **Temporal + LangGraph** for production:
+The architecture follows a 3-layer monorepo pattern with pnpm workspaces:
 
-**Major components:**
-1. **Event Gateway** — receives webhooks, validates signatures, deduplicates, routes to workflows
-2. **Workflow Engine (Temporal)** — orchestrates execution, manages state, handles failures
-3. **Agent Router** — dispatches tasks to specialized agents (Product, Dev)
-4. **Agents** — domain-specific execution with scoped tools and LLM calls
-5. **HITL Service** — manages approval requests, notifications, workflow resumption
-6. **Observability Layer** — tracing (LangSmith), metrics, structured logs
+```
+packages/
+  platform/       # Event gateway, Temporal, PostgreSQL, config, observability
+  integrations/
+    linear/       # Independent package with MCP server + direct API
+    github/       # Independent package with MCP server + direct API
+    slack/        # Independent package with MCP server + direct API
+    shared/       # Common integration utilities
+  agents/         # Product Agent, Dev Agent, shared agent utilities
+  sandbox/        # Code execution sandbox
+apps/
+  api/            # HTTP server entry point
+  worker/         # Temporal worker entry point
+```
 
-**Key pattern**: Separate agent execution (non-deterministic, LLM calls) into Temporal activities, keeping workflow logic deterministic for replay safety.
+**Key architecture decisions:**
+1. **MCP for LLM tool calls** - Agents use MCP clients to invoke integration MCP servers
+2. **Direct TypeScript imports for non-LLM calls** - Temporal activities use direct imports from integration packages
+3. **Factory functions for clients** - No global singletons, dependency injection via factories
+4. **Event-driven webhooks** - Gateway validates, deduplicates, routes to Temporal workflows
+5. **LangGraph + Temporal hybrid** - LangGraph for agent reasoning, Temporal for durable orchestration
+
+**Layer dependency rules:**
+- Agents depend on Integrations (via MCP) and Platform
+- Integrations depend only on Platform
+- Platform depends on nothing internal (only external libs)
 
 ### Critical Pitfalls
 
-1. **Autonomous agents without guardrails** — The Replit incident (July 2025): AI agent deleted production database despite explicit "no changes" instructions, then lied about it. Prevention: environment separation, approval gates, shadow mode for new agents.
+**Top 7 pitfalls requiring early attention:**
 
-2. **Infinite loops and deadlocks** — Single most common failure mode. Agents get stuck in recursive patterns or wait on each other indefinitely. Prevention: coordinator pattern, hard iteration limits, wall-clock timeouts.
+| # | Pitfall | Prevention | Phase |
+|---|---------|------------|-------|
+| 1 | **Big Bang Migration** | Incremental migration, each PR deployable, parallel structure | Phase 1 |
+| 2 | **Leaky Abstractions** | Domain types first, explicit mappers at boundaries, ESLint/TS project refs | Phase 2 |
+| 3 | **Environment Variable Drift** | Single .env.example, Zod validation at startup, fail fast | Phase 1 |
+| 4 | **Test Isolation Failures** | Transaction-per-test or testcontainers, no shared state | Phase 3 |
+| 5 | **Temporal Non-Determinism** | All external calls through activities, use workflow.now() | Any Temporal phase |
+| 6 | **CI That Doesn't Protect** | Branch protection enforced, fail fast, cache aggressively | Phase 4 |
+| 7 | **Context Explosion in Agents** | Scoped context per agent, summarization between handoffs | Post-foundation |
 
-3. **Context explosion** — Token costs spiral as agents pass full histories without summarization. Prevention: scoped context per agent, summarization at handoffs, semantic pruning (40-60% token savings).
-
-4. **AI-generated code quality** — 45% fails security tests, 1.7x more problems than human code. Prevention: mandatory security gates, human review for all AI PRs.
-
-5. **Human-in-the-loop bottlenecks** — Miscalibrated thresholds overwhelm humans or let risky decisions slip through. Prevention: async channels, risk-based routing, calibrate through iteration.
+**v1 lessons learned:**
+- Linear auth shared with GitHub - need separate adapters per integration
+- Painful E2E testing - need testcontainers + contract tests
+- .env.local vs .env confusion - need Zod schema validation
+- Hand-rolled utilities - need library audit before implementing
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure:
+Based on dependency analysis across all research files, suggested phase structure:
 
-### Phase 1: Core Agent Framework
-**Rationale:** Foundation must include safety guardrails, observability, and loop protection from day one—not bolted on later.
-**Delivers:** Single Dev Agent with basic loop, cost controls, iteration limits, environment separation
-**Addresses:** Table stakes (basic execution), differentiator (config-as-code agents)
-**Avoids:** Pitfalls 1-3 (guardrails, infinite loops, context explosion), Pitfall 8 (observability), Pitfall 9 (cost control)
+### Phase 1: Foundation Setup
+**Rationale:** Everything else depends on tooling, config, and observability being solid.
+**Delivers:** pnpm workspace structure, Biome, dotenv-flow, pino logger, base tsconfig
+**Addresses:** Table stakes (linting, config, logging)
+**Avoids:** Big Bang Migration (parallel structure), Environment Drift (config validation)
+**Complexity:** Medium (new tooling, minimal code changes)
 
-### Phase 2: Linear Integration
-**Rationale:** Linear is the entry point for tasks; establishes integration patterns reused for GitHub and Slack
-**Delivers:** Agent reads tasks from Linear, updates status, webhook-driven triggers
-**Uses:** MCP for tool abstraction, webhook gateway with idempotency
-**Avoids:** Pitfall 6 (inconsistent error handling), Pitfall 7 (LLM handling complex schemas)
+### Phase 2: Platform Layer
+**Rationale:** Platform services (config, secrets, observability) are dependencies for all other layers.
+**Delivers:** packages/platform with config loader, secrets provider, logger factory, tracing setup
+**Implements:** Platform layer from architecture, observability cross-cutting concern
+**Avoids:** Leaky Abstractions (define domain types here)
+**Complexity:** Medium
 
-### Phase 3: GitHub Integration
-**Rationale:** Code output is the core value; PR workflow is the primary delivery mechanism
-**Delivers:** Agent writes code, creates branches, opens PRs with context
-**Implements:** Branch protection (never push to main), security scanning on AI PRs
-**Avoids:** Pitfall 4 (AI code quality), security mistakes (no direct prod access)
+### Phase 3: Integration Extraction
+**Rationale:** Integrations must be independent packages before agents can use them properly.
+**Delivers:** packages/integrations/{linear,github,slack} as independent packages
+**Implements:** Integration layer, each with MCP server + direct API + activities
+**Avoids:** Integration packages depending on each other
+**Complexity:** High (most code movement)
 
-### Phase 4: Slack Integration + Human-in-the-Loop
-**Rationale:** Human approval is required for safe operation; Slack is the natural interface for async handoffs
-**Delivers:** Notifications, approval buttons, async workflow resume
-**Implements:** Risk-based routing, timeout handling, context preservation in handoffs
-**Avoids:** Pitfall 5 (HITL bottleneck), UX pitfalls (silent failures, no progress visibility)
+### Phase 4: MCP Layer
+**Rationale:** MCP servers build on extracted integrations; agents need MCP clients.
+**Delivers:** MCP servers in each integration, shared MCP client utilities for agents
+**Uses:** @modelcontextprotocol/server and client SDKs
+**Avoids:** MCP for everything (use only for LLM tool calls)
+**Complexity:** Medium
 
-### Phase 5: Product Agent + Multi-Agent Orchestration
-**Rationale:** Defer multi-agent complexity until single-agent workflow is proven; Product Agent adds requirements gathering
-**Delivers:** Product Agent for task specification, agent-to-agent handoff
-**Requires:** Validated Dev Agent, proven HITL patterns, established coordination protocols
-**Avoids:** Pitfall 10 (79% of multi-agent failures are coordination issues)
+### Phase 5: Testing Pyramid
+**Rationale:** Testing patterns must be established before CI can enforce quality gates.
+**Delivers:** Unit test patterns, testcontainers for integration tests, coverage reporting
+**Addresses:** Test isolation, coverage reporting, fixture factories
+**Avoids:** Coverage Theater (behavior-focused tests), Test Isolation Failures
+**Complexity:** Medium
 
-### Phase 6: Temporal Integration (Production Hardening)
-**Rationale:** Move to durable execution once async approval workflows are established; Temporal provides reliability for long-running workflows
-**Delivers:** Replay-safe workflows, automatic failure recovery, long-term state persistence
-**Implements:** Workflow/activity separation, signals for human approval
-**Avoids:** Anti-pattern 1 (in-memory state for long-running workflows)
+### Phase 6: CI/CD Pipeline
+**Rationale:** CI validates all previous work; must come after testing patterns established.
+**Delivers:** GitHub Actions with lint -> typecheck -> test -> integration jobs, branch protection
+**Implements:** Quality gates, dependency caching, parallel jobs
+**Avoids:** CI That Doesn't Protect, Supply Chain attacks (pin actions to SHA)
+**Complexity:** Low-Medium
+
+### Phase 7: Local Dev Environment
+**Rationale:** Developer experience improvements after core architecture is stable.
+**Delivers:** Docker hot reload, health check endpoints, graceful shutdown, updated docs
+**Addresses:** One-command local dev, Docker optimization
+**Avoids:** Docker Image Bloat (multi-stage builds)
+**Complexity:** Low-Medium
 
 ### Phase Ordering Rationale
 
-- **Phase 1 before all else**: Safety, observability, and cost control are architectural requirements, not features. The Replit incident proves agents can cause serious damage without guardrails.
-- **Linear before GitHub**: Task intake happens before code output. Linear integration establishes patterns reused later.
-- **GitHub before Slack**: Code delivery is core value. Slack is enhancement for communication.
-- **HITL in Phase 4, not Phase 1**: Approval gates need a functioning agent to approve. Build the agent first, then add approval workflow.
-- **Multi-agent after single-agent**: 79% of multi-agent failures are coordination issues. Validate single agent workflow before adding complexity.
-- **Temporal last**: Production hardening happens after core workflow is validated. Don't over-engineer upfront.
+1. **Tooling before code** - Biome/pino/dotenv-flow establish patterns used everywhere
+2. **Platform before integrations** - Config/secrets/logging are dependencies
+3. **Integrations before MCP** - MCP servers wrap existing integration logic
+4. **Testing before CI** - CI enforces test patterns that must exist first
+5. **CI before local dev polish** - Core quality gates more important than DX polish
 
 ### Research Flags
 
-**Phases likely needing deeper research during planning:**
-- **Phase 1**: LangGraph.js patterns for context management and loop guards — research-phase recommended
-- **Phase 4**: Temporal integration patterns for HITL — research-phase recommended
-- **Phase 5**: Multi-agent coordination protocols — research-phase strongly recommended
+**Phases needing deeper research during planning:**
+- **Phase 3 (Integration Extraction):** Complex code movement, need specific migration strategy per integration
+- **Phase 4 (MCP Layer):** MCP transport for containers (stdio vs HTTP), security boundaries between agents
 
 **Phases with standard patterns (skip research-phase):**
-- **Phase 2**: Linear API is well-documented; MCP patterns are established
-- **Phase 3**: GitHub integration patterns are ubiquitous; branch protection is standard
+- **Phase 1 (Foundation Setup):** Biome, pino, dotenv-flow are well-documented
+- **Phase 5 (Testing Pyramid):** testcontainers + Vitest patterns established
+- **Phase 6 (CI/CD):** GitHub Actions patterns well-documented
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | LangGraph.js is GA 1.0, verified with official docs; Temporal is production-proven at OpenAI |
-| Features | MEDIUM | Based on competitor analysis and community consensus; market is evolving rapidly |
-| Architecture | MEDIUM-HIGH | Patterns well-established (Google ADK, Microsoft, AWS); async HITL still maturing |
-| Pitfalls | HIGH | Based on real post-mortems (Replit incident), GitHub issues, empirical studies (Veracode) |
+| Stack | HIGH | Official docs verified, 2025/2026 ecosystem data, clear recommendations |
+| Features | HIGH | Established patterns, existing codebase context informs priorities |
+| Architecture | HIGH | MCP is industry standard, LangGraph+Temporal pattern explicitly recommended by both teams |
+| Pitfalls | HIGH | Real post-mortems (Replit), v1 project experience, official documentation |
 
-**Overall confidence:** MEDIUM-HIGH
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **MCP server implementation patterns**: Research during Phase 2 planning
-- **Temporal activity patterns for LangGraph agents**: Research during Phase 6 planning
-- **Token cost optimization strategies**: Monitor during execution, optimize iteratively
-- **Multi-agent coordination protocols**: Deep research needed before Phase 5
+| Gap | How to Handle |
+|-----|---------------|
+| MCP transport for containers | Phase 4 planning: decide stdio (simple, single process) vs HTTP (container isolation) |
+| Multi-tenant credentials | Defer to post-foundation; current single-tenant approach sufficient |
+| Integration swapping mechanism | Defer; runtime registry vs build-time selection not needed for v2.0 |
+| Agent tool subsets (security) | Defer; all tools available to all agents initially |
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- LangGraph.js Official Docs — architecture, checkpointing, HITL patterns
-- Temporal Documentation — durable execution, signals, replay
-- Replit Incident Post-Mortems — guardrails, production safety
-- Veracode AI Code Security Report — empirical data on AI code quality
-- OpenAI Safety Guidelines — agent safety patterns
-- Google ADK Multi-Agent Patterns — orchestration patterns
+- [Biome Official](https://biomejs.dev/) - v2.x, 425 rules, 35x faster than Prettier
+- [Model Context Protocol](https://modelcontextprotocol.io/) - Spec v2025-11-25, TypeScript SDK
+- [pino GitHub](https://github.com/pinojs/pino) - v10.2.1, 17.2k stars
+- [Vitest](https://vitest.dev/) - v4.0.17
+- [Temporal TypeScript Versioning](https://docs.temporal.io/develop/typescript/versioning)
+- [testcontainers Node](https://node.testcontainers.org/) - v11.11.0
+- [JavaScript Testing Best Practices](https://github.com/goldbergyoni/javascript-testing-best-practices)
+- [Domain-Driven Hexagon](https://github.com/Sairyss/domain-driven-hexagon)
 
 ### Secondary (MEDIUM confidence)
-- Cursor/n8n GitHub Issues — real infinite loop bug reports
-- AWS Strands Agents Documentation — alternative framework evaluation
-- LangSmith Documentation — observability patterns
-- ZenML Linear Agent Case Study — real-world Linear integration
+- [Google Cloud Agentic AI Design Patterns](https://cloud.google.com/architecture/choose-design-pattern-agentic-ai-system)
+- [Temporal for Agentic AI (Grid Dynamics)](https://temporal.io/blog/prototype-to-prod-ready-agentic-ai-grid-dynamics)
+- [LangGraph 1.0 Announcement](https://www.blog.langchain.com/langchain-langgraph-1dot0/)
+- [A Year of MCP: 2025 Review](https://www.pento.ai/blog/a-year-of-mcp-2025-review)
+- [Veracode: AI Code Security Report](https://www.veracode.com/blog/genai-code-security-report/)
+- [Galileo: Why Multi-Agent LLM Systems Fail](https://galileo.ai/blog/multi-agent-llm-systems-fail)
 
-### Tertiary (LOW confidence)
-- VentureBeat industry analysis — useful context, some claims unverified
-- Various Medium articles — individual experiences, not systematic
+### Post-Mortems (HIGH confidence for pitfalls)
+- [Replit AI Incident](https://codenotary.com/blog/when-ai-goes-rogue-the-replit-incident-and-its-lessons)
+- [Cursor Issue #3327: Infinite Loop](https://github.com/cursor/cursor/issues/3327)
+- [Compromised GitHub Action](https://www.infoq.com/news/2025/04/compromised-github-action/)
 
 ---
-*Research completed: 2026-01-16*
+*Research completed: 2026-01-19*
 *Ready for roadmap: yes*

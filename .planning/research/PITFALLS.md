@@ -1,8 +1,20 @@
-# Pitfalls Research
+# Domain Pitfalls
 
 **Domain:** Agentic Development Platform / AI Agent Orchestration System
-**Researched:** 2026-01-16
-**Confidence:** MEDIUM (synthesized from multiple sources, real post-mortems, and community discussions)
+**Researched:** 2026-01-19 (updated)
+**Confidence:** HIGH (based on official docs, 2025 industry sources, and v1 project experience)
+
+This document consolidates pitfalls for both:
+1. **Agentic AI Systems** (original research from 2026-01-16)
+2. **v2.0 Foundation Restructure** (added 2026-01-19)
+
+---
+
+# Part 1: Agentic AI System Pitfalls
+
+Critical mistakes when building multi-agent orchestration platforms.
+
+---
 
 ## Critical Pitfalls
 
@@ -327,6 +339,517 @@ Phase 1 (Core Agent Framework) - Define agent boundaries and communication proto
 
 ---
 
+# Part 2: v2.0 Foundation Restructure Pitfalls
+
+Critical mistakes when restructuring TypeScript codebase, establishing CI/CD, and building layered architecture.
+
+---
+
+## Critical Restructure Pitfalls
+
+### Pitfall 11: Big Bang Migration
+
+**What goes wrong:** Attempting to restructure the entire codebase in one massive change. Team tries to implement 3-layer architecture, move all files, update all imports, and fix all tests simultaneously.
+
+**Why it happens:** Desire for "clean slate" after v1 proved the concept. Underestimating interdependencies in existing code.
+
+**Consequences:**
+- Broken builds for days/weeks
+- Lost functionality that "worked before"
+- Cannot ship incremental value
+- Team morale collapse when "just one more fix" spirals
+- Difficult to pinpoint which change broke what
+
+**Prevention:**
+- Establish parallel structure: new `src/layers/` alongside existing `src/`
+- Migrate one module at a time with feature flags
+- Keep old code working until new code is proven
+- Each PR should be deployable and not break existing functionality
+- Use TypeScript path aliases to redirect imports gradually
+
+**Detection (warning signs):**
+- PRs with 50+ file changes
+- "Blocked on restructure" in standups
+- Test suite completely failing
+- "It worked before the restructure" complaints
+
+**Recovery:**
+- Revert to last working state
+- Create smaller migration plan with intermediate states
+- Ship partial migrations behind feature flags
+
+**Phase:** Should be addressed in Phase 1 (Foundation Setup) with migration strategy
+
+**Sources:**
+- [Monorepo Tools - TypeScript](https://monorepo.tools/typescript) - TypeScript-specific monorepo pitfalls
+- [Nx Blog: Managing TS Packages](https://nx.dev/blog/managing-ts-packages-in-monorepos) - Project references and boundaries
+
+---
+
+### Pitfall 12: Leaky Abstractions Between Layers
+
+**What goes wrong:** Domain logic leaks into infrastructure layer. Infrastructure concerns (database schemas, API response formats, webhook payloads) pollute domain types. The "3-layer architecture" becomes 3 folders with no actual separation.
+
+**Why it happens:**
+- Rushing to "just make it work"
+- Domain types directly mirror database schemas
+- External API types used throughout codebase
+- No clear ownership of transformation logic
+
+**Consequences:**
+- Changing Linear webhook format requires changes in 10+ files
+- Cannot swap PostgreSQL for another store without rewriting domain
+- Tests require mocking external services deep in domain code
+- "Why do I need to know about HTTP status codes in my agent logic?"
+
+**Prevention:**
+- Define domain types first, independently of external systems
+- Create explicit mappers at layer boundaries: `LinearWebhookPayload -> DomainEvent`
+- Infrastructure layer owns ALL external type definitions
+- Domain layer has ZERO imports from infrastructure
+- Enforce with ESLint rules or TypeScript project references
+
+**Detection:**
+- `import { LinearClient } from "@linear/sdk"` in domain code
+- Domain types with fields like `httpStatus`, `rawResponse`, `webhookSignature`
+- Tests that require real API credentials to run
+- "I changed the webhook handler and now 15 tests fail"
+
+**Recovery:**
+- Introduce mapper layer at boundaries
+- Extract domain types from infrastructure types
+- Move external dependencies to adapters
+
+**Phase:** Should be addressed in Phase 2 (Core Layer Architecture)
+
+**Sources:**
+- [Domain-Driven Hexagon](https://github.com/Sairyss/domain-driven-hexagon) - Layered architecture patterns in TypeScript
+- [Project Structures: Domain-Driven vs. Layered Architecture](https://hector-reyesaleman.medium.com/project-structures-domain-driven-vs-layered-architecture-db8b713c99ef) - Architecture anti-patterns
+
+---
+
+### Pitfall 13: Testing the Wrong Things (Coverage Theater)
+
+**What goes wrong:** High test coverage numbers that don't catch real bugs. Tests verify implementation details rather than behavior. Flaky tests get disabled or `skip`-ed.
+
+**Why it happens:**
+- Pressure to show "90% coverage"
+- Mocking everything including the thing being tested
+- Tests copy-paste implementation logic into assertions
+- No distinction between unit/integration/e2e test responsibilities
+
+**Consequences:**
+- Refactoring breaks tests that should pass
+- Real bugs slip through to production
+- 20-minute test suites that developers skip locally
+- "The tests pass but it doesn't work"
+- Technical debt in test code mirrors production debt
+
+**Prevention:**
+- Test behavior, not implementation: "when X happens, Y should result"
+- Clear test pyramid: many unit tests (fast), fewer integration (medium), minimal e2e (slow)
+- Integration tests use real dependencies where practical (testcontainers)
+- Unit tests use dependency injection, not mocks of everything
+- Each test should answer: "what business requirement does this verify?"
+
+**Detection:**
+- Tests that change every time implementation changes
+- Tests with 10+ mocks/stubs
+- Test file longer than implementation file
+- "Flaky" label on multiple tests
+- `test.skip` or `test.todo` accumulating
+
+**Recovery:**
+- Delete tests that don't verify behavior
+- Consolidate overlapping tests
+- Create testing guidelines document
+- Use coverage as minimum bar, not goal
+
+**Phase:** Should be addressed in Phase 3 (Testing Pyramid)
+
+**Sources:**
+- [JavaScript Testing Best Practices](https://github.com/goldbergyoni/javascript-testing-best-practices) - Comprehensive testing guidance
+- [Modern Test Pyramid Guide 2025](https://fullscale.io/blog/modern-test-pyramid-guide/) - Updated pyramid for microservices
+
+---
+
+### Pitfall 14: CI/CD That Runs But Doesn't Protect
+
+**What goes wrong:** Pipeline exists and runs, but doesn't catch issues before production. False sense of security from green builds.
+
+**Why it happens:**
+- Pipeline copied from template without customization
+- Tests run but failures are ignored or marked as "known flaky"
+- No branch protection enforced
+- Security scanning disabled because "too many false positives"
+
+**Consequences:**
+- Broken code reaches main branch
+- Security vulnerabilities deployed to production
+- "But CI passed!" becomes excuse for not testing locally
+- Slow pipelines that developers work around
+
+**Prevention:**
+- Branch protection rules: require passing CI, require reviews
+- Pipeline stages: lint -> type-check -> unit tests -> integration tests -> security scan
+- Fail fast: run quick checks before slow tests
+- Cache aggressively: npm dependencies, Docker layers, build artifacts
+- Security scanning with curated rules (not just defaults)
+
+**Detection:**
+- PRs merged with failing checks
+- "Skip CI" in commit messages
+- Pipeline takes >15 minutes
+- No one notices when security scan fails
+- Same bugs repeatedly reach production
+
+**Recovery:**
+- Enforce branch protection immediately
+- Triage and fix flaky tests
+- Optimize slow stages with caching
+- Create escalation path for security findings
+
+**Phase:** Should be addressed in Phase 4 (CI/CD Pipeline)
+
+**Sources:**
+- [CI/CD Anti-Patterns](https://em360tech.com/tech-articles/cicd-anti-patterns-whats-slowing-down-your-pipeline) - Common pipeline mistakes
+- [Hardening GitHub Actions](https://www.wiz.io/blog/github-actions-security-guide) - Security lessons from 2025 attacks
+
+---
+
+### Pitfall 15: Environment Variable Drift and Secret Sprawl
+
+**What goes wrong:** Different environment variables in local vs Docker vs staging vs production. Secrets hardcoded in code or committed to git. No single source of truth for configuration.
+
+**Why it happens (observed in v1):**
+- Quick fixes: "just add another env var"
+- `.env.local` vs `.env` vs `docker-compose.yml` all with different values
+- Copy-paste configuration between environments
+- No validation of required variables at startup
+
+**Consequences:**
+- "Works on my machine" syndrome
+- Production incidents from missing/wrong configuration
+- Secrets in git history
+- Hours debugging why feature doesn't work (answer: env var typo)
+- Security audit failures
+
+**Prevention:**
+- Single `.env.example` with ALL variables and documentation
+- Runtime validation with Zod schema at startup (fail fast)
+- Secrets from external manager (not env vars for sensitive data)
+- Docker Compose interpolates from `.env` only
+- CI validates that all required vars are set
+
+**Detection:**
+- Different variable names in different places (`LINEAR_TOKEN` vs `LINEAR_ACCESS_TOKEN`)
+- Hardcoded values in source code
+- "Add this env var" buried in Slack messages
+- `.env` files in git history
+- Startup succeeds but feature fails due to missing config
+
+**Recovery:**
+- Audit all configuration sources
+- Create canonical schema with validation
+- Rotate any secrets that may have been exposed
+- Document every variable in `.env.example`
+
+**Phase:** Should be addressed in Phase 1 (Foundation Setup) and Phase 5 (Local Dev Environment)
+
+**Sources:**
+- [Kubernetes Secrets Management 2025](https://infisical.com/blog/kubernetes-secrets-management-2025) - Beyond environment variables
+- [Don't Use Environment Variables for Secrets](https://www.nodejs-security.com/blog/do-not-use-secrets-in-environment-variables-and-here-is-how-to-do-it-better) - Security concerns with env vars
+
+---
+
+### Pitfall 16: Temporal Workflow Non-Determinism
+
+**What goes wrong:** Workflows that work on first run but fail on replay. Random values, timestamps, or external calls in workflow code.
+
+**Why it happens:**
+- Misunderstanding Temporal's replay model
+- Using `Date.now()` or `Math.random()` in workflow code
+- Calling external APIs directly instead of through activities
+- Conditional logic based on non-deterministic values
+
+**Consequences:**
+- `NonDeterministicError` in production after deployment
+- Workflows stuck in failed state
+- Cannot roll back because replay fails
+- Data inconsistencies from partial execution
+
+**Prevention:**
+- ALL external calls go through activities
+- Use `workflow.now()` instead of `Date.now()`
+- Use `workflow.random()` for any randomness
+- Code review checklist for workflow determinism
+- Integration tests that force replay
+
+**Detection:**
+- `NonDeterministicError` in Temporal UI
+- Workflows that complete once but fail on worker restart
+- Different results from same workflow on replay
+- External API calls in workflow files (not activity files)
+
+**Recovery:**
+- Fix non-deterministic code with versioning (`patched()` API)
+- May need to terminate stuck workflows
+- Cannot fix historical executions, only future ones
+
+**Phase:** Should be addressed in any phase touching Temporal workflows
+
+**Sources:**
+- [Temporal TypeScript Versioning](https://docs.temporal.io/develop/typescript/versioning) - Workflow determinism and versioning
+- [Durable Execution with Temporal](https://medium.com/@kaushalsinh73/node-js-durable-execution-with-temporal-ts-saga-patterns-without-orchestration-chaos-249132ccf609) - Saga patterns and pitfalls
+
+---
+
+## Moderate Restructure Pitfalls
+
+### Pitfall 17: Docker Image Bloat
+
+**What goes wrong:** Production images are 1GB+ when they could be 100MB. Slow deploys, high bandwidth costs, larger attack surface.
+
+**Why it happens:**
+- Using `node:20` instead of `node:20-alpine` (350MB vs 40MB)
+- Dev dependencies in production image
+- Build artifacts (`.git`, `node_modules/.cache`) not excluded
+- Single-stage Dockerfile
+
+**Consequences:**
+- 5+ minute image pulls in CI
+- Higher cloud storage costs
+- More CVEs from unnecessary packages
+- Slow container startup
+
+**Prevention:**
+- Multi-stage builds: builder stage with dev deps, runtime stage with prod only
+- Base on `node:20-alpine` or distroless
+- Proper `.dockerignore`: `.git`, `node_modules`, `*.md`, test files
+- Run `npm ci --omit=dev` in production stage
+- Scan images for size and vulnerabilities
+
+**Detection:**
+- `docker images` shows >500MB for Node.js app
+- CI image push takes >2 minutes
+- Container startup takes >30 seconds
+- Vulnerability scan shows 100+ CVEs
+
+**Recovery:**
+- Rewrite Dockerfile with multi-stage
+- Audit and remove unnecessary dependencies
+- Add `.dockerignore` entries
+
+**Phase:** Should be addressed in Phase 5 (Local Dev Environment)
+
+**Sources:**
+- [Docker Image Optimization](https://cloudnativenow.com/topics/cloudnativedevelopment/docker/smarter-containers-how-to-optimize-your-dockerfiles-for-speed-size-and-security/) - Multi-stage builds, size reduction
+- [Docker for Node.js Security](https://www.docker.com/blog/docker-for-node-js-developers-5-things-you-need-to-know-not-to-fail-your-security/) - Security best practices
+
+---
+
+### Pitfall 18: Test Database Isolation Failures
+
+**What goes wrong:** Tests pass individually but fail when run together. Flaky tests that pass on retry. Tests that fail in CI but pass locally.
+
+**Why it happens:**
+- Shared database state between test files
+- Vitest's default parallel execution
+- `beforeAll` seeds data that other tests depend on
+- No cleanup in `afterEach`
+
+**Consequences:**
+- "Flaky test" label applied liberally
+- Random CI failures that "pass on re-run"
+- Tests that can only run in specific order
+- Hours debugging test infrastructure
+
+**Prevention:**
+- Transaction-per-test pattern: begin transaction in `beforeEach`, rollback in `afterEach`
+- Or: testcontainers with isolated database per test file
+- Use `--no-threads` flag if using shared database
+- Each test creates its own data, never relies on global state
+- Factory functions instead of shared fixtures
+
+**Detection:**
+- Tests that pass alone but fail in suite
+- Tests that fail differently each CI run
+- `test.sequential` or `--no-threads` used as bandaid
+- "Just re-run CI" as standard practice
+
+**Recovery:**
+- Audit tests for shared state
+- Implement transaction isolation
+- Consider testcontainers for true isolation
+
+**Phase:** Should be addressed in Phase 3 (Testing Pyramid)
+
+**Sources:**
+- [Integration Testing with Vitest & Testcontainers](https://nikolamilovic.com/posts/2025-4-15-integration-testing-node-vitest-testcontainers/) - Database isolation patterns
+- [Epic Web Dev: Vitest Defaults](https://www.epicweb.dev/incredible-vitest-defaults) - Test isolation by default
+
+---
+
+### Pitfall 19: Supply Chain Security Gaps in CI
+
+**What goes wrong:** GitHub Actions use unpinned third-party actions. Compromised action gains access to secrets. npm install runs untrusted code.
+
+**Why it happens:**
+- Copying workflow files from tutorials
+- Using `@latest` or `@v4` instead of SHA pinning
+- Not auditing actions before use
+- Trusting popular actions implicitly
+
+**Consequences:**
+- Secrets exfiltrated through compromised action
+- Malicious code runs in CI with elevated privileges
+- Supply chain attack (like tj-actions/changed-files in March 2025)
+- Compliance failures
+
+**Prevention:**
+- Pin all actions to full SHA: `uses: actions/checkout@8ade135...`
+- Use Dependabot to update action versions with review
+- Minimize third-party actions, prefer official ones
+- Use OIDC for cloud auth instead of long-lived secrets
+- Audit actions before first use
+
+**Detection:**
+- Actions using `@latest` or `@v*` tags
+- Unknown/unpopular third-party actions
+- Actions with write permissions that don't need them
+- No Dependabot alerts configured
+
+**Recovery:**
+- Audit and pin all current actions
+- Rotate secrets that may have been exposed
+- Add Dependabot for action updates
+
+**Phase:** Should be addressed in Phase 4 (CI/CD Pipeline)
+
+**Sources:**
+- [Compromised GitHub Action](https://www.infoq.com/news/2025/04/compromised-github-action/) - Supply chain attack case study
+- [NPM Supply Chain Attacks](https://blog.qualys.com/product-tech/2025/10/06/how-to-prevent-npm-supply-chain-attacks-in-ci-cd-pipelines-with-container-security) - Prevention strategies
+
+---
+
+### Pitfall 20: LangGraph State Schema Sprawl
+
+**What goes wrong:** Agent state grows unboundedly. Old context never cleaned up. Memory usage grows over long-running sessions.
+
+**Why it happens:**
+- Appending to message arrays without trimming
+- Storing full API responses instead of extracted data
+- No strategy for context window management
+- "We might need that later" mentality
+
+**Consequences:**
+- Context window exceeded, agent fails
+- Increasing token costs as conversations grow
+- Slow checkpointing with large state
+- Out of memory errors on long sessions
+
+**Prevention:**
+- Define max state sizes upfront
+- Implement message trimming strategy (keep N most recent)
+- Store summaries instead of full content
+- Use `continueAsNew` for long-running workflows
+- Monitor state size in observability
+
+**Detection:**
+- Token usage increasing over session lifetime
+- Checkpoint sizes growing unboundedly
+- "Context length exceeded" errors
+- Slow state serialization
+
+**Recovery:**
+- Implement retrospective summarization
+- Add state pruning in agent nodes
+- Consider workflow continuation strategy
+
+**Phase:** Should be addressed in Phase 2 (Core Layer Architecture)
+
+**Sources:**
+- [LangGraph 2025 Review](https://sider.ai/blog/ai-tools/langgraph-review-is-the-agentic-state-machine-worth-your-stack-in-2025) - State management challenges
+- [State of AI Agents](https://www.langchain.com/state-of-agent-engineering) - Production adoption challenges
+
+---
+
+## Minor Restructure Pitfalls
+
+### Pitfall 21: TypeScript Config Fragmentation
+
+**What goes wrong:** Different `tsconfig.json` settings across packages. Some code uses strict mode, some doesn't. Inconsistent target/module settings.
+
+**Consequences:**
+- Type errors appear/disappear based on which package you're in
+- "It compiled for me" issues
+- Different behavior between build and IDE
+
+**Prevention:**
+- Base `tsconfig.base.json` with shared settings
+- All packages extend base config
+- Strict mode everywhere
+- Consistent target: ES2022+ for Node.js 20+
+
+**Phase:** Phase 1 (Foundation Setup)
+
+---
+
+### Pitfall 22: Import Path Chaos After Restructure
+
+**What goes wrong:** Mix of relative paths (`../../lib/utils`), absolute paths (`src/lib/utils`), and path aliases (`@/lib/utils`).
+
+**Consequences:**
+- Confusing imports
+- Refactoring breaks unexpected files
+- IDE auto-imports use inconsistent paths
+
+**Prevention:**
+- Define path aliases in `tsconfig.json`
+- ESLint rule to enforce alias usage
+- Configure IDE to prefer aliases
+
+**Phase:** Phase 1 (Foundation Setup)
+
+---
+
+### Pitfall 23: Hand-Rolled Utilities for Standard Problems
+
+**What goes wrong (observed in v1):** Writing custom retry logic, custom logging, custom validation when established libraries exist.
+
+**Consequences:**
+- Bugs in utilities that libraries solved years ago
+- Maintenance burden for undifferentiated code
+- New developers confused by non-standard patterns
+
+**Prevention:**
+- Audit existing utilities against npm ecosystem
+- Use established libraries: `zod`, `pino`, `p-retry`, etc.
+- Custom code only for domain-specific logic
+
+**Phase:** Phase 1 (Foundation Setup)
+
+---
+
+### Pitfall 24: Missing Graceful Shutdown
+
+**What goes wrong:** Container stops mid-request. Temporal worker stops mid-activity. Database connections not closed properly.
+
+**Consequences:**
+- Lost work from interrupted operations
+- Connection pool exhaustion
+- Stuck workflows requiring manual intervention
+
+**Prevention:**
+- Handle SIGTERM/SIGINT signals
+- Drain HTTP connections before exit
+- Wait for in-flight Temporal activities
+- Close database connections cleanly
+
+**Phase:** Phase 5 (Local Dev Environment)
+
+---
+
 ## Technical Debt Patterns
 
 Shortcuts that seem reasonable but create long-term problems.
@@ -341,6 +864,11 @@ Shortcuts that seem reasonable but create long-term problems.
 | No cost attribution | Simpler architecture | Unable to optimize, budget surprises | Only in early prototyping |
 | Synchronous human approval for all actions | Maximum safety | Workflow bottlenecks, human burnout | Only for high-risk actions |
 | Single powerful model for all tasks | Simpler routing | Unnecessary costs | Only when cost is irrelevant |
+| Big bang migration | "Clean" restructure | Weeks of broken builds | Never |
+| Domain types that mirror DB schemas | Less code | Tight coupling, hard to change | Very simple CRUD apps only |
+| Skipping test isolation | Tests run faster | Flaky tests, wasted debugging time | Never |
+
+---
 
 ## Integration Gotchas
 
@@ -355,52 +883,16 @@ Common mistakes when connecting to external services.
 | OAuth services | Token refresh handled per-integration | Centralized credential manager with proactive refresh |
 | Webhooks | Building custom webhook handlers per service | Unified gateway with retry logic and idempotency |
 | Rate-limited APIs | Aggressive retry without backoff | Exponential backoff with jitter, circuit breakers |
+| PostgreSQL (testing) | Shared database between parallel tests | Transaction isolation or testcontainers |
+| Docker | `node:latest` base image | Pinned `node:20-alpine` with multi-stage build |
 
-## Performance Traps
-
-Patterns that work at small scale but fail as usage grows.
-
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| Full context on every request | Slow responses, high costs | Context summarization, scoped context | >10 message threads |
-| Synchronous human approval | Workflow delays, user complaints | Async channels, risk-based routing | >10 approvals/day |
-| Single coordinator agent | Bottleneck, single point of failure | Distributed coordination, hierarchy | >5 concurrent workflows |
-| No caching of LLM responses | Repeated expensive calls | Cache deterministic steps | Any repeated operations |
-| Unlimited agent loop iterations | Runaway costs, timeouts | Hard iteration limits, wall-clock timeouts | First infinite loop |
-| No observability sampling | Storage costs, slow queries | Trace sampling for high-volume paths | >1000 traces/minute |
-
-## Security Mistakes
-
-Domain-specific security issues beyond general web security.
-
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| Agent with prod database write access | Data deletion/corruption (Replit) | Read-only in prod, write only in sandbox |
-| No command allowlist for shell access | Arbitrary code execution | Whitelist specific commands, sandbox execution |
-| Passing API keys through LLM context | Key exposure in logs/prompts | Environment variables, secret managers |
-| Agent with GitHub push to main | Malicious/buggy code in production | Branch protection, PR-only workflow |
-| Unvalidated LLM output as code | Injection attacks, malicious code | Static analysis, AST validation before execution |
-| No PII detection in agent context | Privacy violations, compliance issues | Guardrails to redact PII before LLM processing |
-| Trusting LLM for access control decisions | Privilege escalation | Programmatic RBAC, LLM only suggests |
-
-## UX Pitfalls
-
-Common user experience mistakes in this domain.
-
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| Agents silently failing | Users don't know why nothing happened | Surface errors in Slack with actionable info |
-| Context loss on handoff | Users repeat themselves | Pass full context summary to human |
-| No progress visibility | Users unsure if agent is working | Status updates in Slack thread |
-| Binary approval (yes/no) | No nuanced feedback | Allow edit-and-approve, partial approval |
-| Agent creates PR without summary | Reviewer doesn't understand changes | Always include context, test plan |
-| Mixing urgent and non-urgent in same channel | Important items buried | Separate channels by urgency/type |
-| No way to override/abort agent | User loses control | Always provide cancel mechanism |
+---
 
 ## "Looks Done But Isn't" Checklist
 
 Things that appear complete but are missing critical pieces.
 
+### Agentic System Checklist
 - [ ] **Agent handoff:** Often missing trace_id for correlation - verify handoff payloads include correlation ID
 - [ ] **Error handling:** Often missing distinction between retryable and terminal - verify retry policies exist
 - [ ] **Rate limiting:** Often missing backoff - verify exponential backoff with jitter implemented
@@ -412,68 +904,100 @@ Things that appear complete but are missing critical pieces.
 - [ ] **Loop guards:** Often missing timeout - verify all loops have max iterations AND wall-clock limits
 - [ ] **Prod isolation:** Often missing for agent tooling - verify agents can't write to prod without approval
 
-## Recovery Strategies
+### Restructure Checklist
+- [ ] **Layer boundaries:** ESLint rules or TS project references enforce separation
+- [ ] **Import paths:** All using path aliases, not relative paths
+- [ ] **Config validation:** Startup fails fast with clear error on missing env vars
+- [ ] **Test isolation:** Each test can run independently, no shared state
+- [ ] **CI protection:** Branch protection enforced, can't merge with failures
+- [ ] **Docker optimization:** Multi-stage build, <200MB image size
+- [ ] **Graceful shutdown:** SIGTERM handled, in-flight work completed
+- [ ] **Documentation:** README, env.example, architecture diagram updated
+- [ ] **Old code removed:** No orphan files from v1 structure
+- [ ] **Type exports:** Only intended public API exported from packages
 
-When pitfalls occur despite prevention, how to recover.
+---
 
-| Pitfall | Recovery Cost | Recovery Steps |
-|---------|---------------|----------------|
-| Infinite loop / runaway costs | LOW | Kill agent, investigate logs, add iteration limits |
-| Production data deleted | HIGH | Restore from backup, implement env separation immediately |
-| Context explosion | MEDIUM | Implement summarization, clear accumulated context |
-| Security vulnerability shipped | MEDIUM-HIGH | Patch, scan for exploitation, add security gates |
-| Human bottleneck blocking workflows | MEDIUM | Route non-critical to async, adjust thresholds |
-| Silent integration failures | MEDIUM | Add observability, replay failed operations |
-| Cost attribution impossible | MEDIUM | Add tagging, accept historical costs are unattributable |
-| Agent coordination breakdown | LOW-MEDIUM | Add coordinator, define explicit protocols |
+## v1 Lessons Learned (Project-Specific Context)
+
+Issues specifically observed in v1 that v2 must address:
+
+| v1 Problem | Root Cause | v2 Prevention |
+|------------|------------|---------------|
+| Linear auth shared with GitHub | No clear integration boundaries | Separate adapters per integration |
+| Painful E2E testing | Tests coupled to real services | Testcontainers + contract tests |
+| `.env.local` vs `.env` confusion | No config validation | Zod schema validation at startup |
+| Hand-rolled utilities | Quick implementation over research | Library audit before implementing |
+| Coupled, messy code | "Prove it works" priority over architecture | Architecture-first in v2, tests enforce boundaries |
+
+---
 
 ## Pitfall-to-Phase Mapping
 
-How roadmap phases should address these pitfalls.
+| Phase | Primary Pitfalls | Secondary Pitfalls |
+|-------|------------------|-------------------|
+| **Phase 1: Foundation Setup** | Big Bang Migration (#11), Environment Drift (#15) | TypeScript Config (#21), Import Paths (#22), Hand-Rolled Utils (#23) |
+| **Phase 2: Core Architecture** | Leaky Abstractions (#12), LangGraph State (#20) | Coordination Issues (#10), Context Explosion (#1) |
+| **Phase 3: Testing Pyramid** | Coverage Theater (#13), Test Isolation (#18) | All (testing validates other phases) |
+| **Phase 4: CI/CD Pipeline** | Pipeline Security (#14, #19) | Slow builds if not cached properly |
+| **Phase 5: Local Dev** | Docker Bloat (#17), Environment Drift (#15) | Graceful Shutdown (#24) |
+| **Any Temporal Phase** | Workflow Non-Determinism (#16) | Long-running workflow management |
+| **All Agentic Phases** | Infinite Loops (#2), Guardrails (#3), AI Code Quality (#4) | Poor Observability (#8), Token Costs (#9) |
 
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| Context explosion | Phase 1: Core Framework | Token usage decreases over conversation length |
-| Infinite loops | Phase 1: Core Framework | All agents have termination conditions in tests |
-| No guardrails | Phase 1: Core Framework | Prod actions require explicit approval in audit log |
-| AI code quality | Phase 3: GitHub Integration | Security scan passes on all AI PRs |
-| HITL bottleneck | Phase 4: Slack Integration | Async approval queue with SLA metrics |
-| Integration errors | Phase 2: Linear Integration | Error handling tests for all external APIs |
-| Complex schema to LLM | Phase 2-4: All Integrations | LLM tasks limited to summarization/classification |
-| Poor observability | Phase 1: Core Framework | End-to-end trace visible for every workflow |
-| Runaway costs | Phase 1: Core Framework | Budget alerts fire before $X spend |
-| Coordination failures | Phase 1: Core Framework | Agent boundaries documented and tested |
+---
 
 ## Sources
 
-**Post-Mortems (HIGH confidence):**
+### Post-Mortems (HIGH confidence)
 - [Replit AI Incident - Codenotary](https://codenotary.com/blog/when-ai-goes-rogue-the-replit-incident-and-its-lessons)
 - [Inside the Replit AI Catastrophe - Medium](https://medium.com/@neerupujari5/inside-the-replit-ai-catastrophe-438e0f63b21c)
 - [Cursor Issue #3327: Infinite Loop](https://github.com/cursor/cursor/issues/3327)
 - [n8n Issue #13525: Agent Infinite Loop](https://github.com/n8n-io/n8n/issues/13525)
+- [Compromised GitHub Action](https://www.infoq.com/news/2025/04/compromised-github-action/)
 
-**Research Studies (HIGH confidence):**
+### Research Studies (HIGH confidence)
 - [Veracode: AI Code Security Report](https://www.veracode.com/blog/genai-code-security-report/)
 - [Galileo: Why Multi-Agent LLM Systems Fail](https://galileo.ai/blog/multi-agent-llm-systems-fail)
 - [OpenTelemetry: AI Agent Observability](https://opentelemetry.io/blog/2025/ai-agent-observability/)
 
-**Framework Documentation (HIGH confidence):**
+### Framework Documentation (HIGH confidence)
 - [OpenAI: Safety in Building Agents](https://platform.openai.com/docs/guides/agent-builder-safety)
 - [Google ADK: Loop Agents](https://google.github.io/adk-docs/agents/workflow-agents/loop-agents/)
-- [Restate: Agents with Vercel AI SDK](https://docs.restate.dev/tour/vercel-ai-agents)
+- [Temporal TypeScript Versioning](https://docs.temporal.io/develop/typescript/versioning)
 
-**Industry Experience (MEDIUM confidence):**
+### Restructuring and Architecture (HIGH confidence)
+- [Monorepo Tools - TypeScript](https://monorepo.tools/typescript)
+- [Nx Blog: Managing TS Packages](https://nx.dev/blog/managing-ts-packages-in-monorepos)
+- [Domain-Driven Hexagon](https://github.com/Sairyss/domain-driven-hexagon)
+- [Project Structures: Domain-Driven vs. Layered Architecture](https://hector-reyesaleman.medium.com/project-structures-domain-driven-vs-layered-architecture-db8b713c99ef)
+
+### Testing (HIGH confidence)
+- [JavaScript Testing Best Practices](https://github.com/goldbergyoni/javascript-testing-best-practices)
+- [Modern Test Pyramid Guide 2025](https://fullscale.io/blog/modern-test-pyramid-guide/)
+- [Integration Testing with Vitest & Testcontainers](https://nikolamilovic.com/posts/2025-4-15-integration-testing-node-vitest-testcontainers/)
+
+### CI/CD and Security (HIGH confidence)
+- [CI/CD Anti-Patterns](https://em360tech.com/tech-articles/cicd-anti-patterns-whats-slowing-down-your-pipeline)
+- [Hardening GitHub Actions](https://www.wiz.io/blog/github-actions-security-guide)
+- [NPM Supply Chain Attacks](https://blog.qualys.com/product-tech/2025/10/06/how-to-prevent-npm-supply-chain-attacks-in-ci-cd-pipelines-with-container-security)
+
+### Docker and Containers (HIGH confidence)
+- [Docker Image Optimization](https://cloudnativenow.com/topics/cloudnativedevelopment/docker/smarter-containers-how-to-optimize-your-dockerfiles-for-speed-size-and-security/)
+- [Docker for Node.js Security](https://www.docker.com/blog/docker-for-node-js-developers-5-things-you-need-to-know-not-to-fail-your-security/)
+
+### Environment and Secrets (HIGH confidence)
+- [Kubernetes Secrets Management 2025](https://infisical.com/blog/kubernetes-secrets-management-2025)
+- [Don't Use Environment Variables for Secrets](https://www.nodejs-security.com/blog/do-not-use-secrets-in-environment-variables-and-here-is-how-to-do-it-better)
+
+### Agentic Systems (MEDIUM confidence)
 - [ZenML: Agent Deployment Gap](https://www.zenml.io/blog/the-agent-deployment-gap-why-your-llm-loop-isnt-production-ready-and-what-to-do-about-it)
-- [ZenML: Linear Conversational AI Agent](https://www.zenml.io/llmops-database/building-a-conversational-ai-agent-for-slack-integration)
-- [Skywork: Multi-Agent Orchestration Best Practices](https://skywork.ai/blog/ai-agent-orchestration-best-practices-handoffs/)
 - [Agents Arcade: Reducing Token Costs](https://agentsarcade.com/blog/reducing-token-costs-long-running-agent-workflows)
-- [Maxim AI: Agent Tracing for Debugging](https://www.getmaxim.ai/articles/agent-tracing-for-debugging-multi-agent-ai-systems/)
-
-**Community Discussions (MEDIUM confidence):**
-- [Continue.dev: Slack Cloud Agent with GitHub and Linear](https://blog.continue.dev/slack-cloud-agent-github-linear/)
-- [InfoWorld: AI-Assisted Coding Creates More Problems](https://www.infoworld.com/article/4109129/ai-assisted-coding-creates-more-problems-report.html)
-- [Medium: Debugging AI Autonomy - Manus Agent Loop](https://medium.com/@connect.hashblock/debugging-ai-autonomy-what-i-learned-from-a-failing-manus-agent-loop-408e8c0a5e5a)
+- [LangGraph 2025 Review](https://sider.ai/blog/ai-tools/langgraph-review-is-the-agentic-state-machine-worth-your-stack-in-2025)
+- [State of AI Agents](https://www.langchain.com/state-of-agent-engineering)
 
 ---
-*Pitfalls research for: Agentic Development Platform / AI Agent Orchestration System*
-*Researched: 2026-01-16*
+
+*Pitfalls research for: Aesir Agentic Development Platform*
+*Original agentic pitfalls: 2026-01-16*
+*v2.0 restructure pitfalls added: 2026-01-19*
+*Confidence: HIGH (based on official docs, 2025 industry sources, and v1 project experience)*
