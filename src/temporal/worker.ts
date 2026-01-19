@@ -3,11 +3,14 @@
  *
  * Creates and runs a Temporal worker that executes workflows and activities.
  * The worker connects to a Temporal server and polls for tasks on a specific queue.
+ *
+ * Activities are bound with dependencies at worker startup via makeActivities().
  */
 
 import { Worker, NativeConnection } from "@temporalio/worker";
 
 import { createLogger } from "../logging/logger.js";
+import { makeActivities, type ActivityDependencies } from "./activities/index.js";
 
 const logger = createLogger({ defaultContext: { module: "temporal-worker" } });
 
@@ -21,13 +24,15 @@ export interface WorkerConfig {
   namespace?: string;
   /** Task queue name (required) - workflows and activities are routed via this queue */
   taskQueue: string;
+  /** Activity dependencies - required for activities to function at runtime */
+  dependencies?: ActivityDependencies;
 }
 
 /**
  * Create a Temporal worker configured for the Aesir approval workflow
  *
  * The worker will load workflow definitions from the workflows directory
- * and activity implementations from the activities directory.
+ * and activity implementations via the makeActivities factory.
  *
  * @param config Worker configuration including connection details and task queue
  * @returns A configured Worker instance ready to run
@@ -43,19 +48,22 @@ export async function createTemporalWorker(config: WorkerConfig): Promise<Worker
 
   const connection = await NativeConnection.connect({ address });
 
-  // Import activities dynamically to avoid circular dependencies
-  // Activities will be defined in subsequent plans
+  // Bind activities with dependencies if provided
   let activities: object = {};
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const imported = require("./activities/index.js");
-    if (imported) {
-      activities = imported as object;
-    }
-  } catch {
-    // Activities not yet defined - worker can still run for development
-    logger.debug("temporal_worker_no_activities", {
-      message: "No activities module found, worker will run without activities",
+  if (config.dependencies) {
+    activities = makeActivities(config.dependencies);
+    logger.info("temporal_worker_activities_bound", {
+      message: "Activities bound with dependencies",
+      context: {
+        hasSlackClient: !!config.dependencies.slackClient,
+        hasOctokit: !!config.dependencies.octokit,
+        hasLinearClient: !!config.dependencies.linearClient,
+        hasSandbox: !!config.dependencies.sandbox,
+      },
+    });
+  } else {
+    logger.warn("temporal_worker_no_dependencies", {
+      message: "No dependencies provided, activities will fail at runtime",
     });
   }
 
