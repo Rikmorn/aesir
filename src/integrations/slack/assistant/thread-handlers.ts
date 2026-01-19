@@ -16,7 +16,7 @@ import type { WebClient } from "@slack/web-api";
 import type { AppMentionEvent, GenericMessageEvent } from "@slack/types";
 import type { ChatAnthropic } from "@langchain/anthropic";
 import type { LinearClient } from "@linear/sdk";
-import type { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
+import type { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { createLogger } from "../../../logging/logger.js";
 import { runProductAgent, type RunProductAgentInput } from "../../../agents/product-agent/runner.js";
 
@@ -33,7 +33,7 @@ export interface ThreadHandlerOptions {
   /** Team ID for issue creation */
   teamId: string;
   /** Checkpointer for conversation persistence */
-  checkpointer: SqliteSaver;
+  checkpointer: PostgresSaver;
   /** Bot user ID for detecting @mentions in channel threads (optional - fetched on startup) */
   botUserId?: string;
 }
@@ -403,7 +403,7 @@ const IGNORED_SUBTYPES = new Set([
  *   llm: new ChatAnthropic({ model: 'claude-sonnet-4-20250514' }),
  *   linearClient: getLinearClient(token),
  *   teamId: 'team-123',
- *   checkpointer: SqliteSaver.fromConnString(':memory:'),
+ *   checkpointer: PostgresSaver.fromConnString(process.env.DATABASE_URL),
  *   botUserId: 'U1234567890', // Fetched from auth.test on startup
  * });
  *

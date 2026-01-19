@@ -13,7 +13,7 @@
 import { HumanMessage, AIMessage } from "@langchain/core/messages";
 import type { ChatAnthropic } from "@langchain/anthropic";
 import type { LinearClient } from "@linear/sdk";
-import type { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
+import type { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { createProductAgentGraph } from "./graph.js";
 import type { ProductAgentPhase, CreatedTask } from "./state.js";
 import { createLogger } from "../../logging/logger.js";
@@ -59,7 +59,7 @@ export interface RunProductAgentOptions {
   /** Team ID for issue creation */
   teamId: string;
   /** Checkpointer for conversation persistence */
-  checkpointer: SqliteSaver;
+  checkpointer: PostgresSaver;
 }
 
 /**

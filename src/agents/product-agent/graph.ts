@@ -15,7 +15,7 @@
  */
 
 import { StateGraph } from "@langchain/langgraph";
-import type { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
+import type { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import type { LinearClient } from "@linear/sdk";
 import { ChatAnthropic } from "@langchain/anthropic";
 import {
@@ -66,7 +66,7 @@ export interface ProductAgentGraphOptions {
   /** Team ID to create issues in (required) */
   teamId: string;
   /** Checkpointer for conversation persistence (optional) */
-  checkpointer?: SqliteSaver;
+  checkpointer?: PostgresSaver;
 }
 
 /**

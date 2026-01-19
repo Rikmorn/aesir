@@ -9,6 +9,11 @@
  * - PostgresSaver for persistence across restarts (requires DATABASE_URL)
  * - Exports compiled graph for langgraph.json configuration
  * - recursionLimit must be passed to invoke(), not withConfig() (known bug)
+ * - setupCheckpointer must be called before first use to create database tables
+ *
+ * Environment:
+ * - DATABASE_URL: Required PostgreSQL connection string
+ *   Example: postgresql://temporal:temporal@localhost:5432/temporal
  */
 
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
@@ -36,37 +41,54 @@ function createLLM(model: string = DEFAULT_MODEL, temperature: number = 0) {
 /**
  * Create the checkpointer for state persistence
  *
- * Uses PostgreSQL for persistence across restarts.
  * Requires DATABASE_URL environment variable.
+ * Note: Call setupCheckpointer() before first agent use to create tables.
  *
  * @param connectionString - PostgreSQL connection string (defaults to DATABASE_URL env var)
+ * @throws Error if DATABASE_URL is not set
  */
-async function createCheckpointer(connectionString?: string): Promise<PostgresSaver> {
+function createCheckpointer(connectionString?: string): PostgresSaver {
   const connStr = connectionString ?? process.env["DATABASE_URL"];
   if (!connStr) {
-    throw new Error("DATABASE_URL environment variable is required for checkpointer");
+    throw new Error(
+      "DATABASE_URL environment variable is required for checkpointer. " +
+      "Example: DATABASE_URL=postgresql://temporal:temporal@localhost:5432/temporal"
+    );
   }
-  const saver = PostgresSaver.fromConnString(connStr);
-  await saver.setup();
-  return saver;
+  return PostgresSaver.fromConnString(connStr);
+}
+
+// Lazy checkpointer - created on first access
+let _checkpointer: PostgresSaver | undefined;
+
+/**
+ * Get or create the checkpointer instance
+ * Uses lazy initialization to defer DATABASE_URL requirement until actual use
+ */
+function getCheckpointer(): PostgresSaver {
+  if (!_checkpointer) {
+    _checkpointer = createCheckpointer();
+  }
+  return _checkpointer;
 }
 
 /**
- * Cached checkpointer instance for lazy initialization
- */
-let _checkpointer: PostgresSaver | null = null;
-
-/**
- * Get the checkpointer instance (lazy initialization)
+ * Setup the checkpointer database tables
+ * Must be called before first agent use. Safe to call multiple times (idempotent).
  *
- * Creates and initializes the PostgresSaver on first call,
- * returns cached instance on subsequent calls.
+ * @example
+ * ```typescript
+ * import { setupCheckpointer, devAgent } from './agents/dev-agent.js';
+ *
+ * // On application startup
+ * await setupCheckpointer();
+ *
+ * // Now agent can be used
+ * await devAgent.invoke({ messages: [...] }, config);
+ * ```
  */
-export async function getCheckpointer(): Promise<PostgresSaver> {
-  if (!_checkpointer) {
-    _checkpointer = await createCheckpointer();
-  }
-  return _checkpointer;
+export async function setupCheckpointer(): Promise<void> {
+  await getCheckpointer().setup();
 }
 
 /**
@@ -75,7 +97,7 @@ export async function getCheckpointer(): Promise<PostgresSaver> {
 const llm = createLLM();
 
 /**
- * Create the development agent with the provided checkpointer
+ * Development agent using createReactAgent prebuilt
  *
  * This agent:
  * - Uses Claude 3.5 Sonnet for reasoning
@@ -83,15 +105,22 @@ const llm = createLLM();
  * - Persists state via PostgresSaver checkpointer
  * - Follows the ReAct (Reason + Act) loop pattern
  *
- * @param checkpointer - PostgresSaver instance for state persistence
+ * NOTE: Call setupCheckpointer() before first use to initialize database tables.
  */
-export function createDevAgent(checkpointer: PostgresSaver) {
-  return createReactAgent({
-    llm,
-    tools: [codeGenTool],
-    checkpointSaver: checkpointer,
-  });
-}
+export const devAgent = createReactAgent({
+  llm,
+  tools: [codeGenTool],
+  // Use getter to defer checkpointer creation until first agent use
+  get checkpointSaver() {
+    return getCheckpointer();
+  },
+});
+
+/**
+ * Export the compiled graph for use with langgraph.json
+ * This enables LangGraph Studio and deployment support
+ */
+export const agent = devAgent;
 
 /**
  * Logger instance for agent operations
@@ -99,6 +128,6 @@ export function createDevAgent(checkpointer: PostgresSaver) {
 export const agentLogger = logger.child({ agentId: "dev-agent" });
 
 /**
- * Type for the dev agent
+ * Type for the agent
  */
-export type DevAgent = ReturnType<typeof createDevAgent>;
+export type DevAgent = typeof devAgent;
