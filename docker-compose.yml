@@ -1,16 +1,23 @@
-# Aesir Local Development Infrastructure
+# Aesir Development Infrastructure
 #
-# Provides Temporal server and related services for local development.
-# Agents run on the host for easier debugging; infrastructure in Docker.
+# Complete containerized setup including agents and supporting services.
 #
 # Usage:
-#   npm run infra:up      # Start infrastructure
-#   npm run infra:down    # Stop infrastructure
-#   npm run infra:logs    # View logs
+#   docker compose up -d                    # Start all services
+#   docker compose up -d postgresql temporal temporal-ui  # Infrastructure only
+#   docker compose logs -f dev-agent        # View agent logs
+#   docker compose down                     # Stop all
 #
 # Access:
 #   - Temporal UI: http://localhost:8080
 #   - Temporal gRPC: localhost:7233
+#   - Dev Agent webhooks: http://localhost:3001
+#   - Product Agent (Socket Mode): connects to Slack
+#   - Cloudflared (requires setup): exposes webhooks via Cloudflare Tunnel
+#
+# Environment:
+#   Copy .env.example to .env and fill in API keys.
+#   Docker Compose automatically loads .env file.
 
 services:
   postgresql:
@@ -70,6 +77,108 @@ services:
       - "8080:8080"
     networks:
       - aesir-network
+
+  # Dev Agent - handles Linear task automation
+  dev-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aesir-dev-agent
+    depends_on:
+      temporal:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+    environment:
+      # Database (internal Docker network)
+      - DATABASE_URL=postgresql://temporal:temporal@postgresql:5432/temporal
+      # Temporal (internal Docker network)
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_NAMESPACE=default
+      # API Keys (from .env file)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - LINEAR_ACCESS_TOKEN=${LINEAR_ACCESS_TOKEN}
+      - LINEAR_WEBHOOK_SECRET=${LINEAR_WEBHOOK_SECRET}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_REPO=${GITHUB_REPO}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_CHANNEL_ID=${SLACK_CHANNEL_ID}
+      # Optional
+      - NODE_ENV=${NODE_ENV:-production}
+      - LANGSMITH_TRACING=${LANGSMITH_TRACING:-false}
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY:-}
+      - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-aesir-agents}
+    ports:
+      - "3001:3001"  # Webhook endpoint
+    command: ["node", "dist/scripts/start-dev-agent.js"]
+    networks:
+      - aesir-network
+    restart: unless-stopped
+
+  # Product Agent - handles Slack conversations
+  product-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aesir-product-agent
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    environment:
+      # Database (internal Docker network)
+      - DATABASE_URL=postgresql://temporal:temporal@postgresql:5432/temporal
+      # API Keys (from .env file)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - LINEAR_ACCESS_TOKEN=${LINEAR_ACCESS_TOKEN}
+      - LINEAR_TEAM_ID=${LINEAR_TEAM_ID}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+      # Optional
+      - NODE_ENV=${NODE_ENV:-production}
+      - LANGSMITH_TRACING=${LANGSMITH_TRACING:-false}
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY:-}
+      - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-aesir-agents}
+    command: ["node", "dist/scripts/start-product-agent.js"]
+    networks:
+      - aesir-network
+    restart: unless-stopped
+
+  # Cloudflare Tunnel - exposes webhooks to external services (Linear, GitHub)
+  # Requires CLOUDFLARE_TUNNEL_TOKEN from Zero Trust dashboard
+  cloudflared:
+    image: cloudflare/cloudflared:2025.2.0
+    container_name: aesir-cloudflared
+    restart: unless-stopped
+    # --no-autoupdate: prevents container from updating itself
+    # --metrics=0.0.0.0:2000: exposes /ready endpoint for health checks
+    command: tunnel --no-autoupdate run --metrics=0.0.0.0:2000
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - aesir-network
+    depends_on:
+      dev-agent:
+        condition: service_started
+    profiles:
+      - tunnel
+
+  # Health check sidecar for cloudflared tunnel readiness
+  cloudflared-health:
+    image: quay.io/curl/curl:8.10.1
+    container_name: aesir-cloudflared-health
+    init: true
+    command: sleep infinity
+    depends_on:
+      - cloudflared
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://cloudflared:2000/ready']
+      interval: 1s
+      timeout: 2s
+      retries: 60
+    networks:
+      - aesir-network
+    profiles:
+      - tunnel
 
 volumes:
   temporal-postgresql:
