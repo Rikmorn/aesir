@@ -26,6 +26,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 8: Human-in-the-Loop** - Approval gates before PR merge
 - [x] **Phase 9: Product Agent** - Requirements gathering and task creation
 - [x] **Phase 9.1: Infrastructure & Local Dev** - Linear OAuth, Docker Compose, README, Dev Agent entry point (INSERTED)
+- [ ] **Phase 9.2: Integration Gap Closure** - Fix integration issues blocking E2E flows (INSERTED)
 
 ## Phase Details
 
@@ -200,10 +201,36 @@ Urgent insertion to address gaps discovered during milestone verification:
 - No docker-compose.yml for local services
 - Dev Agent lacks start script entry point
 
+### Phase 9.2: Integration Gap Closure (INSERTED)
+**Goal**: Close all integration gaps identified by milestone audit to enable E2E workflow execution
+**Depends on**: Phase 9.1
+**Requirements**: None (all requirements satisfied; integration broken)
+**Gap Closure**: Audit gaps 1-4 from v1-MILESTONE-AUDIT.md
+**Success Criteria** (what must be TRUE):
+  1. prNumber is propagated from commit-pr node through to workflow result
+  2. Temporal activities receive properly configured client instances via DI
+  3. Linear webhook handler triggers Dev Agent workflow on task delegation
+  4. LangGraph checkpointer uses PostgreSQL for state persistence
+  5. Full E2E flow works: Linear task → Dev Agent → PR → Approval → Merge
+**Research**: Not required (audit provides implementation details)
+**Plans**: 3 plans
+
+Plans:
+- [ ] 9.2-01: prNumber Propagation & Activity DI (Wave 1)
+- [ ] 9.2-02: Linear Webhook Handler (Wave 2)
+- [ ] 9.2-03: PostgreSQL Checkpointer Migration (Wave 1)
+
+**Details:**
+Urgent insertion to close integration gaps found by `/gsd:audit-milestone`:
+- Gap 1: prNumber lost in commit-pr node (blocks approval workflow)
+- Gap 2: Temporal activities receive empty objects (blocks all activities)
+- Gap 3: No Linear webhook to trigger Dev Agent (blocks automation)
+- Gap 4: SQLite in-memory loses state on restart (blocks persistence)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 9.1
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 9.1 → 9.2
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -217,6 +244,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 8. Human-in-the-Loop | 4/4 | Complete | 2026-01-16 |
 | 9. Product Agent | 4/4 | Complete | 2026-01-18 |
 | 9.1 Infrastructure & Local Dev | 3/3 | Complete | 2026-01-18 |
+| 9.2 Integration Gap Closure | 0/3 | Not Started | — |
 
 ---
 *Roadmap created: 2026-01-16*

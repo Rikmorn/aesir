@@ -5,16 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-01-16)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** MILESTONE COMPLETE — All phases verified, ready for audit
+**Current focus:** Phase 9.2 — Integration gap closure to enable E2E flows
 
 ## Current Position
 
-Phase: 9.1 of 9.1 (Infrastructure & Local Dev)
-Plan: 3 of 3 complete (9.1-01, 9.1-02, 9.1-03)
-Status: PHASE COMPLETE
-Last activity: 2026-01-18 — Completed 9.1-03-PLAN.md (README Documentation & E2E Verification)
+Phase: 9.2 of 9.2 (Integration Gap Closure)
+Plan: 0 of 3 complete
+Status: NOT STARTED
+Last activity: 2026-01-19 — Created Phase 9.2 from audit gaps
 
-Progress: █████████████████████ 100%
+Progress: ░░░░░░░░░░░░░░░░░░░░░ 0%
+
+## Phase 9.2 Plans
+
+| Plan | Title | Wave | Status |
+|------|-------|------|--------|
+| 9.2-01 | prNumber Propagation & Activity DI | 1 | Not Started |
+| 9.2-02 | Linear Webhook Handler | 2 | Not Started |
+| 9.2-03 | PostgreSQL Checkpointer Migration | 1 | Not Started |
 
 ## Phase 9.1 Plans
 
@@ -216,6 +224,13 @@ Recent decisions affecting current work:
 
 ### Roadmap Evolution
 
+- Phase 9.2 inserted after Phase 9.1: Integration Gap Closure (URGENT)
+  - Reason: Audit found 4 integration gaps preventing E2E flows
+  - Gap 1: prNumber not propagated from commit-pr node
+  - Gap 2: Temporal activities receive empty objects instead of clients
+  - Gap 3: No Linear webhook handler to trigger Dev Agent
+  - Gap 4: SQLite in-memory loses state on restart
+
 - Phase 9.1 inserted after Phase 9: Infrastructure & Local Dev (URGENT)
   - Reason: Discovered during milestone verification that Linear OAuth, Docker Compose, and README completeness need addressing before v1.0 MVP
 
@@ -229,7 +244,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-01-18
-Stopped at: Phase 9.1 complete, all phases verified
+Last session: 2026-01-19
+Stopped at: Phase 9.2 created from audit gaps
 Resume file: None
-Next action: /gsd:audit-milestone — verify Dev Agent E2E flow before v1.0 release
+Next action: /gsd:plan-phase 9.2 — plan first gap closure phase
