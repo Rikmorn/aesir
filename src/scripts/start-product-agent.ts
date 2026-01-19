@@ -11,6 +11,7 @@
  * - LINEAR_ACCESS_TOKEN: Linear API key or OAuth access token
  * - LINEAR_TEAM_ID: Linear team ID for task creation
  * - ANTHROPIC_API_KEY: Anthropic API key for Claude
+ * - DATABASE_URL: PostgreSQL connection string (e.g., postgresql://temporal:temporal@localhost:5432/temporal)
  *
  * Usage:
  *   npx tsx src/scripts/start-product-agent.ts
@@ -29,7 +30,7 @@ dotenv.config({ path: ".env" });
 // Now dynamically import modules that depend on env vars
 async function bootstrap(): Promise<void> {
   const { ChatAnthropic } = await import("@langchain/anthropic");
-  const { SqliteSaver } = await import("@langchain/langgraph-checkpoint-sqlite");
+  const { PostgresSaver } = await import("@langchain/langgraph-checkpoint-postgres");
   const {
     createBoltApp,
     startBoltApp,
@@ -51,6 +52,7 @@ async function bootstrap(): Promise<void> {
       "LINEAR_ACCESS_TOKEN",
       "LINEAR_TEAM_ID",
       "ANTHROPIC_API_KEY",
+      "DATABASE_URL",
     ];
 
     const missing = required.filter((key) => !process.env[key]);
@@ -83,9 +85,10 @@ async function bootstrap(): Promise<void> {
   const teamId = process.env["LINEAR_TEAM_ID"]!;
 
   // Initialize checkpointer for conversation persistence
-  // Uses in-memory SQLite for development
-  logger.info("init_checkpointer", { message: "Initializing SQLite checkpointer" });
-  const checkpointer = SqliteSaver.fromConnString(":memory:");
+  // Uses PostgreSQL for persistence across restarts
+  logger.info("init_checkpointer", { message: "Initializing PostgreSQL checkpointer" });
+  const checkpointer = PostgresSaver.fromConnString(process.env["DATABASE_URL"]!);
+  await checkpointer.setup();
 
   // Create Bolt app with Socket Mode
   logger.info("init_bolt", { message: "Creating Bolt app with Socket Mode" });
