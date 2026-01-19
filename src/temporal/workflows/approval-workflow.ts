@@ -20,8 +20,8 @@ import type { ApprovalDecision, ChangesRequested } from "../types.js";
 import { approvalSignal, changesRequestedSignal } from "../signals.js";
 import type { IssueStatus } from "../../integrations/linear/types.js";
 
-// Import activity types for proxyActivities
-import type * as activities from "../activities/index.js";
+// Import BoundActivities type for properly typed activity proxies
+import type { BoundActivities } from "../activities/index.js";
 
 /**
  * Workflow input configuration
@@ -78,16 +78,15 @@ export interface ApprovalQueryStatus {
 }
 
 // Configure activities with appropriate timeouts
-// Note: Activities are configured here but the actual client instances
-// are managed by the activity implementations using environment variables
-// or dependency injection at the worker level.
+// Activities are bound with dependencies at worker startup via makeActivities()
+// The BoundActivities type reflects the simplified signatures without client params
 const {
   executeDevWorkflow,
   mergePRActivity,
   sendApprovalRequestActivity,
   sendStatusUpdateActivity,
   updateLinearStatusActivity,
-} = proxyActivities<typeof activities>({
+} = proxyActivities<BoundActivities>({
   startToCloseTimeout: "30 minutes", // Dev workflow can take a while
   retry: {
     maximumAttempts: 3,
@@ -176,12 +175,9 @@ export async function prApprovalWorkflow(
     wf.log.info(`Running dev workflow (iteration ${feedbackIteration})`);
 
     try {
-      // Note: The activity will use pre-configured clients from the worker context
-      // Dependencies are injected at the worker level, not serialized in workflow input
-      const devResult = await executeDevWorkflow(taskId, {
-        // Dependencies are provided at the worker level
-        // This cast is safe because the activity handles dependency resolution
-      } as Parameters<typeof executeDevWorkflow>[1]);
+      // Dependencies are bound at worker startup via makeActivities()
+      // The bound activity only needs taskId
+      const devResult = await executeDevWorkflow(taskId);
 
       if (!devResult.success || devResult.prNumber === undefined) {
         wf.log.error("Dev workflow failed to create PR", {
@@ -213,9 +209,8 @@ export async function prApprovalWorkflow(
     wf.log.info("Sending approval request notification");
 
     try {
+      // Bound activity - no client param needed
       await sendApprovalRequestActivity(
-        // Client is provided at the worker level
-        {} as Parameters<typeof sendApprovalRequestActivity>[0],
         {
           type: "approval_needed",
           taskId,
@@ -251,7 +246,6 @@ export async function prApprovalWorkflow(
       // Send timeout notification
       try {
         await sendStatusUpdateActivity(
-          {} as Parameters<typeof sendStatusUpdateActivity>[0],
           {
             type: "status_update",
             taskId,
@@ -295,15 +289,13 @@ export async function prApprovalWorkflow(
         state.currentStatus = "approved";
 
         try {
-          await mergePRActivity(
-            {} as Parameters<typeof mergePRActivity>[0],
-            {
-              owner,
-              repo,
-              pullNumber: state.prNumber,
-              mergeMethod: "squash",
-            }
-          );
+          // Bound activity - no octokit param needed
+          await mergePRActivity({
+            owner,
+            repo,
+            pullNumber: state.prNumber,
+            mergeMethod: "squash",
+          });
         } catch (error) {
           wf.log.error("Failed to merge PR", { error });
           return {
@@ -316,11 +308,8 @@ export async function prApprovalWorkflow(
 
         // Update Linear to configurable completion status
         try {
-          await updateLinearStatusActivity(
-            {} as Parameters<typeof updateLinearStatusActivity>[0],
-            taskId,
-            completionStatus
-          );
+          // Bound activity - no linear client param needed
+          await updateLinearStatusActivity(taskId, completionStatus);
         } catch (error) {
           wf.log.warn("Failed to update Linear status", { error });
           // Continue - Linear update failure shouldn't fail the workflow
@@ -329,7 +318,6 @@ export async function prApprovalWorkflow(
         // Send success notification
         try {
           await sendStatusUpdateActivity(
-            {} as Parameters<typeof sendStatusUpdateActivity>[0],
             {
               type: "status_update",
               taskId,
@@ -360,11 +348,7 @@ export async function prApprovalWorkflow(
 
         // Update Linear back to Todo on rejection
         try {
-          await updateLinearStatusActivity(
-            {} as Parameters<typeof updateLinearStatusActivity>[0],
-            taskId,
-            "Todo"
-          );
+          await updateLinearStatusActivity(taskId, "Todo");
         } catch (error) {
           wf.log.warn("Failed to update Linear status on rejection", { error });
         }
@@ -372,7 +356,6 @@ export async function prApprovalWorkflow(
         // Send rejection notification
         try {
           await sendStatusUpdateActivity(
-            {} as Parameters<typeof sendStatusUpdateActivity>[0],
             {
               type: "status_update",
               taskId,
@@ -404,7 +387,6 @@ export async function prApprovalWorkflow(
   // Send failure notification
   try {
     await sendStatusUpdateActivity(
-      {} as Parameters<typeof sendStatusUpdateActivity>[0],
       {
         type: "status_update",
         taskId,
