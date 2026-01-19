@@ -380,6 +380,10 @@ The Dev Agent processes Linear tasks and creates pull requests. It requires Temp
    - `GITHUB_TOKEN`: GitHub PAT with `repo` and `workflow` scopes
    - `GITHUB_REPO`: Repository in `owner/repo` format
    - `ANTHROPIC_API_KEY`: Anthropic API key
+3. **Docker socket accessible**: The dev-agent container needs Docker socket access for sandbox execution:
+   - Docker Desktop (macOS/Windows): Enabled by default
+   - Docker Engine (Linux): User must be in `docker` group
+4. **Sandbox image available**: The container pulls `node:20-alpine` for sandbox execution. On slow networks, first pull may take time.
 
 ### Starting the Dev Agent
 
@@ -512,6 +516,8 @@ npm run docker:build
 # Start all services
 npm run docker:up
 ```
+
+**Note:** The dev-agent container mounts the Docker socket to create sandbox containers. This is configured in `docker-compose.yml`. On Linux, ensure your user is in the `docker` group.
 
 ### 3. View Logs
 
