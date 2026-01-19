@@ -28,6 +28,8 @@
 
 import dotenv from "dotenv";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import type { ActivityDependencies } from "../temporal/activities/index.js";
+import type { LinearWebhookConfig } from "../api/webhooks/linear-agent-session.js";
 
 // Load environment variables BEFORE importing modules that use them
 // .env.local takes precedence (loaded first), .env provides defaults
@@ -36,10 +38,8 @@ dotenv.config({ path: ".env" });
 
 async function bootstrap(): Promise<void> {
   const { createTemporalWorker } = await import("../temporal/worker.js");
-  const { makeActivities, type ActivityDependencies } = await import(
-    "../temporal/activities/index.js"
-  );
-  const { linearWebhookHandler, type LinearWebhookConfig } = await import(
+  const { makeActivities } = await import("../temporal/activities/index.js");
+  const { linearWebhookHandler } = await import(
     "../api/webhooks/linear-agent-session.js"
   );
   const { getLinearClient } = await import("../integrations/linear/index.js");
@@ -104,7 +104,6 @@ async function bootstrap(): Promise<void> {
   logger.info("init_sandbox", { message: "Creating Docker sandbox" });
   const sandbox = await DockerSandbox.create({
     image: "node:20-alpine",
-    workDir: "/workspace",
   });
 
   const dependencies: ActivityDependencies = {
