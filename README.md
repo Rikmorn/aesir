@@ -429,6 +429,8 @@ src/
 
 ## Available Scripts
 
+### Local Development
+
 | Script | Description |
 |--------|-------------|
 | `npm run build` | Compile TypeScript |
@@ -436,12 +438,172 @@ src/
 | `npm run test` | Run tests |
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run lint` | Type-check without emitting |
-| `npm run product-agent` | Start Product Agent (Slack bot) |
-| `npm run dev-agent` | Start Dev Agent (Temporal worker) |
+| `npm run product-agent` | Start Product Agent locally |
+| `npm run dev-agent` | Start Dev Agent locally |
 | `npm run linear-oauth` | Authorize Linear OAuth app |
-| `npm run infra:up` | Start infrastructure (Temporal, PostgreSQL) |
-| `npm run infra:down` | Stop infrastructure |
-| `npm run infra:logs` | View infrastructure logs (follow mode) |
+
+### Infrastructure Only
+
+| Script | Description |
+|--------|-------------|
+| `npm run infra:up` | Start PostgreSQL, Temporal, and Temporal UI |
+| `npm run infra:down` | Stop infrastructure services |
+| `npm run infra:logs` | View infrastructure logs |
+
+### Full Docker (Recommended)
+
+| Script | Description |
+|--------|-------------|
+| `npm run docker:build` | Build agent Docker images |
+| `npm run docker:up` | Start all services (infra + agents) |
+| `npm run docker:down` | Stop all services |
+| `npm run docker:logs` | View all logs |
+| `npm run docker:dev-agent` | Start and follow Dev Agent logs |
+| `npm run docker:product-agent` | Start and follow Product Agent logs |
+
+## Running with Docker (Recommended)
+
+The recommended way to run Aesir is fully containerized. This ensures consistent environments and automatic wiring of database connections.
+
+### 1. Configure Environment
+
+```bash
+cp .env.example .env
+# Edit .env with your API keys
+```
+
+### 2. Build and Start
+
+```bash
+# Build images
+npm run docker:build
+
+# Start all services
+npm run docker:up
+```
+
+### 3. View Logs
+
+```bash
+# All logs
+npm run docker:logs
+
+# Specific agent
+docker compose logs -f dev-agent
+docker compose logs -f product-agent
+```
+
+### Service URLs
+
+| Service | URL | Purpose |
+|---------|-----|---------|
+| Temporal UI | http://localhost:8080 | Workflow monitoring |
+| Dev Agent webhook | http://localhost:3001 | Linear webhook endpoint (local) |
+| Cloudflared | https://your-subdomain.your-domain.com | Webhook tunnel (when configured) |
+
+### Running Individual Agents
+
+Start just the infrastructure and run agents locally for debugging:
+
+```bash
+# Start infrastructure only
+npm run infra:up
+
+# Run agent locally (with DATABASE_URL pointing to Docker)
+DATABASE_URL=postgresql://temporal:temporal@localhost:5432/temporal npm run dev-agent
+```
+
+## Webhook Tunnel Setup (Cloudflare)
+
+External services (Linear, GitHub) cannot reach `localhost:3001` to deliver webhooks. Cloudflare Tunnel exposes your local webhook endpoints to the internet securely.
+
+**Note:** The tunnel is optional. Port 3001 remains exposed for local testing and curl commands. Only set up the tunnel when you need webhooks from external services.
+
+### Prerequisites
+
+- Cloudflare account (free tier is sufficient)
+- Domain added to Cloudflare (for custom subdomain)
+
+### 1. Create Tunnel in Zero Trust Dashboard
+
+1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) and select Zero Trust
+2. Navigate to: **Networks** > **Tunnels**
+3. Click **Create a tunnel**
+4. Select **Cloudflared** as connector type
+5. Name it (e.g., "aesir-dev")
+6. Copy the tunnel token
+
+### 2. Configure Environment
+
+Add the token to your `.env` file:
+
+```bash
+CLOUDFLARE_TUNNEL_TOKEN=eyJhIjoiNzg5...your-token-here
+```
+
+### 3. Configure Public Hostname
+
+In the tunnel configuration, add a public hostname:
+
+| Field | Value |
+|-------|-------|
+| Subdomain | `aesir-dev` (or your choice) |
+| Domain | `your-cloudflare-domain.com` |
+| Path | (leave empty for all paths) |
+| Service Type | HTTP |
+| URL | `dev-agent:3001` |
+
+This routes `https://aesir-dev.your-domain.com/*` to your local dev-agent container.
+
+### 4. Start Services with Tunnel
+
+```bash
+# Start all services including tunnel
+docker compose --profile tunnel up -d
+
+# Or just the tunnel (if other services already running)
+docker compose --profile tunnel up -d cloudflared cloudflared-health
+```
+
+### 5. Update Webhook URLs
+
+Update your webhook configurations to use the tunnel URL:
+
+| Service | Setting Location | New URL |
+|---------|------------------|---------|
+| Linear | Settings > Webhooks | `https://aesir-dev.your-domain.com/webhooks/linear` |
+| GitHub | Repo Settings > Webhooks | `https://aesir-dev.your-domain.com/webhooks/github` |
+
+### Verification
+
+```bash
+# Check tunnel is healthy
+docker compose logs cloudflared
+
+# Test endpoint is reachable (should return 401 - no signature)
+curl -X POST https://aesir-dev.your-domain.com/webhooks/linear
+
+# Check tunnel readiness
+docker compose exec cloudflared curl -fsS http://localhost:2000/ready
+```
+
+### Troubleshooting Tunnel Issues
+
+**"Tunnel not connecting"**
+- Verify `CLOUDFLARE_TUNNEL_TOKEN` is set in `.env`
+- Check token hasn't expired (regenerate in Zero Trust dashboard if needed)
+- View logs: `docker compose logs cloudflared`
+
+**"Webhooks not received"**
+- Verify public hostname routes to `dev-agent:3001` (not `localhost:3001`)
+- Ensure webhook URL in Linear/GitHub matches your tunnel URL exactly
+- Check dev-agent logs: `docker compose logs dev-agent`
+
+**"Connection refused in tunnel"**
+- Ensure dev-agent container is running: `docker compose ps`
+- Both services must be on the same network (`aesir-network`)
+
+For detailed Cloudflare Tunnel documentation, see [developers.cloudflare.com](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/).
 
 ## Architecture
 
