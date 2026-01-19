@@ -59,7 +59,7 @@ services:
     networks:
       - aesir-network
     healthcheck:
-      test: ["CMD", "tctl", "--address", "localhost:7233", "cluster", "health"]
+      test: ["CMD", "tctl", "--address", "127.0.0.1:7233", "cluster", "health"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -86,7 +86,7 @@ services:
     container_name: aesir-dev-agent
     depends_on:
       temporal:
-        condition: service_healthy
+        condition: service_started  # Temporal binds to network IP, not localhost
       postgresql:
         condition: service_healthy
     environment:
@@ -151,7 +151,7 @@ services:
     restart: unless-stopped
     # --no-autoupdate: prevents container from updating itself
     # --metrics=0.0.0.0:2000: exposes /ready endpoint for health checks
-    command: tunnel --no-autoupdate run --metrics=0.0.0.0:2000
+    command: tunnel --no-autoupdate --metrics=0.0.0.0:2000 run
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
     networks:
