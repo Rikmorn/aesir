@@ -5,16 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-01-16)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** Milestone complete — all phases executed
+**Current focus:** E2E verification gaps closed
 
 ## Current Position
 
-Phase: 9.3 of 9.3 (Webhook API Exposure)
-Plan: 1 of 1
+Phase: e2e-verification (Gap Closure)
+Plan: FIX of FIX
 Status: Complete
-Last activity: 2026-01-19 — Phase 9.3 complete
+Last activity: 2026-01-19 — Completed e2e-FIX-PLAN.md
 
 Progress: █████████████████████ 100%
+
+## E2E Verification Plans
+
+| Plan | Title | Wave | Status |
+|------|-------|------|--------|
+| e2e-FIX | E2E Gap Closure | 1 | Complete |
 
 ## Phase 9.3 Plans
 
@@ -241,6 +247,9 @@ Recent decisions affecting current work:
 | 9.2-02 | Raw body collection for signature | JSON.stringify changes whitespace, breaking HMAC verification |
 | 9.2-02 | Health endpoint | Add /health for container orchestration health checks |
 | 9.2-02 | Approval task queue constant | Define APPROVAL_TASK_QUEUE in client.ts to centralize |
+| e2e-FIX | OAUTH_CALLBACK_URL env var | Allows configurable tunnel URLs for containerized OAuth |
+| e2e-FIX | oauth profile in docker-compose | Service runs on-demand, not with regular docker compose up |
+| e2e-FIX | OAuth token preference | Try OAuth tokens first (app identity), fall back to LINEAR_ACCESS_TOKEN (user identity) |
 
 ### Roadmap Evolution
 
@@ -269,6 +278,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-19
-Stopped at: Phase 9.3 complete — all phases executed
+Stopped at: Completed e2e-FIX-PLAN.md — E2E verification gaps closed
 Resume file: None
-Next action: /gsd:audit-milestone — verify requirements, cross-phase integration, E2E flows
+Next action: E2E UAT — verify containerized OAuth flow end-to-end
