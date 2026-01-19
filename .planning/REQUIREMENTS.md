@@ -32,7 +32,7 @@ Requirements for Foundation milestone. Full restructure from "prove it works" to
 - [ ] **ARCH-04**: pnpm workspace monorepo structure with clear package boundaries
 - [ ] **ARCH-05**: MCP servers in each integration for agent tool calls
 - [ ] **ARCH-06**: Factory functions for dependency injection (no global singletons)
-- [ ] **ARCH-07**: Layer dependency rules enforced (Agents → Integrations → Platform)
+- [ ] **ARCH-07**: Layer dependency rules enforced (Agents -> Integrations -> Platform)
 
 ### Data Layer
 
@@ -54,7 +54,7 @@ Requirements for Foundation milestone. Full restructure from "prove it works" to
 
 ### CI/CD Pipeline
 
-- [ ] **CICD-01**: GitHub Actions workflow (lint → typecheck → test → integration)
+- [ ] **CICD-01**: GitHub Actions workflow (lint -> typecheck -> test -> integration)
 - [ ] **CICD-02**: Quality gates blocking PRs until quality bar met
 - [ ] **CICD-03**: Branch protection rules enforced
 - [ ] **CICD-04**: Dependency caching for faster CI runs
@@ -118,57 +118,59 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TOOL-01 | Phase 1 | Pending |
-| TOOL-02 | Phase 1 | Pending |
-| TOOL-03 | Phase 1 | Pending |
-| TOOL-04 | Phase 1 | Pending |
-| TOOL-05 | Phase 1 | Pending |
-| QUAL-01 | Phase 2 | Pending |
-| QUAL-02 | Phase 2 | Pending |
-| QUAL-03 | Phase 2 | Pending |
-| QUAL-04 | Phase 2 | Pending |
-| QUAL-05 | Phase 2 | Pending |
-| QUAL-06 | Phase 2 | Pending |
-| ARCH-01 | Phase 3 | Pending |
-| ARCH-02 | Phase 4 | Pending |
-| ARCH-03 | Phase 4 | Pending |
-| ARCH-04 | Phase 3 | Pending |
-| ARCH-05 | Phase 5 | Pending |
-| ARCH-06 | Phase 3 | Pending |
-| ARCH-07 | Phase 3 | Pending |
-| DATA-01 | Phase 3 | Pending |
-| DATA-02 | Phase 3 | Pending |
-| DATA-03 | Phase 3 | Pending |
-| DATA-04 | Phase 3 | Pending |
-| DATA-05 | Phase 3 | Pending |
-| DATA-06 | Phase 3 | Pending |
-| TEST-01 | Phase 6 | Pending |
-| TEST-02 | Phase 6 | Pending |
-| TEST-03 | Phase 6 | Pending |
-| TEST-04 | Phase 6 | Pending |
-| TEST-05 | Phase 6 | Pending |
-| TEST-06 | Phase 7 | Pending |
-| CICD-01 | Phase 7 | Pending |
-| CICD-02 | Phase 7 | Pending |
-| CICD-03 | Phase 7 | Pending |
-| CICD-04 | Phase 7 | Pending |
-| CICD-05 | Phase 7 | Pending |
-| CICD-06 | Phase 7 | Pending |
-| OBSV-01 | Phase 3 | Pending |
-| OBSV-02 | Phase 3 | Pending |
-| OBSV-03 | Phase 3 | Pending |
-| LDEV-01 | Phase 8 | Pending |
-| LDEV-02 | Phase 8 | Pending |
-| LDEV-03 | Phase 8 | Pending |
-| LDEV-04 | Phase 8 | Pending |
-| LDEV-05 | Phase 8 | Pending |
-| LDEV-06 | Phase 8 | Pending |
+| TOOL-01 | Phase 10 | Pending |
+| TOOL-02 | Phase 10 | Pending |
+| TOOL-03 | Phase 10 | Pending |
+| TOOL-04 | Phase 10 | Pending |
+| TOOL-05 | Phase 10 | Pending |
+| ARCH-04 | Phase 11 | Pending |
+| OBSV-01 | Phase 12 | Pending |
+| OBSV-02 | Phase 12 | Pending |
+| OBSV-03 | Phase 12 | Pending |
+| DATA-01 | Phase 13 | Pending |
+| DATA-02 | Phase 13 | Pending |
+| DATA-03 | Phase 14 | Pending |
+| DATA-04 | Phase 14 | Pending |
+| DATA-05 | Phase 14 | Pending |
+| DATA-06 | Phase 14 | Pending |
+| ARCH-01 | Phase 14 | Pending |
+| ARCH-06 | Phase 14 | Pending |
+| ARCH-07 | Phase 14 | Pending |
+| QUAL-01 | Phase 15 | Pending |
+| QUAL-02 | Phase 15 | Pending |
+| QUAL-03 | Phase 15 | Pending |
+| QUAL-04 | Phase 15 | Pending |
+| QUAL-05 | Phase 15 | Pending |
+| QUAL-06 | Phase 15 | Pending |
+| ARCH-02 | Phase 16, 17, 18 | Pending |
+| ARCH-03 | Phase 16, 17, 18 | Pending |
+| ARCH-05 | Phase 19 | Pending |
+| TEST-01 | Phase 20 | Pending |
+| TEST-02 | Phase 20 | Pending |
+| TEST-03 | Phase 20 | Pending |
+| TEST-04 | Phase 20 | Pending |
+| TEST-05 | Phase 20 | Pending |
+| TEST-06 | Phase 21 | Pending |
+| CICD-01 | Phase 21 | Pending |
+| CICD-02 | Phase 21 | Pending |
+| CICD-03 | Phase 21 | Pending |
+| CICD-04 | Phase 21 | Pending |
+| CICD-05 | Phase 21 | Pending |
+| CICD-06 | Phase 21 | Pending |
+| LDEV-01 | Phase 22 | Pending |
+| LDEV-02 | Phase 22 | Pending |
+| LDEV-03 | Phase 22 | Pending |
+| LDEV-04 | Phase 22 | Pending |
+| LDEV-05 | Phase 10 | Pending |
+| LDEV-06 | Phase 10 | Pending |
 
 **Coverage:**
 - v2.0 requirements: 40 total
 - Mapped to phases: 40
-- Unmapped: 0 ✓
+- Unmapped: 0
+
+**Note:** ARCH-02 and ARCH-03 are split across phases 16-18 (one integration extraction per phase).
 
 ---
 *Requirements defined: 2026-01-19*
-*Last updated: 2026-01-19 after initial definition*
+*Last updated: 2026-01-19 after roadmap restructure to 13 phases*

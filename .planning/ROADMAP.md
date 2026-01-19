@@ -1,0 +1,253 @@
+# Roadmap: Aesir v2.0 Foundation
+
+## Milestones
+
+- [x] **v1.0 MVP** - Phases 1-9 (shipped 2026-01-19) - See `.planning/MILESTONES.md`
+- [ ] **v2.0 Foundation** - Phases 10-22 (in progress)
+
+## Overview
+
+The v2.0 Foundation milestone restructures Aesir from a working prototype to a maintainable, scalable 3-layer platform. Thirteen focused phases transform the codebase incrementally: foundation tooling, monorepo structure, observability, data layer, platform services, code quality patterns, integration extraction (one per service), MCP layer, testing pyramid, CI/CD pipeline, and local dev environment. Each phase is deliberately small to ensure completable, verifiable progress.
+
+## Phases
+
+**Phase Numbering:**
+- Phases 1-9: v1.0 MVP (archived)
+- Phases 10-22: v2.0 Foundation (current milestone)
+- Decimal phases (10.1, 10.2): Urgent insertions if needed
+
+- [ ] **Phase 10: Foundation Setup** - Biome, npm, dotenv-flow, pre-commit hooks, .claude/.cursor files
+- [ ] **Phase 11: Monorepo Setup** - pnpm workspace structure with package boundaries
+- [ ] **Phase 12: Observability** - pino logging, correlation IDs, structured JSON logs
+- [ ] **Phase 13: Data Layer** - PostgreSQL schemas, credential migration from .tokens/
+- [ ] **Phase 14: Platform Services** - Webhook idempotency, execution tracking, cleanup, DI patterns
+- [ ] **Phase 15: Code Quality** - Error handling, validation, branded types, dead code removal
+- [ ] **Phase 16: Linear Extraction** - Extract Linear integration to independent package
+- [ ] **Phase 17: GitHub Extraction** - Extract GitHub integration to independent package
+- [ ] **Phase 18: Slack Extraction** - Extract Slack integration to independent package
+- [ ] **Phase 19: MCP Layer** - MCP servers in each integration for agent tool calls
+- [ ] **Phase 20: Testing Pyramid** - Coverage, testcontainers, fixtures, isolation
+- [ ] **Phase 21: CI/CD Pipeline** - GitHub Actions, quality gates, branch protection
+- [ ] **Phase 22: Local Dev Environment** - Docker hot reload, health checks, graceful shutdown
+
+## Phase Details
+
+### Phase 10: Foundation Setup
+**Goal:** Standardized development tooling and ML configuration enabling consistent code quality and AI-assisted development
+**Depends on:** Nothing (first v2.0 phase)
+**Requirements:** TOOL-01, TOOL-02, TOOL-03, TOOL-04, TOOL-05, LDEV-05, LDEV-06
+**Success Criteria** (what must be TRUE):
+  1. Running `npm run lint` uses Biome and reports zero violations on existing code
+  2. Only package-lock.json exists (no yarn.lock), npm commands work throughout codebase
+  3. Git commits are blocked if staged files fail lint/format checks
+  4. Environment variables load correctly based on NODE_ENV (.env.development, .env.test)
+  5. Application fails fast at startup with clear error messages when required env vars are missing
+  6. .claude files document current architecture, tooling decisions, and coding patterns
+  7. cursor files provide AI tools with codebase understanding
+**Plans:** TBD
+
+**ML Configuration Note:** All subsequent phases MUST update .claude and cursor files when making architectural changes. This ensures Claude Code and other AI tools always have current context.
+
+Plans:
+- [ ] 10-01: TBD
+
+### Phase 11: Monorepo Setup
+**Goal:** pnpm workspace structure with clear package boundaries enabling independent package development
+**Depends on:** Phase 10
+**Requirements:** ARCH-04
+**Success Criteria** (what must be TRUE):
+  1. Running `pnpm install` from root installs all workspace packages
+  2. packages/ directory contains platform/, integrations/, agents/ with their own package.json
+  3. TypeScript project references enforce import boundaries between packages
+  4. Each package can be built independently with `pnpm --filter <package> build`
+**Plans:** TBD
+
+Plans:
+- [ ] 11-01: TBD
+
+### Phase 12: Observability
+**Goal:** Production-ready logging infrastructure with correlation across service boundaries
+**Depends on:** Phase 11
+**Requirements:** OBSV-01, OBSV-02, OBSV-03
+**Success Criteria** (what must be TRUE):
+  1. All log output uses pino (no console.log, no custom logger)
+  2. Every HTTP request generates a unique correlation ID visible in all resulting log entries
+  3. Log output is valid JSON that can be parsed by standard log aggregation tools
+  4. Sensitive fields (passwords, tokens, API keys) are automatically redacted from logs
+**Plans:** TBD
+
+Plans:
+- [ ] 12-01: TBD
+
+### Phase 13: Data Layer
+**Goal:** PostgreSQL schema structure with encrypted credential storage replacing .tokens/ files
+**Depends on:** Phase 12
+**Requirements:** DATA-01, DATA-02
+**Success Criteria** (what must be TRUE):
+  1. PostgreSQL database has platform, integrations, observability schemas created by migrations
+  2. OAuth tokens stored in integrations.credentials table with encryption at rest
+  3. .tokens/ directory is deleted, all credential access goes through database
+  4. Migration scripts can be run idempotently (re-running does not fail)
+**Plans:** TBD
+
+Plans:
+- [ ] 13-01: TBD
+
+### Phase 14: Platform Services
+**Goal:** Core platform services for webhook handling, execution tracking, and dependency injection
+**Depends on:** Phase 13
+**Requirements:** DATA-03, DATA-04, DATA-05, DATA-06, ARCH-01, ARCH-06, ARCH-07
+**Success Criteria** (what must be TRUE):
+  1. Duplicate webhooks (same delivery ID) are ignored without error
+  2. Agent executions are recorded with start/end times and status in observability.agent_executions
+  3. Integration sync cursors persist between runs (integrations.sync_cursors table)
+  4. LangGraph checkpoints older than retention policy are automatically cleaned up
+  5. All services created via factory functions, no global singletons
+  6. Importing from agents/ into platform/ fails TypeScript compilation (layer rules enforced)
+**Plans:** TBD
+
+Plans:
+- [ ] 14-01: TBD
+
+### Phase 15: Code Quality
+**Goal:** Consistent error handling, validation, and type safety patterns across the codebase
+**Depends on:** Phase 14
+**Requirements:** QUAL-01, QUAL-02, QUAL-03, QUAL-04, QUAL-05, QUAL-06
+**Success Criteria** (what must be TRUE):
+  1. Service boundary functions return Result<T, E> types (neverthrow), not thrown exceptions
+  2. All external API inputs (webhooks, HTTP endpoints) validated with Zod before processing
+  3. Each package exports its public API via index.ts (no deep imports into internal modules)
+  4. Cross-service IDs are branded types (LinearIssueId, GitHubPRId) that prevent accidental mixing
+  5. Error classes extend AppError base class with unique error codes
+  6. Running dead code analysis reports no unreachable code or unused exports
+**Plans:** TBD
+
+Plans:
+- [ ] 15-01: TBD
+
+### Phase 16: Linear Extraction
+**Goal:** Linear integration extracted as independent package with its own lifecycle
+**Depends on:** Phase 15
+**Requirements:** ARCH-02 (partial), ARCH-03 (partial)
+**Success Criteria** (what must be TRUE):
+  1. packages/integrations/linear/ contains all Linear-specific code
+  2. Linear package has its own package.json with only its required dependencies
+  3. Linear OAuth, webhook handling, and API calls work through the extracted package
+  4. Linear package can be versioned and published independently
+**Plans:** TBD
+
+Plans:
+- [ ] 16-01: TBD
+
+### Phase 17: GitHub Extraction
+**Goal:** GitHub integration extracted as independent package with its own lifecycle
+**Depends on:** Phase 16
+**Requirements:** ARCH-02 (partial), ARCH-03 (partial)
+**Success Criteria** (what must be TRUE):
+  1. packages/integrations/github/ contains all GitHub-specific code
+  2. GitHub package has its own package.json with only its required dependencies
+  3. GitHub OAuth, webhook handling, PR/branch operations work through the extracted package
+  4. GitHub package can be versioned and published independently
+**Plans:** TBD
+
+Plans:
+- [ ] 17-01: TBD
+
+### Phase 18: Slack Extraction
+**Goal:** Slack integration extracted as independent package with its own lifecycle
+**Depends on:** Phase 17
+**Requirements:** ARCH-02 (partial), ARCH-03 (partial)
+**Success Criteria** (what must be TRUE):
+  1. packages/integrations/slack/ contains all Slack-specific code
+  2. Slack package has its own package.json with only its required dependencies
+  3. Slack OAuth, event handling, and message posting work through the extracted package
+  4. Slack package can be versioned and published independently
+**Plans:** TBD
+
+Plans:
+- [ ] 18-01: TBD
+
+### Phase 19: MCP Layer
+**Goal:** MCP servers in each integration enabling standardized agent tool calls
+**Depends on:** Phase 18
+**Requirements:** ARCH-05
+**Success Criteria** (what must be TRUE):
+  1. Each integration (Linear, GitHub, Slack) exposes an MCP server with tools for its operations
+  2. Agents can discover and call integration tools via MCP protocol
+  3. MCP tool calls are logged with correlation IDs for traceability
+  4. MCP server configuration specifies available tools per agent (tool whitelisting)
+**Plans:** TBD
+
+Plans:
+- [ ] 19-01: TBD
+
+### Phase 20: Testing Pyramid
+**Goal:** Comprehensive testing infrastructure with fast local tests and reliable integration tests
+**Depends on:** Phase 19
+**Requirements:** TEST-01, TEST-02, TEST-03, TEST-04, TEST-05
+**Success Criteria** (what must be TRUE):
+  1. Test coverage report shows 70%+ coverage on core platform and integration modules
+  2. Integration tests use testcontainers for isolated PostgreSQL instances
+  3. Test fixtures and factories exist for all major domain objects (agents, issues, PRs)
+  4. Running `npm test:fast` skips slow Docker tests for rapid iteration (<5s)
+  5. Tests are isolated via transaction rollback or testcontainers (no shared database state)
+**Plans:** TBD
+
+Plans:
+- [ ] 20-01: TBD
+
+### Phase 21: CI/CD Pipeline
+**Goal:** Automated quality gates blocking PRs until quality bar is met
+**Depends on:** Phase 20
+**Requirements:** TEST-06, CICD-01, CICD-02, CICD-03, CICD-04, CICD-05, CICD-06
+**Success Criteria** (what must be TRUE):
+  1. GitHub Actions workflow runs lint -> typecheck -> test -> integration on every PR
+  2. PRs cannot be merged until all CI checks pass (branch protection enforced)
+  3. CI uses pnpm and TypeScript caching (subsequent runs significantly faster than cold runs)
+  4. Independent jobs (lint, typecheck) run in parallel
+  5. All GitHub Actions pinned to SHA, not tags (supply chain security)
+**Plans:** TBD
+
+Plans:
+- [ ] 21-01: TBD
+
+### Phase 22: Local Dev Environment
+**Goal:** One-command local development with fast iteration and proper shutdown handling
+**Depends on:** Phase 21
+**Requirements:** LDEV-01, LDEV-02, LDEV-03, LDEV-04
+**Success Criteria** (what must be TRUE):
+  1. Running `docker compose up` starts all services (PostgreSQL, Temporal, agents) ready to use
+  2. Each service exposes /health endpoint returning 200 when healthy
+  3. Services handle SIGTERM gracefully (drain connections, complete in-flight work, exit cleanly)
+  4. Code changes trigger automatic rebuild without manual restart (hot reload)
+  5. .claude and cursor files reflect final v2.0 architecture (final update after all phases)
+**Plans:** TBD
+
+Plans:
+- [ ] 22-01: TBD
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 10 -> 11 -> 12 -> ... -> 22
+Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 10. Foundation Setup | v2.0 | 0/TBD | Not started | - |
+| 11. Monorepo Setup | v2.0 | 0/TBD | Not started | - |
+| 12. Observability | v2.0 | 0/TBD | Not started | - |
+| 13. Data Layer | v2.0 | 0/TBD | Not started | - |
+| 14. Platform Services | v2.0 | 0/TBD | Not started | - |
+| 15. Code Quality | v2.0 | 0/TBD | Not started | - |
+| 16. Linear Extraction | v2.0 | 0/TBD | Not started | - |
+| 17. GitHub Extraction | v2.0 | 0/TBD | Not started | - |
+| 18. Slack Extraction | v2.0 | 0/TBD | Not started | - |
+| 19. MCP Layer | v2.0 | 0/TBD | Not started | - |
+| 20. Testing Pyramid | v2.0 | 0/TBD | Not started | - |
+| 21. CI/CD Pipeline | v2.0 | 0/TBD | Not started | - |
+| 22. Local Dev Environment | v2.0 | 0/TBD | Not started | - |
+
+---
+*Created: 2026-01-19*
+*Milestone: v2.0 Foundation*
