@@ -46,6 +46,9 @@ async function bootstrap(): Promise<void> {
     "../api/webhooks/github-pr-review.js"
   );
   const { getLinearClient } = await import("../integrations/linear/index.js");
+  const { createLinearClientFromFile, TokenFileNotFoundError } = await import(
+    "../integrations/linear/token-store.js"
+  );
   const { Octokit } = await import("@octokit/rest");
   const { WebClient } = await import("@slack/web-api");
   const { DockerSandbox } = await import("../sandbox/docker-sandbox.js");
@@ -97,7 +100,24 @@ async function bootstrap(): Promise<void> {
   // Initialize dependencies
   logger.info("init_dependencies", { message: "Initializing dependencies" });
 
-  const linearClient = getLinearClient(process.env["LINEAR_ACCESS_TOKEN"]!);
+  // Prefer OAuth tokens from file (shows app identity in Linear)
+  // Fall back to LINEAR_ACCESS_TOKEN env var (shows user identity)
+  let linearClient;
+  try {
+    linearClient = await createLinearClientFromFile();
+    logger.info("linear_client_init", {
+      message: "Using OAuth tokens from .linear-tokens.json (app identity)"
+    });
+  } catch (err) {
+    if (err instanceof TokenFileNotFoundError) {
+      logger.warn("linear_client_fallback", {
+        message: "OAuth tokens not found, falling back to LINEAR_ACCESS_TOKEN (user identity). Run 'docker compose --profile oauth run --rm oauth' for app identity."
+      });
+      linearClient = getLinearClient(process.env["LINEAR_ACCESS_TOKEN"]!);
+    } else {
+      throw err;
+    }
+  }
   const octokit = new Octokit({ auth: process.env["GITHUB_TOKEN"] });
   const slackClient = new WebClient(process.env["SLACK_BOT_TOKEN"]);
 

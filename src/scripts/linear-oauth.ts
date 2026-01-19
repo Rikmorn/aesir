@@ -69,7 +69,7 @@ async function exchangeCodeForTokens(code: string): Promise<{
     body: new URLSearchParams({
       grant_type: "authorization_code",
       code,
-      redirect_uri: REDIRECT_URI,
+      redirect_uri: REDIRECT_URI!,
       client_id: CLIENT_ID!,
       client_secret: CLIENT_SECRET!,
     }),
@@ -119,7 +119,7 @@ async function main(): Promise<void> {
   // Build authorization URL
   const authUrl = new URL("https://linear.app/oauth/authorize");
   authUrl.searchParams.set("client_id", CLIENT_ID!);
-  authUrl.searchParams.set("redirect_uri", REDIRECT_URI);
+  authUrl.searchParams.set("redirect_uri", REDIRECT_URI!);
   authUrl.searchParams.set("response_type", "code");
   authUrl.searchParams.set("state", state);
   authUrl.searchParams.set("scope", SCOPES);
