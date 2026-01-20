@@ -6,7 +6,12 @@
  * which this handler uses to start the prApprovalWorkflow in Temporal.
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
+import {
+  createChildLogger,
+  createPinoLogger,
+  generateCorrelationId,
+  type PinoLogger,
+} from "@aesir/common";
 import type {
   AgentSessionPayload,
   WebhookPayloadBase,
@@ -20,7 +25,7 @@ import {
   verifyWebhookSignature,
 } from "@aesir/integrations";
 
-const logger: PinoLogger = createPinoLogger({
+const baseLogger: PinoLogger = createPinoLogger({
   component: "agents:webhooks:linear-agent-session",
 });
 
@@ -65,11 +70,13 @@ export interface HandleAgentSessionResult {
  *
  * @param payload - Parsed webhook payload
  * @param config - Workflow configuration
+ * @param logger - Optional request-scoped logger (falls back to base logger)
  * @returns Result indicating what action was taken
  */
 export async function handleAgentSessionWebhook(
   payload: AgentSessionPayload,
   config: LinearWebhookConfig,
+  logger: PinoLogger = baseLogger,
 ): Promise<HandleAgentSessionResult> {
   const { action, agentSession } = payload;
   const taskId = agentSession.issueId;
@@ -151,6 +158,10 @@ export async function linearWebhookHandler(
   config: LinearWebhookConfig,
   webhookSecret: string,
 ): Promise<void> {
+  // Generate correlation ID for this request
+  const correlationId = generateCorrelationId("req");
+  const logger = createChildLogger(baseLogger, { correlationId });
+
   const signature = req.headers["linear-signature"];
 
   // Verify signature
@@ -195,6 +206,6 @@ export async function linearWebhookHandler(
   );
 
   // Handle the AgentSession event
-  const result = await handleAgentSessionWebhook(payload, config);
+  const result = await handleAgentSessionWebhook(payload, config, logger);
   res.status(200).json(result);
 }
