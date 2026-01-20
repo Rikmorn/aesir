@@ -5,8 +5,8 @@
  * Uses Octokit to interact with the GitHub REST API.
  */
 
-import type { Octokit } from "@octokit/rest";
 import { createLogger } from "@aesir/common";
+import type { Octokit } from "@octokit/rest";
 import type { CreatePROptions, PRComment, PullRequestInfo } from "./types.js";
 
 const logger = createLogger({

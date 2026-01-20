@@ -2,8 +2,8 @@
  * Tests for Commit and PR Node
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DevWorkflowStateType } from "@aesir/common";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type CommitPRConfig, createCommitPRNode } from "./commit-pr.js";
 
 // Mock the GitHub integration module
@@ -21,8 +21,6 @@ vi.mock("../../integrations/linear/index.js", () => ({
 import {
   createCommit,
   createPullRequest,
-} from "@aesir/integrations";
-import {
   emitResponse,
   updateIssueStatus,
 } from "@aesir/integrations";

@@ -5,9 +5,9 @@
  * Activities receive pre-configured LinearClient from the workflow.
  */
 
-import type { LinearClient } from "@linear/sdk";
 import { createLogger, type IssueStatus } from "@aesir/common";
 import { updateIssueStatus } from "@aesir/integrations";
+import type { LinearClient } from "@linear/sdk";
 
 const logger = createLogger({
   defaultContext: { module: "temporal-activity-linear" },

@@ -7,6 +7,6 @@
 
 export type {
   ExecutionResult,
-  TestResult,
   Sandbox,
+  TestResult,
 } from "@aesir/common";

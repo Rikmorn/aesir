@@ -5,8 +5,8 @@
  * Provides factory functions for different authentication patterns.
  */
 
-import { Octokit } from "@octokit/rest";
 import { createLogger } from "@aesir/common";
+import { Octokit } from "@octokit/rest";
 import type { GitHubConfig } from "./types.js";
 
 const logger = createLogger({ defaultContext: { module: "github-client" } });

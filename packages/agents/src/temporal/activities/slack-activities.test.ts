@@ -5,12 +5,12 @@
  * Mocks sendApprovalRequest and sendStatusUpdate.
  */
 
-import type { WebClient } from "@slack/web-api";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   ApprovalNotification,
   StatusNotification,
 } from "@aesir/integrations";
+import type { WebClient } from "@slack/web-api";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   sendApprovalRequestActivity,
   sendStatusUpdateActivity,

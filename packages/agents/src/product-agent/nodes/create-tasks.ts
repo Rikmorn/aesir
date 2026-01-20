@@ -11,15 +11,11 @@
  * - Sets state.phase to 'complete' when done
  */
 
+import { createLogger } from "@aesir/common";
+import { createIssue, type LabelInfo, listLabels } from "@aesir/integrations";
 import { ChatAnthropic } from "@langchain/anthropic";
 import type { LinearClient } from "@linear/sdk";
 import { z } from "zod";
-import {
-  createIssue,
-  type LabelInfo,
-  listLabels,
-} from "@aesir/integrations";
-import { createLogger } from "@aesir/common";
 import { CREATE_TASKS_PROMPT } from "../prompts.js";
 import type {
   CreatedTask,

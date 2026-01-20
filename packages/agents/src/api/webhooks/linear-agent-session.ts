@@ -6,20 +6,18 @@
  * which this handler uses to start the prApprovalWorkflow in Temporal.
  */
 
+import { createLogger } from "@aesir/common";
 import type {
   AgentSessionPayload,
   WebhookPayloadBase,
 } from "@aesir/integrations";
 import {
+  type ApprovalWorkflowInput,
   isAgentSessionEvent,
   parseWebhookPayload,
+  startApprovalWorkflow,
   validateWebhookTimestamp,
   verifyWebhookSignature,
-} from "@aesir/integrations";
-import { createLogger } from "@aesir/common";
-import {
-  type ApprovalWorkflowInput,
-  startApprovalWorkflow,
 } from "@aesir/integrations";
 
 const logger = createLogger({

@@ -5,8 +5,8 @@
  * Provides lifecycle functions for starting and stopping the app.
  */
 
-import { App } from "@slack/bolt";
 import { createLogger } from "@aesir/common";
+import { App } from "@slack/bolt";
 import type { BoltAppConfig } from "./types.js";
 
 const logger = createLogger({ defaultContext: { module: "slack-bolt-app" } });

@@ -7,8 +7,8 @@
  * Activities are passed in from @aesir/agents via the config.activities parameter.
  */
 
-import { NativeConnection, Worker } from "@temporalio/worker";
 import { createLogger } from "@aesir/common";
+import { NativeConnection, Worker } from "@temporalio/worker";
 
 const logger = createLogger({ defaultContext: { module: "temporal-worker" } });
 

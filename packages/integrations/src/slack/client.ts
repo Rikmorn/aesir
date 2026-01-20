@@ -5,8 +5,8 @@
  * Provides factory functions for different usage patterns.
  */
 
-import { WebClient } from "@slack/web-api";
 import { createLogger } from "@aesir/common";
+import { WebClient } from "@slack/web-api";
 import type { SlackConfig } from "./types.js";
 
 const logger = createLogger({ defaultContext: { module: "slack-client" } });

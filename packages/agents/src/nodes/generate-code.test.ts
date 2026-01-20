@@ -4,9 +4,9 @@
  * Tests for generateCodeNode with mock LLM for structured output.
  */
 
+import type { DevWorkflowStateType } from "@aesir/common";
 import type { ChatAnthropic } from "@langchain/anthropic";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { DevWorkflowStateType } from "@aesir/common";
 import {
   type CodeGenerationOutput,
   CodeGenerationOutputSchema,

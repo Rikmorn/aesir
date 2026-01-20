@@ -5,8 +5,8 @@
  * Uses the Git Data API to create commits without needing a local working directory.
  */
 
-import type { Octokit } from "@octokit/rest";
 import { createLogger } from "@aesir/common";
+import type { Octokit } from "@octokit/rest";
 import { getBranch } from "./branches.js";
 import type { CommitInfo, CreateCommitOptions } from "./types.js";
 

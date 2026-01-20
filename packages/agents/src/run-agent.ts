@@ -13,9 +13,8 @@
  * - Returns structured result with clear termination reason
  */
 
+import { devAgentConfig, logger } from "@aesir/common";
 import { GraphRecursionError } from "@langchain/langgraph";
-import { devAgentConfig } from "@aesir/common";
-import { logger } from "@aesir/common";
 import { devAgent } from "./dev-agent.js";
 
 /**

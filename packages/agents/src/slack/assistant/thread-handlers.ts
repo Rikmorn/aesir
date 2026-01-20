@@ -11,6 +11,7 @@
  * - Handles errors gracefully with user-friendly error messages
  */
 
+import { createLogger } from "@aesir/common";
 import type { ChatAnthropic } from "@langchain/anthropic";
 import type { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import type { LinearClient } from "@linear/sdk";
@@ -21,7 +22,6 @@ import {
   type RunProductAgentInput,
   runProductAgent,
 } from "../../product-agent/runner.js";
-import { createLogger } from "@aesir/common";
 
 const logger = createLogger({
   defaultContext: { module: "slack-thread-handlers" },

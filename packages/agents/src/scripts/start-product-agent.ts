@@ -31,7 +31,9 @@ async function bootstrap(): Promise<void> {
   );
   const { createBoltApp, startBoltApp, stopBoltApp, getLinearClient } =
     await import("@aesir/integrations");
-  const { registerHandlers } = await import("../slack/assistant/thread-handlers.js");
+  const { registerHandlers } = await import(
+    "../slack/assistant/thread-handlers.js"
+  );
   const { createLogger } = await import("@aesir/common");
 
   const logger = createLogger({

@@ -11,13 +11,13 @@
  * - Updates testAttempts and status based on result
  */
 
-import { logger } from "@aesir/common";
-import type { Sandbox, TestResult } from "@aesir/common";
 import type {
   DevWorkflowConfig,
   DevWorkflowStateType,
+  Sandbox,
+  TestResult,
 } from "@aesir/common";
-import { DEFAULT_DEV_WORKFLOW_CONFIG } from "@aesir/common";
+import { DEFAULT_DEV_WORKFLOW_CONFIG, logger } from "@aesir/common";
 
 /**
  * Factory function that creates a runTestsNode with injected sandbox.

@@ -5,8 +5,8 @@
  * Used by API endpoints and webhook handlers to interact with running workflows.
  */
 
-import { Client, Connection, type WorkflowHandle } from "@temporalio/client";
 import { createLogger } from "@aesir/common";
+import { Client, Connection, type WorkflowHandle } from "@temporalio/client";
 import { approvalSignal, changesRequestedSignal } from "./signals.js";
 import type { ApprovalDecision, ChangesRequested } from "./types.js";
 import type {

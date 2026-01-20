@@ -10,11 +10,11 @@
  * - Returns structured output with response, phase, and created tasks
  */
 
+import { createLogger } from "@aesir/common";
 import type { ChatAnthropic } from "@langchain/anthropic";
 import { AIMessage, HumanMessage } from "@langchain/core/messages";
 import type { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import type { LinearClient } from "@linear/sdk";
-import { createLogger } from "@aesir/common";
 import { createProductAgentGraph } from "./graph.js";
 import type { CreatedTask, ProductAgentPhase } from "./state.js";
 

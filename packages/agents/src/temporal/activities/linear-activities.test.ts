@@ -5,9 +5,9 @@
  * Verifies that status is configurable (not hardcoded).
  */
 
+import type { IssueStatus } from "@aesir/common";
 import type { LinearClient } from "@linear/sdk";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { IssueStatus } from "@aesir/common";
 import { updateLinearStatusActivity } from "./linear-activities.js";
 
 // Mock the integrations module

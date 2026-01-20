@@ -2,8 +2,8 @@
  * Tests for Pickup Task Node
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DevWorkflowStateType } from "@aesir/common";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createPickupTaskNode } from "./pickup-task.js";
 
 // Mock the Linear integration module
@@ -13,11 +13,7 @@ vi.mock("../../integrations/linear/index.js", () => ({
   emitThought: vi.fn(),
 }));
 
-import {
-  emitThought,
-  readIssue,
-  updateIssueStatus,
-} from "@aesir/integrations";
+import { emitThought, readIssue, updateIssueStatus } from "@aesir/integrations";
 
 const mockReadIssue = vi.mocked(readIssue);
 const mockUpdateIssueStatus = vi.mocked(updateIssueStatus);

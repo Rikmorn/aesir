@@ -16,10 +16,10 @@
  *   Example: postgresql://temporal:temporal@localhost:5432/temporal
  */
 
+import { logger } from "@aesir/common";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
-import { logger } from "@aesir/common";
 import { codeGenTool } from "./tools/index.js";
 
 /**

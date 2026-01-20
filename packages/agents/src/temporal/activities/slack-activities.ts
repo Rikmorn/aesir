@@ -5,15 +5,15 @@
  * Activities receive pre-configured WebClient from the workflow.
  */
 
-import type { WebClient } from "@slack/web-api";
 import { createLogger } from "@aesir/common";
 import {
-  sendApprovalRequest,
-  sendStatusUpdate,
   type ApprovalNotification,
   type NotificationResult,
   type StatusNotification,
+  sendApprovalRequest,
+  sendStatusUpdate,
 } from "@aesir/integrations";
+import type { WebClient } from "@slack/web-api";
 
 const logger = createLogger({
   defaultContext: { module: "temporal-activity-slack" },

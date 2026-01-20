@@ -36,21 +36,17 @@ export {
   incrementLoopCount,
   type LoopGuardState,
 } from "./guards.js";
-
+// Product Agent
+export * from "./product-agent/index.js";
 export {
   type AgentResult,
   runAgentWithGuardrails,
   type TerminationReason,
 } from "./run-agent.js";
-
+// Tools
+export * from "./tools/index.js";
 // Tracing exports
 export {
   createLangGraphTracer,
   LangGraphTracer,
 } from "./tracing/index.js";
-
-// Product Agent
-export * from "./product-agent/index.js";
-
-// Tools
-export * from "./tools/index.js";

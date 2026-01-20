@@ -12,9 +12,9 @@
  * - Placeholder implementation - actual LLM call is in agent
  */
 
+import { logger } from "@aesir/common";
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
-import { logger } from "@aesir/common";
 
 /**
  * Supported programming languages for code generation

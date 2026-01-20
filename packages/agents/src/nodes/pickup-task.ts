@@ -8,13 +8,9 @@
  * task details from Linear and signals that work has started.
  */
 
-import type { LinearClient } from "@linear/sdk";
-import {
-  emitThought,
-  readIssue,
-  updateIssueStatus,
-} from "@aesir/integrations";
 import type { DevWorkflowStateType } from "@aesir/common";
+import { emitThought, readIssue, updateIssueStatus } from "@aesir/integrations";
+import type { LinearClient } from "@linear/sdk";
 
 /**
  * Factory function to create the pickup task node with injected LinearClient.

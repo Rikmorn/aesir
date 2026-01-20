@@ -5,8 +5,8 @@
  * Handles token refresh when tokens are near expiration.
  */
 
-import { type Issue, LinearClient, type WorkflowState } from "@linear/sdk";
 import { createLogger, type IssueStatus } from "@aesir/common";
+import { type Issue, LinearClient, type WorkflowState } from "@linear/sdk";
 import type { LinearConfig } from "./types.js";
 
 const logger = createLogger({ defaultContext: { module: "linear-client" } });

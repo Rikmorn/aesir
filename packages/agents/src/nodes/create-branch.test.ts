@@ -2,8 +2,8 @@
  * Tests for Create Branch Node
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DevWorkflowStateType } from "@aesir/common";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type CreateBranchConfig, createBranchNode } from "./create-branch.js";
 
 // Mock the GitHub integration module

@@ -4,9 +4,6 @@
  * Exports environment configuration and agent configuration schemas.
  */
 
-// Environment configuration (Zod-validated)
-export { config, env } from "./env.js";
-
 // Agent configuration schemas and utilities
 export {
   type AgentConfig,
@@ -16,3 +13,5 @@ export {
   mergeWithDefaults,
   validateAgentConfig,
 } from "./agent-config.js";
+// Environment configuration (Zod-validated)
+export { config, env } from "./env.js";

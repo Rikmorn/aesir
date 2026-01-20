@@ -9,10 +9,10 @@
  * allowing workflows to call activities without serializing clients.
  */
 
+import type { Sandbox } from "@aesir/common";
 import type { LinearClient } from "@linear/sdk";
 import type { Octokit } from "@octokit/rest";
 import type { WebClient } from "@slack/web-api";
-import type { Sandbox } from "@aesir/common";
 
 // Import raw activities for binding
 import { executeDevWorkflow } from "./dev-agent-activity.js";

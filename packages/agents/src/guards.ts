@@ -15,9 +15,9 @@
  * early termination via the runner when building custom graphs.
  */
 
+import { logger } from "@aesir/common";
 import { AIMessage, type BaseMessage } from "@langchain/core/messages";
 import { END } from "@langchain/langgraph";
-import { logger } from "@aesir/common";
 
 /**
  * State shape required for loop guards

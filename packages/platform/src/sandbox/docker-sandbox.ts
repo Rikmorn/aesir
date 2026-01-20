@@ -6,10 +6,10 @@
  */
 
 import * as path from "node:path";
+import { createLogger, type Logger } from "@aesir/common";
 import type { Container } from "dockerode";
 import Docker from "dockerode";
 import * as tar from "tar-stream";
-import { createLogger, type Logger } from "@aesir/common";
 import type { ExecutionResult, Sandbox, TestResult } from "./types.js";
 
 /**

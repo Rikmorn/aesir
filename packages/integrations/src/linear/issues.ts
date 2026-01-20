@@ -5,8 +5,8 @@
  * Used by the Product Agent to create tasks from gathered requirements.
  */
 
-import type { IssueLabel, LinearClient, Team } from "@linear/sdk";
 import { createLogger } from "@aesir/common";
+import type { IssueLabel, LinearClient, Team } from "@linear/sdk";
 
 const logger = createLogger({ defaultContext: { module: "linear-issues" } });
 

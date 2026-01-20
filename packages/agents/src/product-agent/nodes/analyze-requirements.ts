@@ -11,9 +11,9 @@
  * - Accepts LLM via options for testability
  */
 
+import { createLogger } from "@aesir/common";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
-import { createLogger } from "@aesir/common";
 import { ANALYZE_REQUIREMENTS_PROMPT } from "../prompts.js";
 import type {
   ProductAgentPhase,

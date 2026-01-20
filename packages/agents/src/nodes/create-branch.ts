@@ -8,9 +8,9 @@
  * This ensures unique, identifiable branches per task.
  */
 
-import type { Octokit } from "@octokit/rest";
-import { createBranch } from "@aesir/integrations";
 import type { DevWorkflowStateType } from "@aesir/common";
+import { createBranch } from "@aesir/integrations";
+import type { Octokit } from "@octokit/rest";
 
 /**
  * GitHub repository configuration for branch operations

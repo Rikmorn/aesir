@@ -13,9 +13,9 @@
  * for human approval (up to configured timeout).
  */
 
+import type { BoundActivities, IssueStatus } from "@aesir/common";
 import * as wf from "@temporalio/workflow";
 import { proxyActivities } from "@temporalio/workflow";
-import type { BoundActivities, IssueStatus } from "@aesir/common";
 import { approvalSignal, changesRequestedSignal } from "../signals.js";
 import type { ApprovalDecision, ChangesRequested } from "../types.js";
 

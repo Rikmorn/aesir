@@ -2,8 +2,8 @@
  * Tests for Dev Workflow Runner
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_DEV_WORKFLOW_CONFIG } from "@aesir/common";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type DevWorkflowDependencies,
   runDevWorkflow,

@@ -5,9 +5,9 @@
  * Activities receive pre-configured Octokit clients from the workflow.
  */
 
-import type { Octokit } from "@octokit/rest";
 import { createLogger } from "@aesir/common";
 import { mergePullRequest } from "@aesir/integrations";
+import type { Octokit } from "@octokit/rest";
 
 const logger = createLogger({
   defaultContext: { module: "temporal-activity-github" },

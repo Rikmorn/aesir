@@ -5,8 +5,8 @@
  * Formats messages using Block Kit for rich formatting.
  */
 
-import type { Block, KnownBlock, WebClient } from "@slack/web-api";
 import { createLogger } from "@aesir/common";
+import type { Block, KnownBlock, WebClient } from "@slack/web-api";
 import type {
   ApprovalNotification,
   Notification,

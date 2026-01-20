@@ -11,9 +11,9 @@
  * - Accepts LLM via options for testability
  */
 
+import { createLogger } from "@aesir/common";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { AIMessage } from "@langchain/core/messages";
-import { createLogger } from "@aesir/common";
 import { GENERATE_CLARIFICATION_PROMPT } from "../prompts.js";
 import type {
   ProductAgentPhase,

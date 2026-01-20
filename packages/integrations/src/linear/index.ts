@@ -25,6 +25,8 @@
  * ```
  */
 
+// Re-export IssueStatus from common (shared cross-layer type)
+export type { IssueStatus } from "@aesir/common";
 // Agent activity emitters
 export {
   emitAction,
@@ -34,7 +36,6 @@ export {
   emitThought,
   updateSessionPlan,
 } from "./activities.js";
-
 // Client factory and helpers
 export {
   createLinearClient,
@@ -76,8 +77,6 @@ export type {
   WebhookPayload,
   WebhookPayloadBase,
 } from "./types.js";
-// Re-export IssueStatus from common (shared cross-layer type)
-export type { IssueStatus } from "@aesir/common";
 // Webhook signature verification and payload parsing
 export {
   isAgentSessionEvent,
