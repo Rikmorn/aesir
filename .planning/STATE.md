@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 11 of 22 (Monorepo Setup)
-Plan: 1 of 4 in current phase - COMPLETE
+Plan: 2 of 4 in current phase - COMPLETE
 Status: In progress
-Last activity: 2026-01-20 - Completed 11-01-PLAN.md (Workspace Infrastructure)
+Last activity: 2026-01-20 - Completed 11-02-PLAN.md (Package Scaffolding)
 
-Progress: [#####               ] 10% (5 of 50 plans complete)
+Progress: [######              ] 12% (6 of 50 plans complete)
 
 ## Milestone History
 
@@ -25,19 +25,19 @@ Progress: [#####               ] 10% (5 of 50 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5 (v2.0)
-- Average duration: ~10 min
-- Total execution time: ~48 min
+- Total plans completed: 6 (v2.0)
+- Average duration: ~9 min
+- Total execution time: ~51 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 10-foundation-setup | 4/4 | ~44 min | ~11 min |
-| 11-monorepo-setup | 1/4 | ~4 min | ~4 min |
+| 11-monorepo-setup | 2/4 | ~7 min | ~4 min |
 
 **Recent Trend:**
-- Last 5 plans: 11-01 (4 min), 10-04 (4 min), 10-03 (~6 min), 10-02 (~12 min), 10-01 (22 min)
+- Last 5 plans: 11-02 (3 min), 11-01 (4 min), 10-04 (4 min), 10-03 (~6 min), 10-02 (~12 min)
 - Trend: Accelerating (simpler tasks, accumulated context)
 
 *Updated after each plan completion*
@@ -69,6 +69,9 @@ Recent decisions affecting current work:
 - [11-01]: TypeScript project references with composite builds
 - [11-01]: Pre-commit hooks disabled during migration (re-enable in 11-04)
 - [11-01]: Vitest projects mode for monorepo testing
+- [11-02]: Layer dependencies encoded: common (leaf) -> platform -> integrations -> agents
+- [11-02]: workspace:* protocol for internal dependencies
+- [11-02]: Agents layer references integrations, not platform directly
 
 ### Pending Todos
 
@@ -90,9 +93,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-20
-Stopped at: Completed 11-01-PLAN.md (Workspace Infrastructure)
+Stopped at: Completed 11-02-PLAN.md (Package Scaffolding)
 Resume file: None
-Next action: Execute 11-02-PLAN.md (Package Scaffolding)
+Next action: Execute 11-03-PLAN.md (Code Migration)
 
 ---
-*Updated: 2026-01-20 after 11-01 plan completion*
+*Updated: 2026-01-20 after 11-02 plan completion*
