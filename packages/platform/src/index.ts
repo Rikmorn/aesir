@@ -1,4 +1,13 @@
-// @aesir/platform - state, temporal, sandbox
-// Code will be moved here in plan 03
+// @aesir/platform - state, temporal, sandbox, testing
 
-export {};
+// State
+export * from "./state/index.js";
+
+// Temporal
+export * from "./temporal/index.js";
+
+// Sandbox
+export * from "./sandbox/index.js";
+
+// Testing utilities
+export * from "./testing/index.js";
