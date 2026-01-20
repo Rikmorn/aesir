@@ -36,8 +36,8 @@ Requirements for Foundation milestone. Full restructure from "prove it works" to
 
 ### Data Layer
 
-- [ ] **DATA-01**: PostgreSQL schema structure (platform, integrations, observability schemas)
-- [ ] **DATA-02**: Credential storage with encryption (migrate from .tokens/ files to database)
+- [x] **DATA-01**: PostgreSQL schema structure (platform, integrations, observability schemas)
+- [x] **DATA-02**: Credential storage with encryption (migrate from .tokens/ files to database)
 - [ ] **DATA-03**: Webhook idempotency tracking (integrations.webhook_deliveries table)
 - [ ] **DATA-04**: Agent execution records for observability (observability.agent_executions table)
 - [ ] **DATA-05**: Sync cursor management for integrations (integrations.sync_cursors table)
@@ -127,8 +127,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OBSV-01 | Phase 12 | Complete |
 | OBSV-02 | Phase 12 | Complete |
 | OBSV-03 | Phase 12 | Complete |
-| DATA-01 | Phase 13 | Pending |
-| DATA-02 | Phase 13 | Pending |
+| DATA-01 | Phase 13 | Complete |
+| DATA-02 | Phase 13 | Complete |
 | DATA-03 | Phase 14 | Pending |
 | DATA-04 | Phase 14 | Pending |
 | DATA-05 | Phase 14 | Pending |
@@ -173,4 +173,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-01-19*
-*Last updated: 2026-01-20 after Phase 12 completion*
+*Last updated: 2026-01-20 after Phase 13 completion*

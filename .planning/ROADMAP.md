@@ -19,7 +19,7 @@ The v2.0 Foundation milestone restructures Aesir from a working prototype to a m
 - [x] **Phase 10: Foundation Setup** - Biome, npm, dotenv-flow, pre-commit hooks, .claude/.cursor files
 - [x] **Phase 11: Monorepo Setup** - pnpm workspace structure with package boundaries
 - [x] **Phase 12: Observability** - pino logging, correlation IDs, structured JSON logs
-- [ ] **Phase 13: Data Layer** - PostgreSQL schemas, credential migration from .tokens/
+- [x] **Phase 13: Data Layer** - PostgreSQL schemas, credential migration from .tokens/
 - [ ] **Phase 14: Platform Services** - Webhook idempotency, execution tracking, cleanup, DI patterns
 - [ ] **Phase 15: Code Quality** - Error handling, validation, branded types, dead code removal
 - [ ] **Phase 16: Linear Extraction** - Extract Linear integration to independent package
@@ -104,12 +104,12 @@ Plans:
 **Plans:** 6 plans
 
 Plans:
-- [ ] 13-01-PLAN.md — Install Drizzle dependencies, configure database env vars, create prefixed ID generator
-- [ ] 13-02-PLAN.md — Create Drizzle schemas for platform and integrations with database clients
-- [ ] 13-03-PLAN.md — Generate and apply migrations, create updated_at triggers, seed default workspace
-- [ ] 13-04-PLAN.md — Create encryption utilities and database-backed credential store
-- [ ] 13-05-PLAN.md — Wire Linear integration to database credentials, update OAuth flow
-- [ ] 13-06-PLAN.md — Migrate existing token, delete .tokens/, remove legacy code
+- [x] 13-01-PLAN.md — Install Drizzle dependencies, configure database env vars, create prefixed ID generator
+- [x] 13-02-PLAN.md — Create Drizzle schemas for platform and integrations with database clients
+- [x] 13-03-PLAN.md — Generate and apply migrations, create updated_at triggers, seed default workspace
+- [x] 13-04-PLAN.md — Create encryption utilities and database-backed credential store
+- [x] 13-05-PLAN.md — Wire Linear integration to database credentials, update OAuth flow
+- [x] 13-06-PLAN.md — Migrate existing token, delete .tokens/, remove legacy code
 
 ### Phase 14: Platform Services
 **Goal:** Core platform services for webhook handling, execution tracking, and dependency injection
@@ -255,7 +255,7 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 | 10. Foundation Setup | v2.0 | 4/4 | Complete | 2026-01-20 |
 | 11. Monorepo Setup | v2.0 | 4/4 | Complete | 2026-01-20 |
 | 12. Observability | v2.0 | 8/8 | Complete | 2026-01-20 |
-| 13. Data Layer | v2.0 | 0/6 | Not started | - |
+| 13. Data Layer | v2.0 | 6/6 | Complete | 2026-01-20 |
 | 14. Platform Services | v2.0 | 0/TBD | Not started | - |
 | 15. Code Quality | v2.0 | 0/TBD | Not started | - |
 | 16. Linear Extraction | v2.0 | 0/TBD | Not started | - |
@@ -268,5 +268,5 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 
 ---
 *Created: 2026-01-19*
-*Updated: 2026-01-20 (Phase 13 planned)*
+*Updated: 2026-01-20 (Phase 13 complete)*
 *Milestone: v2.0 Foundation*
