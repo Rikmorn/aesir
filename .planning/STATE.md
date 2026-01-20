@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 13 of 22 (Data Layer)
-Plan: 2 of 5 in current phase
+Plan: 3 of 5 in current phase
 Status: In progress
-Last activity: 2026-01-20 - Completed 13-02-PLAN.md
+Last activity: 2026-01-20 - Completed 13-03-PLAN.md
 
 Progress: [#####               ] 31% (4 of 13 phases complete)
 
@@ -25,9 +25,9 @@ Progress: [#####               ] 31% (4 of 13 phases complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17 (v2.0)
+- Total plans completed: 18 (v2.0)
 - Average duration: ~8 min
-- Total execution time: ~136 min
+- Total execution time: ~145 min
 
 **By Phase:**
 
@@ -36,10 +36,10 @@ Progress: [#####               ] 31% (4 of 13 phases complete)
 | 10-foundation-setup | 4/4 | ~44 min | ~11 min |
 | 11-monorepo-setup | 4/4 | ~41 min | ~10 min |
 | 12-observability | 8/8 | 78 min | 10 min |
-| 13-data-layer | 2/5 | 9 min | 5 min |
+| 13-data-layer | 3/5 | 18 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 13-02 (6 min), 13-01 (3 min), 12-07 (3 min), 12-08 (2 min), 12-06 (8 min)
+- Last 5 plans: 13-03 (9 min), 13-02 (6 min), 13-01 (3 min), 12-07 (3 min), 12-08 (2 min)
 - Trend: Foundation setup plans are fast (well-defined scope)
 
 *Updated after each plan completion*
@@ -106,6 +106,9 @@ Recent decisions affecting current work:
 - [13-02]: uniqueIndex with .where() for partial indexes in Drizzle
 - [13-02]: workspace_id as text without FK to avoid cross-schema migration ordering issues
 - [13-02]: Created observability package for Phase 14 agent_executions
+- [13-03]: schema.drizzle.ts files for drizzle-kit (CJS bundler can't resolve workspace:* dependencies)
+- [13-03]: IF NOT EXISTS for CREATE SCHEMA for idempotent migrations
+- [13-03]: Direct DB connection in seed script to avoid full environment validation
 
 ### Pending Todos
 
@@ -132,9 +135,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-20
-Stopped at: Completed 13-02-PLAN.md
+Stopped at: Completed 13-03-PLAN.md
 Resume file: None
-Next action: Continue with 13-03 (Credential Encryption)
+Next action: Continue with 13-04 (Credential Encryption)
 
 ---
-*Updated: 2026-01-20 after 13-02-PLAN.md completed*
+*Updated: 2026-01-20 after 13-03-PLAN.md completed*
