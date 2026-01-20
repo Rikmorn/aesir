@@ -101,10 +101,15 @@ Plans:
   2. OAuth tokens stored in integrations.credentials table with encryption at rest
   3. .tokens/ directory is deleted, all credential access goes through database
   4. Migration scripts can be run idempotently (re-running does not fail)
-**Plans:** TBD
+**Plans:** 6 plans
 
 Plans:
-- [ ] 13-01: TBD
+- [ ] 13-01-PLAN.md — Install Drizzle dependencies, configure database env vars, create prefixed ID generator
+- [ ] 13-02-PLAN.md — Create Drizzle schemas for platform and integrations with database clients
+- [ ] 13-03-PLAN.md — Generate and apply migrations, create updated_at triggers, seed default workspace
+- [ ] 13-04-PLAN.md — Create encryption utilities and database-backed credential store
+- [ ] 13-05-PLAN.md — Wire Linear integration to database credentials, update OAuth flow
+- [ ] 13-06-PLAN.md — Migrate existing token, delete .tokens/, remove legacy code
 
 ### Phase 14: Platform Services
 **Goal:** Core platform services for webhook handling, execution tracking, and dependency injection
@@ -250,7 +255,7 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 | 10. Foundation Setup | v2.0 | 4/4 | Complete | 2026-01-20 |
 | 11. Monorepo Setup | v2.0 | 4/4 | Complete | 2026-01-20 |
 | 12. Observability | v2.0 | 8/8 | Complete | 2026-01-20 |
-| 13. Data Layer | v2.0 | 0/TBD | Not started | - |
+| 13. Data Layer | v2.0 | 0/6 | Not started | - |
 | 14. Platform Services | v2.0 | 0/TBD | Not started | - |
 | 15. Code Quality | v2.0 | 0/TBD | Not started | - |
 | 16. Linear Extraction | v2.0 | 0/TBD | Not started | - |
@@ -263,5 +268,5 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 
 ---
 *Created: 2026-01-19*
-*Updated: 2026-01-20 (Phase 12 complete)*
+*Updated: 2026-01-20 (Phase 13 planned)*
 *Milestone: v2.0 Foundation*
