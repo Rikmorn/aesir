@@ -60,7 +60,7 @@ Plans:
 **Requirements:** ARCH-04
 **Success Criteria** (what must be TRUE):
   1. Running `pnpm install` from root installs all workspace packages
-  2. packages/ directory contains platform/, integrations/, agents/ with their own package.json
+  2. packages/ directory contains common/, platform/, integrations/, agents/ with their own package.json
   3. TypeScript project references enforce import boundaries between packages
   4. Each package can be built independently with `pnpm --filter <package> build`
 **Plans:** 4 plans
