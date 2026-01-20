@@ -1,0 +1,36 @@
+{
+  "name": "@aesir/integrations",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./*": {
+      "import": "./dist/*.js",
+      "types": "./dist/*.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@aesir/common": "workspace:*",
+    "@aesir/platform": "workspace:*",
+    "@linear/sdk": "^70.0.0",
+    "@octokit/rest": "^22.0.1",
+    "@slack/bolt": "^4.6.0",
+    "@slack/web-api": "^7.13.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
