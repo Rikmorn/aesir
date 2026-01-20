@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-01-19)
 
 **Core value:** Maintainable, scalable foundation for end-to-end automated development workflows
-**Current focus:** Phase 12 - Observability (complete)
+**Current focus:** Phase 12 - Observability (gap closure complete)
 
 ## Current Position
 
 Phase: 12 of 22 (Observability)
 Plan: 8 of 8 in current phase
-Status: Gap closure plans executing (12-07 parallel, 12-08 complete)
-Last activity: 2026-01-20 - Completed 12-08-PLAN.md (Temporal Logger Wiring)
+Status: Gap closure plans complete (12-07, 12-08)
+Last activity: 2026-01-20 - Completed 12-07-PLAN.md (Webhook Correlation Wiring)
 
 Progress: [####                ] 23% (3 of 13 phases complete)
 
@@ -25,9 +25,9 @@ Progress: [####                ] 23% (3 of 13 phases complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15 (v2.0)
+- Total plans completed: 16 (v2.0)
 - Average duration: ~9 min
-- Total execution time: ~130 min
+- Total execution time: ~133 min
 
 **By Phase:**
 
@@ -35,11 +35,11 @@ Progress: [####                ] 23% (3 of 13 phases complete)
 |-------|-------|-------|----------|
 | 10-foundation-setup | 4/4 | ~44 min | ~11 min |
 | 11-monorepo-setup | 4/4 | ~41 min | ~10 min |
-| 12-observability | 7/8 | 75 min | 11 min |
+| 12-observability | 8/8 | 78 min | 10 min |
 
 **Recent Trend:**
-- Last 5 plans: 12-08 (2 min), 12-06 (8 min), 12-05 (30 min), 12-04 (15 min), 12-03 (10 min)
-- Trend: Consistent execution, 12-08 was fast (gap closure, 1 code change)
+- Last 5 plans: 12-07 (3 min), 12-08 (2 min), 12-06 (8 min), 12-05 (30 min), 12-04 (15 min)
+- Trend: Gap closure plans are fast (minimal code changes, well-defined scope)
 
 *Updated after each plan completion*
 
@@ -96,6 +96,7 @@ Recent decisions affecting current work:
 - [12-05]: Pre-existing lint issues (noNonNullAssertion) out of scope for migration
 - [12-06]: TraceEntry type separate from pino Logger (used by TraceStore for workflow debugging)
 - [12-06]: createPinoLogger alias for backward compatibility during migration
+- [12-07]: Per-request correlation via child loggers in webhook handlers
 - [12-08]: Runtime.install at module level before any Temporal operations
 - [12-08]: Dist cleanup is local-only since dist/ is gitignored
 
@@ -124,9 +125,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-20
-Stopped at: Completed 12-08-PLAN.md (Temporal Logger Wiring) - Gap closure
+Stopped at: Completed 12-07-PLAN.md (Webhook Correlation Wiring) - Phase 12 gap closure complete
 Resume file: None
-Next action: Await 12-07 completion, then Phase 12 fully complete
+Next action: Re-verify Phase 12 or begin Phase 13 (Error Handling)
 
 ---
-*Updated: 2026-01-20 after 12-08-PLAN.md complete*
+*Updated: 2026-01-20 after 12-07-PLAN.md complete*
