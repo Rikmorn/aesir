@@ -20,8 +20,8 @@ import type { WebClient } from "@slack/web-api";
 import {
   type RunProductAgentInput,
   runProductAgent,
-} from "../../../agents/product-agent/runner.js";
-import { createLogger } from "../../../logging/logger.js";
+} from "../../product-agent/runner.js";
+import { createLogger } from "@aesir/common";
 
 const logger = createLogger({
   defaultContext: { module: "slack-thread-handlers" },

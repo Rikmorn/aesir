@@ -4,16 +4,11 @@
  * Creates and runs a Temporal worker that executes workflows and activities.
  * The worker connects to a Temporal server and polls for tasks on a specific queue.
  *
- * Activities are bound with dependencies at worker startup via makeActivities().
+ * Activities are passed in from @aesir/agents via the config.activities parameter.
  */
 
 import { NativeConnection, Worker } from "@temporalio/worker";
-
-import { createLogger } from "../logging/logger.js";
-import {
-  type ActivityDependencies,
-  makeActivities,
-} from "./activities/index.js";
+import { createLogger } from "@aesir/common";
 
 const logger = createLogger({ defaultContext: { module: "temporal-worker" } });
 
@@ -27,8 +22,8 @@ export interface WorkerConfig {
   namespace?: string;
   /** Task queue name (required) - workflows and activities are routed via this queue */
   taskQueue: string;
-  /** Activity dependencies - required for activities to function at runtime */
-  dependencies?: ActivityDependencies;
+  /** Bound activities - created via makeActivities() from @aesir/agents */
+  activities?: object;
 }
 
 /**
@@ -55,22 +50,16 @@ export async function createTemporalWorker(
 
   const connection = await NativeConnection.connect({ address });
 
-  // Bind activities with dependencies if provided
-  let activities: object = {};
-  if (config.dependencies) {
-    activities = makeActivities(config.dependencies);
-    logger.info("temporal_worker_activities_bound", {
-      message: "Activities bound with dependencies",
-      context: {
-        hasSlackClient: !!config.dependencies.slackClient,
-        hasOctokit: !!config.dependencies.octokit,
-        hasLinearClient: !!config.dependencies.linearClient,
-        hasSandbox: !!config.dependencies.sandbox,
-      },
+  // Use provided activities (bound via makeActivities from @aesir/agents)
+  const activities = config.activities ?? {};
+  if (Object.keys(activities).length === 0) {
+    logger.warn("temporal_worker_no_activities", {
+      message: "No activities provided, workflow activity calls will fail",
     });
   } else {
-    logger.warn("temporal_worker_no_dependencies", {
-      message: "No dependencies provided, activities will fail at runtime",
+    logger.info("temporal_worker_activities_provided", {
+      message: "Activities provided for worker",
+      context: { activityCount: Object.keys(activities).length },
     });
   }
 

@@ -6,7 +6,7 @@
  */
 
 import type { IssueLabel, LinearClient, Team } from "@linear/sdk";
-import { createLogger } from "../../logging/logger.js";
+import { createLogger } from "@aesir/common";
 
 const logger = createLogger({ defaultContext: { module: "linear-issues" } });
 

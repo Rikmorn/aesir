@@ -17,13 +17,13 @@
 import { END, StateGraph } from "@langchain/langgraph";
 import type { LinearClient } from "@linear/sdk";
 import type { Octokit } from "@octokit/rest";
-import type { Sandbox } from "../sandbox/types.js";
 import {
+  type Sandbox,
   DEFAULT_DEV_WORKFLOW_CONFIG,
   type DevWorkflowConfig,
   DevWorkflowState,
   type DevWorkflowStateType,
-} from "../state/dev-workflow-state.js";
+} from "@aesir/common";
 import { createCommitPRNode } from "./nodes/commit-pr.js";
 import { createBranchNode } from "./nodes/create-branch.js";
 import { fixCodeNode } from "./nodes/fix-code.js";

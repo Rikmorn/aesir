@@ -1,7 +1,7 @@
-// @aesir/platform - state, temporal, sandbox, testing
+// @aesir/platform - temporal, sandbox, testing
 
-// State
-export * from "./state/index.js";
+// State is now in @aesir/common (re-export for backward compatibility)
+export * from "@aesir/common";
 
 // Temporal
 export * from "./temporal/index.js";

@@ -10,23 +10,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   ApprovalNotification,
   StatusNotification,
-} from "../../integrations/slack/types.js";
+} from "@aesir/integrations";
 import {
   sendApprovalRequestActivity,
   sendStatusUpdateActivity,
 } from "./slack-activities.js";
 
-// Mock the notifications module
-vi.mock("../../integrations/slack/notifications.js", () => ({
+// Mock the integrations module
+vi.mock("@aesir/integrations", () => ({
   sendApprovalRequest: vi.fn(),
   sendStatusUpdate: vi.fn(),
 }));
 
 // Import the mocked functions
-import {
-  sendApprovalRequest,
-  sendStatusUpdate,
-} from "../../integrations/slack/notifications.js";
+import { sendApprovalRequest, sendStatusUpdate } from "@aesir/integrations";
 
 describe("sendApprovalRequestActivity", () => {
   const mockClient = {} as WebClient;

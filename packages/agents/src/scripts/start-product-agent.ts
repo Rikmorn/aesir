@@ -21,7 +21,7 @@
  */
 
 // Environment must be loaded FIRST before any other imports
-import "../config/env.js";
+import "@aesir/common";
 
 // Now dynamically import modules that depend on env vars
 async function bootstrap(): Promise<void> {
@@ -29,10 +29,10 @@ async function bootstrap(): Promise<void> {
   const { PostgresSaver } = await import(
     "@langchain/langgraph-checkpoint-postgres"
   );
-  const { createBoltApp, startBoltApp, stopBoltApp, registerHandlers } =
-    await import("../integrations/slack/index.js");
-  const { getLinearClient } = await import("../integrations/linear/index.js");
-  const { createLogger } = await import("../logging/logger.js");
+  const { createBoltApp, startBoltApp, stopBoltApp, getLinearClient } =
+    await import("@aesir/integrations");
+  const { registerHandlers } = await import("../slack/assistant/thread-handlers.js");
+  const { createLogger } = await import("@aesir/common");
 
   const logger = createLogger({
     defaultContext: { module: "product-agent-main" },

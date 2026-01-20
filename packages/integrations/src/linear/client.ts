@@ -6,8 +6,8 @@
  */
 
 import { type Issue, LinearClient, type WorkflowState } from "@linear/sdk";
-import { createLogger } from "../../logging/logger.js";
-import type { IssueStatus, LinearConfig } from "./types.js";
+import { createLogger, type IssueStatus } from "@aesir/common";
+import type { LinearConfig } from "./types.js";
 
 const logger = createLogger({ defaultContext: { module: "linear-client" } });
 

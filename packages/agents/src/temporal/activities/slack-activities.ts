@@ -6,16 +6,14 @@
  */
 
 import type { WebClient } from "@slack/web-api";
+import { createLogger } from "@aesir/common";
 import {
   sendApprovalRequest,
   sendStatusUpdate,
-} from "../../integrations/slack/notifications.js";
-import type {
-  ApprovalNotification,
-  NotificationResult,
-  StatusNotification,
-} from "../../integrations/slack/types.js";
-import { createLogger } from "../../logging/logger.js";
+  type ApprovalNotification,
+  type NotificationResult,
+  type StatusNotification,
+} from "@aesir/integrations";
 
 const logger = createLogger({
   defaultContext: { module: "temporal-activity-slack" },

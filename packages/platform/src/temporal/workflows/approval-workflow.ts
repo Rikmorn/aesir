@@ -15,9 +15,7 @@
 
 import * as wf from "@temporalio/workflow";
 import { proxyActivities } from "@temporalio/workflow";
-import type { IssueStatus } from "../../integrations/linear/types.js";
-// Import BoundActivities type for properly typed activity proxies
-import type { BoundActivities } from "../activities/index.js";
+import type { BoundActivities, IssueStatus } from "@aesir/common";
 import { approvalSignal, changesRequestedSignal } from "../signals.js";
 import type { ApprovalDecision, ChangesRequested } from "../types.js";
 

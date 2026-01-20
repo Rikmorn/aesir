@@ -5,12 +5,12 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Sandbox, TestResult } from "../sandbox/types.js";
+import type { Sandbox, TestResult } from "@aesir/common";
 import type {
   DevWorkflowConfig,
   DevWorkflowStateType,
-} from "../state/dev-workflow-state.js";
-import { DEFAULT_DEV_WORKFLOW_CONFIG } from "../state/dev-workflow-state.js";
+} from "@aesir/common";
+import { DEFAULT_DEV_WORKFLOW_CONFIG } from "@aesir/common";
 import {
   type AfterTestRoute,
   createDevWorkflow,

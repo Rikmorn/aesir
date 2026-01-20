@@ -18,8 +18,8 @@ import {
   createIssue,
   type LabelInfo,
   listLabels,
-} from "../../../integrations/linear/issues.js";
-import { createLogger } from "../../../logging/logger.js";
+} from "@aesir/integrations";
+import { createLogger } from "@aesir/common";
 import { CREATE_TASKS_PROMPT } from "../prompts.js";
 import type {
   CreatedTask,

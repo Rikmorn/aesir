@@ -7,16 +7,16 @@
 
 import type { LinearClient } from "@linear/sdk";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { IssueStatus } from "../../integrations/linear/types.js";
+import type { IssueStatus } from "@aesir/common";
 import { updateLinearStatusActivity } from "./linear-activities.js";
 
-// Mock the Linear client module
-vi.mock("../../integrations/linear/client.js", () => ({
+// Mock the integrations module
+vi.mock("@aesir/integrations", () => ({
   updateIssueStatus: vi.fn(),
 }));
 
 // Import the mocked function
-import { updateIssueStatus } from "../../integrations/linear/client.js";
+import { updateIssueStatus } from "@aesir/integrations";
 
 describe("updateLinearStatusActivity", () => {
   const mockClient = {} as LinearClient;

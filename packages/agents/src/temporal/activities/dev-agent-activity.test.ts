@@ -9,16 +9,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   DevWorkflowDependencies,
   DevWorkflowResult,
-} from "../../agents/dev-workflow-runner.js";
+} from "../../dev-workflow-runner.js";
 import { executeDevWorkflow } from "./dev-agent-activity.js";
 
 // Mock the dev-workflow-runner module
-vi.mock("../../agents/dev-workflow-runner.js", () => ({
+vi.mock("../../dev-workflow-runner.js", () => ({
   runDevWorkflow: vi.fn(),
 }));
 
 // Import the mocked function
-import { runDevWorkflow } from "../../agents/dev-workflow-runner.js";
+import { runDevWorkflow } from "../../dev-workflow-runner.js";
 
 describe("executeDevWorkflow", () => {
   const mockDeps: DevWorkflowDependencies = {

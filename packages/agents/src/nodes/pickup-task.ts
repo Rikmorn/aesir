@@ -13,8 +13,8 @@ import {
   emitThought,
   readIssue,
   updateIssueStatus,
-} from "../../integrations/linear/index.js";
-import type { DevWorkflowStateType } from "../../state/dev-workflow-state.js";
+} from "@aesir/integrations";
+import type { DevWorkflowStateType } from "@aesir/common";
 
 /**
  * Factory function to create the pickup task node with injected LinearClient.

@@ -3,7 +3,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { DevWorkflowStateType } from "../../state/dev-workflow-state.js";
+import type { DevWorkflowStateType } from "@aesir/common";
 import { type CreateBranchConfig, createBranchNode } from "./create-branch.js";
 
 // Mock the GitHub integration module
@@ -11,7 +11,7 @@ vi.mock("../../integrations/github/index.js", () => ({
   createBranch: vi.fn(),
 }));
 
-import { createBranch } from "../../integrations/github/index.js";
+import { createBranch } from "@aesir/integrations";
 
 const mockCreateBranch = vi.mocked(createBranch);
 

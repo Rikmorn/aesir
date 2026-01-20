@@ -13,7 +13,7 @@
 
 import { Annotation } from "@langchain/langgraph";
 import { z } from "zod";
-import type { TestResult } from "../sandbox/types.js";
+import type { TestResult } from "../types/index.js";
 
 /**
  * Schema for a single file change in the workflow.

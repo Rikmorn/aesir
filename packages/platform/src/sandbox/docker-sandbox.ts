@@ -9,7 +9,7 @@ import * as path from "node:path";
 import type { Container } from "dockerode";
 import Docker from "dockerode";
 import * as tar from "tar-stream";
-import { createLogger, type Logger } from "../logging/logger.js";
+import { createLogger, type Logger } from "@aesir/common";
 import type { ExecutionResult, Sandbox, TestResult } from "./types.js";
 
 /**

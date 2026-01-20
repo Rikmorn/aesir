@@ -6,12 +6,12 @@
  * retry, timeout, and monitoring capabilities.
  */
 
+import { createLogger } from "@aesir/common";
 import {
   type DevWorkflowDependencies,
   type DevWorkflowResult,
   runDevWorkflow,
-} from "../../agents/dev-workflow-runner.js";
-import { createLogger } from "../../logging/logger.js";
+} from "../../dev-workflow-runner.js";
 
 const logger = createLogger({
   defaultContext: { module: "temporal-activity-dev-agent" },

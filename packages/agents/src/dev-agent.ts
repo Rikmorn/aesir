@@ -19,8 +19,8 @@
 import { ChatAnthropic } from "@langchain/anthropic";
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
-import { logger } from "../logging/index.js";
-import { codeGenTool } from "../tools/index.js";
+import { logger } from "@aesir/common";
+import { codeGenTool } from "./tools/index.js";
 
 /**
  * Default model for the agent

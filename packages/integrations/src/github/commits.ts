@@ -6,7 +6,7 @@
  */
 
 import type { Octokit } from "@octokit/rest";
-import { createLogger } from "../../logging/logger.js";
+import { createLogger } from "@aesir/common";
 import { getBranch } from "./branches.js";
 import type { CommitInfo, CreateCommitOptions } from "./types.js";
 

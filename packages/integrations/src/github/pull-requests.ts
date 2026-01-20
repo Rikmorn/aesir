@@ -6,7 +6,7 @@
  */
 
 import type { Octokit } from "@octokit/rest";
-import { createLogger } from "../../logging/logger.js";
+import { createLogger } from "@aesir/common";
 import type { CreatePROptions, PRComment, PullRequestInfo } from "./types.js";
 
 const logger = createLogger({

@@ -13,7 +13,7 @@
 
 import { ChatAnthropic } from "@langchain/anthropic";
 import { AIMessage } from "@langchain/core/messages";
-import { createLogger } from "../../../logging/logger.js";
+import { createLogger } from "@aesir/common";
 import { GENERATE_CLARIFICATION_PROMPT } from "../prompts.js";
 import type {
   ProductAgentPhase,

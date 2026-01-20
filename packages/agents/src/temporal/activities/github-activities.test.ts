@@ -9,13 +9,13 @@ import type { Octokit } from "@octokit/rest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type MergePRInput, mergePRActivity } from "./github-activities.js";
 
-// Mock the pull-requests module
-vi.mock("../../integrations/github/pull-requests.js", () => ({
+// Mock the integrations module
+vi.mock("@aesir/integrations", () => ({
   mergePullRequest: vi.fn(),
 }));
 
 // Import the mocked function
-import { mergePullRequest } from "../../integrations/github/pull-requests.js";
+import { mergePullRequest } from "@aesir/integrations";
 
 describe("mergePRActivity", () => {
   const mockOctokit = {} as Octokit;

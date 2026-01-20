@@ -1,10 +1,10 @@
 import type { Serialized } from "@langchain/core/load/serializable";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createLogger, type Logger } from "../../logging/logger.js";
+import { createLogger, type Logger } from "@aesir/common";
 import {
   createTraceStore,
   type TraceStore,
-} from "../../logging/trace-store.js";
+} from "@aesir/common";
 import { createLangGraphTracer, LangGraphTracer } from "./langgraph-tracer.js";
 
 /**

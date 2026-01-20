@@ -13,12 +13,12 @@ import type { Octokit } from "@octokit/rest";
 import {
   createCommit,
   createPullRequest,
-} from "../../integrations/github/index.js";
+} from "@aesir/integrations";
 import {
   emitResponse,
   updateIssueStatus,
-} from "../../integrations/linear/index.js";
-import type { DevWorkflowStateType } from "../../state/dev-workflow-state.js";
+} from "@aesir/integrations";
+import type { DevWorkflowStateType } from "@aesir/common";
 
 /**
  * GitHub repository configuration for commit and PR operations

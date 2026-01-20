@@ -3,7 +3,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { DevWorkflowStateType } from "../../state/dev-workflow-state.js";
+import type { DevWorkflowStateType } from "@aesir/common";
 import { type CommitPRConfig, createCommitPRNode } from "./commit-pr.js";
 
 // Mock the GitHub integration module
@@ -21,11 +21,11 @@ vi.mock("../../integrations/linear/index.js", () => ({
 import {
   createCommit,
   createPullRequest,
-} from "../../integrations/github/index.js";
+} from "@aesir/integrations";
 import {
   emitResponse,
   updateIssueStatus,
-} from "../../integrations/linear/index.js";
+} from "@aesir/integrations";
 
 const mockCreateCommit = vi.mocked(createCommit);
 const mockCreatePullRequest = vi.mocked(createPullRequest);

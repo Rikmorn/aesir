@@ -33,6 +33,7 @@ export {
   getTemporalClient,
   sendApprovalSignal,
   sendChangesRequestedSignal,
+  startApprovalWorkflow,
 } from "./client.js";
 
 // Signals (for workflow and client code)

@@ -3,7 +3,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DEFAULT_DEV_WORKFLOW_CONFIG } from "../state/dev-workflow-state.js";
+import { DEFAULT_DEV_WORKFLOW_CONFIG } from "@aesir/common";
 import {
   type DevWorkflowDependencies,
   runDevWorkflow,
@@ -63,7 +63,7 @@ vi.mock("./tracing/index.js", () => ({
   })),
 }));
 
-import { emitError, updateIssueStatus } from "../integrations/linear/index.js";
+import { emitError, updateIssueStatus } from "@aesir/integrations";
 import { createDevWorkflow } from "./dev-workflow.js";
 
 const mockCreateDevWorkflow = vi.mocked(createDevWorkflow);

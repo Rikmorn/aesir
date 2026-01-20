@@ -12,16 +12,14 @@
  * This is the primary entry point for running the Dev Agent workflow.
  */
 
-import { emitError, updateIssueStatus } from "../integrations/linear/index.js";
+import { emitError, updateIssueStatus } from "@aesir/integrations";
 import {
   createLogger,
   createTraceStore,
   type LogEntry,
-} from "../logging/index.js";
-import {
   DEFAULT_DEV_WORKFLOW_CONFIG,
   type DevWorkflowConfig,
-} from "../state/dev-workflow-state.js";
+} from "@aesir/common";
 import {
   createDevWorkflow,
   type DevWorkflowDependencies,

@@ -6,8 +6,8 @@
  */
 
 import type { Octokit } from "@octokit/rest";
-import { mergePullRequest } from "../../integrations/github/pull-requests.js";
-import { createLogger } from "../../logging/logger.js";
+import { createLogger } from "@aesir/common";
+import { mergePullRequest } from "@aesir/integrations";
 
 const logger = createLogger({
   defaultContext: { module: "temporal-activity-github" },

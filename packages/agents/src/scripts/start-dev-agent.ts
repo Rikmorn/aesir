@@ -27,7 +27,7 @@
  */
 
 // Environment must be loaded FIRST before any other imports
-import "../config/env.js";
+import "@aesir/common";
 
 import {
   createServer,
@@ -38,7 +38,13 @@ import type { LinearWebhookConfig } from "../api/webhooks/linear-agent-session.j
 import type { ActivityDependencies } from "../temporal/activities/index.js";
 
 async function bootstrap(): Promise<void> {
-  const { createTemporalWorker } = await import("../temporal/worker.js");
+  const {
+    createTemporalWorker,
+    DockerSandbox,
+    getLinearClient,
+    createLinearClientFromFile,
+    TokenFileNotFoundError,
+  } = await import("@aesir/integrations");
   const { makeActivities } = await import("../temporal/activities/index.js");
   const { linearWebhookHandler } = await import(
     "../api/webhooks/linear-agent-session.js"
@@ -46,14 +52,9 @@ async function bootstrap(): Promise<void> {
   const { prReviewWebhookHandler } = await import(
     "../api/webhooks/github-pr-review.js"
   );
-  const { getLinearClient } = await import("../integrations/linear/index.js");
-  const { createLinearClientFromFile, TokenFileNotFoundError } = await import(
-    "../integrations/linear/token-store.js"
-  );
   const { Octokit } = await import("@octokit/rest");
   const { WebClient } = await import("@slack/web-api");
-  const { DockerSandbox } = await import("../sandbox/docker-sandbox.js");
-  const { createLogger } = await import("../logging/logger.js");
+  const { createLogger } = await import("@aesir/common");
 
   const logger = createLogger({ defaultContext: { module: "dev-agent-main" } });
 
@@ -127,13 +128,16 @@ async function bootstrap(): Promise<void> {
 
   logger.info("init_temporal_worker", { message: "Starting Temporal worker" });
 
+  // Create bound activities from dependencies
+  const activities = makeActivities(dependencies);
+
   let worker;
   try {
     worker = await createTemporalWorker({
       address: temporalAddress,
       namespace: temporalNamespace,
       taskQueue,
-      dependencies,
+      activities,
     });
   } catch (error) {
     const _errorMessage =

@@ -17,7 +17,7 @@
 
 import { AIMessage, type BaseMessage } from "@langchain/core/messages";
 import { END } from "@langchain/langgraph";
-import { logger } from "../logging/index.js";
+import { logger } from "@aesir/common";
 
 /**
  * State shape required for loop guards

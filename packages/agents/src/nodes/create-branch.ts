@@ -9,8 +9,8 @@
  */
 
 import type { Octokit } from "@octokit/rest";
-import { createBranch } from "../../integrations/github/index.js";
-import type { DevWorkflowStateType } from "../../state/dev-workflow-state.js";
+import { createBranch } from "@aesir/integrations";
+import type { DevWorkflowStateType } from "@aesir/common";
 
 /**
  * GitHub repository configuration for branch operations

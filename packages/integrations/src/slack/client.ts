@@ -6,7 +6,7 @@
  */
 
 import { WebClient } from "@slack/web-api";
-import { createLogger } from "../../logging/logger.js";
+import { createLogger } from "@aesir/common";
 import type { SlackConfig } from "./types.js";
 
 const logger = createLogger({ defaultContext: { module: "slack-client" } });

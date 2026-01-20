@@ -64,13 +64,8 @@
  * ```
  */
 
-// Product Agent event handlers
-export {
-  handleAppMention,
-  handleDirectMessage,
-  registerHandlers,
-  type ThreadHandlerOptions,
-} from "./assistant/index.js";
+// NOTE: Product Agent event handlers moved to @aesir/agents/slack/assistant
+
 // Bolt app lifecycle
 export { createBoltApp, startBoltApp, stopBoltApp } from "./bolt-app.js";
 // Client factory

@@ -70,13 +70,14 @@ export type {
   AgentSessionPayload,
   ElicitationActivityContent,
   ErrorActivityContent,
-  IssueStatus,
   LinearConfig,
   ResponseActivityContent,
   ThoughtActivityContent,
   WebhookPayload,
   WebhookPayloadBase,
 } from "./types.js";
+// Re-export IssueStatus from common (shared cross-layer type)
+export type { IssueStatus } from "@aesir/common";
 // Webhook signature verification and payload parsing
 export {
   isAgentSessionEvent,

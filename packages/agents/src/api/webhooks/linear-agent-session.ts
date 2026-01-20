@@ -9,18 +9,18 @@
 import type {
   AgentSessionPayload,
   WebhookPayloadBase,
-} from "../../integrations/linear/types.js";
+} from "@aesir/integrations";
 import {
   isAgentSessionEvent,
   parseWebhookPayload,
   validateWebhookTimestamp,
   verifyWebhookSignature,
-} from "../../integrations/linear/webhooks.js";
-import { createLogger } from "../../logging/logger.js";
+} from "@aesir/integrations";
+import { createLogger } from "@aesir/common";
 import {
   type ApprovalWorkflowInput,
   startApprovalWorkflow,
-} from "../../temporal/client.js";
+} from "@aesir/integrations";
 
 const logger = createLogger({
   defaultContext: { module: "linear-agent-session-webhook" },

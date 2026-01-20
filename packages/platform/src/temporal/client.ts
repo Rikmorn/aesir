@@ -6,8 +6,7 @@
  */
 
 import { Client, Connection, type WorkflowHandle } from "@temporalio/client";
-
-import { createLogger } from "../logging/logger.js";
+import { createLogger } from "@aesir/common";
 import { approvalSignal, changesRequestedSignal } from "./signals.js";
 import type { ApprovalDecision, ChangesRequested } from "./types.js";
 import type {

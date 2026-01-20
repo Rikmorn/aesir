@@ -5,7 +5,7 @@
  * Integrates with the Logger class to intercept structured log entries.
  */
 
-import type { LogEntry, LogLevel } from "../logging/index.js";
+import type { LogEntry, LogLevel } from "@aesir/common";
 
 /**
  * Captured log entry with additional test utilities

@@ -16,7 +16,7 @@ vi.mock("../../temporal/client.js", () => ({
 }));
 
 // Import after mocking
-import * as temporalClient from "../../temporal/client.js";
+import * as temporalClient from "@aesir/integrations";
 
 describe("extractTaskId", () => {
   it('extracts task ID from "Task: ABC-123" format', () => {

@@ -6,7 +6,7 @@
  */
 
 import type { Block, KnownBlock, WebClient } from "@slack/web-api";
-import { createLogger } from "../../logging/logger.js";
+import { createLogger } from "@aesir/common";
 import type {
   ApprovalNotification,
   Notification,

@@ -6,7 +6,7 @@
 
 import type { ChatAnthropic } from "@langchain/anthropic";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { DevWorkflowStateType } from "../../state/dev-workflow-state.js";
+import type { DevWorkflowStateType } from "@aesir/common";
 import {
   type CodeGenerationOutput,
   CodeGenerationOutputSchema,

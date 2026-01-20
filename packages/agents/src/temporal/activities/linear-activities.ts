@@ -6,9 +6,8 @@
  */
 
 import type { LinearClient } from "@linear/sdk";
-import { updateIssueStatus } from "../../integrations/linear/client.js";
-import type { IssueStatus } from "../../integrations/linear/types.js";
-import { createLogger } from "../../logging/logger.js";
+import { createLogger, type IssueStatus } from "@aesir/common";
+import { updateIssueStatus } from "@aesir/integrations";
 
 const logger = createLogger({
   defaultContext: { module: "temporal-activity-linear" },

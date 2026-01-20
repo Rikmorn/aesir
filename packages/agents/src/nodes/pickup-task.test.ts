@@ -3,7 +3,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { DevWorkflowStateType } from "../../state/dev-workflow-state.js";
+import type { DevWorkflowStateType } from "@aesir/common";
 import { createPickupTaskNode } from "./pickup-task.js";
 
 // Mock the Linear integration module
@@ -17,7 +17,7 @@ import {
   emitThought,
   readIssue,
   updateIssueStatus,
-} from "../../integrations/linear/index.js";
+} from "@aesir/integrations";
 
 const mockReadIssue = vi.mocked(readIssue);
 const mockUpdateIssueStatus = vi.mocked(updateIssueStatus);

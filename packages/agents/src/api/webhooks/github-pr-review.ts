@@ -7,11 +7,11 @@
 
 import * as crypto from "node:crypto";
 
-import { createLogger } from "../../logging/logger.js";
+import { createLogger } from "@aesir/common";
 import {
   sendApprovalSignal,
   sendChangesRequestedSignal,
-} from "../../temporal/client.js";
+} from "@aesir/integrations";
 
 const logger = createLogger({
   defaultContext: { module: "github-pr-review-webhook" },

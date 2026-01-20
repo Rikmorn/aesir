@@ -14,8 +14,8 @@
  */
 
 import { GraphRecursionError } from "@langchain/langgraph";
-import { devAgentConfig } from "../config/index.js";
-import { logger } from "../logging/index.js";
+import { devAgentConfig } from "@aesir/common";
+import { logger } from "@aesir/common";
 import { devAgent } from "./dev-agent.js";
 
 /**

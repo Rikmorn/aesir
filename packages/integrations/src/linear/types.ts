@@ -136,18 +136,7 @@ export type AgentActivityContent =
   | ErrorActivityContent
   | ElicitationActivityContent;
 
-/**
- * Issue status values used in Linear workflows
- * These are the common status names; actual values depend on team configuration
- */
-export type IssueStatus =
-  | "Triage"
-  | "Ready"
-  | "Backlog"
-  | "In Progress"
-  | "Done"
-  | "Canceled"
-  | "Duplicate";
+// IssueStatus is re-exported from @aesir/common (see linear/index.ts)
 
 /**
  * Plan item for multi-step task progress

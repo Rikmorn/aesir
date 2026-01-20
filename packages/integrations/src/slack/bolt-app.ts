@@ -6,7 +6,7 @@
  */
 
 import { App } from "@slack/bolt";
-import { createLogger } from "../../logging/logger.js";
+import { createLogger } from "@aesir/common";
 import type { BoltAppConfig } from "./types.js";
 
 const logger = createLogger({ defaultContext: { module: "slack-bolt-app" } });

@@ -6,7 +6,7 @@
  */
 
 import { Octokit } from "@octokit/rest";
-import { createLogger } from "../../logging/logger.js";
+import { createLogger } from "@aesir/common";
 import type { GitHubConfig } from "./types.js";
 
 const logger = createLogger({ defaultContext: { module: "github-client" } });
