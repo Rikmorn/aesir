@@ -8,7 +8,7 @@
  * from crashing the workflow.
  */
 
-import type { LogEntry, PinoLogger, TraceStore } from "@aesir/common";
+import type { PinoLogger, TraceEntry, TraceStore } from "@aesir/common";
 import { BaseCallbackHandler } from "@langchain/core/callbacks/base";
 import type { Serialized } from "@langchain/core/load/serializable";
 import type { LLMResult } from "@langchain/core/outputs";
@@ -36,16 +36,16 @@ export class LangGraphTracer extends BaseCallbackHandler {
   }
 
   /**
-   * Helper to create and append a log entry to the store.
+   * Helper to create and append a trace entry to the store.
    */
   private appendToStore(
-    level: LogEntry["level"],
+    level: TraceEntry["level"],
     action: string,
     context: Record<string, unknown>,
-    outcome?: LogEntry["outcome"],
+    outcome?: TraceEntry["outcome"],
     message?: string,
   ): void {
-    const entry: LogEntry = {
+    const entry: TraceEntry = {
       timestamp: new Date().toISOString(),
       level,
       action,

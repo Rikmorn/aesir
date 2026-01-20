@@ -17,8 +17,8 @@ import {
   createTraceStore,
   DEFAULT_DEV_WORKFLOW_CONFIG,
   type DevWorkflowConfig,
-  type LogEntry,
   type PinoLogger,
+  type TraceEntry,
 } from "@aesir/common";
 import { emitError, updateIssueStatus } from "@aesir/integrations";
 import {
@@ -46,7 +46,7 @@ export interface DevWorkflowResult {
   /** Total workflow duration in milliseconds */
   durationMs: number;
   /** Workflow execution traces for debugging */
-  traces?: LogEntry[];
+  traces?: TraceEntry[];
 }
 
 /**

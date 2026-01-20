@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { createLogger, type LogEntry } from "./logger.js";
+import type { TraceEntry } from "./trace-entry.js";
 import { createTraceStore, type TraceStore } from "./trace-store.js";
 
 /**
- * Helper to create a LogEntry for testing
+ * Helper to create a TraceEntry for testing
  */
 function createTestEntry(
   action: string,
   taskId?: string,
   workflowId?: string,
-): LogEntry {
+): TraceEntry {
   return {
     timestamp: new Date().toISOString(),
     level: "info",
@@ -189,53 +189,6 @@ describe("TraceStore", () => {
 
     it("returns 0 for empty store", () => {
       expect(store.size()).toBe(0);
-    });
-  });
-
-  describe("Integration with Logger", () => {
-    it("Logger with customOutput appends to TraceStore", () => {
-      const logger = createLogger({
-        minLevel: "debug",
-        console: false,
-        output: (entry) => store.append(entry),
-        defaultContext: { taskId: "TASK-100" },
-      });
-
-      logger.info("node_start", { message: "Starting node" });
-      logger.info("node_end", { message: "Node complete" });
-
-      const entries = store.getByTaskId("TASK-100");
-      expect(entries).toHaveLength(2);
-      expect(entries[0]?.action).toBe("node_start");
-      expect(entries[1]?.action).toBe("node_end");
-    });
-
-    it("Child logger with taskId produces queryable entries", () => {
-      const rootLogger = createLogger({
-        minLevel: "debug",
-        console: false,
-        output: (entry) => store.append(entry),
-      });
-
-      const taskLogger = rootLogger.child({
-        taskId: "TASK-200",
-        workflowId: "WF-001",
-      });
-
-      taskLogger.info("generate_code", { message: "Generating code" });
-      taskLogger.info("run_tests", { message: "Running tests" });
-
-      // Query by taskId
-      const taskEntries = store.getByTaskId("TASK-200");
-      expect(taskEntries).toHaveLength(2);
-
-      // Query by workflowId
-      const workflowEntries = store.getByWorkflowId("WF-001");
-      expect(workflowEntries).toHaveLength(2);
-
-      // Verify context is preserved
-      expect(taskEntries[0]?.context.taskId).toBe("TASK-200");
-      expect(taskEntries[0]?.context.workflowId).toBe("WF-001");
     });
   });
 

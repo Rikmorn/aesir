@@ -1,16 +1,7 @@
 /**
  * Logging Module Public API
  *
- * Exports pino-based structured logging utilities alongside legacy logger.
- *
- * New pino exports (preferred for new code):
- * - createPinoLogger: Factory for pino logger instances
- * - createChildLogger: Create child logger with additional context
- * - generateCorrelationId: Create prefixed correlation IDs
- *
- * Existing exports (maintained for backward compatibility):
- * - createLogger, Logger: Original implementation (will migrate in 12-04)
- * - createTimer: Timer utility
+ * Exports pino-based structured logging utilities.
  */
 
 // Correlation ID utilities
@@ -20,28 +11,18 @@ export {
   generateCorrelationId,
   type OperationType,
 } from "./correlation.js";
+
 // HTTP middleware
 export {
   createHttpLogger,
   type HttpLogger,
   type HttpLoggerOptions,
 } from "./http-logger.js";
-// Existing Logger exports (maintained for backward compatibility)
-// Will be migrated to pino in plan 12-04
-export {
-  createLogger,
-  createTimer,
-  type LogContext,
-  type LogEntry,
-  Logger,
-  type LoggerOptions,
-  type LogLevel,
-  logger,
-  type Timer,
-} from "./logger.js";
-// New pino-based logging (use createPinoLogger for new code)
+// Core logger factory
 export {
   createChildLogger,
+  createLogger,
+  // Re-export as createPinoLogger for explicit naming during migration
   createLogger as createPinoLogger,
 } from "./pino-logger.js";
 // Redaction configuration
@@ -52,14 +33,20 @@ export {
   type TemporalLoggerInterface,
   type TemporalLogLevel,
 } from "./temporal-logger.js";
-
-// TraceStore (will be updated in plan 12-04)
+// TraceEntry types for workflow debugging
+export type {
+  TraceContext,
+  TraceEntry,
+  TraceLevel,
+} from "./trace-entry.js";
+// TraceStore for workflow observability
 export { createTraceStore, TraceStore } from "./trace-store.js";
-
 // Types for pino logger
+// Re-export Logger as PinoLogger for explicit naming
 export type {
   ChildLoggerContext,
   CreateLoggerOptions,
+  Logger,
   Logger as PinoLogger,
   LoggerBindings,
 } from "./types.js";

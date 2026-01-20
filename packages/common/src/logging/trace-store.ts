@@ -1,28 +1,28 @@
 /**
  * TraceStore for Workflow Observability
  *
- * Indexes log entries by task ID for query-by-task debugging.
+ * Indexes trace entries by task ID for query-by-task debugging.
  * Enables querying all workflow events for a specific task.
  */
 
-import type { LogEntry } from "./logger.js";
+import type { TraceEntry } from "./trace-entry.js";
 
 /**
- * TraceStore stores and indexes log entries by task ID.
+ * TraceStore stores and indexes trace entries by task ID.
  *
  * Provides query methods for debugging workflow execution:
  * - getByTaskId: Get all entries for a specific task
  * - getByWorkflowId: Get all entries for a workflow run
  */
 export class TraceStore {
-  private readonly byTaskId = new Map<string, LogEntry[]>();
+  private readonly byTaskId = new Map<string, TraceEntry[]>();
 
   /**
-   * Append a log entry to the store.
+   * Append a trace entry to the store.
    * Entry is indexed by taskId from entry.context.
    * No-op if taskId is missing.
    */
-  append(entry: LogEntry): void {
+  append(entry: TraceEntry): void {
     const taskId = entry.context.taskId;
     if (typeof taskId !== "string" || taskId === "") {
       return;
@@ -34,21 +34,21 @@ export class TraceStore {
   }
 
   /**
-   * Get all log entries for a specific task ID.
+   * Get all trace entries for a specific task ID.
    * Returns entries in append order.
    * Returns empty array if taskId not found.
    */
-  getByTaskId(taskId: string): LogEntry[] {
+  getByTaskId(taskId: string): TraceEntry[] {
     return this.byTaskId.get(taskId) ?? [];
   }
 
   /**
-   * Get all log entries for a specific workflow ID.
+   * Get all trace entries for a specific workflow ID.
    * Searches across all tasks for matching workflowId in context.
    * Returns empty array if workflowId not found.
    */
-  getByWorkflowId(workflowId: string): LogEntry[] {
-    const results: LogEntry[] = [];
+  getByWorkflowId(workflowId: string): TraceEntry[] {
+    const results: TraceEntry[] = [];
 
     for (const entries of this.byTaskId.values()) {
       for (const entry of entries) {
@@ -75,7 +75,7 @@ export class TraceStore {
   }
 
   /**
-   * Get the total number of log entries across all tasks.
+   * Get the total number of trace entries across all tasks.
    */
   size(): number {
     let total = 0;
