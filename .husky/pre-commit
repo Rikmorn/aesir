@@ -1,9 +1,7 @@
 #!/bin/sh
 
-# TEMPORARILY DISABLED FOR MONOREPO MIGRATION (Phase 11)
-# Re-enable after migration completes in 11-04-PLAN.md
+# Pre-commit hooks for aesir monorepo
+# Runs biome check on staged files and typecheck
 
-# npx biome check --staged --no-errors-on-unmatched
-# npm run typecheck
-
-echo "Pre-commit hooks disabled for monorepo migration"
+npx biome check --staged --no-errors-on-unmatched
+pnpm -r run build
