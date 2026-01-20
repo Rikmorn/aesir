@@ -54,9 +54,9 @@ async function bootstrap(): Promise<void> {
   );
   const { Octokit } = await import("@octokit/rest");
   const { WebClient } = await import("@slack/web-api");
-  const { createLogger } = await import("@aesir/common");
+  const { createPinoLogger } = await import("@aesir/common");
 
-  const logger = createLogger({ defaultContext: { module: "dev-agent-main" } });
+  const logger = createPinoLogger({ component: "agents:scripts:dev-agent" });
 
   // Note: Required environment variables are validated by ../config/env.js at import time
 
@@ -74,22 +74,23 @@ async function bootstrap(): Promise<void> {
   const { owner, repo } = validateGitHubRepo();
 
   // Initialize dependencies
-  logger.info("init_dependencies", { message: "Initializing dependencies" });
+  logger.info({}, "Initializing dependencies");
 
   // Prefer OAuth tokens from file (shows app identity in Linear)
   // Fall back to LINEAR_ACCESS_TOKEN env var (shows user identity)
   let linearClient;
   try {
     linearClient = await createLinearClientFromFile();
-    logger.info("linear_client_init", {
-      message: "Using OAuth tokens from .tokens/linear.json (app identity)",
-    });
+    logger.info(
+      {},
+      "Using OAuth tokens from .tokens/linear.json (app identity)",
+    );
   } catch (err) {
     if (err instanceof TokenFileNotFoundError) {
-      logger.warn("linear_client_fallback", {
-        message:
-          "OAuth tokens not found, falling back to LINEAR_ACCESS_TOKEN (user identity). Run 'docker compose --profile oauth run --rm oauth' for app identity.",
-      });
+      logger.warn(
+        {},
+        "OAuth tokens not found, falling back to LINEAR_ACCESS_TOKEN (user identity). Run 'docker compose --profile oauth run --rm oauth' for app identity.",
+      );
       linearClient = getLinearClient(process.env.LINEAR_ACCESS_TOKEN!);
     } else {
       throw err;
@@ -101,7 +102,7 @@ async function bootstrap(): Promise<void> {
   // Create sandbox for worker activities
   // Note: In production, you'd want sandbox-per-task, but for MVP
   // we create one that gets reused by activities
-  logger.info("init_sandbox", { message: "Creating Docker sandbox" });
+  logger.info({}, "Creating Docker sandbox");
   const sandbox = await DockerSandbox.create({
     image: "node:20-alpine",
   });
@@ -126,7 +127,7 @@ async function bootstrap(): Promise<void> {
   const temporalNamespace = process.env.TEMPORAL_NAMESPACE ?? "default";
   const taskQueue = "dev-agent-queue";
 
-  logger.info("init_temporal_worker", { message: "Starting Temporal worker" });
+  logger.info({}, "Starting Temporal worker");
 
   // Create bound activities from dependencies
   const activities = makeActivities(dependencies);
@@ -149,10 +150,7 @@ async function bootstrap(): Promise<void> {
   // Start worker in background (non-blocking)
   const workerPromise = worker.run();
   workerPromise.catch((err) => {
-    logger.error("temporal_worker_error", {
-      outcome: "failure",
-      message: `Temporal worker error: ${err.message}`,
-    });
+    logger.error({ err }, `Temporal worker error: ${err.message}`);
     process.exit(1);
   });
 
@@ -163,20 +161,16 @@ async function bootstrap(): Promise<void> {
   const server = createServer(
     async (req: IncomingMessage, res: ServerResponse) => {
       // Log all incoming requests for debugging
-      logger.info("http_request_received", {
-        message: `${req.method} ${req.url}`,
-        context: {
+      logger.info(
+        {
           method: req.method,
           url: req.url,
-          headers: {
-            "content-type": req.headers["content-type"],
-            "linear-signature": req.headers["linear-signature"]
-              ? "[present]"
-              : "[missing]",
-            "user-agent": req.headers["user-agent"],
-          },
+          contentType: req.headers["content-type"],
+          hasLinearSignature: Boolean(req.headers["linear-signature"]),
+          userAgent: req.headers["user-agent"],
         },
-      });
+        `${req.method} ${req.url}`,
+      );
 
       // Health check endpoint
       if (req.method === "GET" && req.url === "/health") {
@@ -216,10 +210,10 @@ async function bootstrap(): Promise<void> {
       // Route to appropriate handler
       if (req.url === "/webhooks/linear") {
         try {
-          logger.debug("linear_webhook_routing", {
-            message: "Routing to Linear webhook handler",
-            context: { bodyLength: rawBody.length },
-          });
+          logger.debug(
+            { bodyLength: rawBody.length },
+            "Routing to Linear webhook handler",
+          );
           await linearWebhookHandler(
             webhookReq,
             webhookRes,
@@ -228,14 +222,10 @@ async function bootstrap(): Promise<void> {
           );
         } catch (err) {
           const errorMessage = err instanceof Error ? err.message : String(err);
-          logger.error("linear_webhook_handler_error", {
-            outcome: "failure",
-            message: `Unhandled error in Linear webhook handler: ${errorMessage}`,
-            context: {
-              error: errorMessage,
-              stack: err instanceof Error ? err.stack : undefined,
-            },
-          });
+          logger.error(
+            { err },
+            `Unhandled error in Linear webhook handler: ${errorMessage}`,
+          );
           res.writeHead(500, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ error: "Internal server error" }));
         }

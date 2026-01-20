@@ -34,36 +34,34 @@ async function bootstrap(): Promise<void> {
   const { registerHandlers } = await import(
     "../slack/assistant/thread-handlers.js"
   );
-  const { createLogger } = await import("@aesir/common");
+  const { createPinoLogger } = await import("@aesir/common");
 
-  const logger = createLogger({
-    defaultContext: { module: "product-agent-main" },
+  const logger = createPinoLogger({
+    component: "agents:scripts:product-agent",
   });
 
   // Note: Required environment variables are validated by ../config/env.js at import time
 
   // Initialize LLM
-  logger.info("init_llm", { message: "Initializing ChatAnthropic" });
+  logger.info({}, "Initializing ChatAnthropic");
   const llm = new ChatAnthropic({
     model: "claude-sonnet-4-20250514",
     temperature: 0.7,
   });
 
   // Initialize Linear client
-  logger.info("init_linear", { message: "Initializing Linear client" });
+  logger.info({}, "Initializing Linear client");
   const linearClient = getLinearClient(process.env.LINEAR_ACCESS_TOKEN!);
   const teamId = process.env.LINEAR_TEAM_ID!;
 
   // Initialize checkpointer for conversation persistence
   // Uses PostgreSQL for persistence across restarts
-  logger.info("init_checkpointer", {
-    message: "Initializing PostgreSQL checkpointer",
-  });
+  logger.info({}, "Initializing PostgreSQL checkpointer");
   const checkpointer = PostgresSaver.fromConnString(process.env.DATABASE_URL!);
   await checkpointer.setup();
 
   // Create Bolt app with Socket Mode
-  logger.info("init_bolt", { message: "Creating Bolt app with Socket Mode" });
+  logger.info({}, "Creating Bolt app with Socket Mode");
   const app = createBoltApp({
     botToken: process.env.SLACK_BOT_TOKEN!,
     appToken: process.env.SLACK_APP_TOKEN!,
@@ -72,28 +70,26 @@ async function bootstrap(): Promise<void> {
 
   // Fetch bot user ID for @mention detection in threads
   // Using auth.test API to dynamically get the bot's user ID
-  logger.info("fetch_bot_user_id", {
-    message: "Fetching bot user ID from Slack",
-  });
+  logger.info({}, "Fetching bot user ID from Slack");
   let botUserId: string | undefined;
   try {
     const authResult = await app.client.auth.test();
     botUserId = authResult.user_id;
-    logger.info("bot_user_id_fetched", {
-      outcome: "success",
-      message: `Bot user ID: ${botUserId}`,
-      context: { botUserId, botName: authResult.user },
-    });
+    logger.info(
+      { botUserId, botName: authResult.user },
+      `Bot user ID: ${botUserId}`,
+    );
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
-    logger.warn("bot_user_id_fetch_failed", {
-      message: `Failed to fetch bot user ID: ${errorMessage}. Thread @mention fallback will be disabled.`,
-    });
+    logger.warn(
+      { err: error },
+      `Failed to fetch bot user ID: ${errorMessage}. Thread @mention fallback will be disabled.`,
+    );
   }
 
   // Register event handlers
-  logger.info("register_handlers", { message: "Registering event handlers" });
+  logger.info({}, "Registering event handlers");
 
   // Build options conditionally for exactOptionalPropertyTypes compliance
   const handlerOptions: Parameters<typeof registerHandlers>[1] = {

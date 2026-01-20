@@ -5,12 +5,16 @@
  * Activities receive pre-configured LinearClient from the workflow.
  */
 
-import { createLogger, type IssueStatus } from "@aesir/common";
+import {
+  createPinoLogger,
+  type IssueStatus,
+  type PinoLogger,
+} from "@aesir/common";
 import { updateIssueStatus } from "@aesir/integrations";
 import type { LinearClient } from "@linear/sdk";
 
-const logger = createLogger({
-  defaultContext: { module: "temporal-activity-linear" },
+const logger: PinoLogger = createPinoLogger({
+  component: "agents:temporal:linear-activities",
 });
 
 /**
@@ -28,16 +32,15 @@ export async function updateLinearStatusActivity(
   issueId: string,
   statusName: IssueStatus,
 ): Promise<void> {
-  logger.info("activity_linear_update_status", {
-    message: `Updating issue ${issueId} to ${statusName}`,
-    context: { issueId, statusName },
-  });
+  logger.info(
+    { issueId, statusName },
+    `Updating issue ${issueId} to ${statusName}`,
+  );
 
   await updateIssueStatus(client, issueId, statusName);
 
-  logger.info("activity_linear_update_status_complete", {
-    outcome: "success",
-    message: `Issue ${issueId} updated to ${statusName}`,
-    context: { issueId, statusName },
-  });
+  logger.info(
+    { issueId, statusName },
+    `Issue ${issueId} updated to ${statusName}`,
+  );
 }

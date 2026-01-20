@@ -10,7 +10,7 @@
  * - Returns structured output with response, phase, and created tasks
  */
 
-import { createLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import type { ChatAnthropic } from "@langchain/anthropic";
 import { AIMessage, HumanMessage } from "@langchain/core/messages";
 import type { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
@@ -18,8 +18,8 @@ import type { LinearClient } from "@linear/sdk";
 import { createProductAgentGraph } from "./graph.js";
 import type { CreatedTask, ProductAgentPhase } from "./state.js";
 
-const logger = createLogger({
-  defaultContext: { module: "product-agent-runner" },
+const logger: PinoLogger = createPinoLogger({
+  component: "agents:product-agent:runner",
 });
 
 /**
@@ -103,13 +103,13 @@ export async function runProductAgent(
     userId: input.slackContext.userId,
   });
 
-  runLogger.info("run_product_agent_start", {
-    message: "Starting Product Agent run",
-    context: {
+  runLogger.info(
+    {
       messageLength: input.message.length,
       historyCount: input.conversationHistory?.length ?? 0,
     },
-  });
+    "Starting Product Agent run",
+  );
 
   try {
     // Create the graph with injected dependencies
@@ -172,25 +172,24 @@ export async function runProductAgent(
       }));
     }
 
-    runLogger.info("run_product_agent_complete", {
-      outcome: "success",
-      message: "Product Agent run completed",
-      context: {
+    runLogger.info(
+      {
         phase: result.phase,
         responseLength: response.length,
         tasksCreated: output.createdTasks?.length ?? 0,
       },
-    });
+      "Product Agent run completed",
+    );
 
     return output;
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
 
-    runLogger.error("run_product_agent_error", {
-      outcome: "failure",
-      message: `Product Agent run failed: ${errorMessage}`,
-    });
+    runLogger.error(
+      { err: error },
+      `Product Agent run failed: ${errorMessage}`,
+    );
 
     throw error;
   }

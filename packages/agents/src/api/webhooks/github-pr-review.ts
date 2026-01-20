@@ -7,14 +7,14 @@
 
 import * as crypto from "node:crypto";
 
-import { createLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import {
   sendApprovalSignal,
   sendChangesRequestedSignal,
 } from "@aesir/integrations";
 
-const logger = createLogger({
-  defaultContext: { module: "github-pr-review-webhook" },
+const logger: PinoLogger = createPinoLogger({
+  component: "agents:webhooks:github-pr-review",
 });
 
 /**
@@ -143,10 +143,10 @@ export async function handlePRReviewEvent(
 ): Promise<HandlePRReviewResult> {
   // Only handle 'submitted' action
   if (event.action !== "submitted") {
-    logger.debug("github_pr_review_ignored", {
-      message: `Ignoring PR review action: ${event.action}`,
-      context: { action: event.action },
-    });
+    logger.debug(
+      { action: event.action },
+      `Ignoring PR review action: ${event.action}`,
+    );
     return { action: "ignored" };
   }
 
@@ -155,17 +155,17 @@ export async function handlePRReviewEvent(
   const prNumber = event.pull_request.number;
   const comment = event.review.body;
 
-  logger.info("github_pr_review_received", {
-    message: `PR #${prNumber} review: ${reviewState} by ${reviewer}`,
-    context: { prNumber, state: reviewState, reviewer },
-  });
+  logger.info(
+    { prNumber, state: reviewState, reviewer },
+    `PR #${prNumber} review: ${reviewState} by ${reviewer}`,
+  );
 
   // Only process approved or changes_requested
   if (reviewState !== "approved" && reviewState !== "changes_requested") {
-    logger.debug("github_pr_review_state_ignored", {
-      message: `Ignoring PR review state: ${reviewState}`,
-      context: { state: reviewState },
-    });
+    logger.debug(
+      { state: reviewState },
+      `Ignoring PR review state: ${reviewState}`,
+    );
     return { action: "ignored" };
   }
 
@@ -173,10 +173,10 @@ export async function handlePRReviewEvent(
   const taskId = extractTaskId(event.pull_request);
 
   if (!taskId) {
-    logger.warn("github_pr_review_no_task_id", {
-      message: "Could not extract task ID from PR",
-      context: { prNumber, title: event.pull_request.title },
-    });
+    logger.warn(
+      { prNumber, title: event.pull_request.title },
+      "Could not extract task ID from PR",
+    );
     return { action: "no_task_id" };
   }
 
@@ -190,11 +190,10 @@ export async function handlePRReviewEvent(
         ...(comment != null && { comment }),
       });
 
-      logger.info("github_pr_review_approval_sent", {
-        outcome: "success",
-        message: `Approval signal sent for PR #${prNumber}`,
-        context: { prNumber, workflowId, reviewer },
-      });
+      logger.info(
+        { prNumber, workflowId, reviewer },
+        `Approval signal sent for PR #${prNumber}`,
+      );
 
       return { action: "approved", workflowId };
     } else {
@@ -204,22 +203,20 @@ export async function handlePRReviewEvent(
         feedback: comment ?? "Changes requested (no details provided)",
       });
 
-      logger.info("github_pr_review_changes_requested_sent", {
-        outcome: "success",
-        message: `Changes-requested signal sent for PR #${prNumber}`,
-        context: { prNumber, workflowId, reviewer },
-      });
+      logger.info(
+        { prNumber, workflowId, reviewer },
+        `Changes-requested signal sent for PR #${prNumber}`,
+      );
 
       return { action: "changes_requested", workflowId };
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
 
-    logger.error("github_pr_review_signal_failed", {
-      outcome: "failure",
-      message: `Failed to send signal for PR #${prNumber}: ${errorMessage}`,
-      context: { prNumber, workflowId, error: errorMessage },
-    });
+    logger.error(
+      { prNumber, workflowId, err: error },
+      `Failed to send signal for PR #${prNumber}: ${errorMessage}`,
+    );
 
     // Return error state instead of throwing
     return { action: "error", workflowId, error: errorMessage };
@@ -260,9 +257,7 @@ export async function prReviewWebhookHandler(
   // Verify signature if secret is configured
   if (webhookSecret && signature) {
     if (!verifyWebhookSignature(req.rawBody, signature, webhookSecret)) {
-      logger.warn("github_webhook_invalid_signature", {
-        message: "Invalid webhook signature",
-      });
+      logger.warn({}, "Invalid webhook signature");
       res.status(401).json({ error: "Invalid signature" });
       return;
     }

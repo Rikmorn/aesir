@@ -5,7 +5,7 @@
  * Activities receive pre-configured WebClient from the workflow.
  */
 
-import { createLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import {
   type ApprovalNotification,
   type NotificationResult,
@@ -15,8 +15,8 @@ import {
 } from "@aesir/integrations";
 import type { WebClient } from "@slack/web-api";
 
-const logger = createLogger({
-  defaultContext: { module: "temporal-activity-slack" },
+const logger: PinoLogger = createPinoLogger({
+  component: "agents:temporal:slack-activities",
 });
 
 /**
@@ -32,10 +32,10 @@ export async function sendApprovalRequestActivity(
   notification: ApprovalNotification,
   channel: string,
 ): Promise<NotificationResult> {
-  logger.info("activity_slack_approval_request", {
-    message: `Sending approval request for task ${notification.taskId}`,
-    context: { taskId: notification.taskId, channel },
-  });
+  logger.info(
+    { taskId: notification.taskId, channel },
+    `Sending approval request for task ${notification.taskId}`,
+  );
 
   return sendApprovalRequest(client, notification, channel);
 }
@@ -53,14 +53,10 @@ export async function sendStatusUpdateActivity(
   notification: StatusNotification,
   channel: string,
 ): Promise<NotificationResult> {
-  logger.info("activity_slack_status_update", {
-    message: `Sending status update for task ${notification.taskId}`,
-    context: {
-      taskId: notification.taskId,
-      status: notification.status,
-      channel,
-    },
-  });
+  logger.info(
+    { taskId: notification.taskId, status: notification.status, channel },
+    `Sending status update for task ${notification.taskId}`,
+  );
 
   return sendStatusUpdate(client, notification, channel);
 }

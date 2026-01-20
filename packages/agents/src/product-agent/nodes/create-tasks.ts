@@ -11,7 +11,7 @@
  * - Sets state.phase to 'complete' when done
  */
 
-import { createLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import { createIssue, type LabelInfo, listLabels } from "@aesir/integrations";
 import { ChatAnthropic } from "@langchain/anthropic";
 import type { LinearClient } from "@linear/sdk";
@@ -24,7 +24,9 @@ import type {
   ProductAgentStateUpdate,
 } from "../state.js";
 
-const logger = createLogger({ defaultContext: { module: "create-tasks" } });
+const logger: PinoLogger = createPinoLogger({
+  component: "agents:product-agent:create-tasks",
+});
 
 /**
  * Schema for a single generated task
@@ -120,9 +122,7 @@ async function resolveLabelIds(
     return resolvedIds;
   } catch {
     // If label lookup fails, continue without labels
-    logger.warn("label_resolution_failed", {
-      message: "Failed to resolve labels, continuing without them",
-    });
+    logger.warn({}, "Failed to resolve labels, continuing without them");
     return [];
   }
 }
@@ -139,15 +139,15 @@ export function createTasksNode(options: CreateTasksNodeOptions) {
   return async (state: ProductAgentState): Promise<ProductAgentStateUpdate> => {
     const nodeLogger = logger.child({ node: "create-tasks" });
 
-    nodeLogger.debug("create_tasks_start", {
-      message: "Generating and creating tasks from requirements",
-      context: {
+    nodeLogger.debug(
+      {
         messageCount: state.messages.length,
         hasWhat: state.requirements.what !== null,
         hasWhy: state.requirements.why !== null,
         teamId,
       },
-    });
+      "Generating and creating tasks from requirements",
+    );
 
     try {
       // Use provided LLM or create default
@@ -170,14 +170,13 @@ export function createTasksNode(options: CreateTasksNodeOptions) {
         { role: "user", content: requirementsContext },
       ]);
 
-      nodeLogger.info("tasks_generated", {
-        outcome: "success",
-        message: `Generated ${taskList.tasks.length} task(s)`,
-        context: {
+      nodeLogger.info(
+        {
           taskCount: taskList.tasks.length,
           projectContext: taskList.projectContext.slice(0, 100),
         },
-      });
+        `Generated ${taskList.tasks.length} task(s)`,
+      );
 
       // Create tasks in Linear
       const createdTasks: CreatedTask[] = [];
@@ -219,37 +218,23 @@ export function createTasksNode(options: CreateTasksNodeOptions) {
             title: result.title,
           });
 
-          nodeLogger.info("task_created", {
-            outcome: "success",
-            message: `Created task ${result.identifier}: ${result.title}`,
-            context: {
-              issueId: result.id,
-              identifier: result.identifier,
-            },
-          });
+          nodeLogger.info(
+            { issueId: result.id, identifier: result.identifier },
+            `Created task ${result.identifier}: ${result.title}`,
+          );
         } catch (error) {
-          const errorMessage =
-            error instanceof Error
-              ? error.message
-              : "Unknown error creating task";
-
-          nodeLogger.error("task_creation_failed", {
-            outcome: "failure",
-            message: `Failed to create task: ${task.title}`,
-            context: { error: errorMessage },
-          });
+          nodeLogger.error(
+            { err: error, taskTitle: task.title },
+            `Failed to create task: ${task.title}`,
+          );
           // Continue with other tasks
         }
       }
 
-      nodeLogger.info("create_tasks_complete", {
-        outcome: "success",
-        message: `Created ${createdTasks.length} of ${taskList.tasks.length} task(s)`,
-        context: {
-          created: createdTasks.length,
-          total: taskList.tasks.length,
-        },
-      });
+      nodeLogger.info(
+        { created: createdTasks.length, total: taskList.tasks.length },
+        `Created ${createdTasks.length} of ${taskList.tasks.length} task(s)`,
+      );
 
       return {
         createdTasks,
@@ -261,10 +246,7 @@ export function createTasksNode(options: CreateTasksNodeOptions) {
           ? error.message
           : "Unknown error during task creation";
 
-      nodeLogger.error("create_tasks_error", {
-        outcome: "failure",
-        message: errorMessage,
-      });
+      nodeLogger.error({ err: error }, errorMessage);
 
       // On error, stay in creating phase (can retry)
       return {

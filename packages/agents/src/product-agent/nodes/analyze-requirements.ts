@@ -11,7 +11,7 @@
  * - Accepts LLM via options for testability
  */
 
-import { createLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
 import { ANALYZE_REQUIREMENTS_PROMPT } from "../prompts.js";
@@ -22,8 +22,8 @@ import type {
   Requirements,
 } from "../state.js";
 
-const logger = createLogger({
-  defaultContext: { module: "analyze-requirements" },
+const logger: PinoLogger = createPinoLogger({
+  component: "agents:product-agent:analyze-requirements",
 });
 
 /**
@@ -93,13 +93,10 @@ export function analyzeRequirementsNode(
   return async (state: ProductAgentState): Promise<ProductAgentStateUpdate> => {
     const nodeLogger = logger.child({ node: "analyze-requirements" });
 
-    nodeLogger.debug("analyze_requirements_start", {
-      message: "Analyzing conversation for requirements",
-      context: {
-        messageCount: state.messages.length,
-        currentPhase: state.phase,
-      },
-    });
+    nodeLogger.debug(
+      { messageCount: state.messages.length, currentPhase: state.phase },
+      "Analyzing conversation for requirements",
+    );
 
     try {
       // Use provided LLM or create default
@@ -120,15 +117,14 @@ export function analyzeRequirementsNode(
         ...state.messages,
       ]);
 
-      nodeLogger.info("analyze_requirements_complete", {
-        outcome: "success",
-        message: `Requirements ${analysis.isComplete ? "complete" : "incomplete"}`,
-        context: {
+      nodeLogger.info(
+        {
           isComplete: analysis.isComplete,
           confidence: analysis.confidence,
           missingCount: analysis.missingElements.length,
         },
-      });
+        `Requirements ${analysis.isComplete ? "complete" : "incomplete"}`,
+      );
 
       // Determine next phase
       let nextPhase: ProductAgentPhase;
@@ -172,10 +168,7 @@ export function analyzeRequirementsNode(
           ? error.message
           : "Unknown error during analysis";
 
-      nodeLogger.error("analyze_requirements_error", {
-        outcome: "failure",
-        message: errorMessage,
-      });
+      nodeLogger.error({ err: error }, errorMessage);
 
       // On error, stay in gathering phase
       return {

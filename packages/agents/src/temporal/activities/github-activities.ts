@@ -5,12 +5,12 @@
  * Activities receive pre-configured Octokit clients from the workflow.
  */
 
-import { createLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import { mergePullRequest } from "@aesir/integrations";
 import type { Octokit } from "@octokit/rest";
 
-const logger = createLogger({
-  defaultContext: { module: "temporal-activity-github" },
+const logger: PinoLogger = createPinoLogger({
+  component: "agents:temporal:github-activities",
 });
 
 /**
@@ -48,14 +48,10 @@ export async function mergePRActivity(
   octokit: Octokit,
   input: MergePRInput,
 ): Promise<MergePROutput> {
-  logger.info("activity_merge_pr_start", {
-    message: `Merging PR #${input.pullNumber}`,
-    context: {
-      owner: input.owner,
-      repo: input.repo,
-      pullNumber: input.pullNumber,
-    },
-  });
+  logger.info(
+    { owner: input.owner, repo: input.repo, pullNumber: input.pullNumber },
+    `Merging PR #${input.pullNumber}`,
+  );
 
   // Build options only with defined values (exactOptionalPropertyTypes)
   const options: { mergeMethod?: "merge" | "squash" | "rebase" } | undefined =
@@ -71,11 +67,10 @@ export async function mergePRActivity(
     options,
   );
 
-  logger.info("activity_merge_pr_complete", {
-    outcome: "success",
-    message: `PR #${input.pullNumber} merged`,
-    context: { sha: result.sha },
-  });
+  logger.info(
+    { sha: result.sha, pullNumber: input.pullNumber },
+    `PR #${input.pullNumber} merged`,
+  );
 
   return result;
 }

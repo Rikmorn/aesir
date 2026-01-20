@@ -11,7 +11,7 @@
  * - Accepts LLM via options for testability
  */
 
-import { createLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { AIMessage } from "@langchain/core/messages";
 import { GENERATE_CLARIFICATION_PROMPT } from "../prompts.js";
@@ -21,8 +21,8 @@ import type {
   ProductAgentStateUpdate,
 } from "../state.js";
 
-const logger = createLogger({
-  defaultContext: { module: "generate-clarification" },
+const logger: PinoLogger = createPinoLogger({
+  component: "agents:product-agent:generate-clarification",
 });
 
 /**
@@ -47,14 +47,14 @@ export function generateClarificationNode(
   return async (state: ProductAgentState): Promise<ProductAgentStateUpdate> => {
     const nodeLogger = logger.child({ node: "generate-clarification" });
 
-    nodeLogger.debug("generate_clarification_start", {
-      message: "Generating clarifying question",
-      context: {
+    nodeLogger.debug(
+      {
         messageCount: state.messages.length,
         requirementsWhat: state.requirements.what !== null,
         requirementsWhy: state.requirements.why !== null,
       },
-    });
+      "Generating clarifying question",
+    );
 
     try {
       // Use provided LLM or create default
@@ -86,13 +86,10 @@ export function generateClarificationNode(
                 .join("")
             : "";
 
-      nodeLogger.info("generate_clarification_complete", {
-        outcome: "success",
-        message: "Generated clarifying question",
-        context: {
-          questionLength: questionContent.length,
-        },
-      });
+      nodeLogger.info(
+        { questionLength: questionContent.length },
+        "Generated clarifying question",
+      );
 
       // Create AI message for the conversation
       const aiMessage = new AIMessage(questionContent);
@@ -107,10 +104,7 @@ export function generateClarificationNode(
           ? error.message
           : "Unknown error during clarification";
 
-      nodeLogger.error("generate_clarification_error", {
-        outcome: "failure",
-        message: errorMessage,
-      });
+      nodeLogger.error({ err: error }, errorMessage);
 
       // On error, create a generic fallback question
       const fallbackMessage = new AIMessage(

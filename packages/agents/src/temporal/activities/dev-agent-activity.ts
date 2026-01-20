@@ -6,15 +6,15 @@
  * retry, timeout, and monitoring capabilities.
  */
 
-import { createLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import {
   type DevWorkflowDependencies,
   type DevWorkflowResult,
   runDevWorkflow,
 } from "../../dev-workflow-runner.js";
 
-const logger = createLogger({
-  defaultContext: { module: "temporal-activity-dev-agent" },
+const logger: PinoLogger = createPinoLogger({
+  component: "agents:temporal:dev-agent-activity",
 });
 
 /**
@@ -33,18 +33,22 @@ export async function executeDevWorkflow(
   sessionId: string,
   deps: DevWorkflowDependencies,
 ): Promise<DevWorkflowResult> {
-  logger.info("activity_dev_workflow_start", {
-    message: `Executing dev workflow for task ${taskId}`,
-    context: { taskId, sessionId },
-  });
+  logger.info(
+    { taskId, sessionId },
+    `Executing dev workflow for task ${taskId}`,
+  );
 
   const result = await runDevWorkflow(taskId, sessionId, deps);
 
-  logger.info("activity_dev_workflow_complete", {
-    outcome: result.success ? "success" : "failure",
-    message: `Dev workflow ${result.success ? "completed" : "failed"} for task ${taskId}`,
-    context: { taskId, status: result.status, prNumber: result.prNumber },
-  });
+  logger.info(
+    {
+      taskId,
+      status: result.status,
+      prNumber: result.prNumber,
+      success: result.success,
+    },
+    `Dev workflow ${result.success ? "completed" : "failed"} for task ${taskId}`,
+  );
 
   return result;
 }

@@ -11,7 +11,7 @@
  * - Handles errors gracefully with user-friendly error messages
  */
 
-import { createLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import type { ChatAnthropic } from "@langchain/anthropic";
 import type { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import type { LinearClient } from "@linear/sdk";
@@ -23,8 +23,8 @@ import {
   runProductAgent,
 } from "../../product-agent/runner.js";
 
-const logger = createLogger({
-  defaultContext: { module: "slack-thread-handlers" },
+const logger: PinoLogger = createPinoLogger({
+  component: "agents:slack:thread-handlers",
 });
 
 /**
@@ -78,10 +78,10 @@ async function getConversationHistory(
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
-    logger.warn("conversation_history_fetch_failed", {
-      message: `Failed to fetch conversation history: ${errorMessage}`,
-      context: { channelId, threadTs },
-    });
+    logger.warn(
+      { channelId, threadTs },
+      `Failed to fetch conversation history: ${errorMessage}`,
+    );
     return [];
   }
 }
@@ -221,17 +221,12 @@ export function handleAppMention(options: ThreadHandlerOptions) {
     const userId = event.user ?? "unknown";
     const rawText = event.text ?? "";
 
-    handlerLogger.info("app_mention_received", {
-      message: "Received app mention",
-      context: { channelId, threadTs, userId },
-    });
+    handlerLogger.info({ channelId, threadTs, userId }, "Received app mention");
 
     try {
       // Skip if no user (bot messages or system messages)
       if (!event.user) {
-        handlerLogger.debug("app_mention_no_user", {
-          message: "Ignoring app mention without user",
-        });
+        handlerLogger.debug({}, "Ignoring app mention without user");
         return;
       }
 
@@ -266,23 +261,18 @@ export function handleAppMention(options: ThreadHandlerOptions) {
         blocks,
       });
 
-      handlerLogger.info("app_mention_handled", {
-        outcome: "success",
-        message: "Processed app mention and sent response",
-        context: {
-          phase: result.phase,
-          tasksCreated: result.createdTasks?.length ?? 0,
-        },
-      });
+      handlerLogger.info(
+        { phase: result.phase, tasksCreated: result.createdTasks?.length ?? 0 },
+        "Processed app mention and sent response",
+      );
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
 
-      handlerLogger.error("app_mention_error", {
-        outcome: "failure",
-        message: `Error processing app mention: ${errorMessage}`,
-        context: { channelId, threadTs },
-      });
+      handlerLogger.error(
+        { channelId, threadTs, err: error },
+        `Error processing app mention: ${errorMessage}`,
+      );
 
       // Send user-friendly error message
       await say({
@@ -330,10 +320,10 @@ export function handleDirectMessage(options: ThreadHandlerOptions) {
       return;
     }
 
-    handlerLogger.info("direct_message_received", {
-      message: "Received direct message",
-      context: { channelId, threadTs, userId },
-    });
+    handlerLogger.info(
+      { channelId, threadTs, userId },
+      "Received direct message",
+    );
 
     try {
       if (!messageText.trim()) {
@@ -364,23 +354,18 @@ export function handleDirectMessage(options: ThreadHandlerOptions) {
         blocks,
       });
 
-      handlerLogger.info("direct_message_handled", {
-        outcome: "success",
-        message: "Processed direct message and sent response",
-        context: {
-          phase: result.phase,
-          tasksCreated: result.createdTasks?.length ?? 0,
-        },
-      });
+      handlerLogger.info(
+        { phase: result.phase, tasksCreated: result.createdTasks?.length ?? 0 },
+        "Processed direct message and sent response",
+      );
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
 
-      handlerLogger.error("direct_message_error", {
-        outcome: "failure",
-        message: `Error processing direct message: ${errorMessage}`,
-        context: { channelId, threadTs },
-      });
+      handlerLogger.error(
+        { channelId, threadTs, err: error },
+        `Error processing direct message: ${errorMessage}`,
+      );
 
       // Send user-friendly error message
       await say({
@@ -436,10 +421,10 @@ export function registerHandlers(
   app: App,
   options: ThreadHandlerOptions,
 ): void {
-  logger.info("register_handlers", {
-    message: "Registering Product Agent event handlers",
-    context: { botUserId: options.botUserId ?? "not set" },
-  });
+  logger.info(
+    { botUserId: options.botUserId ?? "not set" },
+    "Registering Product Agent event handlers",
+  );
 
   // Handle @mentions in channels (primary handler)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -459,41 +444,41 @@ export function registerHandlers(
     const hasBotId = "bot_id" in event && Boolean(event.bot_id);
     const messageText = "text" in event ? event.text : undefined;
 
-    logger.debug("message_event_received", {
-      message: "Processing message event",
-      context: {
+    logger.debug(
+      {
         channelType,
         subtype: subtype ?? "none",
         hasThreadTs: Boolean(threadTs),
         hasBotId,
         channel: "channel" in event ? event.channel : undefined,
       },
-    });
+      "Processing message event",
+    );
 
     // Ignore bot messages to prevent loops
     if (hasBotId) {
-      logger.debug("message_event_filtered", {
-        message: "Ignoring bot message (loop prevention)",
-        context: { reason: "bot_id present" },
-      });
+      logger.debug(
+        { reason: "bot_id present" },
+        "Ignoring bot message (loop prevention)",
+      );
       return;
     }
 
     // Ignore specific message subtypes (edits, deletes, joins, etc.)
     if (subtype && IGNORED_SUBTYPES.has(subtype)) {
-      logger.debug("message_event_filtered", {
-        message: `Ignoring message with subtype: ${subtype}`,
-        context: { reason: "ignored_subtype", subtype },
-      });
+      logger.debug(
+        { reason: "ignored_subtype", subtype },
+        `Ignoring message with subtype: ${subtype}`,
+      );
       return;
     }
 
     // Case 1: Direct messages (including thread replies in DMs)
     if (channelType === "im") {
-      logger.debug("message_event_routing", {
-        message: "Routing to DM handler",
-        context: { channelType, isThreadReply: Boolean(threadTs) },
-      });
+      logger.debug(
+        { channelType, isThreadReply: Boolean(threadTs) },
+        "Routing to DM handler",
+      );
       await handleDirectMessage(options)({
         event: event as GenericMessageEvent,
         client,
@@ -508,10 +493,10 @@ export function registerHandlers(
     if (threadTs && options.botUserId && messageText) {
       const mentionPattern = `<@${options.botUserId}>`;
       if (messageText.includes(mentionPattern)) {
-        logger.debug("message_event_routing", {
-          message: "Routing thread @mention to app_mention handler (fallback)",
-          context: { channelType, threadTs, botUserId: options.botUserId },
-        });
+        logger.debug(
+          { channelType, threadTs, botUserId: options.botUserId },
+          "Routing thread @mention to app_mention handler (fallback)",
+        );
         // Process as app mention equivalent
         await handleAppMention(options)({
           event: event as unknown as AppMentionEvent,
@@ -523,18 +508,15 @@ export function registerHandlers(
     }
 
     // Message doesn't match any handler criteria
-    logger.debug("message_event_unhandled", {
-      message: "Message event not routed (not DM, not @mention in thread)",
-      context: {
+    logger.debug(
+      {
         channelType,
         hasThreadTs: Boolean(threadTs),
         hasBotUserId: Boolean(options.botUserId),
       },
-    });
+      "Message event not routed (not DM, not @mention in thread)",
+    );
   });
 
-  logger.info("handlers_registered", {
-    outcome: "success",
-    message: "Product Agent event handlers registered",
-  });
+  logger.info({}, "Product Agent event handlers registered");
 }

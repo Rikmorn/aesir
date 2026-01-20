@@ -6,7 +6,7 @@
  * which this handler uses to start the prApprovalWorkflow in Temporal.
  */
 
-import { createLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import type {
   AgentSessionPayload,
   WebhookPayloadBase,
@@ -20,8 +20,8 @@ import {
   verifyWebhookSignature,
 } from "@aesir/integrations";
 
-const logger = createLogger({
-  defaultContext: { module: "linear-agent-session-webhook" },
+const logger: PinoLogger = createPinoLogger({
+  component: "agents:webhooks:linear-agent-session",
 });
 
 /**
@@ -75,18 +75,15 @@ export async function handleAgentSessionWebhook(
   const taskId = agentSession.issueId;
   const sessionId = agentSession.id;
 
-  logger.info("linear_agent_session_received", {
-    message: `AgentSession ${action} for issue ${taskId}`,
-    context: { action, taskId, sessionId },
-  });
+  logger.info(
+    { action, taskId, sessionId },
+    `AgentSession ${action} for issue ${taskId}`,
+  );
 
   // Only handle 'created' action (new delegation)
   // 'prompted' is for follow-up messages which we don't handle yet
   if (action !== "created") {
-    logger.debug("linear_agent_session_ignored", {
-      message: `Ignoring AgentSession action: ${action}`,
-      context: { action, taskId },
-    });
+    logger.debug({ action, taskId }, `Ignoring AgentSession action: ${action}`);
     return { action: "ignored", taskId };
   }
 
@@ -107,21 +104,19 @@ export async function handleAgentSessionWebhook(
     // Start the approval workflow
     await startApprovalWorkflow(workflowId, workflowInput);
 
-    logger.info("linear_agent_session_workflow_started", {
-      outcome: "success",
-      message: `Started approval workflow for task ${taskId}`,
-      context: { taskId, workflowId },
-    });
+    logger.info(
+      { taskId, workflowId },
+      `Started approval workflow for task ${taskId}`,
+    );
 
     return { action: "workflow_started", workflowId, taskId };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
 
-    logger.error("linear_agent_session_workflow_failed", {
-      outcome: "failure",
-      message: `Failed to start workflow for task ${taskId}: ${errorMessage}`,
-      context: { taskId, workflowId, error: errorMessage },
-    });
+    logger.error(
+      { taskId, workflowId, err: error },
+      `Failed to start workflow for task ${taskId}: ${errorMessage}`,
+    );
 
     return { action: "error", workflowId, taskId, error: errorMessage };
   }
@@ -163,47 +158,41 @@ export async function linearWebhookHandler(
     !signature ||
     !verifyWebhookSignature(signature, req.rawBody, webhookSecret)
   ) {
-    logger.warn("linear_webhook_invalid_signature", {
-      message: "Invalid or missing webhook signature",
-    });
+    logger.warn({}, "Invalid or missing webhook signature");
     res.status(401).json({ error: "Invalid signature" });
     return;
   }
 
-  logger.info("linear_webhook_signature_valid", {
-    message: "Webhook signature verified",
-  });
+  logger.info({}, "Webhook signature verified");
 
   // Parse payload
   const payload = parseWebhookPayload<WebhookPayloadBase>(req.rawBody);
 
   // Validate timestamp (prevent replay attacks)
   if (!validateWebhookTimestamp(payload.webhookTimestamp)) {
-    logger.warn("linear_webhook_stale_timestamp", {
-      message: "Webhook timestamp too old",
-      context: { timestamp: payload.webhookTimestamp },
-    });
+    logger.warn(
+      { timestamp: payload.webhookTimestamp },
+      "Webhook timestamp too old",
+    );
     res.status(400).json({ error: "Stale webhook" });
     return;
   }
 
   // Only handle AgentSession events
   if (!isAgentSessionEvent(payload)) {
-    logger.info("linear_webhook_not_agent_session", {
-      message: `Ignoring webhook type: ${payload.type}`,
-      context: { type: payload.type },
-    });
+    logger.info(
+      { type: payload.type },
+      `Ignoring webhook type: ${payload.type}`,
+    );
     res.status(200).json({ action: "ignored", reason: "not_agent_session" });
     return;
   }
 
   // Log the payload structure for debugging
-  logger.info("linear_webhook_payload", {
-    message: "AgentSession payload received",
-    context: {
-      payload: JSON.stringify(payload).substring(0, 1000),
-    },
-  });
+  logger.info(
+    { payload: JSON.stringify(payload).substring(0, 1000) },
+    "AgentSession payload received",
+  );
 
   // Handle the AgentSession event
   const result = await handleAgentSessionWebhook(payload, config);
