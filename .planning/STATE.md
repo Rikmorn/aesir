@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 13 of 22 (Data Layer)
-Plan: 1 of 5 in current phase
+Plan: 2 of 5 in current phase
 Status: In progress
-Last activity: 2026-01-20 - Completed 13-01-PLAN.md
+Last activity: 2026-01-20 - Completed 13-02-PLAN.md
 
 Progress: [#####               ] 31% (4 of 13 phases complete)
 
@@ -36,10 +36,10 @@ Progress: [#####               ] 31% (4 of 13 phases complete)
 | 10-foundation-setup | 4/4 | ~44 min | ~11 min |
 | 11-monorepo-setup | 4/4 | ~41 min | ~10 min |
 | 12-observability | 8/8 | 78 min | 10 min |
-| 13-data-layer | 1/5 | 3 min | 3 min |
+| 13-data-layer | 2/5 | 9 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 13-01 (3 min), 12-07 (3 min), 12-08 (2 min), 12-06 (8 min), 12-05 (30 min)
+- Last 5 plans: 13-02 (6 min), 13-01 (3 min), 12-07 (3 min), 12-08 (2 min), 12-06 (8 min)
 - Trend: Foundation setup plans are fast (well-defined scope)
 
 *Updated after each plan completion*
@@ -103,6 +103,9 @@ Recent decisions affecting current work:
 - [13-01]: 24-char nanoid for prefixed IDs (better collision resistance than UUIDv4)
 - [13-01]: Separate DB env vars over DATABASE_URL (better for Kubernetes secret injection)
 - [13-01]: CREDENTIAL_ENCRYPTION_KEY optional (allow running without encryption during setup)
+- [13-02]: uniqueIndex with .where() for partial indexes in Drizzle
+- [13-02]: workspace_id as text without FK to avoid cross-schema migration ordering issues
+- [13-02]: Created observability package for Phase 14 agent_executions
 
 ### Pending Todos
 
@@ -129,9 +132,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-20
-Stopped at: Completed 13-01-PLAN.md
+Stopped at: Completed 13-02-PLAN.md
 Resume file: None
-Next action: Continue with 13-02 (Credential Store Schema)
+Next action: Continue with 13-03 (Credential Encryption)
 
 ---
-*Updated: 2026-01-20 after 13-01-PLAN.md completed*
+*Updated: 2026-01-20 after 13-02-PLAN.md completed*
