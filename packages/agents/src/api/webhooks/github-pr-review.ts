@@ -7,13 +7,18 @@
 
 import * as crypto from "node:crypto";
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
+import {
+  createChildLogger,
+  createPinoLogger,
+  generateCorrelationId,
+  type PinoLogger,
+} from "@aesir/common";
 import {
   sendApprovalSignal,
   sendChangesRequestedSignal,
 } from "@aesir/integrations";
 
-const logger: PinoLogger = createPinoLogger({
+const baseLogger: PinoLogger = createPinoLogger({
   component: "agents:webhooks:github-pr-review",
 });
 
@@ -136,10 +141,12 @@ export interface HandlePRReviewResult {
  * - dismissed -> ignored
  *
  * @param event - GitHub webhook event payload
+ * @param logger - Optional request-scoped logger (falls back to base logger)
  * @returns Result indicating what action was taken
  */
 export async function handlePRReviewEvent(
   event: PRReviewEvent,
+  logger: PinoLogger = baseLogger,
 ): Promise<HandlePRReviewResult> {
   // Only handle 'submitted' action
   if (event.action !== "submitted") {
@@ -251,6 +258,10 @@ export async function prReviewWebhookHandler(
   req: WebhookRequest,
   res: WebhookResponse,
 ): Promise<void> {
+  // Generate correlation ID for this request
+  const correlationId = generateCorrelationId("req");
+  const logger = createChildLogger(baseLogger, { correlationId });
+
   const signature = req.headers["x-hub-signature-256"];
   const webhookSecret = process.env.GITHUB_WEBHOOK_SECRET;
 
@@ -263,6 +274,6 @@ export async function prReviewWebhookHandler(
     }
   }
 
-  const result = await handlePRReviewEvent(req.body);
+  const result = await handlePRReviewEvent(req.body, logger);
   res.status(200).json(result);
 }
