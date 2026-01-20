@@ -16,7 +16,7 @@
  *   Example: postgresql://temporal:temporal@localhost:5432/temporal
  */
 
-import { logger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
@@ -125,7 +125,9 @@ export const agent = devAgent;
 /**
  * Logger instance for agent operations
  */
-export const agentLogger = logger.child({ agentId: "dev-agent" });
+export const agentLogger: PinoLogger = createPinoLogger({
+  component: "agents:dev-agent",
+});
 
 /**
  * Type for the agent

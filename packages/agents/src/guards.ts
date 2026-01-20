@@ -15,9 +15,11 @@
  * early termination via the runner when building custom graphs.
  */
 
-import { logger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import { AIMessage, type BaseMessage } from "@langchain/core/messages";
 import { END } from "@langchain/langgraph";
+
+const logger: PinoLogger = createPinoLogger({ component: "agents:guards" });
 
 /**
  * State shape required for loop guards
@@ -52,11 +54,10 @@ export function createLoopGuard(maxIterations: number) {
   return function checkLoopLimit(state: LoopGuardState): GuardRouting {
     // Check iteration limit first
     if (state.loopCount >= maxIterations) {
-      guardLogger.warn("loop_limit_reached", {
-        context: { loopCount: state.loopCount, maxIterations },
-        outcome: "failure",
-        message: `Loop limit ${maxIterations} reached`,
-      });
+      guardLogger.warn(
+        { loopCount: state.loopCount, maxIterations },
+        `Loop limit ${maxIterations} reached`,
+      );
       return END;
     }
 

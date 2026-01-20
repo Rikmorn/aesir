@@ -13,9 +13,15 @@
  * - Returns structured result with clear termination reason
  */
 
-import { devAgentConfig, logger } from "@aesir/common";
+import {
+  createPinoLogger,
+  devAgentConfig,
+  type PinoLogger,
+} from "@aesir/common";
 import { GraphRecursionError } from "@langchain/langgraph";
 import { devAgent } from "./dev-agent.js";
+
+const logger: PinoLogger = createPinoLogger({ component: "agents:runner" });
 
 /**
  * Termination reasons for agent execution
@@ -68,18 +74,17 @@ export async function runAgentWithGuardrails(
     abortController.abort();
   }, timeoutMs);
 
-  const agentLogger = logger.child({ threadId, agentId: "dev-agent" });
+  const agentLogger = logger.child({ threadId });
 
-  agentLogger.info("agent_start", {
-    context: {
-      threadId,
-      taskDescription,
+  agentLogger.info(
+    {
+      taskDescriptionLength: taskDescription.length,
       recursionLimit: devAgentConfig.recursionLimit,
       maxIterations: devAgentConfig.maxIterations,
       timeoutMs,
     },
-    outcome: "pending",
-  });
+    "Starting agent execution",
+  );
 
   try {
     const result = await devAgent.invoke(
@@ -97,11 +102,7 @@ export async function runAgentWithGuardrails(
 
     const durationMs = Date.now() - startTime;
 
-    agentLogger.info("agent_complete", {
-      context: { threadId },
-      outcome: "success",
-      durationMs,
-    });
+    agentLogger.info({ durationMs }, "Agent execution completed successfully");
 
     return {
       success: true,
@@ -115,12 +116,10 @@ export async function runAgentWithGuardrails(
 
     // Handle timeout (AbortError)
     if (error instanceof Error && error.name === "AbortError") {
-      agentLogger.warn("agent_timeout", {
-        context: { threadId, timeoutMs },
-        outcome: "failure",
-        message: `Agent exceeded timeout of ${timeoutMs}ms`,
-        durationMs,
-      });
+      agentLogger.warn(
+        { timeoutMs, durationMs },
+        `Agent exceeded timeout of ${timeoutMs}ms`,
+      );
 
       return {
         success: false,
@@ -132,12 +131,10 @@ export async function runAgentWithGuardrails(
 
     // Handle recursion limit
     if (error instanceof GraphRecursionError) {
-      agentLogger.warn("agent_recursion_limit", {
-        context: { threadId, limit: devAgentConfig.recursionLimit },
-        outcome: "failure",
-        message: "Agent exceeded recursion limit",
-        durationMs,
-      });
+      agentLogger.warn(
+        { limit: devAgentConfig.recursionLimit, durationMs },
+        "Agent exceeded recursion limit",
+      );
 
       return {
         success: false,
@@ -150,12 +147,10 @@ export async function runAgentWithGuardrails(
     // Handle other errors
     const errorMessage = error instanceof Error ? error.message : String(error);
 
-    agentLogger.error("agent_error", {
-      context: { threadId, error: errorMessage },
-      outcome: "failure",
-      message: errorMessage,
-      durationMs,
-    });
+    agentLogger.error(
+      { err: errorMessage, durationMs },
+      "Agent execution failed",
+    );
 
     return {
       success: false,

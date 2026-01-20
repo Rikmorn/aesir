@@ -14,10 +14,12 @@
 
 import {
   createLogger,
+  createPinoLogger,
   createTraceStore,
   DEFAULT_DEV_WORKFLOW_CONFIG,
   type DevWorkflowConfig,
   type LogEntry,
+  type PinoLogger,
 } from "@aesir/common";
 import { emitError, updateIssueStatus } from "@aesir/integrations";
 import {
@@ -26,8 +28,14 @@ import {
 } from "./dev-workflow.js";
 import { createLangGraphTracer } from "./tracing/index.js";
 
-const logger = createLogger({
-  defaultContext: { module: "dev-workflow-runner" },
+const logger: PinoLogger = createPinoLogger({
+  component: "agents:dev-workflow",
+});
+
+// TODO(12-05): Remove after tracer is migrated to pino in Task 3
+// Legacy logger for LangGraph tracer compatibility - tracer uses old Logger API
+const tracerLogger = createLogger({
+  defaultContext: { component: "agents:dev-workflow:tracer" },
 });
 
 /**
@@ -73,14 +81,12 @@ export async function runDevWorkflow(
   const startTime = Date.now();
 
   // Create trace store and tracer for this workflow run
+  // TODO(12-05): Use pino logger after tracer is migrated in Task 3
   const traceStore = createTraceStore();
-  const taskLogger = logger.child({ taskId });
-  const tracer = createLangGraphTracer(taskLogger, traceStore);
+  const taskTracerLogger = tracerLogger.child({ taskId });
+  const tracer = createLangGraphTracer(taskTracerLogger, traceStore);
 
-  logger.info("dev_workflow_start", {
-    message: `Starting dev workflow for task ${taskId}`,
-    context: { taskId },
-  });
+  logger.info({ taskId }, `Starting dev workflow for task ${taskId}`);
 
   try {
     // Create the workflow with all dependencies
@@ -98,12 +104,10 @@ export async function runDevWorkflow(
 
     const durationMs = Date.now() - startTime;
 
-    logger.info("dev_workflow_complete", {
-      outcome: "success",
-      message: `Dev workflow completed for task ${taskId}`,
-      context: { taskId, status: result.status },
-      durationMs,
-    });
+    logger.info(
+      { taskId, status: result.status, durationMs },
+      `Dev workflow completed for task ${taskId}`,
+    );
 
     // Build result with conditional prNumber to satisfy exactOptionalPropertyTypes
     const workflowResult: DevWorkflowResult = {
@@ -120,12 +124,10 @@ export async function runDevWorkflow(
     const durationMs = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : String(error);
 
-    logger.error("dev_workflow_error", {
-      outcome: "failure",
-      message: `Dev workflow failed for task ${taskId}: ${errorMessage}`,
-      context: { taskId, error: errorMessage },
-      durationMs,
-    });
+    logger.error(
+      { taskId, err: errorMessage, durationMs },
+      `Dev workflow failed for task ${taskId}: ${errorMessage}`,
+    );
 
     // Update Linear status to indicate failure
     try {
@@ -137,16 +139,16 @@ export async function runDevWorkflow(
       );
     } catch (linearError) {
       // Log but don't throw - we want to return the original error
-      logger.warn("dev_workflow_linear_update_failed", {
-        message: "Failed to update Linear status on workflow failure",
-        context: {
+      logger.warn(
+        {
           taskId,
-          error:
+          err:
             linearError instanceof Error
               ? linearError.message
               : String(linearError),
         },
-      });
+        "Failed to update Linear status on workflow failure",
+      );
     }
 
     return {
@@ -158,30 +160,23 @@ export async function runDevWorkflow(
     };
   } finally {
     // ALWAYS clean up sandbox, regardless of success or failure
-    logger.debug("dev_workflow_cleanup", {
-      message: `Cleaning up sandbox for task ${taskId}`,
-      context: { taskId },
-    });
+    logger.debug({ taskId }, `Cleaning up sandbox for task ${taskId}`);
 
     try {
       await deps.sandbox.cleanup();
-      logger.debug("dev_workflow_cleanup_complete", {
-        message: `Sandbox cleanup complete for task ${taskId}`,
-        context: { taskId },
-      });
+      logger.debug({ taskId }, `Sandbox cleanup complete for task ${taskId}`);
     } catch (cleanupError) {
       // Log but don't throw - cleanup failure shouldn't mask original error
-      logger.error("dev_workflow_cleanup_failed", {
-        outcome: "failure",
-        message: "Sandbox cleanup failed",
-        context: {
+      logger.error(
+        {
           taskId,
-          error:
+          err:
             cleanupError instanceof Error
               ? cleanupError.message
               : String(cleanupError),
         },
-      });
+        "Sandbox cleanup failed",
+      );
     }
   }
 }
