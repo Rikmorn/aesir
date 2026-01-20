@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-01-19)
 
 **Core value:** Maintainable, scalable foundation for end-to-end automated development workflows
-**Current focus:** Phase 12 - Observability (next)
+**Current focus:** Phase 12 - Observability (in progress)
 
 ## Current Position
 
-Phase: 11 of 22 (Monorepo Setup)
-Plan: 4 of 4 in current phase - COMPLETE
-Status: Phase complete
-Last activity: 2026-01-20 - Completed 11-04-PLAN.md (Import Path Fixes)
+Phase: 12 of 22 (Observability)
+Plan: 1 of 6 in current phase
+Status: In progress
+Last activity: 2026-01-20 - Completed 12-01-PLAN.md (Pino Infrastructure)
 
 Progress: [####                ] 15% (2 of 13 phases complete)
 
@@ -25,9 +25,9 @@ Progress: [####                ] 15% (2 of 13 phases complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8 (v2.0)
-- Average duration: ~10 min
-- Total execution time: ~85 min
+- Total plans completed: 9 (v2.0)
+- Average duration: ~9 min
+- Total execution time: ~87 min
 
 **By Phase:**
 
@@ -35,10 +35,11 @@ Progress: [####                ] 15% (2 of 13 phases complete)
 |-------|-------|-------|----------|
 | 10-foundation-setup | 4/4 | ~44 min | ~11 min |
 | 11-monorepo-setup | 4/4 | ~41 min | ~10 min |
+| 12-observability | 1/6 | 2 min | 2 min |
 
 **Recent Trend:**
-- Last 5 plans: 11-04 (30 min), 11-03 (4 min), 11-02 (3 min), 11-01 (4 min), 10-04 (4 min)
-- Trend: 11-04 required significant architectural restructuring
+- Last 5 plans: 12-01 (2 min), 11-04 (30 min), 11-03 (4 min), 11-02 (3 min), 11-01 (4 min)
+- Trend: 12-01 fast setup (dependencies + utilities)
 
 *Updated after each plan completion*
 
@@ -79,6 +80,9 @@ Recent decisions affecting current work:
 - [11-04]: State module moved from platform to common (cross-layer contract)
 - [11-04]: Temporal activities moved from platform to agents (orchestration layer)
 - [11-04]: Integrations re-exports platform types for agents access
+- [12-01]: pino v10 (latest) for structured logging
+- [12-01]: 16-char nanoid for correlation IDs (shorter, collision-resistant)
+- [12-01]: Explicit redaction paths over ** wildcards (performance)
 
 ### Pending Todos
 
@@ -105,9 +109,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-20
-Stopped at: Phase 11 (Monorepo Setup) complete
+Stopped at: Completed 12-01-PLAN.md (Pino Infrastructure)
 Resume file: None
-Next action: /gsd:discuss-phase 12
+Next action: Execute 12-02-PLAN.md (Logger Factory)
 
 ---
-*Updated: 2026-01-20 after Phase 11 complete*
+*Updated: 2026-01-20 after 12-01-PLAN.md complete*
