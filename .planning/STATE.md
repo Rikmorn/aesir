@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 12 of 22 (Observability)
-Plan: 3 of 6 in current phase
+Plan: 4 of 6 in current phase
 Status: In progress
-Last activity: 2026-01-20 - Completed 12-03-PLAN.md (HTTP Request Logging)
+Last activity: 2026-01-20 - Completed 12-04-PLAN.md (Logger Migration)
 
 Progress: [####                ] 15% (2 of 13 phases complete)
 
@@ -25,9 +25,9 @@ Progress: [####                ] 15% (2 of 13 phases complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11 (v2.0)
+- Total plans completed: 12 (v2.0)
 - Average duration: ~10 min
-- Total execution time: ~105 min
+- Total execution time: ~120 min
 
 **By Phase:**
 
@@ -35,11 +35,11 @@ Progress: [####                ] 15% (2 of 13 phases complete)
 |-------|-------|-------|----------|
 | 10-foundation-setup | 4/4 | ~44 min | ~11 min |
 | 11-monorepo-setup | 4/4 | ~41 min | ~10 min |
-| 12-observability | 3/6 | 20 min | 7 min |
+| 12-observability | 4/6 | 35 min | 9 min |
 
 **Recent Trend:**
-- Last 5 plans: 12-03 (10 min), 12-02 (8 min), 12-01 (2 min), 11-04 (30 min), 11-03 (4 min)
-- Trend: 12-03 included cleanup of orphaned uncommitted changes from previous session
+- Last 5 plans: 12-04 (15 min), 12-03 (10 min), 12-02 (8 min), 12-01 (2 min), 11-04 (30 min)
+- Trend: 12-04 included blocking issue fixes for tracer type incompatibility
 
 *Updated after each plan completion*
 
@@ -89,6 +89,9 @@ Recent decisions affecting current work:
 - [12-03]: pino-http middleware with custom genReqId for correlation
 - [12-03]: Local TemporalLoggerInterface type (no @temporalio/worker dependency)
 - [12-03]: Temporal adapter adds temporal: true marker to logs
+- [12-04]: Use createPinoLogger explicit import during migration
+- [12-04]: Manual timing with durationMs field replaces startTimer pattern
+- [12-04]: Keep env.ts console.error (intentional pre-logger startup errors)
 
 ### Pending Todos
 
@@ -115,9 +118,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-20
-Stopped at: Completed 12-03-PLAN.md (HTTP Request Logging)
+Stopped at: Completed 12-04-PLAN.md (Logger Migration)
 Resume file: None
-Next action: Execute 12-04-PLAN.md (Logger Migration)
+Next action: Execute 12-05-PLAN.md (Agent Migration)
 
 ---
-*Updated: 2026-01-20 after 12-03-PLAN.md complete*
+*Updated: 2026-01-20 after 12-04-PLAN.md complete*
