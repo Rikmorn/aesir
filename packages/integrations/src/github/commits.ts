@@ -5,12 +5,12 @@
  * Uses the Git Data API to create commits without needing a local working directory.
  */
 
-import { createLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/common";
 import type { Octokit } from "@octokit/rest";
 import { getBranch } from "./branches.js";
 import type { CommitInfo, CreateCommitOptions } from "./types.js";
 
-const logger = createLogger({ defaultContext: { module: "github-commits" } });
+const logger = createPinoLogger({ component: "integrations:github" });
 
 /**
  * Create a commit with file changes using the Git Data API
@@ -34,10 +34,10 @@ export async function createCommit(
 ): Promise<CommitInfo> {
   const { owner, repo, branch, message, files } = options;
 
-  logger.debug("github_create_commit_start", {
-    message: `Creating commit on ${branch} with ${files.length} file(s)`,
-    context: { owner, repo, branch, fileCount: files.length },
-  });
+  logger.debug(
+    { owner, repo, branch, fileCount: files.length },
+    `Creating commit on ${branch} with ${files.length} file(s)`,
+  );
 
   // Step 1: Get current commit SHA from branch
   const branchInfo = await getBranch(octokit, owner, repo, branch);
@@ -83,17 +83,10 @@ export async function createCommit(
     sha: commit.sha,
   });
 
-  logger.info("github_commit_created", {
-    outcome: "success",
-    message: `Commit created on ${branch}`,
-    context: {
-      owner,
-      repo,
-      branch,
-      sha: commit.sha,
-      fileCount: files.length,
-    },
-  });
+  logger.info(
+    { owner, repo, branch, sha: commit.sha, fileCount: files.length },
+    `Commit created on ${branch}`,
+  );
 
   return {
     sha: commit.sha,

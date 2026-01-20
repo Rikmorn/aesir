@@ -5,11 +5,11 @@
  * Handles token refresh when tokens are near expiration.
  */
 
-import { createLogger, type IssueStatus } from "@aesir/common";
+import { createPinoLogger, type IssueStatus } from "@aesir/common";
 import { type Issue, LinearClient, type WorkflowState } from "@linear/sdk";
 import type { LinearConfig } from "./types.js";
 
-const logger = createLogger({ defaultContext: { module: "linear-client" } });
+const logger = createPinoLogger({ component: "integrations:linear" });
 
 /**
  * Response from Linear's OAuth token refresh endpoint
@@ -43,9 +43,7 @@ export async function refreshOAuthToken(refreshToken: string): Promise<{
     );
   }
 
-  logger.info("linear_token_refresh", {
-    message: "Refreshing OAuth token",
-  });
+  logger.info("Refreshing OAuth token");
 
   const response = await fetch("https://api.linear.app/oauth/token", {
     method: "POST",
@@ -62,11 +60,10 @@ export async function refreshOAuthToken(refreshToken: string): Promise<{
 
   if (!response.ok) {
     const errorText = await response.text();
-    logger.error("linear_token_refresh_failed", {
-      outcome: "failure",
-      message: `Token refresh failed: ${response.status} ${errorText}`,
-      context: { status: response.status },
-    });
+    logger.error(
+      { status: response.status },
+      `Token refresh failed: ${response.status} ${errorText}`,
+    );
     throw new Error(
       `Failed to refresh Linear OAuth token: ${response.status} ${errorText}`,
     );
@@ -74,11 +71,10 @@ export async function refreshOAuthToken(refreshToken: string): Promise<{
 
   const data = (await response.json()) as TokenRefreshResponse;
 
-  logger.info("linear_token_refresh_success", {
-    outcome: "success",
-    message: "OAuth token refreshed successfully",
-    context: { expiresIn: data.expires_in },
-  });
+  logger.info(
+    { expiresIn: data.expires_in },
+    "OAuth token refreshed successfully",
+  );
 
   return {
     accessToken: data.access_token,
@@ -123,21 +119,18 @@ export async function createLinearClient(
     if (!config.refreshToken) {
       // Linear tokens are long-lived (~10 years) and don't include refresh tokens
       // This is expected - just log and continue
-      logger.warn("linear_token_expiring_no_refresh", {
-        message:
-          "Linear token expiring. Linear doesn't provide refresh tokens - re-run OAuth flow.",
-        context: {
-          expiresAt: new Date(config.expiresAt).toISOString(),
-        },
-      });
+      logger.warn(
+        { expiresAt: new Date(config.expiresAt).toISOString() },
+        "Linear token expiring. Linear doesn't provide refresh tokens - re-run OAuth flow.",
+      );
     } else {
-      logger.debug("linear_token_expiring", {
-        message: "Token expiring soon, refreshing",
-        context: {
+      logger.debug(
+        {
           expiresAt: new Date(config.expiresAt).toISOString(),
           now: new Date(now).toISOString(),
         },
-      });
+        "Token expiring soon, refreshing",
+      );
 
       const refreshed = await refreshOAuthToken(config.refreshToken);
 
@@ -199,10 +192,7 @@ export async function readIssue(
   client: LinearClient,
   issueId: string,
 ): Promise<Issue> {
-  logger.debug("linear_read_issue", {
-    message: `Reading issue ${issueId}`,
-    context: { issueId },
-  });
+  logger.debug({ issueId }, `Reading issue ${issueId}`);
 
   const issue = await client.issue(issueId);
 
@@ -229,10 +219,10 @@ export async function updateIssueStatus(
   issueId: string,
   statusName: IssueStatus,
 ): Promise<void> {
-  logger.debug("linear_update_status", {
-    message: `Updating issue ${issueId} to ${statusName}`,
-    context: { issueId, statusName },
-  });
+  logger.debug(
+    { issueId, statusName },
+    `Updating issue ${issueId} to ${statusName}`,
+  );
 
   // Get the issue to find its team
   const issue = await client.issue(issueId);
@@ -263,9 +253,8 @@ export async function updateIssueStatus(
     stateId: targetState.id,
   });
 
-  logger.info("linear_status_updated", {
-    outcome: "success",
-    message: `Issue ${issueId} updated to ${statusName}`,
-    context: { issueId, statusName, stateId: targetState.id },
-  });
+  logger.info(
+    { issueId, statusName, stateId: targetState.id },
+    `Issue ${issueId} updated to ${statusName}`,
+  );
 }

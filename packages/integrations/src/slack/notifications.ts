@@ -5,7 +5,7 @@
  * Formats messages using Block Kit for rich formatting.
  */
 
-import { createLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/common";
 import type { Block, KnownBlock, WebClient } from "@slack/web-api";
 import type {
   ApprovalNotification,
@@ -14,9 +14,7 @@ import type {
   StatusNotification,
 } from "./types.js";
 
-const logger = createLogger({
-  defaultContext: { module: "slack-notifications" },
-});
+const logger = createPinoLogger({ component: "integrations:slack" });
 
 /**
  * Format an approval notification as Block Kit blocks
@@ -161,15 +159,10 @@ export async function postNotification(
       blocks,
     });
 
-    logger.info("slack_notification_sent", {
-      outcome: "success",
-      message: `Notification sent to ${channel}`,
-      context: {
-        channel,
-        type: notification.type,
-        timestamp: result.ts,
-      },
-    });
+    logger.info(
+      { channel, type: notification.type, timestamp: result.ts },
+      `Notification sent to ${channel}`,
+    );
 
     return result.ts
       ? { success: true, timestamp: result.ts }
@@ -178,15 +171,10 @@ export async function postNotification(
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
 
-    logger.error("slack_notification_failed", {
-      outcome: "failure",
-      message: `Failed to send notification: ${errorMessage}`,
-      context: {
-        channel,
-        type: notification.type,
-        error: errorMessage,
-      },
-    });
+    logger.error(
+      { err: error, channel, type: notification.type },
+      `Failed to send notification: ${errorMessage}`,
+    );
 
     return {
       success: false,
@@ -246,10 +234,7 @@ export async function openDmChannel(
   client: WebClient,
   userId: string,
 ): Promise<string> {
-  logger.debug("slack_dm_open", {
-    message: `Opening DM channel with user ${userId}`,
-    context: { userId },
-  });
+  logger.debug({ userId }, `Opening DM channel with user ${userId}`);
 
   const result = await client.conversations.open({
     users: userId,
@@ -259,10 +244,7 @@ export async function openDmChannel(
     throw new Error(`Failed to open DM channel with user ${userId}`);
   }
 
-  logger.debug("slack_dm_opened", {
-    message: `DM channel opened`,
-    context: { userId, channelId: result.channel.id },
-  });
+  logger.debug({ userId, channelId: result.channel.id }, "DM channel opened");
 
   return result.channel.id;
 }

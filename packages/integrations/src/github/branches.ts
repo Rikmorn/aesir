@@ -5,11 +5,11 @@
  * Uses Octokit to interact with the GitHub REST API.
  */
 
-import { createLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/common";
 import type { Octokit } from "@octokit/rest";
 import type { BranchInfo, CreateBranchOptions } from "./types.js";
 
-const logger = createLogger({ defaultContext: { module: "github-branches" } });
+const logger = createPinoLogger({ component: "integrations:github" });
 
 /**
  * Get information about a specific branch
@@ -27,10 +27,7 @@ export async function getBranch(
   repo: string,
   branch: string,
 ): Promise<BranchInfo> {
-  logger.debug("github_get_branch", {
-    message: `Getting branch ${branch}`,
-    context: { owner, repo, branch },
-  });
+  logger.debug({ owner, repo, branch }, `Getting branch ${branch}`);
 
   const { data: ref } = await octokit.rest.git.getRef({
     owner,
@@ -58,10 +55,7 @@ export async function listBranches(
   owner: string,
   repo: string,
 ): Promise<BranchInfo[]> {
-  logger.debug("github_list_branches", {
-    message: "Listing branches",
-    context: { owner, repo },
-  });
+  logger.debug({ owner, repo }, "Listing branches");
 
   const { data: branches } = await octokit.rest.repos.listBranches({
     owner,
@@ -91,10 +85,10 @@ export async function createBranch(
 ): Promise<BranchInfo> {
   const { owner, repo, branchName, baseBranch = "main" } = options;
 
-  logger.debug("github_create_branch_start", {
-    message: `Creating branch ${branchName} from ${baseBranch}`,
-    context: { owner, repo, branchName, baseBranch },
-  });
+  logger.debug(
+    { owner, repo, branchName, baseBranch },
+    `Creating branch ${branchName} from ${baseBranch}`,
+  );
 
   // Get the SHA of the base branch
   const baseInfo = await getBranch(octokit, owner, repo, baseBranch);
@@ -107,11 +101,10 @@ export async function createBranch(
     sha: baseInfo.sha,
   });
 
-  logger.info("github_branch_created", {
-    outcome: "success",
-    message: `Branch ${branchName} created from ${baseBranch}`,
-    context: { owner, repo, branchName, baseBranch, sha: ref.object.sha },
-  });
+  logger.info(
+    { owner, repo, branchName, baseBranch, sha: ref.object.sha },
+    `Branch ${branchName} created from ${baseBranch}`,
+  );
 
   return {
     name: branchName,

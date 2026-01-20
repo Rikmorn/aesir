@@ -5,10 +5,10 @@
  * Used by the Product Agent to create tasks from gathered requirements.
  */
 
-import { createLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/common";
 import type { IssueLabel, LinearClient, Team } from "@linear/sdk";
 
-const logger = createLogger({ defaultContext: { module: "linear-issues" } });
+const logger = createPinoLogger({ component: "integrations:linear" });
 
 /**
  * Parameters for creating a new issue
@@ -78,15 +78,15 @@ export async function createIssue(
 ): Promise<CreateIssueResult> {
   const { teamId, title, description, priority, labelIds } = params;
 
-  logger.debug("linear_create_issue", {
-    message: `Creating issue: ${title}`,
-    context: {
+  logger.debug(
+    {
       teamId,
       title,
       hasPriority: priority !== undefined,
       labelCount: labelIds?.length ?? 0,
     },
-  });
+    `Creating issue: ${title}`,
+  );
 
   // Build params object, only including defined values for exactOptionalPropertyTypes
   const createParams: {
@@ -118,15 +118,10 @@ export async function createIssue(
     throw new Error(`Issue created but could not retrieve: ${title}`);
   }
 
-  logger.info("linear_issue_created", {
-    outcome: "success",
-    message: `Created issue ${issue.identifier}: ${title}`,
-    context: {
-      issueId: issue.id,
-      identifier: issue.identifier,
-      url: issue.url,
-    },
-  });
+  logger.info(
+    { issueId: issue.id, identifier: issue.identifier, url: issue.url },
+    `Created issue ${issue.identifier}: ${title}`,
+  );
 
   return {
     id: issue.id,
@@ -143,9 +138,7 @@ export async function createIssue(
  * @returns Array of teams with id, name, and key
  */
 export async function listTeams(client: LinearClient): Promise<TeamInfo[]> {
-  logger.debug("linear_list_teams", {
-    message: "Listing available teams",
-  });
+  logger.debug("Listing available teams");
 
   const teams = await client.teams();
 
@@ -155,11 +148,7 @@ export async function listTeams(client: LinearClient): Promise<TeamInfo[]> {
     key: team.key,
   }));
 
-  logger.info("linear_teams_listed", {
-    outcome: "success",
-    message: `Found ${teamList.length} teams`,
-    context: { count: teamList.length },
-  });
+  logger.info({ count: teamList.length }, `Found ${teamList.length} teams`);
 
   return teamList;
 }
@@ -175,10 +164,7 @@ export async function listLabels(
   client: LinearClient,
   teamId: string,
 ): Promise<LabelInfo[]> {
-  logger.debug("linear_list_labels", {
-    message: `Listing labels for team ${teamId}`,
-    context: { teamId },
-  });
+  logger.debug({ teamId }, `Listing labels for team ${teamId}`);
 
   // Get team-specific labels
   const team = await client.team(teamId);
@@ -194,11 +180,10 @@ export async function listLabels(
     color: label.color,
   }));
 
-  logger.info("linear_labels_listed", {
-    outcome: "success",
-    message: `Found ${labelList.length} labels for team`,
-    context: { teamId, count: labelList.length },
-  });
+  logger.info(
+    { teamId, count: labelList.length },
+    `Found ${labelList.length} labels for team`,
+  );
 
   return labelList;
 }

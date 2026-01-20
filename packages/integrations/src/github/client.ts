@@ -5,11 +5,11 @@
  * Provides factory functions for different authentication patterns.
  */
 
-import { createLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/common";
 import { Octokit } from "@octokit/rest";
 import type { GitHubConfig } from "./types.js";
 
-const logger = createLogger({ defaultContext: { module: "github-client" } });
+const logger = createPinoLogger({ component: "integrations:github" });
 
 /**
  * Create an Octokit client with configuration object
@@ -21,9 +21,7 @@ const logger = createLogger({ defaultContext: { module: "github-client" } });
  * @returns Configured Octokit instance
  */
 export function createGitHubClient(config: GitHubConfig): Octokit {
-  logger.debug("github_client_create", {
-    message: "Creating GitHub client with config",
-  });
+  logger.debug("Creating GitHub client with config");
 
   return new Octokit({
     auth: config.token,
@@ -40,9 +38,7 @@ export function createGitHubClient(config: GitHubConfig): Octokit {
  * @returns Configured Octokit instance
  */
 export function getOctokit(token: string): Octokit {
-  logger.debug("github_client_create_direct", {
-    message: "Creating GitHub client with direct token",
-  });
+  logger.debug("Creating GitHub client with direct token");
 
   return new Octokit({
     auth: token,

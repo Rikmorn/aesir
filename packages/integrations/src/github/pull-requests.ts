@@ -5,13 +5,11 @@
  * Uses Octokit to interact with the GitHub REST API.
  */
 
-import { createLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/common";
 import type { Octokit } from "@octokit/rest";
 import type { CreatePROptions, PRComment, PullRequestInfo } from "./types.js";
 
-const logger = createLogger({
-  defaultContext: { module: "github-pull-requests" },
-});
+const logger = createPinoLogger({ component: "integrations:github" });
 
 /**
  * Create a new pull request
@@ -27,10 +25,7 @@ export async function createPullRequest(
 ): Promise<PullRequestInfo> {
   const { owner, repo, title, body, head, base } = options;
 
-  logger.debug("github_create_pr_start", {
-    message: `Creating PR: ${title}`,
-    context: { owner, repo, head, base },
-  });
+  logger.debug({ owner, repo, head, base }, `Creating PR: ${title}`);
 
   // Build request params, only including body if defined (exactOptionalPropertyTypes)
   const params: Parameters<typeof octokit.rest.pulls.create>[0] = {
@@ -46,16 +41,10 @@ export async function createPullRequest(
 
   const { data: pr } = await octokit.rest.pulls.create(params);
 
-  logger.info("github_pr_created", {
-    outcome: "success",
-    message: `PR #${pr.number} created`,
-    context: {
-      owner,
-      repo,
-      number: pr.number,
-      url: pr.html_url,
-    },
-  });
+  logger.info(
+    { owner, repo, number: pr.number, url: pr.html_url },
+    `PR #${pr.number} created`,
+  );
 
   return {
     number: pr.number,
@@ -84,10 +73,7 @@ export async function getPullRequest(
   repo: string,
   pullNumber: number,
 ): Promise<PullRequestInfo> {
-  logger.debug("github_get_pr", {
-    message: `Getting PR #${pullNumber}`,
-    context: { owner, repo, pullNumber },
-  });
+  logger.debug({ owner, repo, pullNumber }, `Getting PR #${pullNumber}`);
 
   const { data: pr } = await octokit.rest.pulls.get({
     owner,
@@ -124,10 +110,10 @@ export async function listPRComments(
   repo: string,
   pullNumber: number,
 ): Promise<PRComment[]> {
-  logger.debug("github_list_pr_comments", {
-    message: `Listing comments on PR #${pullNumber}`,
-    context: { owner, repo, pullNumber },
-  });
+  logger.debug(
+    { owner, repo, pullNumber },
+    `Listing comments on PR #${pullNumber}`,
+  );
 
   // Get review comments (on specific lines of code)
   const { data: reviewComments } = await octokit.rest.pulls.listReviewComments({
@@ -187,10 +173,10 @@ export async function addPRComment(
   pullNumber: number,
   body: string,
 ): Promise<PRComment> {
-  logger.debug("github_add_pr_comment_start", {
-    message: `Adding comment to PR #${pullNumber}`,
-    context: { owner, repo, pullNumber, bodyLength: body.length },
-  });
+  logger.debug(
+    { owner, repo, pullNumber, bodyLength: body.length },
+    `Adding comment to PR #${pullNumber}`,
+  );
 
   const { data: comment } = await octokit.rest.issues.createComment({
     owner,
@@ -199,11 +185,10 @@ export async function addPRComment(
     body,
   });
 
-  logger.info("github_pr_comment_added", {
-    outcome: "success",
-    message: `Comment added to PR #${pullNumber}`,
-    context: { owner, repo, pullNumber, commentId: comment.id },
-  });
+  logger.info(
+    { owner, repo, pullNumber, commentId: comment.id },
+    `Comment added to PR #${pullNumber}`,
+  );
 
   return {
     id: comment.id,
@@ -237,15 +222,10 @@ export async function mergePullRequest(
     commitMessage?: string;
   },
 ): Promise<{ sha: string; merged: boolean }> {
-  logger.debug("github_merge_pr_start", {
-    message: `Merging PR #${pullNumber}`,
-    context: {
-      owner,
-      repo,
-      pullNumber,
-      method: options?.mergeMethod ?? "squash",
-    },
-  });
+  logger.debug(
+    { owner, repo, pullNumber, method: options?.mergeMethod ?? "squash" },
+    `Merging PR #${pullNumber}`,
+  );
 
   // Build request params, only including optional fields if defined (exactOptionalPropertyTypes)
   const params: Parameters<typeof octokit.rest.pulls.merge>[0] = {
@@ -263,11 +243,10 @@ export async function mergePullRequest(
 
   const { data } = await octokit.rest.pulls.merge(params);
 
-  logger.info("github_pr_merged", {
-    outcome: "success",
-    message: `PR #${pullNumber} merged`,
-    context: { owner, repo, pullNumber, sha: data.sha },
-  });
+  logger.info(
+    { owner, repo, pullNumber, sha: data.sha },
+    `PR #${pullNumber} merged`,
+  );
 
   return { sha: data.sha, merged: data.merged };
 }

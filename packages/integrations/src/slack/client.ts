@@ -5,11 +5,11 @@
  * Provides factory functions for different usage patterns.
  */
 
-import { createLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/common";
 import { WebClient } from "@slack/web-api";
 import type { SlackConfig } from "./types.js";
 
-const logger = createLogger({ defaultContext: { module: "slack-client" } });
+const logger = createPinoLogger({ component: "integrations:slack" });
 
 /**
  * Create a WebClient with configuration object
@@ -21,9 +21,7 @@ const logger = createLogger({ defaultContext: { module: "slack-client" } });
  * @returns Configured WebClient instance
  */
 export function createSlackClient(config: SlackConfig): WebClient {
-  logger.debug("slack_client_create", {
-    message: "Creating Slack client with config",
-  });
+  logger.debug("Creating Slack client with config");
 
   return new WebClient(config.botToken);
 }
@@ -38,9 +36,7 @@ export function createSlackClient(config: SlackConfig): WebClient {
  * @returns Configured WebClient instance
  */
 export function getSlackClient(token: string): WebClient {
-  logger.debug("slack_client_create_direct", {
-    message: "Creating Slack client with direct token",
-  });
+  logger.debug("Creating Slack client with direct token");
 
   return new WebClient(token);
 }

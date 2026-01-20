@@ -5,11 +5,11 @@
  * Provides lifecycle functions for starting and stopping the app.
  */
 
-import { createLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/common";
 import { App } from "@slack/bolt";
 import type { BoltAppConfig } from "./types.js";
 
-const logger = createLogger({ defaultContext: { module: "slack-bolt-app" } });
+const logger = createPinoLogger({ component: "integrations:slack" });
 
 /**
  * Create a Bolt app instance configured for Socket Mode
@@ -30,10 +30,10 @@ const logger = createLogger({ defaultContext: { module: "slack-bolt-app" } });
  * ```
  */
 export function createBoltApp(config: BoltAppConfig): App {
-  logger.debug("bolt_app_create", {
-    message: "Creating Bolt app with Socket Mode",
-    context: { socketMode: config.socketMode },
-  });
+  logger.debug(
+    { socketMode: config.socketMode },
+    "Creating Bolt app with Socket Mode",
+  );
 
   const app = new App({
     token: config.botToken,
@@ -41,10 +41,7 @@ export function createBoltApp(config: BoltAppConfig): App {
     socketMode: config.socketMode,
   });
 
-  logger.info("bolt_app_created", {
-    outcome: "success",
-    message: "Bolt app created successfully",
-  });
+  logger.info("Bolt app created successfully");
 
   return app;
 }
@@ -66,26 +63,17 @@ export function createBoltApp(config: BoltAppConfig): App {
  * ```
  */
 export async function startBoltApp(app: App): Promise<void> {
-  logger.debug("bolt_app_start", {
-    message: "Starting Bolt app",
-  });
+  logger.debug("Starting Bolt app");
 
   try {
     await app.start();
 
-    logger.info("bolt_app_started", {
-      outcome: "success",
-      message: "Bolt app started and connected to Slack",
-    });
+    logger.info("Bolt app started and connected to Slack");
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
 
-    logger.error("bolt_app_start_failed", {
-      outcome: "failure",
-      message: `Failed to start Bolt app: ${errorMessage}`,
-      context: { error: errorMessage },
-    });
+    logger.error({ err: error }, `Failed to start Bolt app: ${errorMessage}`);
 
     throw error;
   }
@@ -108,26 +96,17 @@ export async function startBoltApp(app: App): Promise<void> {
  * ```
  */
 export async function stopBoltApp(app: App): Promise<void> {
-  logger.debug("bolt_app_stop", {
-    message: "Stopping Bolt app",
-  });
+  logger.debug("Stopping Bolt app");
 
   try {
     await app.stop();
 
-    logger.info("bolt_app_stopped", {
-      outcome: "success",
-      message: "Bolt app stopped gracefully",
-    });
+    logger.info("Bolt app stopped gracefully");
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
 
-    logger.error("bolt_app_stop_failed", {
-      outcome: "failure",
-      message: `Error stopping Bolt app: ${errorMessage}`,
-      context: { error: errorMessage },
-    });
+    logger.error({ err: error }, `Error stopping Bolt app: ${errorMessage}`);
 
     // Don't re-throw on stop - we're shutting down anyway
   }
