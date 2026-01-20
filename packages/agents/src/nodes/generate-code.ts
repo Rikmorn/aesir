@@ -12,9 +12,9 @@
  */
 
 import {
+  createPinoLogger,
   type DevWorkflowStateType,
   FileChangeSchema,
-  logger,
 } from "@aesir/common";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
@@ -30,6 +30,8 @@ export const CodeGenerationOutputSchema = z.object({
 });
 
 export type CodeGenerationOutput = z.infer<typeof CodeGenerationOutputSchema>;
+
+const logger = createPinoLogger({ component: "agents:nodes:generate-code" });
 
 /**
  * Build the prompt for code generation
@@ -78,15 +80,16 @@ export async function generateCodeNode(
   state: DevWorkflowStateType,
   options: GenerateCodeNodeOptions = {},
 ): Promise<Partial<DevWorkflowStateType>> {
-  const nodeLogger = logger.child({ node: "generate-code" });
-
-  const timing = nodeLogger.startTimer("generate_code", {
-    context: {
-      taskId: state.taskId,
-      taskDescriptionLength: state.taskDescription.length,
-    },
-    message: `Generating code for task: ${state.taskId}`,
+  const nodeLogger = logger.child({
+    node: "generate-code",
+    taskId: state.taskId,
   });
+  const startTime = Date.now();
+
+  nodeLogger.info(
+    { taskDescriptionLength: state.taskDescription.length },
+    `Generating code for task: ${state.taskId}`,
+  );
 
   try {
     // Use provided LLM or create a new one
@@ -103,30 +106,32 @@ export async function generateCodeNode(
     const prompt = buildCodeGenPrompt(state.taskDescription);
     const result = await structuredLlm.invoke(prompt);
 
-    nodeLogger.info("code_generated", {
-      context: {
+    const durationMs = Date.now() - startTime;
+
+    nodeLogger.info(
+      {
         fileCount: result.files.length,
         reasoning: result.reasoning.slice(0, 200),
+        durationMs,
       },
-      message: `Generated ${result.files.length} file(s)`,
-    });
-
-    timing.success({
-      context: { fileCount: result.files.length },
-      message: "Code generation completed",
-    });
+      `Generated ${result.files.length} file(s)`,
+    );
 
     return {
       files: result.files,
       status: "testing" as const,
     };
   } catch (error) {
+    const durationMs = Date.now() - startTime;
     const errorMessage =
       error instanceof Error
         ? error.message
         : "Unknown error during code generation";
 
-    timing.failure({ message: errorMessage });
+    nodeLogger.error(
+      { err: errorMessage, durationMs },
+      "Code generation failed",
+    );
 
     return {
       status: "failed" as const,

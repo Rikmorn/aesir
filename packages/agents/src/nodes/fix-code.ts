@@ -12,9 +12,9 @@
  */
 
 import {
+  createPinoLogger,
   type DevWorkflowStateType,
   FileChangeSchema,
-  logger,
 } from "@aesir/common";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
@@ -32,6 +32,8 @@ export const FixCodeOutputSchema = z.object({
 });
 
 export type FixCodeOutput = z.infer<typeof FixCodeOutputSchema>;
+
+const logger = createPinoLogger({ component: "agents:nodes:fix-code" });
 
 /**
  * Build the prompt for code fixing
@@ -86,16 +88,13 @@ export async function fixCodeNode(
   state: DevWorkflowStateType,
   options: FixCodeNodeOptions = {},
 ): Promise<Partial<DevWorkflowStateType>> {
-  const nodeLogger = logger.child({ node: "fix-code" });
+  const nodeLogger = logger.child({ node: "fix-code", taskId: state.taskId });
+  const startTime = Date.now();
 
-  const timing = nodeLogger.startTimer("fix_code", {
-    context: {
-      taskId: state.taskId,
-      testAttempts: state.testAttempts,
-      fileCount: state.files.length,
-    },
-    message: `Fixing code for task: ${state.taskId}`,
-  });
+  nodeLogger.info(
+    { testAttempts: state.testAttempts, fileCount: state.files.length },
+    `Fixing code for task: ${state.taskId}`,
+  );
 
   try {
     // Use provided LLM or create a new one
@@ -111,28 +110,27 @@ export async function fixCodeNode(
     const prompt = buildFixCodePrompt(state);
     const result = await structuredLlm.invoke(prompt);
 
-    nodeLogger.info("code_fixed", {
-      context: {
+    const durationMs = Date.now() - startTime;
+
+    nodeLogger.info(
+      {
         fileCount: result.files.length,
         reasoning: result.reasoning.slice(0, 200),
+        durationMs,
       },
-      message: `Generated ${result.files.length} fixed file(s)`,
-    });
-
-    timing.success({
-      context: { fileCount: result.files.length },
-      message: "Code fix completed",
-    });
+      `Generated ${result.files.length} fixed file(s)`,
+    );
 
     return {
       files: result.files,
       status: "testing" as const,
     };
   } catch (error) {
+    const durationMs = Date.now() - startTime;
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error during code fix";
 
-    timing.failure({ message: errorMessage });
+    nodeLogger.error({ err: errorMessage, durationMs }, "Code fix failed");
 
     return {
       status: "failed" as const,

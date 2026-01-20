@@ -11,13 +11,16 @@
  * - Updates testAttempts and status based on result
  */
 
-import type {
-  DevWorkflowConfig,
-  DevWorkflowStateType,
-  Sandbox,
-  TestResult,
+import {
+  createPinoLogger,
+  DEFAULT_DEV_WORKFLOW_CONFIG,
+  type DevWorkflowConfig,
+  type DevWorkflowStateType,
+  type Sandbox,
+  type TestResult,
 } from "@aesir/common";
-import { DEFAULT_DEV_WORKFLOW_CONFIG, logger } from "@aesir/common";
+
+const logger = createPinoLogger({ component: "agents:nodes:run-tests" });
 
 /**
  * Factory function that creates a runTestsNode with injected sandbox.
@@ -30,16 +33,16 @@ export function createRunTestsNode(sandbox: Sandbox) {
     state: DevWorkflowStateType,
     config: DevWorkflowConfig = DEFAULT_DEV_WORKFLOW_CONFIG,
   ): Promise<Partial<DevWorkflowStateType>> {
-    const nodeLogger = logger.child({ node: "run-tests" });
-
-    const timing = nodeLogger.startTimer("run_tests", {
-      context: {
-        taskId: state.taskId,
-        fileCount: state.files.length,
-        testAttempts: state.testAttempts,
-      },
-      message: `Running tests for task: ${state.taskId}`,
+    const nodeLogger = logger.child({
+      node: "run-tests",
+      taskId: state.taskId,
     });
+    const startTime = Date.now();
+
+    nodeLogger.info(
+      { fileCount: state.files.length, testAttempts: state.testAttempts },
+      `Running tests for task: ${state.taskId}`,
+    );
 
     try {
       // Write all files to sandbox
@@ -54,36 +57,30 @@ export function createRunTestsNode(sandbox: Sandbox) {
         }
       }
 
-      nodeLogger.info("files_written", {
-        context: { fileCount: state.files.length },
-        message: `Wrote ${state.files.length} file(s) to sandbox`,
-      });
+      nodeLogger.info(
+        { fileCount: state.files.length },
+        `Wrote ${state.files.length} file(s) to sandbox`,
+      );
 
       // Run tests
       const testResult: TestResult = await sandbox.runTests(config.testCommand);
 
+      const durationMs = Date.now() - startTime;
       const newTestAttempts = state.testAttempts + 1;
       const newStatus = testResult.passed ? "committing" : "fixing";
 
-      nodeLogger.info("tests_executed", {
-        context: {
+      nodeLogger.info(
+        {
           passed: testResult.passed,
           exitCode: testResult.exitCode,
           testAttempts: newTestAttempts,
           status: newStatus,
+          durationMs,
         },
-        message: testResult.passed
+        testResult.passed
           ? "Tests passed"
           : `Tests failed (attempt ${newTestAttempts})`,
-      });
-
-      timing.success({
-        context: {
-          passed: testResult.passed,
-          testAttempts: newTestAttempts,
-        },
-        message: "Test execution completed",
-      });
+      );
 
       return {
         testResult,
@@ -91,12 +88,16 @@ export function createRunTestsNode(sandbox: Sandbox) {
         status: newStatus,
       };
     } catch (error) {
+      const durationMs = Date.now() - startTime;
       const errorMessage =
         error instanceof Error
           ? error.message
           : "Unknown error during test execution";
 
-      timing.failure({ message: errorMessage });
+      nodeLogger.error(
+        { err: errorMessage, durationMs },
+        "Test execution failed",
+      );
 
       return {
         status: "failed",
