@@ -28,6 +28,11 @@
     "infra:up": "docker compose up -d postgresql temporal temporal-ui",
     "infra:down": "docker compose down",
     "infra:logs": "docker compose logs -f postgresql temporal temporal-ui",
+    "db:generate": "pnpm --filter @aesir/platform db:generate && pnpm --filter @aesir/integrations db:generate && pnpm --filter @aesir/observability db:generate",
+    "db:migrate": "pnpm --filter @aesir/platform db:migrate && pnpm --filter @aesir/integrations db:migrate && pnpm --filter @aesir/observability db:migrate",
+    "db:migrate:platform": "pnpm --filter @aesir/platform db:migrate",
+    "db:migrate:integrations": "pnpm --filter @aesir/integrations db:migrate",
+    "db:migrate:observability": "pnpm --filter @aesir/observability db:migrate",
     "prepare": "husky"
   },
   "keywords": [
