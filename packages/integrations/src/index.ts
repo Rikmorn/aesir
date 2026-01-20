@@ -1,4 +1,10 @@
 // @aesir/integrations - linear, github, slack
-// Code will be moved here in plan 03
 
-export {};
+// Linear
+export * from "./linear/index.js";
+
+// GitHub
+export * from "./github/index.js";
+
+// Slack
+export * from "./slack/index.js";
