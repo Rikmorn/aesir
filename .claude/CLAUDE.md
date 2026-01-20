@@ -31,7 +31,7 @@ Platform (config, logging, state, temporal)
 
 - Agent state persisted to PostgreSQL via LangGraph checkpointer
 - Temporal workflows stored in same PostgreSQL instance
-- OAuth tokens in `.tokens/` directory (migrating to database in v2.0)
+- OAuth tokens encrypted and stored in PostgreSQL (integrations.credentials table)
 
 ## Directory Structure
 
@@ -216,9 +216,9 @@ describe("ComponentName", () => {
 
 ### OAuth Tokens
 
-- Linear OAuth tokens stored in `.tokens/` directory
+- Linear OAuth tokens stored in PostgreSQL `integrations.credentials` table (encrypted)
 - Run `npm run linear-oauth` to authenticate
-- Tokens migrating to PostgreSQL in v2.0
+- Requires `CREDENTIAL_ENCRYPTION_KEY` environment variable (generate with `openssl rand -hex 32`)
 
 ### npm Install
 
@@ -245,7 +245,7 @@ Current milestone is v2.0 Foundation - full architectural restructure for mainta
 
 ### Key Changes Coming
 
-- pnpm monorepo structure
-- Centralized pino logging
-- PostgreSQL-based credentials storage
+- pnpm monorepo structure (complete)
+- Centralized pino logging (complete)
+- PostgreSQL-based credentials storage (complete)
 - Result types for error handling (neverthrow)

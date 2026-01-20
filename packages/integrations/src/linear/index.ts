@@ -55,17 +55,11 @@ export {
   type TeamInfo,
 } from "./issues.js";
 // Token persistence utilities (database-backed)
-// Legacy file-based token utilities (deprecated)
 export {
   CredentialNotFoundError,
   createLinearClientFromDatabase,
-  createLinearClientFromFile,
-  InvalidTokenFileError,
   loadLinearTokens,
-  loadLinearTokensFromFile,
   saveLinearTokens,
-  saveLinearTokensToFile,
-  TokenFileNotFoundError,
 } from "./token-store.js";
 // Types
 export type {

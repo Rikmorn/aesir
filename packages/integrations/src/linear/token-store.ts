@@ -2,11 +2,11 @@
  * Linear Token Store
  *
  * Database-backed storage for Linear OAuth tokens with encryption.
- * Replaces file-based .tokens/linear.json storage.
  */
 
 import { createPinoLogger } from "@aesir/common";
 import type { LinearClient } from "@linear/sdk";
+
 import {
   type DecryptedCredential,
   getCredentialByProvider,
@@ -148,128 +148,4 @@ function credentialToConfig(credential: DecryptedCredential): LinearConfig {
   }
 
   return config;
-}
-
-// =============================================================================
-// Legacy file-based functions (deprecated - kept for migration only)
-// =============================================================================
-
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import * as path from "node:path";
-
-const DEFAULT_TOKEN_FILE = ".tokens/linear.json";
-
-/**
- * Error thrown when token file is missing
- * @deprecated Use CredentialNotFoundError instead
- */
-export class TokenFileNotFoundError extends Error {
-  constructor(tokenFile: string) {
-    super(
-      `Linear tokens not found at "${tokenFile}". ` +
-        `Run "npm run linear-oauth" to authorize and obtain tokens.`,
-    );
-    this.name = "TokenFileNotFoundError";
-  }
-}
-
-/**
- * Error thrown when token file has invalid format
- * @deprecated File-based storage is deprecated
- */
-export class InvalidTokenFileError extends Error {
-  constructor(tokenFile: string, reason: string) {
-    super(`Invalid token file at "${tokenFile}": ${reason}`);
-    this.name = "InvalidTokenFileError";
-  }
-}
-
-/**
- * @deprecated Use loadLinearTokens() instead (database-backed)
- * Load Linear OAuth tokens from a JSON file (legacy)
- */
-export async function loadLinearTokensFromFile(
-  tokenFile: string = DEFAULT_TOKEN_FILE,
-): Promise<LinearConfig> {
-  let content: string;
-
-  try {
-    content = await readFile(tokenFile, "utf-8");
-  } catch (err) {
-    if (err instanceof Error && "code" in err && err.code === "ENOENT") {
-      throw new TokenFileNotFoundError(tokenFile);
-    }
-    throw err;
-  }
-
-  let data: unknown;
-  try {
-    data = JSON.parse(content);
-  } catch {
-    throw new InvalidTokenFileError(tokenFile, "Invalid JSON format");
-  }
-
-  if (typeof data !== "object" || data === null) {
-    throw new InvalidTokenFileError(tokenFile, "Expected object");
-  }
-
-  const obj = data as Record<string, unknown>;
-
-  if (typeof obj.accessToken !== "string" || !obj.accessToken) {
-    throw new InvalidTokenFileError(
-      tokenFile,
-      "Missing or invalid accessToken",
-    );
-  }
-
-  if (typeof obj.expiresAt !== "number" || obj.expiresAt <= 0) {
-    throw new InvalidTokenFileError(tokenFile, "Missing or invalid expiresAt");
-  }
-
-  const config: LinearConfig = {
-    accessToken: obj.accessToken,
-    expiresAt: obj.expiresAt,
-  };
-
-  if (typeof obj.refreshToken === "string" && obj.refreshToken) {
-    config.refreshToken = obj.refreshToken;
-  }
-
-  return config;
-}
-
-/**
- * @deprecated Use saveLinearTokens() instead (database-backed)
- * Save Linear OAuth tokens to a JSON file (legacy)
- */
-export async function saveLinearTokensToFile(
-  config: LinearConfig,
-  tokenFile: string = DEFAULT_TOKEN_FILE,
-): Promise<void> {
-  const data = {
-    accessToken: config.accessToken,
-    refreshToken: config.refreshToken,
-    expiresAt: config.expiresAt,
-  };
-
-  await mkdir(path.dirname(tokenFile), { recursive: true });
-  await writeFile(tokenFile, `${JSON.stringify(data, null, 2)}\n`, {
-    mode: 0o600,
-  });
-}
-
-/**
- * @deprecated Use createLinearClientFromDatabase() instead
- * Create a LinearClient from a token file (legacy)
- */
-export async function createLinearClientFromFile(
-  tokenFile: string = DEFAULT_TOKEN_FILE,
-): Promise<LinearClient> {
-  const config = await loadLinearTokensFromFile(tokenFile);
-
-  const onTokenRefresh = async (newConfig: LinearConfig): Promise<void> => {
-    await saveLinearTokensToFile(newConfig, tokenFile);
-  };
-
-  return createLinearClient(config, onTokenRefresh);
 }
