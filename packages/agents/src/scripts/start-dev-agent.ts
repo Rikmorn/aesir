@@ -42,8 +42,8 @@ async function bootstrap(): Promise<void> {
     createTemporalWorker,
     DockerSandbox,
     getLinearClient,
-    createLinearClientFromFile,
-    TokenFileNotFoundError,
+    createLinearClientFromDatabase,
+    CredentialNotFoundError,
   } = await import("@aesir/integrations");
   const { makeActivities } = await import("../temporal/activities/index.js");
   const { linearWebhookHandler } = await import(
@@ -76,20 +76,17 @@ async function bootstrap(): Promise<void> {
   // Initialize dependencies
   logger.info({}, "Initializing dependencies");
 
-  // Prefer OAuth tokens from file (shows app identity in Linear)
+  // Prefer database credentials (shows app identity in Linear)
   // Fall back to LINEAR_ACCESS_TOKEN env var (shows user identity)
-  let linearClient;
+  let linearClient: Awaited<ReturnType<typeof createLinearClientFromDatabase>>;
   try {
-    linearClient = await createLinearClientFromFile();
-    logger.info(
-      {},
-      "Using OAuth tokens from .tokens/linear.json (app identity)",
-    );
+    linearClient = await createLinearClientFromDatabase();
+    logger.info({}, "Using Linear credentials from database (app identity)");
   } catch (err) {
-    if (err instanceof TokenFileNotFoundError) {
+    if (err instanceof CredentialNotFoundError) {
       logger.warn(
         {},
-        "OAuth tokens not found, falling back to LINEAR_ACCESS_TOKEN (user identity). Run 'docker compose --profile oauth run --rm oauth' for app identity.",
+        "Linear credentials not found in database, falling back to LINEAR_ACCESS_TOKEN (user identity). Run 'npm run linear-oauth' for app identity.",
       );
       linearClient = getLinearClient(process.env.LINEAR_ACCESS_TOKEN!);
     } else {
@@ -132,7 +129,7 @@ async function bootstrap(): Promise<void> {
   // Create bound activities from dependencies
   const activities = makeActivities(dependencies);
 
-  let worker;
+  let worker: Awaited<ReturnType<typeof createTemporalWorker>>;
   try {
     worker = await createTemporalWorker({
       address: temporalAddress,
