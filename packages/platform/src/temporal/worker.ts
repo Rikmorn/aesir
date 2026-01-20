@@ -7,10 +7,10 @@
  * Activities are passed in from @aesir/agents via the config.activities parameter.
  */
 
-import { createLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/common";
 import { NativeConnection, Worker } from "@temporalio/worker";
 
-const logger = createLogger({ defaultContext: { module: "temporal-worker" } });
+const logger = createPinoLogger({ component: "platform:temporal" });
 
 /**
  * Configuration for creating a Temporal worker
@@ -43,24 +43,22 @@ export async function createTemporalWorker(
   const namespace =
     config.namespace ?? process.env.TEMPORAL_NAMESPACE ?? "default";
 
-  logger.info("temporal_worker_connecting", {
-    message: `Connecting to Temporal at ${address}`,
-    context: { address, namespace, taskQueue: config.taskQueue },
-  });
+  logger.info(
+    { address, namespace, taskQueue: config.taskQueue },
+    `Connecting to Temporal at ${address}`,
+  );
 
   const connection = await NativeConnection.connect({ address });
 
   // Use provided activities (bound via makeActivities from @aesir/agents)
   const activities = config.activities ?? {};
   if (Object.keys(activities).length === 0) {
-    logger.warn("temporal_worker_no_activities", {
-      message: "No activities provided, workflow activity calls will fail",
-    });
+    logger.warn("No activities provided, workflow activity calls will fail");
   } else {
-    logger.info("temporal_worker_activities_provided", {
-      message: "Activities provided for worker",
-      context: { activityCount: Object.keys(activities).length },
-    });
+    logger.info(
+      { activityCount: Object.keys(activities).length },
+      "Activities provided for worker",
+    );
   }
 
   const worker = await Worker.create({
@@ -72,11 +70,7 @@ export async function createTemporalWorker(
     activities,
   });
 
-  logger.info("temporal_worker_created", {
-    outcome: "success",
-    message: "Temporal worker created",
-    context: { taskQueue: config.taskQueue },
-  });
+  logger.info({ taskQueue: config.taskQueue }, "Temporal worker created");
 
   return worker;
 }
@@ -92,10 +86,7 @@ export async function createTemporalWorker(
 export async function runWorker(config: WorkerConfig): Promise<void> {
   const worker = await createTemporalWorker(config);
 
-  logger.info("temporal_worker_starting", {
-    message: "Starting Temporal worker",
-    context: { taskQueue: config.taskQueue },
-  });
+  logger.info({ taskQueue: config.taskQueue }, "Starting Temporal worker");
 
   await worker.run();
 }

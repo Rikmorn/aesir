@@ -2,13 +2,13 @@
  * LangGraph Callback Tracer
  *
  * Captures all LangGraph events (node transitions, LLM calls, tool calls)
- * for workflow debugging. Integrates with Logger and TraceStore.
+ * for workflow debugging. Integrates with pino Logger and TraceStore.
  *
  * All handler methods are wrapped in try/catch to prevent tracing errors
  * from crashing the workflow.
  */
 
-import type { LogContext, LogEntry, Logger, TraceStore } from "@aesir/common";
+import type { LogEntry, PinoLogger, TraceStore } from "@aesir/common";
 import { BaseCallbackHandler } from "@langchain/core/callbacks/base";
 import type { Serialized } from "@langchain/core/load/serializable";
 import type { LLMResult } from "@langchain/core/outputs";
@@ -21,15 +21,15 @@ import type { LLMResult } from "@langchain/core/outputs";
  * - LLM events (model calls)
  * - Tool events (tool invocations)
  *
- * Events are logged via Logger and appended to TraceStore for query.
+ * Events are logged via pino Logger and appended to TraceStore for query.
  */
 export class LangGraphTracer extends BaseCallbackHandler {
   name = "LangGraphTracer";
 
-  private readonly logger: Logger;
+  private readonly logger: PinoLogger;
   private readonly store: TraceStore;
 
-  constructor(logger: Logger, store: TraceStore) {
+  constructor(logger: PinoLogger, store: TraceStore) {
     super();
     this.logger = logger;
     this.store = store;
@@ -41,7 +41,7 @@ export class LangGraphTracer extends BaseCallbackHandler {
   private appendToStore(
     level: LogEntry["level"],
     action: string,
-    context: LogContext,
+    context: Record<string, unknown>,
     outcome?: LogEntry["outcome"],
     message?: string,
   ): void {
@@ -74,7 +74,7 @@ export class LangGraphTracer extends BaseCallbackHandler {
         chainType,
         ...(parentRunId !== undefined && { parentRunId }),
       };
-      this.logger.info("chain_start", { context });
+      this.logger.info(context, "chain_start");
       this.appendToStore("info", "chain_start", context);
     } catch {
       // Silently ignore - tracing errors should never crash workflow
@@ -87,7 +87,7 @@ export class LangGraphTracer extends BaseCallbackHandler {
   handleChainEnd(_outputs: Record<string, unknown>, runId: string): void {
     try {
       const context = { runId };
-      this.logger.info("chain_end", { outcome: "success", context });
+      this.logger.info(context, "chain_end");
       this.appendToStore("info", "chain_end", context, "success");
     } catch {
       // Silently ignore - tracing errors should never crash workflow
@@ -99,16 +99,12 @@ export class LangGraphTracer extends BaseCallbackHandler {
    */
   handleChainError(error: Error, runId: string): void {
     try {
-      const context = { runId };
-      this.logger.error("chain_error", {
-        outcome: "failure",
-        message: error.message,
-        context,
-      });
+      const context = { runId, err: error.message };
+      this.logger.error(context, "chain_error");
       this.appendToStore(
         "error",
         "chain_error",
-        context,
+        { runId },
         "failure",
         error.message,
       );
@@ -134,7 +130,7 @@ export class LangGraphTracer extends BaseCallbackHandler {
         promptCount: prompts.length,
         ...(parentRunId !== undefined && { parentRunId }),
       };
-      this.logger.debug("llm_start", { context });
+      this.logger.debug(context, "llm_start");
       this.appendToStore("debug", "llm_start", context);
     } catch {
       // Silently ignore - tracing errors should never crash workflow
@@ -162,7 +158,7 @@ export class LangGraphTracer extends BaseCallbackHandler {
           completionTokens: tokenUsage.completionTokens,
         }),
       };
-      this.logger.debug("llm_end", { context });
+      this.logger.debug(context, "llm_end");
       this.appendToStore("debug", "llm_end", context);
     } catch {
       // Silently ignore - tracing errors should never crash workflow
@@ -186,7 +182,7 @@ export class LangGraphTracer extends BaseCallbackHandler {
         inputLength: input.length,
         ...(parentRunId !== undefined && { parentRunId }),
       };
-      this.logger.info("tool_start", { context });
+      this.logger.info(context, "tool_start");
       this.appendToStore("info", "tool_start", context);
     } catch {
       // Silently ignore - tracing errors should never crash workflow
@@ -202,7 +198,7 @@ export class LangGraphTracer extends BaseCallbackHandler {
         runId,
         outputLength: output.length,
       };
-      this.logger.info("tool_end", { context });
+      this.logger.info(context, "tool_end");
       this.appendToStore("info", "tool_end", context);
     } catch {
       // Silently ignore - tracing errors should never crash workflow
@@ -213,12 +209,12 @@ export class LangGraphTracer extends BaseCallbackHandler {
 /**
  * Factory function to create a LangGraphTracer instance.
  *
- * @param logger - Logger instance (use child logger with taskId for correlation)
+ * @param logger - Pino Logger instance (use child logger with taskId for correlation)
  * @param store - TraceStore for indexing events
  * @returns Configured LangGraphTracer
  */
 export function createLangGraphTracer(
-  logger: Logger,
+  logger: PinoLogger,
   store: TraceStore,
 ): LangGraphTracer {
   return new LangGraphTracer(logger, store);

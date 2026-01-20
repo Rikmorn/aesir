@@ -5,7 +5,7 @@
  * Used by API endpoints and webhook handlers to interact with running workflows.
  */
 
-import { createLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/common";
 import { Client, Connection, type WorkflowHandle } from "@temporalio/client";
 import { approvalSignal, changesRequestedSignal } from "./signals.js";
 import type { ApprovalDecision, ChangesRequested } from "./types.js";
@@ -15,7 +15,7 @@ import type {
 } from "./workflows/approval-workflow.js";
 import { prApprovalWorkflow } from "./workflows/approval-workflow.js";
 
-const logger = createLogger({ defaultContext: { module: "temporal-client" } });
+const logger = createPinoLogger({ component: "platform:temporal" });
 
 /**
  * Configuration for Temporal client connection
@@ -51,19 +51,15 @@ export async function getTemporalClient(
   const namespace =
     config.namespace ?? process.env.TEMPORAL_NAMESPACE ?? "default";
 
-  logger.debug("temporal_client_connecting", {
-    message: `Creating Temporal client for ${address}`,
-    context: { address, namespace },
-  });
+  logger.debug(
+    { address, namespace },
+    `Creating Temporal client for ${address}`,
+  );
 
   const connection = await Connection.connect({ address });
   cachedClient = new Client({ connection, namespace });
 
-  logger.info("temporal_client_created", {
-    outcome: "success",
-    message: "Temporal client connected",
-    context: { address, namespace },
-  });
+  logger.info({ address, namespace }, "Temporal client connected");
 
   return cachedClient;
 }
@@ -93,15 +89,10 @@ export async function sendApprovalSignal(
 
   await handle.signal(approvalSignal, decision);
 
-  logger.info("temporal_approval_signal_sent", {
-    outcome: "success",
-    message: `Approval signal sent to workflow ${workflowId}`,
-    context: {
-      workflowId,
-      approved: decision.approved,
-      reviewer: decision.reviewer,
-    },
-  });
+  logger.info(
+    { workflowId, approved: decision.approved, reviewer: decision.reviewer },
+    `Approval signal sent to workflow ${workflowId}`,
+  );
 }
 
 /**
@@ -122,14 +113,10 @@ export async function sendChangesRequestedSignal(
 
   await handle.signal(changesRequestedSignal, changesRequested);
 
-  logger.info("temporal_changes_requested_signal_sent", {
-    outcome: "success",
-    message: `Changes requested signal sent to workflow ${workflowId}`,
-    context: {
-      workflowId,
-      reviewer: changesRequested.reviewer,
-    },
-  });
+  logger.info(
+    { workflowId, reviewer: changesRequested.reviewer },
+    `Changes requested signal sent to workflow ${workflowId}`,
+  );
 }
 
 /** Default task queue for approval workflows */
@@ -151,10 +138,10 @@ export async function startApprovalWorkflow(
 ): Promise<WorkflowHandle<typeof prApprovalWorkflow>> {
   const client = await getTemporalClient();
 
-  logger.info("temporal_start_approval_workflow", {
-    message: `Starting approval workflow ${workflowId}`,
-    context: { workflowId, taskId: input.taskId },
-  });
+  logger.info(
+    { workflowId, taskId: input.taskId },
+    `Starting approval workflow ${workflowId}`,
+  );
 
   return client.workflow.start(prApprovalWorkflow, {
     workflowId,

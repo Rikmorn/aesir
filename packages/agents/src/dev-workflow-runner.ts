@@ -13,7 +13,6 @@
  */
 
 import {
-  createLogger,
   createPinoLogger,
   createTraceStore,
   DEFAULT_DEV_WORKFLOW_CONFIG,
@@ -30,12 +29,6 @@ import { createLangGraphTracer } from "./tracing/index.js";
 
 const logger: PinoLogger = createPinoLogger({
   component: "agents:dev-workflow",
-});
-
-// TODO(12-05): Remove after tracer is migrated to pino in Task 3
-// Legacy logger for LangGraph tracer compatibility - tracer uses old Logger API
-const tracerLogger = createLogger({
-  defaultContext: { component: "agents:dev-workflow:tracer" },
 });
 
 /**
@@ -81,9 +74,8 @@ export async function runDevWorkflow(
   const startTime = Date.now();
 
   // Create trace store and tracer for this workflow run
-  // TODO(12-05): Use pino logger after tracer is migrated in Task 3
   const traceStore = createTraceStore();
-  const taskTracerLogger = tracerLogger.child({ taskId });
+  const taskTracerLogger = logger.child({ taskId });
   const tracer = createLangGraphTracer(taskTracerLogger, traceStore);
 
   logger.info({ taskId }, `Starting dev workflow for task ${taskId}`);

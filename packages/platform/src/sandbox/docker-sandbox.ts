@@ -6,7 +6,7 @@
  */
 
 import * as path from "node:path";
-import { createLogger, type Logger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import type { Container } from "dockerode";
 import Docker from "dockerode";
 import * as tar from "tar-stream";
@@ -25,7 +25,7 @@ export interface DockerSandboxOptions {
   /** Docker client instance (for testing) */
   docker?: Docker;
   /** Logger instance (optional) */
-  logger?: Logger;
+  logger?: PinoLogger;
 }
 
 /**
@@ -57,10 +57,10 @@ const DEFAULTS = {
  */
 export class DockerSandbox implements Sandbox {
   private readonly container: Container;
-  private readonly logger: Logger;
+  private readonly logger: PinoLogger;
   private isCleanedUp = false;
 
-  private constructor(container: Container, logger: Logger) {
+  private constructor(container: Container, logger: PinoLogger) {
     this.container = container;
     this.logger = logger;
   }
@@ -76,16 +76,13 @@ export class DockerSandbox implements Sandbox {
   ): Promise<DockerSandbox> {
     const docker = options.docker ?? new Docker();
     const logger =
-      options.logger ??
-      createLogger({ defaultContext: { component: "DockerSandbox" } });
+      options.logger ?? createPinoLogger({ component: "platform:sandbox" });
 
     const image = options.image ?? DEFAULTS.image;
     const memoryLimit = options.memoryLimit ?? DEFAULTS.memoryLimit;
     const cpuQuota = options.cpuQuota ?? DEFAULTS.cpuQuota;
 
-    logger.info("container_create", {
-      message: `Creating container with image ${image}`,
-    });
+    logger.info({ image }, `Creating container with image ${image}`);
 
     const container = await docker.createContainer({
       Image: image,
@@ -99,10 +96,10 @@ export class DockerSandbox implements Sandbox {
     });
 
     await container.start();
-    logger.info("container_start", {
-      message: `Container ${container.id.slice(0, 12)} started`,
-      outcome: "success",
-    });
+    logger.info(
+      { containerId: container.id.slice(0, 12) },
+      `Container ${container.id.slice(0, 12)} started`,
+    );
 
     return new DockerSandbox(container, logger);
   }
@@ -118,9 +115,8 @@ export class DockerSandbox implements Sandbox {
       throw new Error("Sandbox has been cleaned up");
     }
 
-    const timedLog = this.logger.startTimer("container_exec", {
-      context: { command: command.join(" ") },
-    });
+    const startTime = performance.now();
+    const commandStr = command.join(" ");
 
     try {
       const exec = await this.container.exec({
@@ -159,10 +155,18 @@ export class DockerSandbox implements Sandbox {
         stream.on("error", reject);
       });
 
-      timedLog.success({ context: { exitCode: result.exitCode } });
+      const durationMs = Math.round(performance.now() - startTime);
+      this.logger.info(
+        { command: commandStr, exitCode: result.exitCode, durationMs },
+        "Container exec completed",
+      );
       return result;
     } catch (error) {
-      timedLog.failure({ message: String(error) });
+      const durationMs = Math.round(performance.now() - startTime);
+      this.logger.error(
+        { err: error, command: commandStr, durationMs },
+        "Container exec failed",
+      );
       throw error;
     }
   }
@@ -180,9 +184,7 @@ export class DockerSandbox implements Sandbox {
       throw new Error("Sandbox has been cleaned up");
     }
 
-    const timedLog = this.logger.startTimer("file_write", {
-      context: { path: filePath },
-    });
+    const startTime = performance.now();
 
     try {
       const fileName = path.basename(filePath);
@@ -196,9 +198,17 @@ export class DockerSandbox implements Sandbox {
       // Write tar archive to container
       await this.container.putArchive(pack, { path: dirName });
 
-      timedLog.success();
+      const durationMs = Math.round(performance.now() - startTime);
+      this.logger.info(
+        { path: filePath, durationMs },
+        "File written to container",
+      );
     } catch (error) {
-      timedLog.failure({ message: String(error) });
+      const durationMs = Math.round(performance.now() - startTime);
+      this.logger.error(
+        { err: error, path: filePath, durationMs },
+        "File write failed",
+      );
       throw error;
     }
   }
@@ -218,9 +228,7 @@ export class DockerSandbox implements Sandbox {
       throw new Error("Sandbox has been cleaned up");
     }
 
-    const timedLog = this.logger.startTimer("file_read", {
-      context: { path: filePath },
-    });
+    const startTime = performance.now();
 
     try {
       const stream = await this.container.getArchive({ path: filePath });
@@ -228,10 +236,18 @@ export class DockerSandbox implements Sandbox {
       // Extract file content from tar stream
       const content = await this.extractFileFromTar(stream);
 
-      timedLog.success();
+      const durationMs = Math.round(performance.now() - startTime);
+      this.logger.info(
+        { path: filePath, durationMs },
+        "File read from container",
+      );
       return content;
     } catch (error) {
-      timedLog.failure({ message: String(error) });
+      const durationMs = Math.round(performance.now() - startTime);
+      this.logger.error(
+        { err: error, path: filePath, durationMs },
+        "File read failed",
+      );
       throw error;
     }
   }
@@ -297,9 +313,8 @@ export class DockerSandbox implements Sandbox {
       return;
     }
 
-    const timedLog = this.logger.startTimer("container_cleanup", {
-      context: { containerId: this.container.id.slice(0, 12) },
-    });
+    const startTime = performance.now();
+    const containerId = this.container.id.slice(0, 12);
 
     try {
       // Try graceful stop first
@@ -312,9 +327,18 @@ export class DockerSandbox implements Sandbox {
 
       await this.container.remove();
       this.isCleanedUp = true;
-      timedLog.success();
+
+      const durationMs = Math.round(performance.now() - startTime);
+      this.logger.info(
+        { containerId, durationMs },
+        "Container cleanup completed",
+      );
     } catch (error) {
-      timedLog.failure({ message: String(error) });
+      const durationMs = Math.round(performance.now() - startTime);
+      this.logger.error(
+        { err: error, containerId, durationMs },
+        "Container cleanup failed",
+      );
       throw error;
     }
   }
