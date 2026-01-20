@@ -20,7 +20,12 @@ export {
   generateCorrelationId,
   type OperationType,
 } from "./correlation.js";
-
+// HTTP middleware
+export {
+  createHttpLogger,
+  type HttpLogger,
+  type HttpLoggerOptions,
+} from "./http-logger.js";
 // Existing Logger exports (maintained for backward compatibility)
 // Will be migrated to pino in plan 12-04
 export {
@@ -34,15 +39,19 @@ export {
   logger,
   type Timer,
 } from "./logger.js";
-
 // New pino-based logging (use createPinoLogger for new code)
 export {
   createChildLogger,
   createLogger as createPinoLogger,
 } from "./pino-logger.js";
-
 // Redaction configuration
 export { createRedactionConfig, REDACTION_PATHS } from "./redaction.js";
+// Temporal adapter
+export {
+  createTemporalLogger,
+  type TemporalLoggerInterface,
+  type TemporalLogLevel,
+} from "./temporal-logger.js";
 
 // TraceStore (will be updated in plan 12-04)
 export { createTraceStore, TraceStore } from "./trace-store.js";
