@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 12 of 22 (Observability)
-Plan: 1 of 6 in current phase
+Plan: 2 of 6 in current phase
 Status: In progress
-Last activity: 2026-01-20 - Completed 12-01-PLAN.md (Pino Infrastructure)
+Last activity: 2026-01-20 - Completed 12-02-PLAN.md (Logger Factory)
 
 Progress: [####                ] 15% (2 of 13 phases complete)
 
@@ -25,9 +25,9 @@ Progress: [####                ] 15% (2 of 13 phases complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9 (v2.0)
+- Total plans completed: 10 (v2.0)
 - Average duration: ~9 min
-- Total execution time: ~87 min
+- Total execution time: ~95 min
 
 **By Phase:**
 
@@ -35,11 +35,11 @@ Progress: [####                ] 15% (2 of 13 phases complete)
 |-------|-------|-------|----------|
 | 10-foundation-setup | 4/4 | ~44 min | ~11 min |
 | 11-monorepo-setup | 4/4 | ~41 min | ~10 min |
-| 12-observability | 1/6 | 2 min | 2 min |
+| 12-observability | 2/6 | 10 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 12-01 (2 min), 11-04 (30 min), 11-03 (4 min), 11-02 (3 min), 11-01 (4 min)
-- Trend: 12-01 fast setup (dependencies + utilities)
+- Last 5 plans: 12-02 (8 min), 12-01 (2 min), 11-04 (30 min), 11-03 (4 min), 11-02 (3 min)
+- Trend: 12-02 included blocking fix for prerequisite files
 
 *Updated after each plan completion*
 
@@ -83,6 +83,9 @@ Recent decisions affecting current work:
 - [12-01]: pino v10 (latest) for structured logging
 - [12-01]: 16-char nanoid for correlation IDs (shorter, collision-resistant)
 - [12-01]: Explicit redaction paths over ** wildcards (performance)
+- [12-02]: Export as createPinoLogger (new) to maintain createLogger backward compat
+- [12-02]: Conditionally spread redaction for exactOptionalPropertyTypes
+- [12-02]: Cache component log levels at module load
 
 ### Pending Todos
 
@@ -109,9 +112,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-20
-Stopped at: Completed 12-01-PLAN.md (Pino Infrastructure)
+Stopped at: Completed 12-02-PLAN.md (Logger Factory)
 Resume file: None
-Next action: Execute 12-02-PLAN.md (Logger Factory)
+Next action: Execute 12-03-PLAN.md (HTTP Request Logging)
 
 ---
-*Updated: 2026-01-20 after 12-01-PLAN.md complete*
+*Updated: 2026-01-20 after 12-02-PLAN.md complete*
