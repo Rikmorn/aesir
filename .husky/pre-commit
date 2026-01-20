@@ -1,0 +1,10 @@
+# Biome lint and format on staged files (native --staged support)
+# --write auto-fixes, --files-ignore-unknown skips non-supported files
+npx @biomejs/biome check --staged --write --files-ignore-unknown=true --no-errors-on-unmatched
+
+# Re-stage any auto-fixed files
+git update-index --again
+
+# TypeScript type-check (must be full project - staged-only is fundamentally broken)
+# See 10-RESEARCH.md "Anti-Patterns to Avoid" for rationale
+npx tsc --noEmit
