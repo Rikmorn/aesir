@@ -24,16 +24,20 @@
   "dependencies": {
     "@aesir/common": "workspace:*",
     "@langchain/langgraph-checkpoint-postgres": "^0.1.0",
-    "pino": "^10.2.1",
     "@temporalio/activity": "^1.14.1",
     "@temporalio/client": "^1.14.1",
     "@temporalio/common": "^1.14.1",
     "@temporalio/worker": "^1.14.1",
     "@temporalio/workflow": "^1.14.1",
-    "dockerode": "^4.0.9"
+    "dockerode": "^4.0.9",
+    "drizzle-orm": "^0.45.1",
+    "pg": "^8.17.2",
+    "pino": "^10.2.1"
   },
   "devDependencies": {
     "@types/dockerode": "^4.0.0",
+    "@types/pg": "^8.16.0",
+    "drizzle-kit": "^0.31.8",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   }

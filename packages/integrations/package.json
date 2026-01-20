@@ -27,9 +27,13 @@
     "@linear/sdk": "^70.0.0",
     "@octokit/rest": "^22.0.1",
     "@slack/bolt": "^4.6.0",
-    "@slack/web-api": "^7.13.0"
+    "@slack/web-api": "^7.13.0",
+    "drizzle-orm": "^0.45.1",
+    "pg": "^8.17.2"
   },
   "devDependencies": {
+    "@types/pg": "^8.16.0",
+    "drizzle-kit": "^0.31.8",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   }
