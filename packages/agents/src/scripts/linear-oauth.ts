@@ -4,12 +4,13 @@
  * Linear OAuth Authorization Script
  *
  * Performs the OAuth authorization flow to obtain access and refresh tokens
- * for the Linear API. Tokens are persisted to .tokens/linear.json for use
- * by the application.
+ * for the Linear API. Tokens are persisted to the database via the credential
+ * store with fallback to .tokens/linear.json during transition.
  *
  * Required environment variables:
  * - LINEAR_CLIENT_ID: OAuth application client ID
  * - LINEAR_CLIENT_SECRET: OAuth application client secret
+ * - Database connection (DB_HOST, DB_PORT, etc.) for credential storage
  *
  * Usage:
  *   npx tsx src/scripts/linear-oauth.ts
@@ -95,9 +96,9 @@ async function exchangeCodeForTokens(code: string): Promise<{
 }
 
 /**
- * Save tokens to file
+ * Save tokens to file (fallback)
  */
-async function saveTokens(tokens: {
+async function saveTokensToFile(tokens: {
   accessToken: string;
   refreshToken: string;
   expiresAt: number;
@@ -107,6 +108,37 @@ async function saveTokens(tokens: {
   await writeFile(TOKEN_FILE, `${JSON.stringify(tokens, null, 2)}\n`, {
     mode: 0o600, // Restrictive permissions: owner read/write only
   });
+}
+
+/**
+ * Save tokens to database with file fallback
+ */
+async function saveTokens(tokens: {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+}): Promise<void> {
+  // Try database first
+  try {
+    const { saveLinearTokens } = await import("@aesir/integrations");
+    const credentialId = await saveLinearTokens({
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresAt: tokens.expiresAt,
+    });
+    // biome-ignore lint/suspicious/noConsole: Script output
+    console.log(`Tokens saved to database (credential ID: ${credentialId})`);
+  } catch (dbError) {
+    // biome-ignore lint/suspicious/noConsole: Script output
+    console.warn(
+      "Failed to save to database, falling back to file:",
+      dbError instanceof Error ? dbError.message : String(dbError),
+    );
+    // Fallback to file during transition
+    await saveTokensToFile(tokens);
+    // biome-ignore lint/suspicious/noConsole: Script output
+    console.log(`Tokens saved to file: ${TOKEN_FILE}`);
+  }
 }
 
 /**
@@ -209,8 +241,8 @@ async function main(): Promise<void> {
             <html>
             <head><title>Authorization Successful</title></head>
             <body style="font-family: system-ui; max-width: 600px; margin: 100px auto; text-align: center;">
-              <h1>✅ Authorization Successful!</h1>
-              <p>Tokens have been saved to <code>${TOKEN_FILE}</code></p>
+              <h1>Authorization Successful!</h1>
+              <p>Tokens have been saved. Check terminal for details.</p>
               <p>You can close this window and return to the terminal.</p>
             </body>
             </html>
