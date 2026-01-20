@@ -1,4 +1,7 @@
 // @aesir/common - shared contracts, config loading, utilities
-// Code will be moved here in plan 03
 
-export {};
+// Config
+export * from "./config/index.js";
+
+// Logging
+export * from "./logging/index.js";
