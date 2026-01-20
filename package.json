@@ -55,6 +55,7 @@
     "@temporalio/workflow": "^1.14.1",
     "dockerode": "^4.0.9",
     "dotenv": "^16.4.0",
+    "dotenv-flow": "^4.1.0",
     "langsmith": "^0.3.0",
     "tar-stream": "^3.1.7",
     "zod": "3.25.67"
@@ -66,6 +67,5 @@
     "tsx": "^4.0.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
-  },
-  "packageManager": "yarn@1.22.19+sha1.4ba7fc5c6e704fce2066ecbfb0b0d8976fe62447"
+  }
 }
