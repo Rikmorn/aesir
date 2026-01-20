@@ -62,11 +62,19 @@ const envSchema = z.object({
   GITHUB_REPO: z.string().min(1, "GITHUB_REPO is required"),
   GITHUB_WEBHOOK_SECRET: z.string().optional(),
 
-  // Database (optional with default)
-  DATABASE_URL: z
+  // Database connection (separate components for secret injection)
+  DB_HOST: z.string().default("localhost"),
+  DB_PORT: z.coerce.number().default(5432),
+  DB_USER: z.string().default("temporal"),
+  DB_PASSWORD: z.string().default("temporal"),
+  DB_NAME: z.string().default("temporal"),
+
+  // Credential encryption (32-byte hex key for AES-256)
+  // Generate with: openssl rand -hex 32
+  CREDENTIAL_ENCRYPTION_KEY: z
     .string()
-    .url()
-    .default("postgresql://temporal:temporal@localhost:5432/temporal"),
+    .length(64, "CREDENTIAL_ENCRYPTION_KEY must be 64 hex chars (32 bytes)")
+    .optional(),
 
   // Temporal (optional with defaults)
   TEMPORAL_ADDRESS: z.string().default("localhost:7233"),
@@ -144,7 +152,14 @@ export const config = {
   },
 
   database: {
-    url: env.DATABASE_URL,
+    host: env.DB_HOST,
+    port: env.DB_PORT,
+    user: env.DB_USER,
+    password: env.DB_PASSWORD,
+    name: env.DB_NAME,
+    // Computed URL for backward compatibility
+    url: `postgresql://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_HOST}:${env.DB_PORT}/${env.DB_NAME}`,
+    encryptionKey: env.CREDENTIAL_ENCRYPTION_KEY,
   },
 
   temporal: {
