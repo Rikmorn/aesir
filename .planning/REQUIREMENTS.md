@@ -63,9 +63,9 @@ Requirements for Foundation milestone. Full restructure from "prove it works" to
 
 ### Observability
 
-- [ ] **OBSV-01**: pino logger replacing custom hand-rolled logging
-- [ ] **OBSV-02**: Request correlation IDs linking logs across service boundaries
-- [ ] **OBSV-03**: Structured JSON logging with sensitive data redaction
+- [x] **OBSV-01**: pino logger replacing custom hand-rolled logging
+- [x] **OBSV-02**: Request correlation IDs linking logs across service boundaries
+- [x] **OBSV-03**: Structured JSON logging with sensitive data redaction
 
 ### Local Development
 
@@ -124,9 +124,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TOOL-04 | Phase 10 | Complete |
 | TOOL-05 | Phase 10 | Complete |
 | ARCH-04 | Phase 11 | Complete |
-| OBSV-01 | Phase 12 | Pending |
-| OBSV-02 | Phase 12 | Pending |
-| OBSV-03 | Phase 12 | Pending |
+| OBSV-01 | Phase 12 | Complete |
+| OBSV-02 | Phase 12 | Complete |
+| OBSV-03 | Phase 12 | Complete |
 | DATA-01 | Phase 13 | Pending |
 | DATA-02 | Phase 13 | Pending |
 | DATA-03 | Phase 14 | Pending |
@@ -173,4 +173,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-01-19*
-*Last updated: 2026-01-20 after Phase 10 completion*
+*Last updated: 2026-01-20 after Phase 12 completion*

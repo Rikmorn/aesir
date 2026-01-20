@@ -18,7 +18,7 @@ The v2.0 Foundation milestone restructures Aesir from a working prototype to a m
 
 - [x] **Phase 10: Foundation Setup** - Biome, npm, dotenv-flow, pre-commit hooks, .claude/.cursor files
 - [x] **Phase 11: Monorepo Setup** - pnpm workspace structure with package boundaries
-- [ ] **Phase 12: Observability** - pino logging, correlation IDs, structured JSON logs
+- [x] **Phase 12: Observability** - pino logging, correlation IDs, structured JSON logs
 - [ ] **Phase 13: Data Layer** - PostgreSQL schemas, credential migration from .tokens/
 - [ ] **Phase 14: Platform Services** - Webhook idempotency, execution tracking, cleanup, DI patterns
 - [ ] **Phase 15: Code Quality** - Error handling, validation, branded types, dead code removal
@@ -89,8 +89,8 @@ Plans:
 - [x] 12-04-PLAN.md — Migrate integrations and platform packages to pino
 - [x] 12-05-PLAN.md — Migrate agents package to pino
 - [x] 12-06-PLAN.md — Remove legacy logger, update test utilities, verify completion
-- [ ] 12-07-PLAN.md — [Gap closure] Wire correlation IDs to webhook handlers
-- [ ] 12-08-PLAN.md — [Gap closure] Wire Temporal logger adapter, clean stale dist artifacts
+- [x] 12-07-PLAN.md — [Gap closure] Wire correlation IDs to webhook handlers
+- [x] 12-08-PLAN.md — [Gap closure] Wire Temporal logger adapter, clean stale dist artifacts
 
 ### Phase 13: Data Layer
 **Goal:** PostgreSQL schema structure with encrypted credential storage replacing .tokens/ files
@@ -249,7 +249,7 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 |-------|-----------|----------------|--------|-----------|
 | 10. Foundation Setup | v2.0 | 4/4 | Complete | 2026-01-20 |
 | 11. Monorepo Setup | v2.0 | 4/4 | Complete | 2026-01-20 |
-| 12. Observability | v2.0 | 6/8 | Gap closure | - |
+| 12. Observability | v2.0 | 8/8 | Complete | 2026-01-20 |
 | 13. Data Layer | v2.0 | 0/TBD | Not started | - |
 | 14. Platform Services | v2.0 | 0/TBD | Not started | - |
 | 15. Code Quality | v2.0 | 0/TBD | Not started | - |
@@ -263,5 +263,5 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 
 ---
 *Created: 2026-01-19*
-*Updated: 2026-01-20 (Phase 12 gap closure plans added)*
+*Updated: 2026-01-20 (Phase 12 complete)*
 *Milestone: v2.0 Foundation*
