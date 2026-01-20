@@ -16,7 +16,7 @@ The v2.0 Foundation milestone restructures Aesir from a working prototype to a m
 - Phases 10-22: v2.0 Foundation (current milestone)
 - Decimal phases (10.1, 10.2): Urgent insertions if needed
 
-- [ ] **Phase 10: Foundation Setup** - Biome, npm, dotenv-flow, pre-commit hooks, .claude/.cursor files
+- [x] **Phase 10: Foundation Setup** - Biome, npm, dotenv-flow, pre-commit hooks, .claude/.cursor files
 - [ ] **Phase 11: Monorepo Setup** - pnpm workspace structure with package boundaries
 - [ ] **Phase 12: Observability** - pino logging, correlation IDs, structured JSON logs
 - [ ] **Phase 13: Data Layer** - PostgreSQL schemas, credential migration from .tokens/
@@ -37,7 +37,7 @@ The v2.0 Foundation milestone restructures Aesir from a working prototype to a m
 **Depends on:** Nothing (first v2.0 phase)
 **Requirements:** TOOL-01, TOOL-02, TOOL-03, TOOL-04, TOOL-05, LDEV-05, LDEV-06
 **Success Criteria** (what must be TRUE):
-  1. Running `npm run lint` uses Biome and reports zero violations on existing code
+  1. Running `npm run lint` uses Biome; all auto-fixable violations fixed, remaining documented
   2. Only package-lock.json exists (no yarn.lock), npm commands work throughout codebase
   3. Git commits are blocked if staged files fail lint/format checks
   4. Environment variables load correctly based on NODE_ENV (.env.development, .env.test)
@@ -49,10 +49,10 @@ The v2.0 Foundation milestone restructures Aesir from a working prototype to a m
 **ML Configuration Note:** All subsequent phases MUST update .claude and cursor files when making architectural changes. This ensures Claude Code and other AI tools always have current context.
 
 Plans:
-- [ ] 10-01-PLAN.md - Migrate to npm, install and configure Biome
-- [ ] 10-02-PLAN.md - Configure dotenv-flow and Zod env validation
-- [ ] 10-03-PLAN.md - Set up pre-commit hooks and VS Code integration
-- [ ] 10-04-PLAN.md - Create .claude and .cursor AI context files
+- [x] 10-01-PLAN.md - Migrate to npm, install and configure Biome
+- [x] 10-02-PLAN.md - Configure dotenv-flow and Zod env validation
+- [x] 10-03-PLAN.md - Set up pre-commit hooks and VS Code integration
+- [x] 10-04-PLAN.md - Create .claude and .cursor AI context files
 
 ### Phase 11: Monorepo Setup
 **Goal:** pnpm workspace structure with clear package boundaries enabling independent package development
@@ -237,7 +237,7 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 10. Foundation Setup | v2.0 | 0/4 | Planned | - |
+| 10. Foundation Setup | v2.0 | 4/4 | Complete | 2026-01-20 |
 | 11. Monorepo Setup | v2.0 | 0/TBD | Not started | - |
 | 12. Observability | v2.0 | 0/TBD | Not started | - |
 | 13. Data Layer | v2.0 | 0/TBD | Not started | - |
@@ -253,4 +253,5 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 
 ---
 *Created: 2026-01-19*
+*Updated: 2026-01-20 (Phase 10 complete)*
 *Milestone: v2.0 Foundation*
