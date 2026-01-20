@@ -41,8 +41,5 @@ coverage/
 tmp/
 temp/
 
-# Linear OAuth tokens
-.tokens/
-
 # Cloudflare Tunnel
 cloudflared.yml

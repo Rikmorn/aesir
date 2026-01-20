@@ -95,6 +95,12 @@ services:
     environment:
       # Database (internal Docker network)
       - DATABASE_URL=postgresql://temporal:temporal@postgresql:5432/temporal
+      - DB_HOST=postgresql
+      - DB_PORT=5432
+      - DB_USER=temporal
+      - DB_PASSWORD=temporal
+      - DB_NAME=temporal
+      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
       # Temporal (internal Docker network)
       - TEMPORAL_ADDRESS=temporal:7233
       - TEMPORAL_NAMESPACE=default
@@ -117,7 +123,6 @@ services:
       - "3001:3001" # Webhook endpoint
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./.tokens:/app/.tokens:ro
     command: ["node", "dist/scripts/start-dev-agent.js"]
     networks:
       - aesir-network
@@ -135,6 +140,12 @@ services:
     environment:
       # Database (internal Docker network)
       - DATABASE_URL=postgresql://temporal:temporal@postgresql:5432/temporal
+      - DB_HOST=postgresql
+      - DB_PORT=5432
+      - DB_USER=temporal
+      - DB_PASSWORD=temporal
+      - DB_NAME=temporal
+      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
       # API Keys (from .env file)
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - LINEAR_ACCESS_TOKEN=${LINEAR_ACCESS_TOKEN}
@@ -198,16 +209,25 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: aesir-oauth
+    depends_on:
+      postgresql:
+        condition: service_healthy
     environment:
+      # Database (internal Docker network)
+      - DATABASE_URL=postgresql://temporal:temporal@postgresql:5432/temporal
+      - DB_HOST=postgresql
+      - DB_PORT=5432
+      - DB_USER=temporal
+      - DB_PASSWORD=temporal
+      - DB_NAME=temporal
+      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
+      # Linear OAuth credentials
       - LINEAR_CLIENT_ID=${LINEAR_CLIENT_ID}
       - LINEAR_CLIENT_SECRET=${LINEAR_CLIENT_SECRET}
       - OAUTH_CALLBACK_URL=${OAUTH_CALLBACK_URL}
     ports:
       - "3000:3000"
     command: ["node", "dist/scripts/linear-oauth.js"]
-    volumes:
-      # Mount tokens directory to host so other services can access it
-      - ./.tokens:/app/.tokens
     networks:
       aesir-network:
         aliases:
