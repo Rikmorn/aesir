@@ -5,7 +5,8 @@
  * Provides the main agent runner and re-exports public API.
  */
 
-import "dotenv/config";
+// Environment must be loaded FIRST before any other imports
+import "./config/env.js";
 import { HumanMessage } from "@langchain/core/messages";
 import { devAgent } from "./agents/index.js";
 import { devAgentConfig } from "./config/index.js";
@@ -40,7 +41,7 @@ export interface AgentRunResult {
  */
 export async function runAgent(
   taskDescription: string,
-  threadId: string
+  threadId: string,
 ): Promise<AgentRunResult> {
   const agentLogger = logger.child({
     threadId,
@@ -64,7 +65,7 @@ export async function runAgent(
       {
         configurable: { thread_id: threadId },
         recursionLimit: devAgentConfig.recursionLimit,
-      }
+      },
     );
 
     timing.success({
@@ -96,30 +97,35 @@ export async function runAgent(
   }
 }
 
-// Re-export public API from modules
-export { logger, createLogger, type LogEntry, type LogLevel } from "./logging/index.js";
-export { devAgent, agent, type DevAgent } from "./agents/index.js";
+export { agent, type DevAgent, devAgent } from "./agents/index.js";
 export {
+  type AgentConfig,
   AgentConfigSchema,
   devAgentConfig,
-  validateAgentConfig,
   mergeWithDefaults,
-  type AgentConfig,
+  validateAgentConfig,
 } from "./config/index.js";
+// Re-export public API from modules
 export {
-  codeGenTool,
-  CodeGenInputSchema,
-  CodeGenOutputSchema,
-  type CodeGenInput,
-  type CodeGenOutput,
-} from "./tools/index.js";
+  createLogger,
+  type LogEntry,
+  type LogLevel,
+  logger,
+} from "./logging/index.js";
 export {
   AgentState,
-  AgentStatusSchema,
-  MAX_LOOP_COUNT,
-  hasExceededLoopLimit,
-  shouldContinue,
-  createInitialState,
   type AgentStateType,
   type AgentStatus,
+  AgentStatusSchema,
+  createInitialState,
+  hasExceededLoopLimit,
+  MAX_LOOP_COUNT,
+  shouldContinue,
 } from "./state/index.js";
+export {
+  type CodeGenInput,
+  CodeGenInputSchema,
+  type CodeGenOutput,
+  CodeGenOutputSchema,
+  codeGenTool,
+} from "./tools/index.js";

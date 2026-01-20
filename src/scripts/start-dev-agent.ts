@@ -26,15 +26,16 @@
  *   npm run dev-agent
  */
 
-import dotenv from "dotenv";
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import type { ActivityDependencies } from "../temporal/activities/index.js";
-import type { LinearWebhookConfig } from "../api/webhooks/linear-agent-session.js";
+// Environment must be loaded FIRST before any other imports
+import "../config/env.js";
 
-// Load environment variables BEFORE importing modules that use them
-// .env.local takes precedence (loaded first), .env provides defaults
-dotenv.config({ path: ".env.local" });
-dotenv.config({ path: ".env" });
+import {
+  createServer,
+  type IncomingMessage,
+  type ServerResponse,
+} from "node:http";
+import type { LinearWebhookConfig } from "../api/webhooks/linear-agent-session.js";
+import type { ActivityDependencies } from "../temporal/activities/index.js";
 
 async function bootstrap(): Promise<void> {
   const { createTemporalWorker } = await import("../temporal/worker.js");
@@ -56,46 +57,20 @@ async function bootstrap(): Promise<void> {
 
   const logger = createLogger({ defaultContext: { module: "dev-agent-main" } });
 
+  // Note: Required environment variables are validated by ../config/env.js at import time
+
   /**
-   * Validate required environment variables
+   * Validate GITHUB_REPO format (script-specific validation)
    */
-  function validateEnv(): void {
-    const required = [
-      "LINEAR_ACCESS_TOKEN",
-      "LINEAR_WEBHOOK_SECRET",
-      "GITHUB_TOKEN",
-      "GITHUB_REPO",
-      "SLACK_BOT_TOKEN",
-      "SLACK_CHANNEL_ID",
-      "ANTHROPIC_API_KEY",
-      "DATABASE_URL",
-    ];
-
-    const missing = required.filter((key) => !process.env[key]);
-    if (missing.length > 0) {
-      console.error("\nMissing required environment variables:\n");
-      for (const key of missing) {
-        console.error(`   - ${key}`);
-      }
-      console.error("\nSee README.md for setup instructions.\n");
+  function validateGitHubRepo(): { owner: string; repo: string } {
+    const githubRepo = process.env.GITHUB_REPO!;
+    if (!githubRepo.includes("/") || githubRepo.split("/").length !== 2) {
       process.exit(1);
     }
-
-    // Validate GITHUB_REPO format
-    const repo = process.env["GITHUB_REPO"]!;
-    if (!repo.includes("/") || repo.split("/").length !== 2) {
-      console.error(
-        "\nGITHUB_REPO must be in owner/repo format (e.g., 'acme/my-project')\n"
-      );
-      process.exit(1);
-    }
+    const [owner, repo] = githubRepo.split("/") as [string, string];
+    return { owner, repo };
   }
-
-  console.log("\nStarting Dev Agent...\n");
-  validateEnv();
-
-  // Parse GITHUB_REPO (already validated format in validateEnv)
-  const [owner, repo] = process.env["GITHUB_REPO"]!.split("/") as [string, string];
+  const { owner, repo } = validateGitHubRepo();
 
   // Initialize dependencies
   logger.info("init_dependencies", { message: "Initializing dependencies" });
@@ -106,20 +81,21 @@ async function bootstrap(): Promise<void> {
   try {
     linearClient = await createLinearClientFromFile();
     logger.info("linear_client_init", {
-      message: "Using OAuth tokens from .tokens/linear.json (app identity)"
+      message: "Using OAuth tokens from .tokens/linear.json (app identity)",
     });
   } catch (err) {
     if (err instanceof TokenFileNotFoundError) {
       logger.warn("linear_client_fallback", {
-        message: "OAuth tokens not found, falling back to LINEAR_ACCESS_TOKEN (user identity). Run 'docker compose --profile oauth run --rm oauth' for app identity."
+        message:
+          "OAuth tokens not found, falling back to LINEAR_ACCESS_TOKEN (user identity). Run 'docker compose --profile oauth run --rm oauth' for app identity.",
       });
-      linearClient = getLinearClient(process.env["LINEAR_ACCESS_TOKEN"]!);
+      linearClient = getLinearClient(process.env.LINEAR_ACCESS_TOKEN!);
     } else {
       throw err;
     }
   }
-  const octokit = new Octokit({ auth: process.env["GITHUB_TOKEN"] });
-  const slackClient = new WebClient(process.env["SLACK_BOT_TOKEN"]);
+  const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+  const slackClient = new WebClient(process.env.SLACK_BOT_TOKEN);
 
   // Create sandbox for worker activities
   // Note: In production, you'd want sandbox-per-task, but for MVP
@@ -140,13 +116,13 @@ async function bootstrap(): Promise<void> {
   const webhookConfig: LinearWebhookConfig = {
     owner,
     repo,
-    slackChannel: process.env["SLACK_CHANNEL_ID"]!,
+    slackChannel: process.env.SLACK_CHANNEL_ID!,
     completionStatus: "Done",
   };
 
   // Start Temporal worker with bound activities
-  const temporalAddress = process.env["TEMPORAL_ADDRESS"] ?? "localhost:7233";
-  const temporalNamespace = process.env["TEMPORAL_NAMESPACE"] ?? "default";
+  const temporalAddress = process.env.TEMPORAL_ADDRESS ?? "localhost:7233";
+  const temporalNamespace = process.env.TEMPORAL_NAMESPACE ?? "default";
   const taskQueue = "dev-agent-queue";
 
   logger.info("init_temporal_worker", { message: "Starting Temporal worker" });
@@ -160,12 +136,8 @@ async function bootstrap(): Promise<void> {
       dependencies,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("\nFailed to connect to Temporal server.\n");
-    console.error(`   Error: ${errorMessage}\n`);
-    console.error("Make sure Temporal is running:");
-    console.error("   npm run infra:up\n");
-    console.error("Then check Temporal UI at http://localhost:8080\n");
+    const _errorMessage =
+      error instanceof Error ? error.message : String(error);
     await sandbox.cleanup();
     process.exit(1);
   }
@@ -181,8 +153,8 @@ async function bootstrap(): Promise<void> {
   });
 
   // Start HTTP server for webhooks
-  const port = parseInt(process.env["PORT"] ?? "3001", 10);
-  const webhookSecret = process.env["LINEAR_WEBHOOK_SECRET"]!;
+  const port = parseInt(process.env.PORT ?? "3001", 10);
+  const webhookSecret = process.env.LINEAR_WEBHOOK_SECRET!;
 
   const server = createServer(
     async (req: IncomingMessage, res: ServerResponse) => {
@@ -194,7 +166,9 @@ async function bootstrap(): Promise<void> {
           url: req.url,
           headers: {
             "content-type": req.headers["content-type"],
-            "linear-signature": req.headers["linear-signature"] ? "[present]" : "[missing]",
+            "linear-signature": req.headers["linear-signature"]
+              ? "[present]"
+              : "[missing]",
             "user-agent": req.headers["user-agent"],
           },
         },
@@ -242,13 +216,21 @@ async function bootstrap(): Promise<void> {
             message: "Routing to Linear webhook handler",
             context: { bodyLength: rawBody.length },
           });
-          await linearWebhookHandler(webhookReq, webhookRes, webhookConfig, webhookSecret);
+          await linearWebhookHandler(
+            webhookReq,
+            webhookRes,
+            webhookConfig,
+            webhookSecret,
+          );
         } catch (err) {
           const errorMessage = err instanceof Error ? err.message : String(err);
           logger.error("linear_webhook_handler_error", {
             outcome: "failure",
             message: `Unhandled error in Linear webhook handler: ${errorMessage}`,
-            context: { error: errorMessage, stack: err instanceof Error ? err.stack : undefined },
+            context: {
+              error: errorMessage,
+              stack: err instanceof Error ? err.stack : undefined,
+            },
           });
           res.writeHead(500, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ error: "Internal server error" }));
@@ -270,36 +252,17 @@ async function bootstrap(): Promise<void> {
       // Unknown endpoint
       res.writeHead(404, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Not found" }));
-    }
+    },
   );
 
-  server.listen(port, () => {
-    console.log("\nDev Agent is running!\n");
-    console.log("Configuration:");
-    console.log(`   Temporal: ${temporalAddress}`);
-    console.log(`   Namespace: ${temporalNamespace}`);
-    console.log(`   Task Queue: ${taskQueue}`);
-    console.log(`   GitHub Repo: ${owner}/${repo}`);
-    console.log(`   Webhooks: http://localhost:${port}/webhooks/linear`);
-    console.log(`             http://localhost:${port}/webhooks/github`);
-    console.log("\nThe Dev Agent processes tasks from Linear:");
-    console.log("   1. Configure Linear webhook to POST to /webhooks/linear");
-    console.log("   2. Configure GitHub webhook to POST to /webhooks/github");
-    console.log("   3. Delegate an issue to the Dev Agent in Linear");
-    console.log("   4. The agent will read the issue, generate code, and create a PR");
-    console.log("   5. Track progress in Linear's agent activity panel");
-    console.log("\nView Temporal UI at http://localhost:8080");
-    console.log("\nPress Ctrl+C to stop.\n");
-  });
+  server.listen(port, () => {});
 
   // Graceful shutdown
   let isShuttingDown = false;
 
-  const shutdown = async (signal: string): Promise<void> => {
+  const shutdown = async (_signal: string): Promise<void> => {
     if (isShuttingDown) return;
     isShuttingDown = true;
-
-    console.log(`\n\nReceived ${signal}, shutting down gracefully...`);
 
     // Close HTTP server
     server.close();
@@ -309,8 +272,6 @@ async function bootstrap(): Promise<void> {
 
     // Cleanup sandbox
     await sandbox.cleanup();
-
-    console.log("Goodbye!\n");
     process.exit(0);
   };
 
@@ -319,7 +280,6 @@ async function bootstrap(): Promise<void> {
 }
 
 // Run bootstrap
-bootstrap().catch((error) => {
-  console.error("\nFailed to start Dev Agent:", error.message);
+bootstrap().catch((_error) => {
   process.exit(1);
 });

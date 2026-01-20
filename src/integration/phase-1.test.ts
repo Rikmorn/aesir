@@ -15,22 +15,22 @@
  * Agent export tests verify file existence and module structure instead.
  */
 
-import { describe, it, expect } from "vitest";
+import * as fs from "node:fs/promises";
+import { describe, expect, it } from "vitest";
 import {
   AgentConfigSchema,
   devAgentConfig,
   mergeWithDefaults,
   validateAgentConfig,
 } from "../config/index.js";
-import { LogCapture } from "../testing/log-capture.js";
 import { Logger } from "../logging/logger.js";
 import {
   hasExceededLoopLimit,
-  shouldContinue,
   MAX_LOOP_COUNT,
+  shouldContinue,
 } from "../state/index.js";
-import { codeGenTool, CodeGenInputSchema } from "../tools/code-gen.js";
-import * as fs from "fs/promises";
+import { LogCapture } from "../testing/log-capture.js";
+import { CodeGenInputSchema, codeGenTool } from "../tools/code-gen.js";
 
 describe("Phase 1: Core Agent Framework", () => {
   describe("CORE-01: Code generation from natural language", () => {
@@ -101,13 +101,13 @@ describe("Phase 1: Core Agent Framework", () => {
 
     it("should have loop count tracking in agent state", () => {
       // State at loop limit should exceed
-      expect(
-        hasExceededLoopLimit({ loopCount: MAX_LOOP_COUNT } as any)
-      ).toBe(true);
+      expect(hasExceededLoopLimit({ loopCount: MAX_LOOP_COUNT } as any)).toBe(
+        true,
+      );
 
       // State below limit should not exceed
       expect(
-        hasExceededLoopLimit({ loopCount: MAX_LOOP_COUNT - 1 } as any)
+        hasExceededLoopLimit({ loopCount: MAX_LOOP_COUNT - 1 } as any),
       ).toBe(false);
     });
 
@@ -117,7 +117,7 @@ describe("Phase 1: Core Agent Framework", () => {
         shouldContinue({
           status: "running",
           loopCount: 0,
-        } as any)
+        } as any),
       ).toBe(true);
 
       // Should stop when at limit
@@ -125,7 +125,7 @@ describe("Phase 1: Core Agent Framework", () => {
         shouldContinue({
           status: "running",
           loopCount: MAX_LOOP_COUNT,
-        } as any)
+        } as any),
       ).toBe(false);
 
       // Should stop when not running
@@ -133,7 +133,7 @@ describe("Phase 1: Core Agent Framework", () => {
         shouldContinue({
           status: "completed",
           loopCount: 0,
-        } as any)
+        } as any),
       ).toBe(false);
     });
 
@@ -195,11 +195,12 @@ describe("Phase 1: Core Agent Framework", () => {
       expect(firstLog).toBeDefined();
 
       // Verify ISO 8601 format
-      const timestamp = firstLog!.timestamp;
+      const timestamp = firstLog?.timestamp;
       expect(timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
 
       // Should be parseable as a date
-      const date = new Date(timestamp);
+      expect(timestamp).toBeDefined();
+      const date = new Date(timestamp!);
       expect(date.getTime()).not.toBeNaN();
     });
 
@@ -216,8 +217,8 @@ describe("Phase 1: Core Agent Framework", () => {
 
       const log = logCapture.getAll()[0];
       expect(log).toBeDefined();
-      expect(log!.context.threadId).toBe("test-thread-123");
-      expect(log!.context.taskId).toBe("task-456");
+      expect(log?.context.threadId).toBe("test-thread-123");
+      expect(log?.context.taskId).toBe("task-456");
     });
 
     it("should include action in log entries", () => {
@@ -232,8 +233,8 @@ describe("Phase 1: Core Agent Framework", () => {
 
       const logs = logCapture.getAll();
       expect(logs.length).toBe(2);
-      expect(logs[0]!.action).toBe("agent_start");
-      expect(logs[1]!.action).toBe("agent_complete");
+      expect(logs[0]?.action).toBe("agent_start");
+      expect(logs[1]?.action).toBe("agent_complete");
     });
 
     it("should include outcome in log entries", () => {
@@ -248,8 +249,8 @@ describe("Phase 1: Core Agent Framework", () => {
 
       const logs = logCapture.getAll();
       expect(logs.length).toBe(2);
-      expect(logs[0]!.outcome).toBe("success");
-      expect(logs[1]!.outcome).toBe("failure");
+      expect(logs[0]?.outcome).toBe("success");
+      expect(logs[1]?.outcome).toBe("failure");
     });
 
     it("should track duration with startTimer", () => {
@@ -271,8 +272,8 @@ describe("Phase 1: Core Agent Framework", () => {
 
       const log = logCapture.getAll()[0];
       expect(log).toBeDefined();
-      expect(log!.durationMs).toBeGreaterThanOrEqual(0);
-      expect(log!.outcome).toBe("success");
+      expect(log?.durationMs).toBeGreaterThanOrEqual(0);
+      expect(log?.outcome).toBe("success");
     });
 
     it("should create child loggers with inherited context", () => {
@@ -288,9 +289,9 @@ describe("Phase 1: Core Agent Framework", () => {
 
       const log = logCapture.getAll()[0];
       expect(log).toBeDefined();
-      expect(log!.context.service).toBe("aesir");
-      expect(log!.context.threadId).toBe("child-thread");
-      expect(log!.context.extra).toBe("data");
+      expect(log?.context.service).toBe("aesir");
+      expect(log?.context.threadId).toBe("child-thread");
+      expect(log?.context.extra).toBe("data");
     });
 
     it("should support log levels (debug, info, warn, error)", () => {
@@ -382,7 +383,7 @@ describe("Phase 1: Core Agent Framework", () => {
       // Verify the file exists and contains expected exports
       const agentFileContent = await fs.readFile(
         "src/agents/dev-agent.ts",
-        "utf-8"
+        "utf-8",
       );
 
       // Verify file exports agent
@@ -426,7 +427,7 @@ describe("Phase 1: Core Agent Framework", () => {
         validateAgentConfig({
           name: "", // Empty - invalid
           description: "Test",
-        })
+        }),
       ).toThrow();
     });
   });
@@ -435,10 +436,12 @@ describe("Phase 1: Core Agent Framework", () => {
     it("should have run-agent.ts with runAgentWithGuardrails function", async () => {
       const runAgentContent = await fs.readFile(
         "src/agents/run-agent.ts",
-        "utf-8"
+        "utf-8",
       );
 
-      expect(runAgentContent).toContain("export async function runAgentWithGuardrails");
+      expect(runAgentContent).toContain(
+        "export async function runAgentWithGuardrails",
+      );
       expect(runAgentContent).toContain("TerminationReason");
       expect(runAgentContent).toContain("AgentResult");
     });
@@ -446,7 +449,7 @@ describe("Phase 1: Core Agent Framework", () => {
     it("should handle GraphRecursionError in run-agent.ts", async () => {
       const runAgentContent = await fs.readFile(
         "src/agents/run-agent.ts",
-        "utf-8"
+        "utf-8",
       );
 
       expect(runAgentContent).toContain("GraphRecursionError");
@@ -456,7 +459,7 @@ describe("Phase 1: Core Agent Framework", () => {
     it("should handle AbortError for timeout in run-agent.ts", async () => {
       const runAgentContent = await fs.readFile(
         "src/agents/run-agent.ts",
-        "utf-8"
+        "utf-8",
       );
 
       expect(runAgentContent).toContain("AbortError");
@@ -486,7 +489,7 @@ describe("Phase 1: Core Agent Framework", () => {
 
       // Verify guard functions work
       expect(hasExceededLoopLimit({ loopCount: MAX_LOOP_COUNT } as any)).toBe(
-        true
+        true,
       );
     });
 
@@ -516,10 +519,10 @@ describe("Phase 1: Core Agent Framework", () => {
       expect(log).toBeDefined();
 
       // Verify all required fields
-      expect(log!.timestamp).toBeDefined();
-      expect(log!.action).toBe("agent_start");
-      expect(log!.context.threadId).toBe("test-123");
-      expect(log!.outcome).toBe("pending");
+      expect(log?.timestamp).toBeDefined();
+      expect(log?.action).toBe("agent_start");
+      expect(log?.context.threadId).toBe("test-123");
+      expect(log?.outcome).toBe("pending");
     });
 
     it("CORE-05: Agent configuration is fully in code", () => {

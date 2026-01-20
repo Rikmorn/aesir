@@ -1,14 +1,18 @@
 /**
  * Configuration Module Public API
  *
- * Exports agent configuration schemas and utilities.
+ * Exports environment configuration and agent configuration schemas.
  */
 
+// Environment configuration (Zod-validated)
+export { config, env } from "./env.js";
+
+// Agent configuration schemas and utilities
 export {
-  AgentConfigSchema,
-  devAgentConfig,
-  validateAgentConfig,
-  mergeWithDefaults,
   type AgentConfig,
   type AgentConfigInput,
+  AgentConfigSchema,
+  devAgentConfig,
+  mergeWithDefaults,
+  validateAgentConfig,
 } from "./agent-config.js";
