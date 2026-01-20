@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 12 of 22 (Observability)
-Plan: 6 of 6 in current phase
-Status: Phase complete
-Last activity: 2026-01-20 - Completed 12-06-PLAN.md (Legacy Logger Cleanup)
+Plan: 8 of 8 in current phase
+Status: Gap closure plans executing (12-07 parallel, 12-08 complete)
+Last activity: 2026-01-20 - Completed 12-08-PLAN.md (Temporal Logger Wiring)
 
 Progress: [####                ] 23% (3 of 13 phases complete)
 
@@ -25,9 +25,9 @@ Progress: [####                ] 23% (3 of 13 phases complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13 (v2.0)
-- Average duration: ~10 min
-- Total execution time: ~128 min
+- Total plans completed: 15 (v2.0)
+- Average duration: ~9 min
+- Total execution time: ~130 min
 
 **By Phase:**
 
@@ -35,11 +35,11 @@ Progress: [####                ] 23% (3 of 13 phases complete)
 |-------|-------|-------|----------|
 | 10-foundation-setup | 4/4 | ~44 min | ~11 min |
 | 11-monorepo-setup | 4/4 | ~41 min | ~10 min |
-| 12-observability | 6/6 | 73 min | 12 min |
+| 12-observability | 7/8 | 75 min | 11 min |
 
 **Recent Trend:**
-- Last 5 plans: 12-06 (8 min), 12-05 (30 min), 12-04 (15 min), 12-03 (10 min), 12-02 (8 min)
-- Trend: Consistent execution, 12-05 was largest (25 files)
+- Last 5 plans: 12-08 (2 min), 12-06 (8 min), 12-05 (30 min), 12-04 (15 min), 12-03 (10 min)
+- Trend: Consistent execution, 12-08 was fast (gap closure, 1 code change)
 
 *Updated after each plan completion*
 
@@ -96,6 +96,8 @@ Recent decisions affecting current work:
 - [12-05]: Pre-existing lint issues (noNonNullAssertion) out of scope for migration
 - [12-06]: TraceEntry type separate from pino Logger (used by TraceStore for workflow debugging)
 - [12-06]: createPinoLogger alias for backward compatibility during migration
+- [12-08]: Runtime.install at module level before any Temporal operations
+- [12-08]: Dist cleanup is local-only since dist/ is gitignored
 
 ### Pending Todos
 
@@ -122,9 +124,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-20
-Stopped at: Completed 12-06-PLAN.md (Legacy Logger Cleanup) - Phase 12 complete
+Stopped at: Completed 12-08-PLAN.md (Temporal Logger Wiring) - Gap closure
 Resume file: None
-Next action: Begin Phase 13 (Error Handling) or review phase completion
+Next action: Await 12-07 completion, then Phase 12 fully complete
 
 ---
-*Updated: 2026-01-20 after 12-06-PLAN.md complete*
+*Updated: 2026-01-20 after 12-08-PLAN.md complete*
