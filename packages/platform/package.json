@@ -22,7 +22,8 @@
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx src/db/seeds/default-workspace.ts"
   },
   "dependencies": {
     "@aesir/common": "workspace:*",
