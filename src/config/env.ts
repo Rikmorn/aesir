@@ -88,11 +88,17 @@ const envSchema = z.object({
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
+  // biome-ignore lint/suspicious/noConsole: Intentional startup error output to user
+  console.error("\n❌ Environment validation failed:\n");
   const fieldErrors = parsed.error.flatten().fieldErrors;
-  for (const [_field, errors] of Object.entries(fieldErrors)) {
+  for (const [field, errors] of Object.entries(fieldErrors)) {
     if (errors && errors.length > 0) {
+      // biome-ignore lint/suspicious/noConsole: Intentional startup error output to user
+      console.error(`  • ${field}: ${errors.join(", ")}`);
     }
   }
+  // biome-ignore lint/suspicious/noConsole: Intentional startup error output to user
+  console.error("\nCheck your .env files or environment variables.\n");
   process.exit(1);
 }
 
