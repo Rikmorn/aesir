@@ -3,6 +3,9 @@
 // Config
 export * from "./config/index.js";
 
+// Database utilities
+export * from "./db/index.js";
+
 // Logging
 export * from "./logging/index.js";
 // State schemas and types (used by agents and platform)
