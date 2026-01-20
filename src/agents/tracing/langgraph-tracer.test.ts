@@ -1,8 +1,11 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { LangGraphTracer, createLangGraphTracer } from "./langgraph-tracer.js";
-import { createLogger, type Logger } from "../../logging/logger.js";
-import { createTraceStore, type TraceStore } from "../../logging/trace-store.js";
 import type { Serialized } from "@langchain/core/load/serializable";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createLogger, type Logger } from "../../logging/logger.js";
+import {
+  createTraceStore,
+  type TraceStore,
+} from "../../logging/trace-store.js";
+import { createLangGraphTracer, LangGraphTracer } from "./langgraph-tracer.js";
 
 /**
  * Helper to create a mock Serialized object for chain/llm/tool
@@ -42,7 +45,7 @@ describe("LangGraphTracer", () => {
       tracer.handleChainStart(
         createMockSerialized("TestChain"),
         { input: "test" },
-        "run-123"
+        "run-123",
       );
 
       expect(mockLogger.info).toHaveBeenCalledWith("chain_start", {
@@ -57,14 +60,14 @@ describe("LangGraphTracer", () => {
       tracer.handleChainStart(
         createMockSerialized("TestChain"),
         { input: "test" },
-        "run-456"
+        "run-456",
       );
 
       expect(mockLogger.info).toHaveBeenCalledWith(
         "chain_start",
         expect.objectContaining({
           context: expect.objectContaining({ runId: "run-456" }),
-        })
+        }),
       );
     });
 
@@ -73,7 +76,7 @@ describe("LangGraphTracer", () => {
         createMockSerialized("TestChain"),
         { input: "test" },
         "run-123",
-        "parent-456"
+        "parent-456",
       );
 
       expect(mockLogger.info).toHaveBeenCalledWith("chain_start", {
@@ -88,7 +91,7 @@ describe("LangGraphTracer", () => {
       tracer.handleChainStart(
         createMockSerialized("TestChain"),
         { input: "test" },
-        "run-123"
+        "run-123",
       );
 
       // Note: store.append needs taskId in context to store, but we're testing direct append
@@ -135,7 +138,7 @@ describe("LangGraphTracer", () => {
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         "chain_error",
-        expect.objectContaining({ outcome: "failure" })
+        expect.objectContaining({ outcome: "failure" }),
       );
     });
 
@@ -145,7 +148,7 @@ describe("LangGraphTracer", () => {
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         "chain_error",
-        expect.objectContaining({ message: "Detailed error info" })
+        expect.objectContaining({ message: "Detailed error info" }),
       );
     });
   });
@@ -155,7 +158,7 @@ describe("LangGraphTracer", () => {
       tracer.handleLLMStart(
         createMockSerialized("ChatAnthropic"),
         ["prompt 1", "prompt 2"],
-        "run-123"
+        "run-123",
       );
 
       expect(mockLogger.debug).toHaveBeenCalledWith("llm_start", {
@@ -170,7 +173,7 @@ describe("LangGraphTracer", () => {
       tracer.handleLLMStart(
         createMockSerialized("ChatAnthropic"),
         ["prompt 1", "prompt 2", "prompt 3"],
-        "run-123"
+        "run-123",
       );
 
       expect(mockLogger.debug).toHaveBeenCalledWith("llm_start", {
@@ -185,7 +188,7 @@ describe("LangGraphTracer", () => {
         createMockSerialized("ChatAnthropic"),
         ["prompt"],
         "run-123",
-        "parent-456"
+        "parent-456",
       );
 
       expect(mockLogger.debug).toHaveBeenCalledWith("llm_start", {
@@ -198,10 +201,7 @@ describe("LangGraphTracer", () => {
 
   describe("handleLLMEnd", () => {
     it("calls logger.debug with llm_end action", () => {
-      tracer.handleLLMEnd(
-        { generations: [], llmOutput: {} },
-        "run-123"
-      );
+      tracer.handleLLMEnd({ generations: [], llmOutput: {} }, "run-123");
 
       expect(mockLogger.debug).toHaveBeenCalledWith("llm_end", {
         context: expect.objectContaining({ runId: "run-123" }),
@@ -220,7 +220,7 @@ describe("LangGraphTracer", () => {
             },
           },
         },
-        "run-123"
+        "run-123",
       );
 
       expect(mockLogger.debug).toHaveBeenCalledWith("llm_end", {
@@ -233,10 +233,7 @@ describe("LangGraphTracer", () => {
     });
 
     it("handles missing tokenUsage gracefully", () => {
-      tracer.handleLLMEnd(
-        { generations: [] },
-        "run-123"
-      );
+      tracer.handleLLMEnd({ generations: [] }, "run-123");
 
       expect(mockLogger.debug).toHaveBeenCalledWith("llm_end", {
         context: { runId: "run-123" },
@@ -249,7 +246,7 @@ describe("LangGraphTracer", () => {
       tracer.handleToolStart(
         createMockSerialized("GenerateCodeTool"),
         "input data",
-        "run-123"
+        "run-123",
       );
 
       expect(mockLogger.info).toHaveBeenCalledWith("tool_start", {
@@ -264,7 +261,7 @@ describe("LangGraphTracer", () => {
       tracer.handleToolStart(
         createMockSerialized("RunTestsTool"),
         "test input",
-        "run-456"
+        "run-456",
       );
 
       expect(mockLogger.info).toHaveBeenCalledWith("tool_start", {
@@ -279,7 +276,7 @@ describe("LangGraphTracer", () => {
       tracer.handleToolStart(
         createMockSerialized("TestTool"),
         longInput,
-        "run-123"
+        "run-123",
       );
 
       expect(mockLogger.info).toHaveBeenCalledWith("tool_start", {
@@ -330,7 +327,7 @@ describe("LangGraphTracer", () => {
 
       const tracerWithThrow = new LangGraphTracer(
         throwingLogger as unknown as Logger,
-        store
+        store,
       );
 
       // These should NOT throw
@@ -338,41 +335,37 @@ describe("LangGraphTracer", () => {
         tracerWithThrow.handleChainStart(
           createMockSerialized("Test"),
           {},
-          "run-123"
-        )
+          "run-123",
+        ),
       ).not.toThrow();
 
-      expect(() =>
-        tracerWithThrow.handleChainEnd({}, "run-123")
-      ).not.toThrow();
+      expect(() => tracerWithThrow.handleChainEnd({}, "run-123")).not.toThrow();
 
       expect(() =>
-        tracerWithThrow.handleChainError(new Error("test"), "run-123")
+        tracerWithThrow.handleChainError(new Error("test"), "run-123"),
       ).not.toThrow();
 
       expect(() =>
         tracerWithThrow.handleLLMStart(
           createMockSerialized("Test"),
           [],
-          "run-123"
-        )
+          "run-123",
+        ),
       ).not.toThrow();
 
       expect(() =>
-        tracerWithThrow.handleLLMEnd({ generations: [] }, "run-123")
+        tracerWithThrow.handleLLMEnd({ generations: [] }, "run-123"),
       ).not.toThrow();
 
       expect(() =>
         tracerWithThrow.handleToolStart(
           createMockSerialized("Test"),
           "",
-          "run-123"
-        )
+          "run-123",
+        ),
       ).not.toThrow();
 
-      expect(() =>
-        tracerWithThrow.handleToolEnd("", "run-123")
-      ).not.toThrow();
+      expect(() => tracerWithThrow.handleToolEnd("", "run-123")).not.toThrow();
     });
 
     it("subsequent handlers still execute after error", () => {
@@ -392,7 +385,7 @@ describe("LangGraphTracer", () => {
 
       const tracerWithPartialThrow = new LangGraphTracer(
         sometimesThrowingLogger as unknown as Logger,
-        store
+        store,
       );
 
       // First call - should not throw (error caught internally)
@@ -400,8 +393,8 @@ describe("LangGraphTracer", () => {
         tracerWithPartialThrow.handleChainStart(
           createMockSerialized("Test"),
           {},
-          "run-1"
-        )
+          "run-1",
+        ),
       ).not.toThrow();
 
       // Second call - should execute normally
@@ -429,13 +422,13 @@ describe("LangGraphTracer", () => {
       realTracer.handleChainStart(
         createMockSerialized("TestChain"),
         {},
-        "run-123"
+        "run-123",
       );
       realTracer.handleChainEnd({}, "run-123");
       realTracer.handleToolStart(
         createMockSerialized("TestTool"),
         "input",
-        "run-456"
+        "run-456",
       );
       realTracer.handleToolEnd("output", "run-456");
 

@@ -20,7 +20,7 @@ import type { AgentPlanItem } from "./types.js";
 export async function emitThought(
   client: LinearClient,
   sessionId: string,
-  body: string
+  body: string,
 ): Promise<void> {
   await client.createAgentActivity({
     agentSessionId: sessionId,
@@ -42,7 +42,7 @@ export async function emitAction(
   client: LinearClient,
   sessionId: string,
   action: string,
-  parameter: string
+  parameter: string,
 ): Promise<void> {
   await client.createAgentActivity({
     agentSessionId: sessionId,
@@ -62,7 +62,7 @@ export async function emitAction(
 export async function emitResponse(
   client: LinearClient,
   sessionId: string,
-  body: string
+  body: string,
 ): Promise<void> {
   await client.createAgentActivity({
     agentSessionId: sessionId,
@@ -82,7 +82,7 @@ export async function emitResponse(
 export async function emitError(
   client: LinearClient,
   sessionId: string,
-  body: string
+  body: string,
 ): Promise<void> {
   await client.createAgentActivity({
     agentSessionId: sessionId,
@@ -102,7 +102,7 @@ export async function emitError(
 export async function emitElicitation(
   client: LinearClient,
   sessionId: string,
-  body: string
+  body: string,
 ): Promise<void> {
   await client.createAgentActivity({
     agentSessionId: sessionId,
@@ -123,7 +123,7 @@ export async function emitElicitation(
 export async function updateSessionPlan(
   client: LinearClient,
   sessionId: string,
-  plan: AgentPlanItem[]
+  plan: AgentPlanItem[],
 ): Promise<void> {
   await client.updateAgentSession(sessionId, {
     plan: plan as unknown as Record<string, unknown>,

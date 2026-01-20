@@ -27,7 +27,7 @@ const logger = createLogger({
 export async function updateLinearStatusActivity(
   client: LinearClient,
   issueId: string,
-  statusName: IssueStatus
+  statusName: IssueStatus,
 ): Promise<void> {
   logger.info("activity_linear_update_status", {
     message: `Updating issue ${issueId} to ${statusName}`,

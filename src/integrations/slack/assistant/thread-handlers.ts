@@ -11,16 +11,21 @@
  * - Handles errors gracefully with user-friendly error messages
  */
 
-import type { App } from "@slack/bolt";
-import type { WebClient } from "@slack/web-api";
-import type { AppMentionEvent, GenericMessageEvent } from "@slack/types";
 import type { ChatAnthropic } from "@langchain/anthropic";
-import type { LinearClient } from "@linear/sdk";
 import type { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
+import type { LinearClient } from "@linear/sdk";
+import type { App } from "@slack/bolt";
+import type { AppMentionEvent, GenericMessageEvent } from "@slack/types";
+import type { WebClient } from "@slack/web-api";
+import {
+  type RunProductAgentInput,
+  runProductAgent,
+} from "../../../agents/product-agent/runner.js";
 import { createLogger } from "../../../logging/logger.js";
-import { runProductAgent, type RunProductAgentInput } from "../../../agents/product-agent/runner.js";
 
-const logger = createLogger({ defaultContext: { module: "slack-thread-handlers" } });
+const logger = createLogger({
+  defaultContext: { module: "slack-thread-handlers" },
+});
 
 /**
  * Options for thread handler functions
@@ -51,7 +56,7 @@ export interface ThreadHandlerOptions {
 async function getConversationHistory(
   client: WebClient,
   channelId: string,
-  threadTs: string
+  threadTs: string,
 ): Promise<Array<{ role: string; content: string }>> {
   try {
     const result = await client.conversations.replies({
@@ -71,7 +76,8 @@ async function getConversationHistory(
       content: msg.text ?? "",
     }));
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     logger.warn("conversation_history_fetch_failed", {
       message: `Failed to fetch conversation history: ${errorMessage}`,
       context: { channelId, threadTs },
@@ -104,17 +110,18 @@ function stripBotMention(text: string): string {
  */
 function formatSlackResponse(
   response: string,
-  createdTasks?: Array<{ identifier: string; title: string }>
+  createdTasks?: Array<{ identifier: string; title: string }>,
 ): Array<{ type: string; text?: { type: string; text: string } }> {
-  const blocks: Array<{ type: string; text?: { type: string; text: string } }> = [
-    {
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: response,
+  const blocks: Array<{ type: string; text?: { type: string; text: string } }> =
+    [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: response,
+        },
       },
-    },
-  ];
+    ];
 
   // Add task creation confirmation if tasks were created
   if (createdTasks && createdTasks.length > 0) {
@@ -122,7 +129,8 @@ function formatSlackResponse(
       type: "section",
       text: {
         type: "mrkdwn",
-        text: "*Created Tasks:*\n" +
+        text:
+          "*Created Tasks:*\n" +
           createdTasks
             .map((task) => `- \`${task.identifier}\`: ${task.title}`)
             .join("\n"),
@@ -152,12 +160,16 @@ async function processMessage(
   threadTs: string,
   userId: string,
   messageText: string,
-  options: ThreadHandlerOptions
+  options: ThreadHandlerOptions,
 ) {
   const { llm, linearClient, teamId, checkpointer } = options;
 
   // Get conversation history if in a thread
-  const conversationHistory = await getConversationHistory(client, channelId, threadTs);
+  const conversationHistory = await getConversationHistory(
+    client,
+    channelId,
+    threadTs,
+  );
 
   // Build input for Product Agent
   const input: RunProductAgentInput = {
@@ -196,7 +208,11 @@ export function handleAppMention(options: ThreadHandlerOptions) {
   }: {
     event: AppMentionEvent;
     client: WebClient;
-    say: (message: string | { text: string; thread_ts?: string; blocks?: unknown[] }) => Promise<unknown>;
+    say: (
+      message:
+        | string
+        | { text: string; thread_ts?: string; blocks?: unknown[] },
+    ) => Promise<unknown>;
   }): Promise<void> => {
     const handlerLogger = logger.child({ handler: "app_mention" });
 
@@ -237,7 +253,7 @@ export function handleAppMention(options: ThreadHandlerOptions) {
         threadTs,
         event.user,
         messageText,
-        options
+        options,
       );
 
       // Format and send response
@@ -259,7 +275,8 @@ export function handleAppMention(options: ThreadHandlerOptions) {
         },
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
 
       handlerLogger.error("app_mention_error", {
         outcome: "failure",
@@ -294,7 +311,11 @@ export function handleDirectMessage(options: ThreadHandlerOptions) {
   }: {
     event: GenericMessageEvent;
     client: WebClient;
-    say: (message: string | { text: string; thread_ts?: string; blocks?: unknown[] }) => Promise<unknown>;
+    say: (
+      message:
+        | string
+        | { text: string; thread_ts?: string; blocks?: unknown[] },
+    ) => Promise<unknown>;
   }): Promise<void> => {
     const handlerLogger = logger.child({ handler: "direct_message" });
 
@@ -330,7 +351,7 @@ export function handleDirectMessage(options: ThreadHandlerOptions) {
         threadTs,
         userId,
         messageText,
-        options
+        options,
       );
 
       // Format and send response
@@ -352,7 +373,8 @@ export function handleDirectMessage(options: ThreadHandlerOptions) {
         },
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
 
       handlerLogger.error("direct_message_error", {
         outcome: "failure",
@@ -410,7 +432,10 @@ const IGNORED_SUBTYPES = new Set([
  * await startBoltApp(app);
  * ```
  */
-export function registerHandlers(app: App, options: ThreadHandlerOptions): void {
+export function registerHandlers(
+  app: App,
+  options: ThreadHandlerOptions,
+): void {
   logger.info("register_handlers", {
     message: "Registering Product Agent event handlers",
     context: { botUserId: options.botUserId ?? "not set" },
@@ -427,7 +452,8 @@ export function registerHandlers(app: App, options: ThreadHandlerOptions): void 
     const { event, client, say } = args;
 
     // Extract event properties for logging
-    const channelType = "channel_type" in event ? event.channel_type : undefined;
+    const channelType =
+      "channel_type" in event ? event.channel_type : undefined;
     const subtype = "subtype" in event ? event.subtype : undefined;
     const threadTs = "thread_ts" in event ? event.thread_ts : undefined;
     const hasBotId = "bot_id" in event && Boolean(event.bot_id);
@@ -499,7 +525,11 @@ export function registerHandlers(app: App, options: ThreadHandlerOptions): void 
     // Message doesn't match any handler criteria
     logger.debug("message_event_unhandled", {
       message: "Message event not routed (not DM, not @mention in thread)",
-      context: { channelType, hasThreadTs: Boolean(threadTs), hasBotUserId: Boolean(options.botUserId) },
+      context: {
+        channelType,
+        hasThreadTs: Boolean(threadTs),
+        hasBotUserId: Boolean(options.botUserId),
+      },
     });
   });
 

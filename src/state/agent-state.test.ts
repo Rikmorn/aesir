@@ -4,17 +4,17 @@
  * Tests for the agent state schema, reducers, and utility functions.
  */
 
-import { describe, it, expect } from "vitest";
-import { HumanMessage, AIMessage } from "@langchain/core/messages";
+import { AIMessage, HumanMessage } from "@langchain/core/messages";
+import { describe, expect, it } from "vitest";
 import {
   AgentState,
+  type AgentStateType,
+  type AgentStatus,
   AgentStatusSchema,
-  MAX_LOOP_COUNT,
   createInitialState,
   hasExceededLoopLimit,
+  MAX_LOOP_COUNT,
   shouldContinue,
-  type AgentStatus,
-  type AgentStateType,
 } from "./agent-state.js";
 
 describe("AgentState", () => {
@@ -74,7 +74,7 @@ describe("AgentState", () => {
       // Test the operator (reducer) behavior
       const result = messagesChannel.operator(
         [new HumanMessage("Hello")],
-        [new AIMessage("Hi there")]
+        [new AIMessage("Hi there")],
       );
       expect(result).toHaveLength(2);
       expect(result[0]).toBeInstanceOf(HumanMessage);

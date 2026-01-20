@@ -7,9 +7,9 @@
  */
 
 import {
-  runDevWorkflow,
-  type DevWorkflowResult,
   type DevWorkflowDependencies,
+  type DevWorkflowResult,
+  runDevWorkflow,
 } from "../../agents/dev-workflow-runner.js";
 import { createLogger } from "../../logging/logger.js";
 
@@ -31,7 +31,7 @@ const logger = createLogger({
 export async function executeDevWorkflow(
   taskId: string,
   sessionId: string,
-  deps: DevWorkflowDependencies
+  deps: DevWorkflowDependencies,
 ): Promise<DevWorkflowResult> {
   logger.info("activity_dev_workflow_start", {
     message: `Executing dev workflow for task ${taskId}`,

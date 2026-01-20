@@ -1,4 +1,4 @@
-import * as crypto from "crypto";
+import * as crypto from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -20,39 +20,57 @@ import * as temporalClient from "../../temporal/client.js";
 
 describe("extractTaskId", () => {
   it('extracts task ID from "Task: ABC-123" format', () => {
-    expect(extractTaskId({ title: "Fix bug", body: "Task: ABC-123" })).toBe("ABC-123");
+    expect(extractTaskId({ title: "Fix bug", body: "Task: ABC-123" })).toBe(
+      "ABC-123",
+    );
   });
 
   it('extracts task ID from "[ABC-123]" format in title', () => {
-    expect(extractTaskId({ title: "[ABC-123] Fix bug", body: null })).toBe("ABC-123");
+    expect(extractTaskId({ title: "[ABC-123] Fix bug", body: null })).toBe(
+      "ABC-123",
+    );
   });
 
   it('extracts task ID from "Linear: ABC-123" format', () => {
-    expect(extractTaskId({ title: "Fix bug", body: "Linear: ABC-123" })).toBe("ABC-123");
+    expect(extractTaskId({ title: "Fix bug", body: "Linear: ABC-123" })).toBe(
+      "ABC-123",
+    );
   });
 
   it("handles multi-letter project prefixes", () => {
-    expect(extractTaskId({ title: "[PROJ-42] Fix bug", body: null })).toBe("PROJ-42");
-    expect(extractTaskId({ title: "Bug fix", body: "Task: MYAPP-999" })).toBe("MYAPP-999");
+    expect(extractTaskId({ title: "[PROJ-42] Fix bug", body: null })).toBe(
+      "PROJ-42",
+    );
+    expect(extractTaskId({ title: "Bug fix", body: "Task: MYAPP-999" })).toBe(
+      "MYAPP-999",
+    );
   });
 
   it("extracts task ID from body when not in title", () => {
-    expect(extractTaskId({ title: "Feature update", body: "Implements [DEV-100]" })).toBe("DEV-100");
+    expect(
+      extractTaskId({ title: "Feature update", body: "Implements [DEV-100]" }),
+    ).toBe("DEV-100");
   });
 
   it("returns null when no task ID found", () => {
-    expect(extractTaskId({ title: "Fix bug", body: "Some description" })).toBeNull();
+    expect(
+      extractTaskId({ title: "Fix bug", body: "Some description" }),
+    ).toBeNull();
     expect(extractTaskId({ title: "Update readme", body: null })).toBeNull();
     expect(extractTaskId({ title: "No ID here", body: "" })).toBeNull();
   });
 
   it("handles undefined body", () => {
-    expect(extractTaskId({ title: "[ABC-123] Feature", body: undefined })).toBe("ABC-123");
+    expect(extractTaskId({ title: "[ABC-123] Feature", body: undefined })).toBe(
+      "ABC-123",
+    );
   });
 
   it("prefers first match when multiple patterns present", () => {
     // Task: format checked before bracket format
-    expect(extractTaskId({ title: "[DEV-2]", body: "Task: ABC-123" })).toBe("ABC-123");
+    expect(extractTaskId({ title: "[DEV-2]", body: "Task: ABC-123" })).toBe(
+      "ABC-123",
+    );
   });
 });
 
@@ -72,37 +90,47 @@ describe("verifyWebhookSignature", () => {
     const payload = '{"test": "data"}';
     // Generate valid signature using Node's crypto
     const hmac = crypto.createHmac("sha256", secret);
-    const signature = "sha256=" + hmac.update(payload).digest("hex");
+    const signature = `sha256=${hmac.update(payload).digest("hex")}`;
 
     expect(verifyWebhookSignature(payload, signature, secret)).toBe(true);
   });
 
   it("returns false for invalid signature", () => {
-    expect(verifyWebhookSignature("payload", "sha256=invalid", "secret")).toBe(false);
+    expect(verifyWebhookSignature("payload", "sha256=invalid", "secret")).toBe(
+      false,
+    );
   });
 
   it("returns false for wrong secret", () => {
     const payload = '{"test": "data"}';
     const hmac = crypto.createHmac("sha256", "correct-secret");
-    const signature = "sha256=" + hmac.update(payload).digest("hex");
+    const signature = `sha256=${hmac.update(payload).digest("hex")}`;
 
-    expect(verifyWebhookSignature(payload, signature, "wrong-secret")).toBe(false);
+    expect(verifyWebhookSignature(payload, signature, "wrong-secret")).toBe(
+      false,
+    );
   });
 
   it("returns false for mismatched signature lengths", () => {
-    expect(verifyWebhookSignature("payload", "sha256=short", "secret")).toBe(false);
+    expect(verifyWebhookSignature("payload", "sha256=short", "secret")).toBe(
+      false,
+    );
   });
 });
 
 describe("handlePRReviewEvent", () => {
   const mockApprovalSignal = vi.mocked(temporalClient.sendApprovalSignal);
-  const mockChangesSignal = vi.mocked(temporalClient.sendChangesRequestedSignal);
+  const mockChangesSignal = vi.mocked(
+    temporalClient.sendChangesRequestedSignal,
+  );
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  const createBaseEvent = (overrides: Partial<PRReviewEvent> = {}): PRReviewEvent => ({
+  const createBaseEvent = (
+    overrides: Partial<PRReviewEvent> = {},
+  ): PRReviewEvent => ({
     action: "submitted",
     review: {
       id: 1,

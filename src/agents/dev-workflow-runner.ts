@@ -12,16 +12,20 @@
  * This is the primary entry point for running the Dev Agent workflow.
  */
 
+import { emitError, updateIssueStatus } from "../integrations/linear/index.js";
+import {
+  createLogger,
+  createTraceStore,
+  type LogEntry,
+} from "../logging/index.js";
+import {
+  DEFAULT_DEV_WORKFLOW_CONFIG,
+  type DevWorkflowConfig,
+} from "../state/dev-workflow-state.js";
 import {
   createDevWorkflow,
   type DevWorkflowDependencies,
 } from "./dev-workflow.js";
-import {
-  DevWorkflowConfig,
-  DEFAULT_DEV_WORKFLOW_CONFIG,
-} from "../state/dev-workflow-state.js";
-import { updateIssueStatus, emitError } from "../integrations/linear/index.js";
-import { createLogger, createTraceStore, type LogEntry } from "../logging/index.js";
 import { createLangGraphTracer } from "./tracing/index.js";
 
 const logger = createLogger({
@@ -66,7 +70,7 @@ export async function runDevWorkflow(
   taskId: string,
   sessionId: string,
   deps: DevWorkflowDependencies,
-  config: DevWorkflowConfig = DEFAULT_DEV_WORKFLOW_CONFIG
+  config: DevWorkflowConfig = DEFAULT_DEV_WORKFLOW_CONFIG,
 ): Promise<DevWorkflowResult> {
   const startTime = Date.now();
 
@@ -91,7 +95,7 @@ export async function runDevWorkflow(
         configurable: { thread_id: taskId },
         recursionLimit: config.recursionLimit,
         callbacks: [tracer],
-      }
+      },
     );
 
     const durationMs = Date.now() - startTime;
@@ -116,8 +120,7 @@ export async function runDevWorkflow(
     return workflowResult;
   } catch (error) {
     const durationMs = Date.now() - startTime;
-    const errorMessage =
-      error instanceof Error ? error.message : String(error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
 
     logger.error("dev_workflow_error", {
       outcome: "failure",
@@ -131,8 +134,8 @@ export async function runDevWorkflow(
       await updateIssueStatus(deps.linearClient, taskId, "Ready");
       await emitError(
         deps.linearClient,
-        sessionId,  // Use sessionId for agent activities, not taskId
-        `Dev workflow failed: ${errorMessage}`
+        sessionId, // Use sessionId for agent activities, not taskId
+        `Dev workflow failed: ${errorMessage}`,
       );
     } catch (linearError) {
       // Log but don't throw - we want to return the original error

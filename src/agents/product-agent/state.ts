@@ -14,8 +14,8 @@
  * - slackContext enables routing responses back to the right channel/thread
  */
 
+import type { BaseMessage } from "@langchain/core/messages";
 import { Annotation } from "@langchain/langgraph";
-import { BaseMessage } from "@langchain/core/messages";
 import { z } from "zod";
 
 /**
@@ -51,11 +51,11 @@ export const DEFAULT_REQUIREMENTS: Requirements = {
  * Conversation phases
  */
 export const ProductAgentPhaseSchema = z.enum([
-  "gathering",   // Initial requirement gathering
-  "clarifying",  // Asking follow-up questions
-  "confirming",  // Confirming with user before creating
-  "creating",    // Creating Linear issue
-  "complete",    // Issue created
+  "gathering", // Initial requirement gathering
+  "clarifying", // Asking follow-up questions
+  "confirming", // Confirming with user before creating
+  "creating", // Creating Linear issue
+  "complete", // Issue created
 ]);
 
 export type ProductAgentPhase = z.infer<typeof ProductAgentPhaseSchema>;
@@ -109,7 +109,7 @@ export const ProductAgentStateSchema = z.object({
  */
 function requirementsReducer(
   current: Requirements,
-  incoming: Partial<Requirements>
+  incoming: Partial<Requirements>,
 ): Requirements {
   return {
     what: incoming.what !== undefined ? incoming.what : current.what,
@@ -203,7 +203,7 @@ export function hasMinimumRequirements(requirements: Requirements): boolean {
  * Create initial state for a product agent conversation
  */
 export function createProductAgentInitialState(
-  slackContext: SlackContext
+  slackContext: SlackContext,
 ): Partial<ProductAgentState> {
   return {
     messages: [],

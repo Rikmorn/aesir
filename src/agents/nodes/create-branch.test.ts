@@ -2,9 +2,9 @@
  * Tests for Create Branch Node
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createBranchNode, type CreateBranchConfig } from "./create-branch.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DevWorkflowStateType } from "../../state/dev-workflow-state.js";
+import { type CreateBranchConfig, createBranchNode } from "./create-branch.js";
 
 // Mock the GitHub integration module
 vi.mock("../../integrations/github/index.js", () => ({
@@ -29,7 +29,7 @@ describe("createBranchNode", () => {
   // Base state for tests
   const baseState: DevWorkflowStateType = {
     taskId: "ABC-123",
-      sessionId: "session-test",
+    sessionId: "session-test",
     taskDescription: "Test task description",
     repositoryUrl: null,
     branchName: null,
@@ -128,7 +128,7 @@ describe("createBranchNode", () => {
 
     const createBranchNodeFn = createBranchNode(mockOctokit, config);
     await expect(createBranchNodeFn(baseState)).rejects.toThrow(
-      "Branch already exists"
+      "Branch already exists",
     );
   });
 
@@ -136,6 +136,8 @@ describe("createBranchNode", () => {
     mockCreateBranch.mockRejectedValue(new Error("Network error"));
 
     const createBranchNodeFn = createBranchNode(mockOctokit, config);
-    await expect(createBranchNodeFn(baseState)).rejects.toThrow("Network error");
+    await expect(createBranchNodeFn(baseState)).rejects.toThrow(
+      "Network error",
+    );
   });
 });

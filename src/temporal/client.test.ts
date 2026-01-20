@@ -5,7 +5,7 @@
  * Full integration testing requires a running Temporal server.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { ClientConfig } from "./client.js";
 import type { ApprovalDecision, ChangesRequested } from "./types.js";
@@ -13,13 +13,13 @@ import type { ApprovalDecision, ChangesRequested } from "./types.js";
 describe("Temporal Client", () => {
   beforeEach(() => {
     // Clear environment variables
-    delete process.env["TEMPORAL_ADDRESS"];
-    delete process.env["TEMPORAL_NAMESPACE"];
+    delete process.env.TEMPORAL_ADDRESS;
+    delete process.env.TEMPORAL_NAMESPACE;
   });
 
   afterEach(() => {
-    delete process.env["TEMPORAL_ADDRESS"];
-    delete process.env["TEMPORAL_NAMESPACE"];
+    delete process.env.TEMPORAL_ADDRESS;
+    delete process.env.TEMPORAL_NAMESPACE;
   });
 
   describe("ClientConfig interface", () => {
@@ -115,13 +115,13 @@ describe("Temporal Client", () => {
 
   describe("environment variable defaults", () => {
     it("should read TEMPORAL_ADDRESS from environment", () => {
-      process.env["TEMPORAL_ADDRESS"] = "env-test:7233";
-      expect(process.env["TEMPORAL_ADDRESS"]).toBe("env-test:7233");
+      process.env.TEMPORAL_ADDRESS = "env-test:7233";
+      expect(process.env.TEMPORAL_ADDRESS).toBe("env-test:7233");
     });
 
     it("should read TEMPORAL_NAMESPACE from environment", () => {
-      process.env["TEMPORAL_NAMESPACE"] = "env-namespace";
-      expect(process.env["TEMPORAL_NAMESPACE"]).toBe("env-namespace");
+      process.env.TEMPORAL_NAMESPACE = "env-namespace";
+      expect(process.env.TEMPORAL_NAMESPACE).toBe("env-namespace");
     });
   });
 

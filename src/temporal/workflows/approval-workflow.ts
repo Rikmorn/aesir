@@ -15,13 +15,11 @@
 
 import * as wf from "@temporalio/workflow";
 import { proxyActivities } from "@temporalio/workflow";
-
-import type { ApprovalDecision, ChangesRequested } from "../types.js";
-import { approvalSignal, changesRequestedSignal } from "../signals.js";
 import type { IssueStatus } from "../../integrations/linear/types.js";
-
 // Import BoundActivities type for properly typed activity proxies
 import type { BoundActivities } from "../activities/index.js";
+import { approvalSignal, changesRequestedSignal } from "../signals.js";
+import type { ApprovalDecision, ChangesRequested } from "../types.js";
 
 /**
  * Workflow input configuration
@@ -119,7 +117,7 @@ export const approvalStatusQuery =
  * @returns Workflow result with outcome and optional PR number
  */
 export async function prApprovalWorkflow(
-  input: ApprovalWorkflowInput
+  input: ApprovalWorkflowInput,
 ): Promise<ApprovalWorkflowResult> {
   const {
     taskId,
@@ -149,23 +147,23 @@ export async function prApprovalWorkflow(
     state.decision = signalInput;
   });
 
-  wf.setHandler(
-    changesRequestedSignal,
-    (signalInput: ChangesRequested) => {
-      wf.log.info("Received changes requested", {
-        reviewer: signalInput.reviewer,
-      });
-      state.changesRequested = signalInput;
-    }
-  );
+  wf.setHandler(changesRequestedSignal, (signalInput: ChangesRequested) => {
+    wf.log.info("Received changes requested", {
+      reviewer: signalInput.reviewer,
+    });
+    state.changesRequested = signalInput;
+  });
 
   // Query handler for status checks
-  wf.setHandler(approvalStatusQuery, (): ApprovalQueryStatus => ({
-    taskId,
-    prNumber: state.prNumber,
-    status: state.currentStatus,
-    decision: state.decision,
-  }));
+  wf.setHandler(
+    approvalStatusQuery,
+    (): ApprovalQueryStatus => ({
+      taskId,
+      prNumber: state.prNumber,
+      status: state.currentStatus,
+      decision: state.decision,
+    }),
+  );
 
   // Feedback loop for changes requested
   let feedbackIteration = 0;
@@ -221,7 +219,7 @@ export async function prApprovalWorkflow(
           summary: `Dev Agent completed task ${taskId}`,
           prUrl,
         },
-        slackChannel
+        slackChannel,
       );
     } catch (error) {
       wf.log.warn("Failed to send Slack notification", { error });
@@ -237,7 +235,7 @@ export async function prApprovalWorkflow(
 
     const receivedSignal = await wf.condition(
       () => state.decision !== null || state.changesRequested !== null,
-      `${approvalTimeoutDays} days`
+      `${approvalTimeoutDays} days`,
     );
 
     // Check what happened
@@ -255,7 +253,7 @@ export async function prApprovalWorkflow(
             status: "failed",
             details: `Approval timed out after ${approvalTimeoutDays} days`,
           },
-          slackChannel
+          slackChannel,
         );
       } catch {
         // Ignore notification errors
@@ -278,12 +276,9 @@ export async function prApprovalWorkflow(
       // Changes requested - loop back
       const changes: ChangesRequested = state.changesRequested;
       wf.log.info(
-        `Changes requested by ${changes.reviewer}, iteration ${feedbackIteration}`
+        `Changes requested by ${changes.reviewer}, iteration ${feedbackIteration}`,
       );
       state.currentStatus = "running";
-      // Continue loop to re-run dev workflow with feedback
-      // The agent will pick up PR comments as feedback
-      continue;
     } else if (state.decision !== null) {
       const decision: ApprovalDecision = state.decision;
       if (decision.approved) {
@@ -327,7 +322,7 @@ export async function prApprovalWorkflow(
               status: "completed",
               details: `PR #${state.prNumber} merged by ${decision.reviewer}`,
             },
-            slackChannel
+            slackChannel,
           );
         } catch {
           // Ignore notification errors
@@ -344,9 +339,7 @@ export async function prApprovalWorkflow(
         };
       } else {
         // Step 4b: Rejected
-        wf.log.info(
-          `PR rejected by ${decision.reviewer}: ${decision.comment}`
-        );
+        wf.log.info(`PR rejected by ${decision.reviewer}: ${decision.comment}`);
         state.currentStatus = "rejected";
 
         // Update Linear back to Ready on rejection
@@ -365,7 +358,7 @@ export async function prApprovalWorkflow(
               status: "failed",
               details: decision.comment ?? `Rejected by ${decision.reviewer}`,
             },
-            slackChannel
+            slackChannel,
           );
         } catch {
           // Ignore notification errors
@@ -396,7 +389,7 @@ export async function prApprovalWorkflow(
         status: "failed",
         details: `Max feedback iterations (${maxFeedbackIterations}) exceeded`,
       },
-      slackChannel
+      slackChannel,
     );
   } catch {
     // Ignore notification errors

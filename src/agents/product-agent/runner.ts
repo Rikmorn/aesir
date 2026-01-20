@@ -10,15 +10,17 @@
  * - Returns structured output with response, phase, and created tasks
  */
 
-import { HumanMessage, AIMessage } from "@langchain/core/messages";
 import type { ChatAnthropic } from "@langchain/anthropic";
-import type { LinearClient } from "@linear/sdk";
+import { AIMessage, HumanMessage } from "@langchain/core/messages";
 import type { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
-import { createProductAgentGraph } from "./graph.js";
-import type { ProductAgentPhase, CreatedTask } from "./state.js";
+import type { LinearClient } from "@linear/sdk";
 import { createLogger } from "../../logging/logger.js";
+import { createProductAgentGraph } from "./graph.js";
+import type { CreatedTask, ProductAgentPhase } from "./state.js";
 
-const logger = createLogger({ defaultContext: { module: "product-agent-runner" } });
+const logger = createLogger({
+  defaultContext: { module: "product-agent-runner" },
+});
 
 /**
  * Input for running the Product Agent
@@ -94,7 +96,7 @@ export interface RunProductAgentOptions {
  */
 export async function runProductAgent(
   input: RunProductAgentInput,
-  options: RunProductAgentOptions
+  options: RunProductAgentOptions,
 ): Promise<RunProductAgentOutput> {
   const runLogger = logger.child({
     threadId: input.slackContext.threadTs,
@@ -129,7 +131,7 @@ export async function runProductAgent(
       ...(input.conversationHistory ?? []).map((m) =>
         m.role === "user"
           ? new HumanMessage(m.content)
-          : new AIMessage(m.content)
+          : new AIMessage(m.content),
       ),
       new HumanMessage(input.message),
     ];
@@ -140,16 +142,17 @@ export async function runProductAgent(
         messages,
         slackContext: input.slackContext,
       },
-      config
+      config,
     );
 
     // Extract the last AI message as the response
     const lastMessage = result.messages[result.messages.length - 1];
     let response: string;
     if (lastMessage) {
-      response = typeof lastMessage.content === "string"
-        ? lastMessage.content
-        : JSON.stringify(lastMessage.content);
+      response =
+        typeof lastMessage.content === "string"
+          ? lastMessage.content
+          : JSON.stringify(lastMessage.content);
     } else {
       response = "I'm processing your request. Please wait...";
     }
@@ -181,7 +184,8 @@ export async function runProductAgent(
 
     return output;
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
 
     runLogger.error("run_product_agent_error", {
       outcome: "failure",

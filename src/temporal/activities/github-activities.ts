@@ -46,7 +46,7 @@ export interface MergePROutput {
  */
 export async function mergePRActivity(
   octokit: Octokit,
-  input: MergePRInput
+  input: MergePRInput,
 ): Promise<MergePROutput> {
   logger.info("activity_merge_pr_start", {
     message: `Merging PR #${input.pullNumber}`,
@@ -59,14 +59,16 @@ export async function mergePRActivity(
 
   // Build options only with defined values (exactOptionalPropertyTypes)
   const options: { mergeMethod?: "merge" | "squash" | "rebase" } | undefined =
-    input.mergeMethod !== undefined ? { mergeMethod: input.mergeMethod } : undefined;
+    input.mergeMethod !== undefined
+      ? { mergeMethod: input.mergeMethod }
+      : undefined;
 
   const result = await mergePullRequest(
     octokit,
     input.owner,
     input.repo,
     input.pullNumber,
-    options
+    options,
   );
 
   logger.info("activity_merge_pr_complete", {

@@ -7,8 +7,8 @@
  */
 
 export {
-  registerHandlers,
   handleAppMention,
   handleDirectMessage,
+  registerHandlers,
   type ThreadHandlerOptions,
 } from "./thread-handlers.js";

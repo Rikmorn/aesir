@@ -4,13 +4,13 @@
  * Tests for agent configuration schema validation and utilities.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
+  type AgentConfig,
   AgentConfigSchema,
   devAgentConfig,
-  validateAgentConfig,
   mergeWithDefaults,
-  type AgentConfig,
+  validateAgentConfig,
 } from "./agent-config.js";
 
 describe("AgentConfigSchema", () => {
@@ -132,7 +132,7 @@ describe("validateAgentConfig", () => {
       validateAgentConfig({
         name: "",
         description: "",
-      })
+      }),
     ).toThrow();
   });
 });
@@ -165,7 +165,7 @@ describe("devAgentConfig", () => {
   it("should have all expected default values", () => {
     expect(devAgentConfig.name).toBe("dev-agent");
     expect(devAgentConfig.description).toBe(
-      "Development agent for code generation tasks"
+      "Development agent for code generation tasks",
     );
     expect(devAgentConfig.maxIterations).toBe(10);
     expect(devAgentConfig.recursionLimit).toBe(25);

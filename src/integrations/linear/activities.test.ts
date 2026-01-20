@@ -4,16 +4,16 @@
  * Tests for activity emitters using mocked LinearClient.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { LinearClient } from "@linear/sdk";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  emitThought,
   emitAction,
-  emitResponse,
-  emitError,
   emitElicitation,
+  emitError,
+  emitResponse,
+  emitThought,
   updateSessionPlan,
 } from "./activities.js";
-import type { LinearClient } from "@linear/sdk";
 import type { AgentPlanItem } from "./types.js";
 
 // Mock LinearClient
@@ -48,7 +48,7 @@ describe("emitThought", () => {
     vi.mocked(client.createAgentActivity).mockRejectedValue(error);
 
     await expect(emitThought(client, "session", "body")).rejects.toThrow(
-      "API error"
+      "API error",
     );
   });
 });
@@ -78,7 +78,11 @@ describe("emitAction", () => {
 
     expect(client.createAgentActivity).toHaveBeenCalledWith({
       agentSessionId: "session",
-      content: { type: "action", action: "Creating", parameter: "pull request" },
+      content: {
+        type: "action",
+        action: "Creating",
+        parameter: "pull request",
+      },
     });
   });
 });
@@ -180,9 +184,9 @@ describe("updateSessionPlan", () => {
     const error = new Error("Session not found");
     vi.mocked(client.updateAgentSession).mockRejectedValue(error);
 
-    await expect(
-      updateSessionPlan(client, "session", [])
-    ).rejects.toThrow("Session not found");
+    await expect(updateSessionPlan(client, "session", [])).rejects.toThrow(
+      "Session not found",
+    );
   });
 
   it("should pass all status types correctly", async () => {

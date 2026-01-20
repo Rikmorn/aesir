@@ -4,14 +4,14 @@
  * Tests for the structured logging utility.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  Logger,
   createLogger,
   createTimer,
-  logger,
   type LogEntry,
+  Logger,
   type LogLevel,
+  logger,
 } from "./logger.js";
 
 describe("Logger", () => {
@@ -151,7 +151,7 @@ describe("Logger", () => {
         testLogger[level]("test_action");
 
         expect(capturedEntries).toHaveLength(1);
-        expect(capturedEntries[0]!.level).toBe(level);
+        expect(capturedEntries[0]?.level).toBe(level);
       });
     });
 
@@ -185,10 +185,10 @@ describe("Logger", () => {
       testLogger.info("action1");
       testLogger.warn("action2");
 
-      expect(capturedEntries[0]!.context.agentId).toBe("default-agent");
-      expect(capturedEntries[0]!.context.service).toBe("test");
-      expect(capturedEntries[1]!.context.agentId).toBe("default-agent");
-      expect(capturedEntries[1]!.context.service).toBe("test");
+      expect(capturedEntries[0]?.context.agentId).toBe("default-agent");
+      expect(capturedEntries[0]?.context.service).toBe("test");
+      expect(capturedEntries[1]?.context.agentId).toBe("default-agent");
+      expect(capturedEntries[1]?.context.service).toBe("test");
     });
 
     it("should merge provided context with default context", () => {

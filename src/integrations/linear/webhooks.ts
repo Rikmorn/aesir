@@ -6,7 +6,7 @@
  */
 
 import { createHmac, timingSafeEqual } from "node:crypto";
-import type { WebhookPayloadBase, AgentSessionPayload } from "./types.js";
+import type { AgentSessionPayload, WebhookPayloadBase } from "./types.js";
 
 /**
  * Verify a webhook signature using HMAC-SHA256
@@ -22,7 +22,7 @@ import type { WebhookPayloadBase, AgentSessionPayload } from "./types.js";
 export function verifyWebhookSignature(
   signature: string,
   rawBody: string,
-  secret: string
+  secret: string,
 ): boolean {
   try {
     // Convert hex signature from header to Buffer
@@ -52,7 +52,7 @@ export function verifyWebhookSignature(
  */
 export function validateWebhookTimestamp(
   timestamp: number,
-  toleranceMs: number = 60_000
+  toleranceMs: number = 60_000,
 ): boolean {
   const now = Date.now();
   const age = Math.abs(now - timestamp);
@@ -67,7 +67,9 @@ export function validateWebhookTimestamp(
  * @param rawBody - The raw request body string
  * @returns Parsed payload with type assertion
  */
-export function parseWebhookPayload<T = WebhookPayloadBase>(rawBody: string): T {
+export function parseWebhookPayload<T = WebhookPayloadBase>(
+  rawBody: string,
+): T {
   return JSON.parse(rawBody) as T;
 }
 
@@ -78,7 +80,7 @@ export function parseWebhookPayload<T = WebhookPayloadBase>(rawBody: string): T 
  * @returns true if this is an AgentSession webhook, with narrowed type
  */
 export function isAgentSessionEvent(
-  payload: WebhookPayloadBase
+  payload: WebhookPayloadBase,
 ): payload is AgentSessionPayload {
   // Linear sends "AgentSessionEvent" as the type for agent session webhooks
   return payload.type === "AgentSessionEvent";

@@ -2,9 +2,9 @@
  * Tests for Pickup Task Node
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createPickupTaskNode } from "./pickup-task.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DevWorkflowStateType } from "../../state/dev-workflow-state.js";
+import { createPickupTaskNode } from "./pickup-task.js";
 
 // Mock the Linear integration module
 vi.mock("../../integrations/linear/index.js", () => ({
@@ -14,9 +14,9 @@ vi.mock("../../integrations/linear/index.js", () => ({
 }));
 
 import {
+  emitThought,
   readIssue,
   updateIssueStatus,
-  emitThought,
 } from "../../integrations/linear/index.js";
 
 const mockReadIssue = vi.mocked(readIssue);
@@ -30,7 +30,7 @@ describe("createPickupTaskNode", () => {
   // Base state for tests
   const baseState: DevWorkflowStateType = {
     taskId: "ABC-123",
-      sessionId: "session-test",
+    sessionId: "session-test",
     taskDescription: "",
     repositoryUrl: null,
     branchName: null,
@@ -74,7 +74,7 @@ describe("createPickupTaskNode", () => {
     expect(mockUpdateIssueStatus).toHaveBeenCalledWith(
       mockLinearClient,
       "ABC-123",
-      "In Progress"
+      "In Progress",
     );
   });
 
@@ -92,7 +92,7 @@ describe("createPickupTaskNode", () => {
     expect(mockEmitThought).toHaveBeenCalledWith(
       mockLinearClient,
       "ABC-123",
-      "Starting work on: Test issue title"
+      "Starting work on: Test issue title",
     );
   });
 
@@ -135,7 +135,7 @@ describe("createPickupTaskNode", () => {
 
     const pickupTask = createPickupTaskNode(mockLinearClient);
     await expect(pickupTask(baseState)).rejects.toThrow(
-      "Issue not found: ABC-123"
+      "Issue not found: ABC-123",
     );
   });
 
@@ -144,9 +144,7 @@ describe("createPickupTaskNode", () => {
       title: "Test issue",
       description: "Test description",
     } as Awaited<ReturnType<typeof readIssue>>);
-    mockUpdateIssueStatus.mockRejectedValue(
-      new Error("Status update failed")
-    );
+    mockUpdateIssueStatus.mockRejectedValue(new Error("Status update failed"));
 
     const pickupTask = createPickupTaskNode(mockLinearClient);
     await expect(pickupTask(baseState)).rejects.toThrow("Status update failed");

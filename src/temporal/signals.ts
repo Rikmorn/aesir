@@ -32,4 +32,5 @@ export const approvalSignal = wf.defineSignal<[ApprovalDecision]>("approval");
  * await handle.signal(changesRequestedSignal, { reviewer: 'user123', feedback: 'Fix the tests' });
  * ```
  */
-export const changesRequestedSignal = wf.defineSignal<[ChangesRequested]>("changes_requested");
+export const changesRequestedSignal =
+  wf.defineSignal<[ChangesRequested]>("changes_requested");

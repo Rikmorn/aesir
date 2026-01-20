@@ -2,9 +2,9 @@
  * Tests for Commit and PR Node
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createCommitPRNode, type CommitPRConfig } from "./commit-pr.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DevWorkflowStateType } from "../../state/dev-workflow-state.js";
+import { type CommitPRConfig, createCommitPRNode } from "./commit-pr.js";
 
 // Mock the GitHub integration module
 vi.mock("../../integrations/github/index.js", () => ({
@@ -18,8 +18,14 @@ vi.mock("../../integrations/linear/index.js", () => ({
   emitResponse: vi.fn(),
 }));
 
-import { createCommit, createPullRequest } from "../../integrations/github/index.js";
-import { updateIssueStatus, emitResponse } from "../../integrations/linear/index.js";
+import {
+  createCommit,
+  createPullRequest,
+} from "../../integrations/github/index.js";
+import {
+  emitResponse,
+  updateIssueStatus,
+} from "../../integrations/linear/index.js";
 
 const mockCreateCommit = vi.mocked(createCommit);
 const mockCreatePullRequest = vi.mocked(createPullRequest);
@@ -41,15 +47,29 @@ describe("createCommitPRNode", () => {
   // Base state for tests
   const baseState: DevWorkflowStateType = {
     taskId: "ABC-123",
-      sessionId: "session-test",
+    sessionId: "session-test",
     taskDescription: "Implement feature X\n\nDetailed description here",
     repositoryUrl: null,
     branchName: "dev-agent/ABC-123",
     files: [
-      { path: "src/feature.ts", content: "export const x = 1;", operation: "create" },
-      { path: "src/index.ts", content: "export * from './feature.js';", operation: "update" },
+      {
+        path: "src/feature.ts",
+        content: "export const x = 1;",
+        operation: "create",
+      },
+      {
+        path: "src/index.ts",
+        content: "export * from './feature.js';",
+        operation: "update",
+      },
     ],
-    testResult: { passed: true, exitCode: 0, stdout: "All tests passed", stderr: "", summary: "2 tests passed" },
+    testResult: {
+      passed: true,
+      exitCode: 0,
+      stdout: "All tests passed",
+      stderr: "",
+      summary: "2 tests passed",
+    },
     testAttempts: 1,
     status: "testing",
     error: null,
@@ -78,7 +98,11 @@ describe("createCommitPRNode", () => {
     mockUpdateIssueStatus.mockResolvedValue(undefined);
     mockEmitResponse.mockResolvedValue(undefined);
 
-    const commitPRNode = createCommitPRNode(mockOctokit, mockLinearClient, config);
+    const commitPRNode = createCommitPRNode(
+      mockOctokit,
+      mockLinearClient,
+      config,
+    );
     await commitPRNode(baseState);
 
     expect(mockCreateCommit).toHaveBeenCalledWith(mockOctokit, {
@@ -97,9 +121,17 @@ describe("createCommitPRNode", () => {
     const stateWithDelete: DevWorkflowStateType = {
       ...baseState,
       files: [
-        { path: "src/feature.ts", content: "export const x = 1;", operation: "create" },
+        {
+          path: "src/feature.ts",
+          content: "export const x = 1;",
+          operation: "create",
+        },
         { path: "src/old.ts", content: "", operation: "delete" },
-        { path: "src/updated.ts", content: "updated content", operation: "update" },
+        {
+          path: "src/updated.ts",
+          content: "updated content",
+          operation: "update",
+        },
       ],
     };
 
@@ -120,7 +152,11 @@ describe("createCommitPRNode", () => {
     mockUpdateIssueStatus.mockResolvedValue(undefined);
     mockEmitResponse.mockResolvedValue(undefined);
 
-    const commitPRNode = createCommitPRNode(mockOctokit, mockLinearClient, config);
+    const commitPRNode = createCommitPRNode(
+      mockOctokit,
+      mockLinearClient,
+      config,
+    );
     await commitPRNode(stateWithDelete);
 
     // Should only include create and update, not delete
@@ -154,7 +190,11 @@ describe("createCommitPRNode", () => {
     mockUpdateIssueStatus.mockResolvedValue(undefined);
     mockEmitResponse.mockResolvedValue(undefined);
 
-    const commitPRNode = createCommitPRNode(mockOctokit, mockLinearClient, config);
+    const commitPRNode = createCommitPRNode(
+      mockOctokit,
+      mockLinearClient,
+      config,
+    );
     await commitPRNode(baseState);
 
     expect(mockCreatePullRequest).toHaveBeenCalledWith(mockOctokit, {
@@ -185,13 +225,17 @@ describe("createCommitPRNode", () => {
     mockUpdateIssueStatus.mockResolvedValue(undefined);
     mockEmitResponse.mockResolvedValue(undefined);
 
-    const commitPRNode = createCommitPRNode(mockOctokit, mockLinearClient, config);
+    const commitPRNode = createCommitPRNode(
+      mockOctokit,
+      mockLinearClient,
+      config,
+    );
     await commitPRNode(baseState);
 
     expect(mockUpdateIssueStatus).toHaveBeenCalledWith(
       mockLinearClient,
       "ABC-123",
-      "Done"
+      "Done",
     );
   });
 
@@ -213,13 +257,17 @@ describe("createCommitPRNode", () => {
     mockUpdateIssueStatus.mockResolvedValue(undefined);
     mockEmitResponse.mockResolvedValue(undefined);
 
-    const commitPRNode = createCommitPRNode(mockOctokit, mockLinearClient, config);
+    const commitPRNode = createCommitPRNode(
+      mockOctokit,
+      mockLinearClient,
+      config,
+    );
     await commitPRNode(baseState);
 
     expect(mockEmitResponse).toHaveBeenCalledWith(
       mockLinearClient,
       "ABC-123",
-      "Opened PR: https://github.com/test-owner/test-repo/pull/42"
+      "Opened PR: https://github.com/test-owner/test-repo/pull/42",
     );
   });
 
@@ -241,7 +289,11 @@ describe("createCommitPRNode", () => {
     mockUpdateIssueStatus.mockResolvedValue(undefined);
     mockEmitResponse.mockResolvedValue(undefined);
 
-    const commitPRNode = createCommitPRNode(mockOctokit, mockLinearClient, config);
+    const commitPRNode = createCommitPRNode(
+      mockOctokit,
+      mockLinearClient,
+      config,
+    );
     const result = await commitPRNode(baseState);
 
     expect(result).toEqual({
@@ -253,7 +305,11 @@ describe("createCommitPRNode", () => {
   it("should propagate createCommit errors", async () => {
     mockCreateCommit.mockRejectedValue(new Error("Commit failed"));
 
-    const commitPRNode = createCommitPRNode(mockOctokit, mockLinearClient, config);
+    const commitPRNode = createCommitPRNode(
+      mockOctokit,
+      mockLinearClient,
+      config,
+    );
     await expect(commitPRNode(baseState)).rejects.toThrow("Commit failed");
   });
 
@@ -265,7 +321,11 @@ describe("createCommitPRNode", () => {
     });
     mockCreatePullRequest.mockRejectedValue(new Error("PR creation failed"));
 
-    const commitPRNode = createCommitPRNode(mockOctokit, mockLinearClient, config);
+    const commitPRNode = createCommitPRNode(
+      mockOctokit,
+      mockLinearClient,
+      config,
+    );
     await expect(commitPRNode(baseState)).rejects.toThrow("PR creation failed");
   });
 
@@ -292,7 +352,11 @@ describe("createCommitPRNode", () => {
     mockUpdateIssueStatus.mockResolvedValue(undefined);
     mockEmitResponse.mockResolvedValue(undefined);
 
-    const commitPRNode = createCommitPRNode(mockOctokit, mockLinearClient, config);
+    const commitPRNode = createCommitPRNode(
+      mockOctokit,
+      mockLinearClient,
+      config,
+    );
     await commitPRNode(stateWithSingleLine);
 
     expect(mockCreatePullRequest).toHaveBeenCalledWith(mockOctokit, {

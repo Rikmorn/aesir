@@ -4,16 +4,20 @@
  * Tests for webhook signature verification, timestamp validation, and type guards.
  */
 
-import { describe, it, expect } from "vitest";
 import { createHmac } from "node:crypto";
+import { describe, expect, it } from "vitest";
+import type {
+  AgentSessionPayload,
+  WebhookPayload,
+  WebhookPayloadBase,
+} from "./types.js";
 import {
-  verifyWebhookSignature,
-  validateWebhookTimestamp,
-  parseWebhookPayload,
   isAgentSessionEvent,
   isIssueEvent,
+  parseWebhookPayload,
+  validateWebhookTimestamp,
+  verifyWebhookSignature,
 } from "./webhooks.js";
-import type { WebhookPayload, WebhookPayloadBase, AgentSessionPayload } from "./types.js";
 
 describe("verifyWebhookSignature", () => {
   const secret = "test-webhook-secret";
@@ -42,7 +46,11 @@ describe("verifyWebhookSignature", () => {
   });
 
   it("should return false for wrong secret", () => {
-    const result = verifyWebhookSignature(validSignature, rawBody, "wrong-secret");
+    const result = verifyWebhookSignature(
+      validSignature,
+      rawBody,
+      "wrong-secret",
+    );
     expect(result).toBe(false);
   });
 
@@ -57,12 +65,17 @@ describe("verifyWebhookSignature", () => {
   });
 
   it("should verify signature with different body content", () => {
-    const differentBody = '{"type":"AgentSession","action":"created","data":{"id":"123"}}';
+    const differentBody =
+      '{"type":"AgentSession","action":"created","data":{"id":"123"}}';
     const differentSignature = createHmac("sha256", secret)
       .update(differentBody)
       .digest("hex");
 
-    const result = verifyWebhookSignature(differentSignature, differentBody, secret);
+    const result = verifyWebhookSignature(
+      differentSignature,
+      differentBody,
+      secret,
+    );
     expect(result).toBe(true);
   });
 });
@@ -108,7 +121,8 @@ describe("validateWebhookTimestamp", () => {
 
 describe("parseWebhookPayload", () => {
   it("should parse valid JSON payload", () => {
-    const rawBody = '{"type":"Issue","action":"create","data":{"id":"123"},"webhookTimestamp":1234567890,"webhookId":"abc"}';
+    const rawBody =
+      '{"type":"Issue","action":"create","data":{"id":"123"},"webhookTimestamp":1234567890,"webhookId":"abc"}';
     const result = parseWebhookPayload<WebhookPayload>(rawBody);
 
     expect(result.type).toBe("Issue");
@@ -118,7 +132,8 @@ describe("parseWebhookPayload", () => {
   });
 
   it("should parse AgentSessionEvent payload", () => {
-    const rawBody = '{"type":"AgentSessionEvent","action":"created","agentSession":{"id":"session-123","issueId":"issue-456","status":"pending","url":"https://linear.app/test"},"webhookTimestamp":1234567890,"webhookId":"abc"}';
+    const rawBody =
+      '{"type":"AgentSessionEvent","action":"created","agentSession":{"id":"session-123","issueId":"issue-456","status":"pending","url":"https://linear.app/test"},"webhookTimestamp":1234567890,"webhookId":"abc"}';
     const result = parseWebhookPayload<AgentSessionPayload>(rawBody);
 
     expect(result.type).toBe("AgentSessionEvent");
@@ -160,7 +175,12 @@ describe("isAgentSessionEvent", () => {
     const payload = {
       type: "AgentSessionEvent",
       action: "created",
-      agentSession: { id: "123", issueId: "456", status: "pending", url: "https://linear.app/test" },
+      agentSession: {
+        id: "123",
+        issueId: "456",
+        status: "pending",
+        url: "https://linear.app/test",
+      },
       webhookTimestamp: Date.now(),
       webhookId: "abc",
       data: {},

@@ -7,8 +7,8 @@
 
 import type { Octokit } from "@octokit/rest";
 import { createLogger } from "../../logging/logger.js";
-import type { CommitInfo, CreateCommitOptions } from "./types.js";
 import { getBranch } from "./branches.js";
+import type { CommitInfo, CreateCommitOptions } from "./types.js";
 
 const logger = createLogger({ defaultContext: { module: "github-commits" } });
 
@@ -30,7 +30,7 @@ const logger = createLogger({ defaultContext: { module: "github-commits" } });
  */
 export async function createCommit(
   octokit: Octokit,
-  options: CreateCommitOptions
+  options: CreateCommitOptions,
 ): Promise<CommitInfo> {
   const { owner, repo, branch, message, files } = options;
 

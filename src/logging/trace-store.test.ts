@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { TraceStore, createTraceStore } from "./trace-store.js";
+import { beforeEach, describe, expect, it } from "vitest";
 import { createLogger, type LogEntry } from "./logger.js";
+import { createTraceStore, type TraceStore } from "./trace-store.js";
 
 /**
  * Helper to create a LogEntry for testing
@@ -8,7 +8,7 @@ import { createLogger, type LogEntry } from "./logger.js";
 function createTestEntry(
   action: string,
   taskId?: string,
-  workflowId?: string
+  workflowId?: string,
 ): LogEntry {
   return {
     timestamp: new Date().toISOString(),
@@ -217,7 +217,10 @@ describe("TraceStore", () => {
         output: (entry) => store.append(entry),
       });
 
-      const taskLogger = rootLogger.child({ taskId: "TASK-200", workflowId: "WF-001" });
+      const taskLogger = rootLogger.child({
+        taskId: "TASK-200",
+        workflowId: "WF-001",
+      });
 
       taskLogger.info("generate_code", { message: "Generating code" });
       taskLogger.info("run_tests", { message: "Running tests" });

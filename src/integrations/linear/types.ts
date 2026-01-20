@@ -140,7 +140,14 @@ export type AgentActivityContent =
  * Issue status values used in Linear workflows
  * These are the common status names; actual values depend on team configuration
  */
-export type IssueStatus = "Triage" | "Ready" | "Backlog" | "In Progress" | "Done" | "Canceled" | "Duplicate";
+export type IssueStatus =
+  | "Triage"
+  | "Ready"
+  | "Backlog"
+  | "In Progress"
+  | "Done"
+  | "Canceled"
+  | "Duplicate";
 
 /**
  * Plan item for multi-step task progress

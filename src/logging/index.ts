@@ -5,15 +5,15 @@
  */
 
 export {
-  Logger,
   createLogger,
   createTimer,
-  logger,
-  type LogEntry,
-  type LogLevel,
   type LogContext,
+  type LogEntry,
+  Logger,
   type LoggerOptions,
+  type LogLevel,
+  logger,
   type Timer,
 } from "./logger.js";
 
-export { TraceStore, createTraceStore } from "./trace-store.js";
+export { createTraceStore, TraceStore } from "./trace-store.js";

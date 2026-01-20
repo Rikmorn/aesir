@@ -4,19 +4,19 @@
  * Tests for the StateGraph workflow definition and routing logic.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  routeAfterTest,
-  createDevWorkflow,
-  type AfterTestRoute,
-  type DevWorkflowDependencies,
-} from "./dev-workflow.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Sandbox, TestResult } from "../sandbox/types.js";
 import type {
-  DevWorkflowStateType,
   DevWorkflowConfig,
+  DevWorkflowStateType,
 } from "../state/dev-workflow-state.js";
 import { DEFAULT_DEV_WORKFLOW_CONFIG } from "../state/dev-workflow-state.js";
-import type { Sandbox, TestResult } from "../sandbox/types.js";
+import {
+  type AfterTestRoute,
+  createDevWorkflow,
+  type DevWorkflowDependencies,
+  routeAfterTest,
+} from "./dev-workflow.js";
 
 // Mock the logger
 vi.mock("../logging/index.js", () => ({
@@ -48,11 +48,11 @@ vi.mock("./nodes/commit-pr.js", () => ({
  * Create a base state for testing
  */
 function createBaseState(
-  overrides: Partial<DevWorkflowStateType> = {}
+  overrides: Partial<DevWorkflowStateType> = {},
 ): DevWorkflowStateType {
   return {
     taskId: "TEST-123",
-      sessionId: "session-test",
+    sessionId: "session-test",
     taskDescription: "Create a utility function",
     repositoryUrl: "owner/repo",
     branchName: null,
@@ -387,24 +387,24 @@ describe("workflow edge verification", () => {
         createBaseState({
           testResult: createPassingTestResult(),
           testAttempts: 1,
-        })
-      )
+        }),
+      ),
     );
     routes.add(
       routeAfterTest(
         createBaseState({
           testResult: createFailingTestResult(),
           testAttempts: 1,
-        })
-      )
+        }),
+      ),
     );
     routes.add(
       routeAfterTest(
         createBaseState({
           testResult: createFailingTestResult(),
           testAttempts: 5,
-        })
-      )
+        }),
+      ),
     );
 
     expect(routes.has("commit_pr")).toBe(true);

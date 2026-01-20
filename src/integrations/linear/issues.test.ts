@@ -5,10 +5,10 @@
  * Uses mocked LinearClient - no actual API calls.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { LinearClient, Issue, Team, IssueLabel } from "@linear/sdk";
-import { createIssue, listTeams, listLabels } from "./issues.js";
+import type { Issue, IssueLabel, LinearClient, Team } from "@linear/sdk";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CreateIssueParams } from "./issues.js";
+import { createIssue, listLabels, listTeams } from "./issues.js";
 
 // Helper to create mock LinearClient
 function createMockClient(overrides: Partial<LinearClient> = {}): LinearClient {
@@ -131,7 +131,7 @@ describe("createIssue", () => {
     };
 
     await expect(createIssue(mockClient, params)).rejects.toThrow(
-      "Failed to create issue: Failed Issue"
+      "Failed to create issue: Failed Issue",
     );
   });
 
@@ -147,7 +147,7 @@ describe("createIssue", () => {
     };
 
     await expect(createIssue(mockClient, params)).rejects.toThrow(
-      "Issue created but could not retrieve: Missing Issue"
+      "Issue created but could not retrieve: Missing Issue",
     );
   });
 });
@@ -232,7 +232,7 @@ describe("listLabels", () => {
     (mockClient.team as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
     await expect(listLabels(mockClient, "nonexistent-team")).rejects.toThrow(
-      "Team not found: nonexistent-team"
+      "Team not found: nonexistent-team",
     );
   });
 });

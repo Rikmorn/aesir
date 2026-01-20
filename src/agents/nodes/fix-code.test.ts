@@ -4,15 +4,15 @@
  * Tests for fixCodeNode with mock LLM.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { ChatAnthropic } from "@langchain/anthropic";
-import {
-  fixCodeNode,
-  FixCodeOutputSchema,
-  type FixCodeOutput,
-} from "./fix-code.js";
-import type { DevWorkflowStateType } from "../../state/dev-workflow-state.js";
+import type { ChatAnthropic } from "@langchain/anthropic";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TestResult } from "../../sandbox/types.js";
+import type { DevWorkflowStateType } from "../../state/dev-workflow-state.js";
+import {
+  type FixCodeOutput,
+  FixCodeOutputSchema,
+  fixCodeNode,
+} from "./fix-code.js";
 
 // Mock the logger
 vi.mock("../../logging/index.js", () => ({
@@ -76,7 +76,11 @@ describe("FixCodeOutputSchema", () => {
     const validOutput: FixCodeOutput = {
       files: [
         { path: "src/index.ts", content: "fixed content", operation: "update" },
-        { path: "src/new-file.ts", content: "new content", operation: "create" },
+        {
+          path: "src/new-file.ts",
+          content: "new content",
+          operation: "create",
+        },
       ],
       reasoning: "Fixed bug and added missing file",
     };
@@ -110,7 +114,7 @@ describe("FixCodeOutputSchema", () => {
 describe("fixCodeNode", () => {
   const baseState: DevWorkflowStateType = {
     taskId: "TEST-123",
-      sessionId: "session-test",
+    sessionId: "session-test",
     taskDescription: "Create a utility function that returns 'hello'",
     repositoryUrl: "owner/repo",
     branchName: "feat/test-123",
@@ -147,7 +151,13 @@ describe("helper", () => {
   describe("prompt content", () => {
     it("includes test stdout in prompt", async () => {
       const mockInvoke = vi.fn().mockResolvedValue({
-        files: [{ path: "src/utils/helper.ts", content: "fixed", operation: "update" }],
+        files: [
+          {
+            path: "src/utils/helper.ts",
+            content: "fixed",
+            operation: "update",
+          },
+        ],
         reasoning: "Fixed",
       });
 
@@ -165,7 +175,13 @@ describe("helper", () => {
 
     it("includes test stderr in prompt", async () => {
       const mockInvoke = vi.fn().mockResolvedValue({
-        files: [{ path: "src/utils/helper.ts", content: "fixed", operation: "update" }],
+        files: [
+          {
+            path: "src/utils/helper.ts",
+            content: "fixed",
+            operation: "update",
+          },
+        ],
         reasoning: "Fixed",
       });
 
@@ -184,7 +200,13 @@ describe("helper", () => {
 
     it("includes current file contents in prompt", async () => {
       const mockInvoke = vi.fn().mockResolvedValue({
-        files: [{ path: "src/utils/helper.ts", content: "fixed", operation: "update" }],
+        files: [
+          {
+            path: "src/utils/helper.ts",
+            content: "fixed",
+            operation: "update",
+          },
+        ],
         reasoning: "Fixed",
       });
 
@@ -242,14 +264,14 @@ describe("helper", () => {
       expect(result.files).toBeDefined();
       expect(result.files).toHaveLength(1);
       expect(result.files?.[0]?.content).toContain('"hello"');
-      expect(mockLLM.withStructuredOutput).toHaveBeenCalledWith(FixCodeOutputSchema);
+      expect(mockLLM.withStructuredOutput).toHaveBeenCalledWith(
+        FixCodeOutputSchema,
+      );
     });
 
     it("sets status to 'testing' after fix", async () => {
       const mockResponse: FixCodeOutput = {
-        files: [
-          { path: "src/test.ts", content: "fixed", operation: "update" },
-        ],
+        files: [{ path: "src/test.ts", content: "fixed", operation: "update" }],
         reasoning: "Fixed the issue",
       };
 

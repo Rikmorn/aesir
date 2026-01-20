@@ -6,20 +6,20 @@
  * which this handler uses to start the prApprovalWorkflow in Temporal.
  */
 
-import { createLogger } from "../../logging/logger.js";
-import {
-  verifyWebhookSignature,
-  validateWebhookTimestamp,
-  parseWebhookPayload,
-  isAgentSessionEvent,
-} from "../../integrations/linear/webhooks.js";
 import type {
   AgentSessionPayload,
   WebhookPayloadBase,
 } from "../../integrations/linear/types.js";
 import {
-  startApprovalWorkflow,
+  isAgentSessionEvent,
+  parseWebhookPayload,
+  validateWebhookTimestamp,
+  verifyWebhookSignature,
+} from "../../integrations/linear/webhooks.js";
+import { createLogger } from "../../logging/logger.js";
+import {
   type ApprovalWorkflowInput,
+  startApprovalWorkflow,
 } from "../../temporal/client.js";
 
 const logger = createLogger({
@@ -37,7 +37,14 @@ export interface LinearWebhookConfig {
   /** Slack channel ID for notifications */
   slackChannel: string;
   /** Linear status to set after successful merge */
-  completionStatus: "Triage" | "Ready" | "Backlog" | "In Progress" | "Done" | "Canceled" | "Duplicate";
+  completionStatus:
+    | "Triage"
+    | "Ready"
+    | "Backlog"
+    | "In Progress"
+    | "Done"
+    | "Canceled"
+    | "Duplicate";
 }
 
 /**
@@ -64,7 +71,7 @@ export interface HandleAgentSessionResult {
  */
 export async function handleAgentSessionWebhook(
   payload: AgentSessionPayload,
-  config: LinearWebhookConfig
+  config: LinearWebhookConfig,
 ): Promise<HandleAgentSessionResult> {
   const { action, agentSession } = payload;
   const taskId = agentSession.issueId;
@@ -149,7 +156,7 @@ export async function linearWebhookHandler(
   req: WebhookRequest,
   res: WebhookResponse,
   config: LinearWebhookConfig,
-  webhookSecret: string
+  webhookSecret: string,
 ): Promise<void> {
   const signature = req.headers["linear-signature"];
 

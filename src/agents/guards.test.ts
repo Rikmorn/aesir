@@ -4,9 +4,9 @@
  * Tests the loop guard and related utility functions for agent safety.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { END } from "@langchain/langgraph";
 import { AIMessage, HumanMessage } from "@langchain/core/messages";
+import { END } from "@langchain/langgraph";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the logger
 vi.mock("../logging/index.js", () => ({
@@ -21,8 +21,8 @@ vi.mock("../logging/index.js", () => ({
 
 import {
   createLoopGuard,
-  incrementLoopCount,
   hasExceededLimit,
+  incrementLoopCount,
   type LoopGuardState,
 } from "./guards.js";
 

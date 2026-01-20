@@ -4,21 +4,21 @@
  * Tests for state schema validation and reducer behavior.
  */
 
-import { describe, it, expect } from "vitest";
-import { HumanMessage, AIMessage } from "@langchain/core/messages";
+import { AIMessage, HumanMessage } from "@langchain/core/messages";
+import { describe, expect, it } from "vitest";
 import {
-  RequirementsSchema,
-  ProductAgentPhaseSchema,
-  SlackContextSchema,
+  type CreatedTask,
   CreatedTaskSchema,
-  ProductAgentStateSchema,
-  ProductAgentStateAnnotation,
+  createProductAgentInitialState,
   DEFAULT_REQUIREMENTS,
   hasMinimumRequirements,
-  createProductAgentInitialState,
+  ProductAgentPhaseSchema,
+  ProductAgentStateAnnotation,
+  ProductAgentStateSchema,
   type Requirements,
+  RequirementsSchema,
   type SlackContext,
-  type CreatedTask,
+  SlackContextSchema,
 } from "./state.js";
 
 describe("RequirementsSchema", () => {
@@ -64,7 +64,13 @@ describe("RequirementsSchema", () => {
 
 describe("ProductAgentPhaseSchema", () => {
   it("accepts valid phases", () => {
-    const validPhases = ["gathering", "clarifying", "confirming", "creating", "complete"];
+    const validPhases = [
+      "gathering",
+      "clarifying",
+      "confirming",
+      "creating",
+      "complete",
+    ];
 
     for (const phase of validPhases) {
       const result = ProductAgentPhaseSchema.parse(phase);
@@ -283,7 +289,9 @@ describe("ProductAgentStateAnnotation", () => {
         initialValueFactory: () => Requirements;
       };
 
-      expect(requirementsChannel.initialValueFactory()).toEqual(DEFAULT_REQUIREMENTS);
+      expect(requirementsChannel.initialValueFactory()).toEqual(
+        DEFAULT_REQUIREMENTS,
+      );
     });
   });
 
@@ -313,7 +321,10 @@ describe("ProductAgentStateAnnotation", () => {
     it("replaces context", () => {
       const spec = ProductAgentStateAnnotation.spec;
       const contextChannel = spec.slackContext as unknown as {
-        operator: (a: SlackContext | null, b: SlackContext | null) => SlackContext | null;
+        operator: (
+          a: SlackContext | null,
+          b: SlackContext | null,
+        ) => SlackContext | null;
       };
 
       const current: SlackContext = {

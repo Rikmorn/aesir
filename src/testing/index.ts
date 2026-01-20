@@ -7,16 +7,15 @@
  */
 
 export {
-  MockChatModel,
+  type CapturedLog,
+  createLogCapture,
+  LogCapture,
+} from "./log-capture.js";
+export {
   createCompletionMock,
+  createErrorMock,
   createLoopingMock,
   createSlowMock,
-  createErrorMock,
+  MockChatModel,
   type MockLLMOptions,
 } from "./mock-llm.js";
-
-export {
-  LogCapture,
-  createLogCapture,
-  type CapturedLog,
-} from "./log-capture.js";

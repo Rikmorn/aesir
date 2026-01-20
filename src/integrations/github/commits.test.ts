@@ -5,8 +5,8 @@
  * Uses mocked Octokit to verify correct API call sequence.
  */
 
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import type { Octokit } from "@octokit/rest";
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { createCommit } from "./commits.js";
 
 // Helper to get mock from Octokit methods
@@ -85,9 +85,7 @@ describe("createCommit", () => {
       repo: "test-repo",
       branch: "feature-branch",
       message: "Add new feature",
-      files: [
-        { path: "src/index.ts", content: "console.log('hello');" },
-      ],
+      files: [{ path: "src/index.ts", content: "console.log('hello');" }],
     });
 
     expect(result).toEqual({
@@ -150,8 +148,18 @@ describe("createCommit", () => {
       repo: "test-repo",
       base_tree: mockTreeSha,
       tree: [
-        { path: "src/a.ts", mode: "100644", type: "blob", content: "export const a = 1;" },
-        { path: "src/b.ts", mode: "100644", type: "blob", content: "export const b = 2;" },
+        {
+          path: "src/a.ts",
+          mode: "100644",
+          type: "blob",
+          content: "export const a = 1;",
+        },
+        {
+          path: "src/b.ts",
+          mode: "100644",
+          type: "blob",
+          content: "export const b = 2;",
+        },
       ],
     });
   });
@@ -198,16 +206,25 @@ describe("createCommit", () => {
       branch: "main",
       message: "Add executable",
       files: [
-        { path: "scripts/run.sh", content: "#!/bin/bash\necho hello", mode: "100755" },
+        {
+          path: "scripts/run.sh",
+          content: "#!/bin/bash\necho hello",
+          mode: "100755",
+        },
       ],
     });
 
     expect(mockOctokit.rest.git.createTree).toHaveBeenCalledWith(
       expect.objectContaining({
         tree: [
-          { path: "scripts/run.sh", mode: "100755", type: "blob", content: "#!/bin/bash\necho hello" },
+          {
+            path: "scripts/run.sh",
+            mode: "100755",
+            type: "blob",
+            content: "#!/bin/bash\necho hello",
+          },
         ],
-      })
+      }),
     );
   });
 
@@ -222,7 +239,7 @@ describe("createCommit", () => {
         branch: "nonexistent",
         message: "Test",
         files: [{ path: "file.txt", content: "test" }],
-      })
+      }),
     ).rejects.toThrow("Branch not found");
   });
 
@@ -237,7 +254,7 @@ describe("createCommit", () => {
         branch: "main",
         message: "Test",
         files: [{ path: "file.txt", content: "test" }],
-      })
+      }),
     ).rejects.toThrow("Tree creation failed");
   });
 
@@ -252,7 +269,7 @@ describe("createCommit", () => {
         branch: "main",
         message: "Test",
         files: [{ path: "file.txt", content: "test" }],
-      })
+      }),
     ).rejects.toThrow("Commit creation failed");
   });
 
@@ -267,7 +284,7 @@ describe("createCommit", () => {
         branch: "main",
         message: "Test",
         files: [{ path: "file.txt", content: "test" }],
-      })
+      }),
     ).rejects.toThrow("Reference update failed");
   });
 

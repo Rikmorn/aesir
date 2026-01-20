@@ -4,10 +4,10 @@
  * Tests for runTestsNode with mock sandbox.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createRunTestsNode } from "./run-tests.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Sandbox, TestResult } from "../../sandbox/types.js";
 import type { DevWorkflowStateType } from "../../state/dev-workflow-state.js";
+import { createRunTestsNode } from "./run-tests.js";
 
 // Mock the logger
 vi.mock("../../logging/index.js", () => ({
@@ -58,7 +58,7 @@ function createFailingTestResult(): TestResult {
 describe("createRunTestsNode", () => {
   const baseState: DevWorkflowStateType = {
     taskId: "TEST-123",
-      sessionId: "session-test",
+    sessionId: "session-test",
     taskDescription: "Create a utility function",
     repositoryUrl: "owner/repo",
     branchName: "feat/test-123",
@@ -101,11 +101,11 @@ describe("helper", () => {
       expect(mockSandbox.writeFile).toHaveBeenCalledTimes(2);
       expect(mockSandbox.writeFile).toHaveBeenCalledWith(
         "src/utils/helper.ts",
-        'export function helper() { return "hello"; }'
+        'export function helper() { return "hello"; }',
       );
       expect(mockSandbox.writeFile).toHaveBeenCalledWith(
         "src/utils/helper.test.ts",
-        expect.stringContaining("describe")
+        expect.stringContaining("describe"),
       );
     });
 
@@ -149,7 +149,7 @@ describe("helper", () => {
       expect(mockSandbox.writeFile).toHaveBeenCalledTimes(1);
       expect(mockSandbox.writeFile).toHaveBeenCalledWith(
         "src/new-file.ts",
-        "// new file"
+        "// new file",
       );
     });
   });
@@ -178,7 +178,11 @@ describe("helper", () => {
 
       await runTestsNode(baseState, customConfig);
 
-      expect(mockSandbox.runTests).toHaveBeenCalledWith(["npm", "run", "test:unit"]);
+      expect(mockSandbox.runTests).toHaveBeenCalledWith([
+        "npm",
+        "run",
+        "test:unit",
+      ]);
     });
   });
 
@@ -230,8 +234,12 @@ describe("helper", () => {
   describe("error handling", () => {
     it("returns failed status on sandbox error", async () => {
       const mockSandbox: Sandbox = {
-        execute: vi.fn().mockResolvedValue({ exitCode: 0, stdout: "", stderr: "" }),
-        writeFile: vi.fn().mockRejectedValue(new Error("Container not running")),
+        execute: vi
+          .fn()
+          .mockResolvedValue({ exitCode: 0, stdout: "", stderr: "" }),
+        writeFile: vi
+          .fn()
+          .mockRejectedValue(new Error("Container not running")),
         readFile: vi.fn().mockResolvedValue(""),
         runTests: vi.fn().mockResolvedValue(createPassingTestResult()),
         cleanup: vi.fn().mockResolvedValue(undefined),
@@ -295,7 +303,10 @@ describe("helper", () => {
       await runTestsNode(stateWithRootFile);
 
       // Should still write file even without parent directory creation
-      expect(mockSandbox.writeFile).toHaveBeenCalledWith("index.ts", "// root file");
+      expect(mockSandbox.writeFile).toHaveBeenCalledWith(
+        "index.ts",
+        "// root file",
+      );
     });
   });
 });

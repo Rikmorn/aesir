@@ -13,11 +13,18 @@
 
 import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
-import type { ProductAgentState, ProductAgentStateUpdate, ProductAgentPhase, Requirements } from "../state.js";
-import { ANALYZE_REQUIREMENTS_PROMPT } from "../prompts.js";
 import { createLogger } from "../../../logging/logger.js";
+import { ANALYZE_REQUIREMENTS_PROMPT } from "../prompts.js";
+import type {
+  ProductAgentPhase,
+  ProductAgentState,
+  ProductAgentStateUpdate,
+  Requirements,
+} from "../state.js";
 
-const logger = createLogger({ defaultContext: { module: "analyze-requirements" } });
+const logger = createLogger({
+  defaultContext: { module: "analyze-requirements" },
+});
 
 /**
  * Schema for requirement analysis output
@@ -27,17 +34,39 @@ const logger = createLogger({ defaultContext: { module: "analyze-requirements" }
  */
 export const RequirementAnalysisSchema = z.object({
   // Analysis fields
-  isComplete: z.boolean().describe("Are requirements sufficient to create tasks?"),
-  missingElements: z.array(z.string()).describe("What information is still needed"),
-  nextQuestion: z.string().nullable().describe("Best next question to ask (null if complete)"),
-  confidence: z.enum(["high", "medium", "low"]).describe("Confidence in understanding"),
+  isComplete: z
+    .boolean()
+    .describe("Are requirements sufficient to create tasks?"),
+  missingElements: z
+    .array(z.string())
+    .describe("What information is still needed"),
+  nextQuestion: z
+    .string()
+    .nullable()
+    .describe("Best next question to ask (null if complete)"),
+  confidence: z
+    .enum(["high", "medium", "low"])
+    .describe("Confidence in understanding"),
 
   // Extracted requirements (flat, not nested)
-  extractedWhat: z.string().nullable().describe("What needs to be built (null if not yet clear)"),
-  extractedWhy: z.string().nullable().describe("Why it's needed - business value (null if not stated)"),
-  extractedWho: z.string().nullable().describe("Who it's for - user persona (null if not specified)"),
-  extractedAcceptanceCriteria: z.array(z.string()).describe("Criteria for when it's done"),
-  extractedConstraints: z.array(z.string()).describe("Technical constraints or considerations"),
+  extractedWhat: z
+    .string()
+    .nullable()
+    .describe("What needs to be built (null if not yet clear)"),
+  extractedWhy: z
+    .string()
+    .nullable()
+    .describe("Why it's needed - business value (null if not stated)"),
+  extractedWho: z
+    .string()
+    .nullable()
+    .describe("Who it's for - user persona (null if not specified)"),
+  extractedAcceptanceCriteria: z
+    .array(z.string())
+    .describe("Criteria for when it's done"),
+  extractedConstraints: z
+    .array(z.string())
+    .describe("Technical constraints or considerations"),
 });
 
 export type RequirementAnalysis = z.infer<typeof RequirementAnalysisSchema>;
@@ -58,7 +87,9 @@ export interface AnalyzeRequirementsNodeOptions {
  * @param options - Node options with optional LLM override
  * @returns Node function for LangGraph
  */
-export function analyzeRequirementsNode(options: AnalyzeRequirementsNodeOptions = {}) {
+export function analyzeRequirementsNode(
+  options: AnalyzeRequirementsNodeOptions = {},
+) {
   return async (state: ProductAgentState): Promise<ProductAgentStateUpdate> => {
     const nodeLogger = logger.child({ node: "analyze-requirements" });
 
@@ -74,10 +105,14 @@ export function analyzeRequirementsNode(options: AnalyzeRequirementsNodeOptions 
       // Use provided LLM or create default
       const llm =
         options.llm ??
-        new ChatAnthropic({ model: options.model ?? "claude-sonnet-4-20250514" });
+        new ChatAnthropic({
+          model: options.model ?? "claude-sonnet-4-20250514",
+        });
 
       // Bind structured output schema (explicit type breaks infinite inference)
-      const structuredLlm = llm.withStructuredOutput<RequirementAnalysis>(RequirementAnalysisSchema);
+      const structuredLlm = llm.withStructuredOutput<RequirementAnalysis>(
+        RequirementAnalysisSchema,
+      );
 
       // Invoke with system prompt and conversation
       const analysis = await structuredLlm.invoke([
@@ -120,7 +155,8 @@ export function analyzeRequirementsNode(options: AnalyzeRequirementsNodeOptions 
         requirementsUpdate.who = analysis.extractedWho;
       }
       if (analysis.extractedAcceptanceCriteria.length > 0) {
-        requirementsUpdate.acceptanceCriteria = analysis.extractedAcceptanceCriteria;
+        requirementsUpdate.acceptanceCriteria =
+          analysis.extractedAcceptanceCriteria;
       }
       if (analysis.extractedConstraints.length > 0) {
         requirementsUpdate.constraints = analysis.extractedConstraints;
@@ -132,7 +168,9 @@ export function analyzeRequirementsNode(options: AnalyzeRequirementsNodeOptions 
       };
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : "Unknown error during analysis";
+        error instanceof Error
+          ? error.message
+          : "Unknown error during analysis";
 
       nodeLogger.error("analyze_requirements_error", {
         outcome: "failure",

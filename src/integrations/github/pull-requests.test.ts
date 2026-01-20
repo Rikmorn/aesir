@@ -5,13 +5,13 @@
  * Uses mocked Octokit to verify correct API calls.
  */
 
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import type { Octokit } from "@octokit/rest";
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import {
+  addPRComment,
   createPullRequest,
   getPullRequest,
   listPRComments,
-  addPRComment,
   mergePullRequest,
 } from "./pull-requests.js";
 
@@ -114,7 +114,7 @@ describe("createPullRequest", () => {
         title: "Bad PR",
         head: "main",
         base: "main",
-      })
+      }),
     ).rejects.toThrow("No commits between branches");
   });
 });
@@ -143,12 +143,7 @@ describe("getPullRequest", () => {
   });
 
   it("returns correct PullRequestInfo", async () => {
-    const result = await getPullRequest(
-      mockOctokit,
-      "owner",
-      "repo",
-      123
-    );
+    const result = await getPullRequest(mockOctokit, "owner", "repo", 123);
 
     expect(result).toEqual({
       number: 123,
@@ -176,7 +171,7 @@ describe("getPullRequest", () => {
     asMock(mockOctokit.rest.pulls.get).mockRejectedValue(error);
 
     await expect(
-      getPullRequest(mockOctokit, "owner", "repo", 999)
+      getPullRequest(mockOctokit, "owner", "repo", 999),
     ).rejects.toThrow("Not found");
   });
 });
@@ -234,10 +229,10 @@ describe("listPRComments", () => {
 
     expect(result).toHaveLength(4);
     // Verify sorted by createdAt
-    expect(result[0]!.createdAt).toBe("2026-01-15T10:00:00Z"); // First review
-    expect(result[1]!.createdAt).toBe("2026-01-15T11:00:00Z"); // Issue comment
-    expect(result[2]!.createdAt).toBe("2026-01-15T12:00:00Z"); // Second review
-    expect(result[3]!.createdAt).toBe("2026-01-15T13:00:00Z"); // Issue reply
+    expect(result[0]?.createdAt).toBe("2026-01-15T10:00:00Z"); // First review
+    expect(result[1]?.createdAt).toBe("2026-01-15T11:00:00Z"); // Issue comment
+    expect(result[2]?.createdAt).toBe("2026-01-15T12:00:00Z"); // Second review
+    expect(result[3]?.createdAt).toBe("2026-01-15T13:00:00Z"); // Issue reply
   });
 
   it("review comments have path, issue comments do not", async () => {
@@ -297,7 +292,7 @@ describe("listPRComments", () => {
 
     const result = await listPRComments(mockOctokit, "owner", "repo", 42);
 
-    expect(result[0]!.user).toBe("unknown");
+    expect(result[0]?.user).toBe("unknown");
   });
 });
 
@@ -327,7 +322,7 @@ describe("addPRComment", () => {
       "owner",
       "repo",
       42,
-      "Thanks for the feedback, I'll fix that!"
+      "Thanks for the feedback, I'll fix that!",
     );
 
     expect(result).toEqual({
@@ -344,7 +339,7 @@ describe("addPRComment", () => {
       "test-owner",
       "test-repo",
       123,
-      "My comment body"
+      "My comment body",
     );
 
     expect(mockOctokit.rest.issues.createComment).toHaveBeenCalledWith({
@@ -360,7 +355,7 @@ describe("addPRComment", () => {
     asMock(mockOctokit.rest.issues.createComment).mockRejectedValue(error);
 
     await expect(
-      addPRComment(mockOctokit, "owner", "repo", 42, "test")
+      addPRComment(mockOctokit, "owner", "repo", 42, "test"),
     ).rejects.toThrow("Unauthorized");
   });
 
@@ -374,13 +369,7 @@ describe("addPRComment", () => {
       },
     });
 
-    const result = await addPRComment(
-      mockOctokit,
-      "owner",
-      "repo",
-      42,
-      "test"
-    );
+    const result = await addPRComment(mockOctokit, "owner", "repo", 42, "test");
 
     expect(result.body).toBe("");
   });
@@ -409,7 +398,7 @@ describe("mergePullRequest", () => {
       mockOctokit,
       "test-owner",
       "test-repo",
-      42
+      42,
     );
 
     expect(result).toEqual({
@@ -435,7 +424,7 @@ describe("mergePullRequest", () => {
     expect(mockOctokit.rest.pulls.merge).toHaveBeenCalledWith(
       expect.objectContaining({
         merge_method: "squash",
-      })
+      }),
     );
   });
 
@@ -447,7 +436,7 @@ describe("mergePullRequest", () => {
     expect(mockOctokit.rest.pulls.merge).toHaveBeenCalledWith(
       expect.objectContaining({
         merge_method: "rebase",
-      })
+      }),
     );
   });
 
@@ -459,7 +448,7 @@ describe("mergePullRequest", () => {
     expect(mockOctokit.rest.pulls.merge).toHaveBeenCalledWith(
       expect.objectContaining({
         commit_title: "Custom merge title",
-      })
+      }),
     );
   });
 
@@ -471,7 +460,7 @@ describe("mergePullRequest", () => {
     expect(mockOctokit.rest.pulls.merge).toHaveBeenCalledWith(
       expect.objectContaining({
         commit_message: "Custom merge message with details",
-      })
+      }),
     );
   });
 
@@ -497,7 +486,7 @@ describe("mergePullRequest", () => {
     asMock(mockOctokit.rest.pulls.merge).mockRejectedValue(error);
 
     await expect(
-      mergePullRequest(mockOctokit, "owner", "repo", 42)
+      mergePullRequest(mockOctokit, "owner", "repo", 42),
     ).rejects.toThrow("Pull request is not mergeable");
   });
 
@@ -506,7 +495,7 @@ describe("mergePullRequest", () => {
     asMock(mockOctokit.rest.pulls.merge).mockRejectedValue(error);
 
     await expect(
-      mergePullRequest(mockOctokit, "owner", "repo", 42)
+      mergePullRequest(mockOctokit, "owner", "repo", 42),
     ).rejects.toThrow("Head branch was modified");
   });
 });

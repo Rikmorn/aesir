@@ -11,8 +11,8 @@
  * - generatedCode uses null for empty state (exactOptionalPropertyTypes)
  */
 
+import type { BaseMessage } from "@langchain/core/messages";
 import { Annotation } from "@langchain/langgraph";
-import { BaseMessage } from "@langchain/core/messages";
 import { z } from "zod";
 
 /**
@@ -115,7 +115,9 @@ export function shouldContinue(state: AgentStateType): boolean {
 /**
  * Create an initial state for the agent
  */
-export function createInitialState(taskDescription: string): Partial<AgentStateType> {
+export function createInitialState(
+  taskDescription: string,
+): Partial<AgentStateType> {
   return {
     messages: [],
     loopCount: 0,

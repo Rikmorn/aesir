@@ -5,6 +5,6 @@
  */
 
 export {
-  LangGraphTracer,
   createLangGraphTracer,
+  LangGraphTracer,
 } from "./langgraph-tracer.js";

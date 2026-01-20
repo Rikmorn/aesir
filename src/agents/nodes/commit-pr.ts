@@ -8,15 +8,15 @@
  * it commits the generated code, opens a PR, and updates Linear status to Done.
  */
 
-import type { Octokit } from "@octokit/rest";
 import type { LinearClient } from "@linear/sdk";
+import type { Octokit } from "@octokit/rest";
 import {
   createCommit,
   createPullRequest,
 } from "../../integrations/github/index.js";
 import {
-  updateIssueStatus,
   emitResponse,
+  updateIssueStatus,
 } from "../../integrations/linear/index.js";
 import type { DevWorkflowStateType } from "../../state/dev-workflow-state.js";
 
@@ -43,7 +43,7 @@ export interface CommitPRConfig {
 export function createCommitPRNode(
   octokit: Octokit,
   linearClient: LinearClient,
-  config: CommitPRConfig
+  config: CommitPRConfig,
 ) {
   /**
    * Commit and PR node - commits files and opens a pull request.
@@ -52,7 +52,7 @@ export function createCommitPRNode(
    * @returns Partial state update with PR number and complete status
    */
   return async function commitPRNodeFn(
-    state: DevWorkflowStateType
+    state: DevWorkflowStateType,
   ): Promise<Partial<DevWorkflowStateType>> {
     // Convert FileChange[] to format for createCommit
     // Filter out delete operations (handled differently in Git Data API)

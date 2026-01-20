@@ -7,10 +7,13 @@
  * Activities are bound with dependencies at worker startup via makeActivities().
  */
 
-import { Worker, NativeConnection } from "@temporalio/worker";
+import { NativeConnection, Worker } from "@temporalio/worker";
 
 import { createLogger } from "../logging/logger.js";
-import { makeActivities, type ActivityDependencies } from "./activities/index.js";
+import {
+  type ActivityDependencies,
+  makeActivities,
+} from "./activities/index.js";
 
 const logger = createLogger({ defaultContext: { module: "temporal-worker" } });
 
@@ -37,9 +40,13 @@ export interface WorkerConfig {
  * @param config Worker configuration including connection details and task queue
  * @returns A configured Worker instance ready to run
  */
-export async function createTemporalWorker(config: WorkerConfig): Promise<Worker> {
-  const address = config.address ?? process.env["TEMPORAL_ADDRESS"] ?? "localhost:7233";
-  const namespace = config.namespace ?? process.env["TEMPORAL_NAMESPACE"] ?? "default";
+export async function createTemporalWorker(
+  config: WorkerConfig,
+): Promise<Worker> {
+  const address =
+    config.address ?? process.env.TEMPORAL_ADDRESS ?? "localhost:7233";
+  const namespace =
+    config.namespace ?? process.env.TEMPORAL_NAMESPACE ?? "default";
 
   logger.info("temporal_worker_connecting", {
     message: `Connecting to Temporal at ${address}`,

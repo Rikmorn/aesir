@@ -4,17 +4,17 @@
  * Tests for FileChangeSchema, DevWorkflowState, and helper functions.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  FileChangeSchema,
-  DevWorkflowStatusSchema,
-  DEFAULT_DEV_WORKFLOW_CONFIG,
-  hasExceededTestLimit,
-  didTestsPass,
   createDevWorkflowInitialState,
-  type FileChange,
-  type DevWorkflowStatus,
+  DEFAULT_DEV_WORKFLOW_CONFIG,
   type DevWorkflowStateType,
+  type DevWorkflowStatus,
+  DevWorkflowStatusSchema,
+  didTestsPass,
+  type FileChange,
+  FileChangeSchema,
+  hasExceededTestLimit,
 } from "./dev-workflow-state.js";
 
 describe("FileChangeSchema", () => {
@@ -139,7 +139,11 @@ describe("DEFAULT_DEV_WORKFLOW_CONFIG", () => {
 describe("DevWorkflowState defaults", () => {
   it("has correct default values via createDevWorkflowInitialState", () => {
     // Test defaults through the initial state factory function
-    const state = createDevWorkflowInitialState("task-123", "session-123", "Test task");
+    const state = createDevWorkflowInitialState(
+      "task-123",
+      "session-123",
+      "Test task",
+    );
 
     expect(state.taskId).toBe("");
     expect(state.taskDescription).toBe("");
@@ -299,7 +303,11 @@ describe("didTestsPass", () => {
 
 describe("createDevWorkflowInitialState", () => {
   it("creates initial state with required fields", () => {
-    const state = createDevWorkflowInitialState("task-123", "session-123", "Test task");
+    const state = createDevWorkflowInitialState(
+      "task-123",
+      "session-123",
+      "Test task",
+    );
 
     expect(state.taskId).toBe("TASK-123");
     expect(state.taskDescription).toBe("Implement feature X");
@@ -317,7 +325,7 @@ describe("createDevWorkflowInitialState", () => {
     const state = createDevWorkflowInitialState(
       "TASK-456",
       "Fix bug Y",
-      "owner/repo"
+      "owner/repo",
     );
 
     expect(state.taskId).toBe("TASK-456");

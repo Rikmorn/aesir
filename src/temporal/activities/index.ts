@@ -9,23 +9,23 @@
  * allowing workflows to call activities without serializing clients.
  */
 
-import type { WebClient } from "@slack/web-api";
-import type { Octokit } from "@octokit/rest";
 import type { LinearClient } from "@linear/sdk";
+import type { Octokit } from "@octokit/rest";
+import type { WebClient } from "@slack/web-api";
 import type { Sandbox } from "../../sandbox/types.js";
 
 // Import raw activities for binding
 import { executeDevWorkflow } from "./dev-agent-activity.js";
 import {
-  mergePRActivity,
   type MergePRInput,
   type MergePROutput,
+  mergePRActivity,
 } from "./github-activities.js";
+import { updateLinearStatusActivity } from "./linear-activities.js";
 import {
   sendApprovalRequestActivity,
   sendStatusUpdateActivity,
 } from "./slack-activities.js";
-import { updateLinearStatusActivity } from "./linear-activities.js";
 
 // Re-export types for external use
 export type { MergePRInput, MergePROutput };
@@ -69,7 +69,7 @@ export function makeActivities(deps: ActivityDependencies) {
      */
     sendApprovalRequestActivity: (
       notification: Parameters<typeof sendApprovalRequestActivity>[1],
-      channel: Parameters<typeof sendApprovalRequestActivity>[2]
+      channel: Parameters<typeof sendApprovalRequestActivity>[2],
     ) => sendApprovalRequestActivity(deps.slackClient, notification, channel),
 
     /**
@@ -77,7 +77,7 @@ export function makeActivities(deps: ActivityDependencies) {
      */
     sendStatusUpdateActivity: (
       notification: Parameters<typeof sendStatusUpdateActivity>[1],
-      channel: Parameters<typeof sendStatusUpdateActivity>[2]
+      channel: Parameters<typeof sendStatusUpdateActivity>[2],
     ) => sendStatusUpdateActivity(deps.slackClient, notification, channel),
 
     /**
@@ -91,7 +91,7 @@ export function makeActivities(deps: ActivityDependencies) {
      */
     updateLinearStatusActivity: (
       issueId: Parameters<typeof updateLinearStatusActivity>[1],
-      statusName: Parameters<typeof updateLinearStatusActivity>[2]
+      statusName: Parameters<typeof updateLinearStatusActivity>[2],
     ) => updateLinearStatusActivity(deps.linearClient, issueId, statusName),
 
     /**
@@ -101,7 +101,7 @@ export function makeActivities(deps: ActivityDependencies) {
      */
     executeDevWorkflow: (taskId: string, sessionId: string) => {
       // Parse GITHUB_REPO in owner/repo format
-      const [owner, repo] = (process.env["GITHUB_REPO"] ?? "/").split("/");
+      const [owner, repo] = (process.env.GITHUB_REPO ?? "/").split("/");
       return executeDevWorkflow(taskId, sessionId, {
         linearClient: deps.linearClient,
         octokit: deps.octokit,
@@ -109,7 +109,7 @@ export function makeActivities(deps: ActivityDependencies) {
         githubConfig: {
           owner: owner || "",
           repo: repo || "",
-          baseBranch: process.env["GITHUB_BASE_BRANCH"] ?? "main",
+          baseBranch: process.env.GITHUB_BASE_BRANCH ?? "main",
         },
       });
     },

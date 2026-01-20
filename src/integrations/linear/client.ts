@@ -5,9 +5,9 @@
  * Handles token refresh when tokens are near expiration.
  */
 
-import { LinearClient, Issue, WorkflowState } from "@linear/sdk";
+import { type Issue, LinearClient, type WorkflowState } from "@linear/sdk";
 import { createLogger } from "../../logging/logger.js";
-import type { LinearConfig, IssueStatus } from "./types.js";
+import type { IssueStatus, LinearConfig } from "./types.js";
 
 const logger = createLogger({ defaultContext: { module: "linear-client" } });
 
@@ -34,12 +34,12 @@ export async function refreshOAuthToken(refreshToken: string): Promise<{
   refreshToken: string;
   expiresIn: number;
 }> {
-  const clientId = process.env["LINEAR_CLIENT_ID"];
-  const clientSecret = process.env["LINEAR_CLIENT_SECRET"];
+  const clientId = process.env.LINEAR_CLIENT_ID;
+  const clientSecret = process.env.LINEAR_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
     throw new Error(
-      "LINEAR_CLIENT_ID and LINEAR_CLIENT_SECRET must be set for token refresh"
+      "LINEAR_CLIENT_ID and LINEAR_CLIENT_SECRET must be set for token refresh",
     );
   }
 
@@ -68,7 +68,7 @@ export async function refreshOAuthToken(refreshToken: string): Promise<{
       context: { status: response.status },
     });
     throw new Error(
-      `Failed to refresh Linear OAuth token: ${response.status} ${errorText}`
+      `Failed to refresh Linear OAuth token: ${response.status} ${errorText}`,
     );
   }
 
@@ -113,7 +113,7 @@ function stripBearerPrefix(token: string): string {
  */
 export async function createLinearClient(
   config: LinearConfig,
-  onTokenRefresh?: (newConfig: LinearConfig) => Promise<void>
+  onTokenRefresh?: (newConfig: LinearConfig) => Promise<void>,
 ): Promise<LinearClient> {
   // Check if token needs refresh (within 60 seconds of expiration)
   const now = Date.now();
@@ -124,7 +124,8 @@ export async function createLinearClient(
       // Linear tokens are long-lived (~10 years) and don't include refresh tokens
       // This is expected - just log and continue
       logger.warn("linear_token_expiring_no_refresh", {
-        message: "Linear token expiring. Linear doesn't provide refresh tokens - re-run OAuth flow.",
+        message:
+          "Linear token expiring. Linear doesn't provide refresh tokens - re-run OAuth flow.",
         context: {
           expiresAt: new Date(config.expiresAt).toISOString(),
         },
@@ -153,7 +154,9 @@ export async function createLinearClient(
   }
 
   // Strip Bearer prefix from token (common copy-paste mistake)
-  return new LinearClient({ accessToken: stripBearerPrefix(config.accessToken) });
+  return new LinearClient({
+    accessToken: stripBearerPrefix(config.accessToken),
+  });
 }
 
 /**
@@ -194,7 +197,7 @@ export function getLinearClient(token: string): LinearClient {
  */
 export async function readIssue(
   client: LinearClient,
-  issueId: string
+  issueId: string,
 ): Promise<Issue> {
   logger.debug("linear_read_issue", {
     message: `Reading issue ${issueId}`,
@@ -224,7 +227,7 @@ export async function readIssue(
 export async function updateIssueStatus(
   client: LinearClient,
   issueId: string,
-  statusName: IssueStatus
+  statusName: IssueStatus,
 ): Promise<void> {
   logger.debug("linear_update_status", {
     message: `Updating issue ${issueId} to ${statusName}`,
@@ -245,13 +248,13 @@ export async function updateIssueStatus(
 
   const states = await team.states();
   const targetState = states.nodes.find(
-    (state: WorkflowState) => state.name === statusName
+    (state: WorkflowState) => state.name === statusName,
   );
 
   if (!targetState) {
     const availableStates = states.nodes.map((s: WorkflowState) => s.name);
     throw new Error(
-      `State "${statusName}" not found for team. Available states: ${availableStates.join(", ")}`
+      `State "${statusName}" not found for team. Available states: ${availableStates.join(", ")}`,
     );
   }
 

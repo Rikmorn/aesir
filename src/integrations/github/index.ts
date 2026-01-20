@@ -50,33 +50,30 @@
  * ```
  */
 
-// Types
-export type {
-  GitHubConfig,
-  BranchInfo,
-  CreateBranchOptions,
-  CommitInfo,
-  FileChange,
-  CreateCommitOptions,
-  PullRequestInfo,
-  CreatePROptions,
-  PRComment,
-} from "./types.js";
+// Branch operations
+export { createBranch, getBranch, listBranches } from "./branches.js";
 
 // Client factory
 export { createGitHubClient, getOctokit } from "./client.js";
-
-// Branch operations
-export { getBranch, listBranches, createBranch } from "./branches.js";
-
 // Commit operations
 export { createCommit } from "./commits.js";
-
 // Pull request operations
 export {
+  addPRComment,
   createPullRequest,
   getPullRequest,
   listPRComments,
-  addPRComment,
   mergePullRequest,
 } from "./pull-requests.js";
+// Types
+export type {
+  BranchInfo,
+  CommitInfo,
+  CreateBranchOptions,
+  CreateCommitOptions,
+  CreatePROptions,
+  FileChange,
+  GitHubConfig,
+  PRComment,
+  PullRequestInfo,
+} from "./types.js";

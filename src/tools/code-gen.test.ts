@@ -4,14 +4,14 @@
  * Tests for the code generation tool, schemas, and invocation behavior.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  codeGenTool,
-  CodeGenInputSchema,
-  CodeGenOutputSchema,
-  SupportedLanguageSchema,
   type CodeGenInput,
+  CodeGenInputSchema,
   type CodeGenOutput,
+  CodeGenOutputSchema,
+  codeGenTool,
+  SupportedLanguageSchema,
 } from "./code-gen.js";
 
 describe("SupportedLanguageSchema", () => {
@@ -59,7 +59,7 @@ describe("CodeGenInputSchema", () => {
     };
 
     expect(() => CodeGenInputSchema.parse(input)).toThrow(
-      "Task description cannot be empty"
+      "Task description cannot be empty",
     );
   });
 
@@ -108,21 +108,21 @@ describe("CodeGenOutputSchema", () => {
       CodeGenOutputSchema.parse({
         code: "const x = 1;",
         language: "typescript",
-      })
+      }),
     ).toThrow();
 
     expect(() =>
       CodeGenOutputSchema.parse({
         code: "const x = 1;",
         explanation: "A constant",
-      })
+      }),
     ).toThrow();
 
     expect(() =>
       CodeGenOutputSchema.parse({
         language: "typescript",
         explanation: "A constant",
-      })
+      }),
     ).toThrow();
   });
 });

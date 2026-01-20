@@ -5,20 +5,20 @@
  * Tests that all components work together correctly.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createHmac } from "node:crypto";
 import type { LinearClient } from "@linear/sdk";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  verifyWebhookSignature,
-  validateWebhookTimestamp,
-  parseWebhookPayload,
-  isAgentSessionEvent,
-  emitThought,
   emitAction,
   emitResponse,
+  emitThought,
+  isAgentSessionEvent,
+  parseWebhookPayload,
   updateSessionPlan,
+  validateWebhookTimestamp,
+  verifyWebhookSignature,
 } from "./index.js";
-import type { WebhookPayloadBase, AgentPlanItem } from "./types.js";
+import type { AgentPlanItem, WebhookPayloadBase } from "./types.js";
 
 // Mock LinearClient factory
 function createMockClient() {
@@ -81,7 +81,11 @@ describe("Linear Integration - Complete Webhook to Activity Flow", () => {
       expect(payload.agentSession.issueId).toBe(issueId);
 
       // 7. Emit activity using client (acknowledge immediately)
-      await emitThought(mockClient, payload.agentSession.id, "Analyzing task requirements...");
+      await emitThought(
+        mockClient,
+        payload.agentSession.id,
+        "Analyzing task requirements...",
+      );
 
       expect(mockClient.createAgentActivity).toHaveBeenCalledWith({
         agentSessionId: sessionId,
@@ -89,12 +93,21 @@ describe("Linear Integration - Complete Webhook to Activity Flow", () => {
       });
 
       // 8. Emit action for tool use
-      await emitAction(mockClient, payload.agentSession.id, "Reading", "linked issue description");
+      await emitAction(
+        mockClient,
+        payload.agentSession.id,
+        "Reading",
+        "linked issue description",
+      );
 
       expect(mockClient.createAgentActivity).toHaveBeenCalledTimes(2);
       expect(mockClient.createAgentActivity).toHaveBeenLastCalledWith({
         agentSessionId: sessionId,
-        content: { type: "action", action: "Reading", parameter: "linked issue description" },
+        content: {
+          type: "action",
+          action: "Reading",
+          parameter: "linked issue description",
+        },
       });
 
       // 9. Update plan with progress
@@ -110,7 +123,11 @@ describe("Linear Integration - Complete Webhook to Activity Flow", () => {
       });
 
       // 10. Emit final response
-      await emitResponse(mockClient, payload.agentSession.id, "Login feature implemented. PR #42 created.");
+      await emitResponse(
+        mockClient,
+        payload.agentSession.id,
+        "Login feature implemented. PR #42 created.",
+      );
 
       expect(mockClient.createAgentActivity).toHaveBeenCalledTimes(3);
     } else {
@@ -133,7 +150,7 @@ describe("Linear Integration - Complete Webhook to Activity Flow", () => {
     const isValid = verifyWebhookSignature(
       "invalid-signature-0000000000000000000000000000000000000000000000000000000000000000",
       rawBody,
-      webhookSecret
+      webhookSecret,
     );
 
     expect(isValid).toBe(false);
@@ -157,7 +174,9 @@ describe("Linear Integration - Complete Webhook to Activity Flow", () => {
       .digest("hex");
 
     // Signature is valid
-    expect(verifyWebhookSignature(signature, rawBody, webhookSecret)).toBe(true);
+    expect(verifyWebhookSignature(signature, rawBody, webhookSecret)).toBe(
+      true,
+    );
 
     // But timestamp is stale
     expect(validateWebhookTimestamp(payload.webhookTimestamp)).toBe(false);
@@ -207,7 +226,9 @@ describe("Linear Integration - Complete Webhook to Activity Flow", () => {
       .digest("hex");
 
     // Verify and parse
-    expect(verifyWebhookSignature(signature, rawBody, webhookSecret)).toBe(true);
+    expect(verifyWebhookSignature(signature, rawBody, webhookSecret)).toBe(
+      true,
+    );
     const parsed = parseWebhookPayload<typeof payload>(rawBody);
 
     // Check it's a follow-up prompt
@@ -215,7 +236,11 @@ describe("Linear Integration - Complete Webhook to Activity Flow", () => {
     expect(parsed.agentActivity?.body).toContain("unit tests");
 
     // Respond to the follow-up
-    await emitThought(mockClient, sessionId, "Acknowledged. Adding unit tests...");
+    await emitThought(
+      mockClient,
+      sessionId,
+      "Acknowledged. Adding unit tests...",
+    );
     expect(mockClient.createAgentActivity).toHaveBeenCalledWith({
       agentSessionId: sessionId,
       content: { type: "thought", body: "Acknowledged. Adding unit tests..." },

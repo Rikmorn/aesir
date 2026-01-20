@@ -4,14 +4,14 @@
  * Tests for generateCodeNode with mock LLM for structured output.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { ChatAnthropic } from "@langchain/anthropic";
-import {
-  generateCodeNode,
-  CodeGenerationOutputSchema,
-  type CodeGenerationOutput,
-} from "./generate-code.js";
+import type { ChatAnthropic } from "@langchain/anthropic";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DevWorkflowStateType } from "../../state/dev-workflow-state.js";
+import {
+  type CodeGenerationOutput,
+  CodeGenerationOutputSchema,
+  generateCodeNode,
+} from "./generate-code.js";
 
 // Mock the logger
 vi.mock("../../logging/index.js", () => ({
@@ -63,8 +63,16 @@ describe("CodeGenerationOutputSchema", () => {
   it("validates output with multiple files", () => {
     const validOutput: CodeGenerationOutput = {
       files: [
-        { path: "src/index.ts", content: "export * from './utils';", operation: "create" },
-        { path: "src/utils/index.ts", content: "export * from './helper';", operation: "create" },
+        {
+          path: "src/index.ts",
+          content: "export * from './utils';",
+          operation: "create",
+        },
+        {
+          path: "src/utils/index.ts",
+          content: "export * from './helper';",
+          operation: "create",
+        },
       ],
       reasoning: "Created index files for module exports",
     };
@@ -108,7 +116,7 @@ describe("CodeGenerationOutputSchema", () => {
 describe("generateCodeNode", () => {
   const baseState: DevWorkflowStateType = {
     taskId: "TEST-123",
-      sessionId: "session-test",
+    sessionId: "session-test",
     taskDescription: "Create a utility function that adds two numbers",
     repositoryUrl: "owner/repo",
     branchName: null,
@@ -166,7 +174,9 @@ describe("add", () => {
       expect(result.files[0]?.operation).toBe("create");
       expect(result.files[1]?.path).toBe("src/math/add.test.ts");
     }
-    expect(mockLLM.withStructuredOutput).toHaveBeenCalledWith(CodeGenerationOutputSchema);
+    expect(mockLLM.withStructuredOutput).toHaveBeenCalledWith(
+      CodeGenerationOutputSchema,
+    );
   });
 
   it("updates status to testing on success", async () => {
@@ -231,7 +241,11 @@ describe("add", () => {
 
     const mockResponse: CodeGenerationOutput = {
       files: [
-        { path: "src/api/register.ts", content: "// registration", operation: "create" },
+        {
+          path: "src/api/register.ts",
+          content: "// registration",
+          operation: "create",
+        },
       ],
       reasoning: "Created registration endpoint",
     };

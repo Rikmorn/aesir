@@ -14,9 +14,9 @@
  */
 
 import { GraphRecursionError } from "@langchain/langgraph";
-import { devAgent } from "./dev-agent.js";
 import { devAgentConfig } from "../config/index.js";
 import { logger } from "../logging/index.js";
+import { devAgent } from "./dev-agent.js";
 
 /**
  * Termination reasons for agent execution
@@ -59,7 +59,7 @@ export interface AgentResult {
 export async function runAgentWithGuardrails(
   taskDescription: string,
   threadId: string,
-  timeoutMs: number = devAgentConfig.timeoutMs
+  timeoutMs: number = devAgentConfig.timeoutMs,
 ): Promise<AgentResult> {
   const startTime = Date.now();
   const abortController = new AbortController();
@@ -91,7 +91,7 @@ export async function runAgentWithGuardrails(
         configurable: { thread_id: threadId },
         recursionLimit: devAgentConfig.recursionLimit, // NOT in configurable (known bug)
         signal: abortController.signal,
-      }
+      },
     );
 
     clearTimeout(timeoutId);

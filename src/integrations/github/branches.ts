@@ -25,7 +25,7 @@ export async function getBranch(
   octokit: Octokit,
   owner: string,
   repo: string,
-  branch: string
+  branch: string,
 ): Promise<BranchInfo> {
   logger.debug("github_get_branch", {
     message: `Getting branch ${branch}`,
@@ -56,7 +56,7 @@ export async function getBranch(
 export async function listBranches(
   octokit: Octokit,
   owner: string,
-  repo: string
+  repo: string,
 ): Promise<BranchInfo[]> {
   logger.debug("github_list_branches", {
     message: "Listing branches",
@@ -87,7 +87,7 @@ export async function listBranches(
  */
 export async function createBranch(
   octokit: Octokit,
-  options: CreateBranchOptions
+  options: CreateBranchOptions,
 ): Promise<BranchInfo> {
   const { owner, repo, branchName, baseBranch = "main" } = options;
 

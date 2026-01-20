@@ -78,7 +78,8 @@ export async function startBoltApp(app: App): Promise<void> {
       message: "Bolt app started and connected to Slack",
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
 
     logger.error("bolt_app_start_failed", {
       outcome: "failure",
@@ -119,7 +120,8 @@ export async function stopBoltApp(app: App): Promise<void> {
       message: "Bolt app stopped gracefully",
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
 
     logger.error("bolt_app_stop_failed", {
       outcome: "failure",

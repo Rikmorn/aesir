@@ -25,67 +25,63 @@
  * ```
  */
 
-// Types
-export type {
-  LinearConfig,
-  WebhookPayloadBase,
-  WebhookPayload,
-  AgentSessionPayload,
-  AgentActivityType,
-  ThoughtActivityContent,
-  ActionActivityContent,
-  ResponseActivityContent,
-  ErrorActivityContent,
-  ElicitationActivityContent,
-  AgentActivityContent,
-  IssueStatus,
-  AgentPlanItem,
-} from "./types.js";
+// Agent activity emitters
+export {
+  emitAction,
+  emitElicitation,
+  emitError,
+  emitResponse,
+  emitThought,
+  updateSessionPlan,
+} from "./activities.js";
 
 // Client factory and helpers
 export {
   createLinearClient,
   getLinearClient,
-  refreshOAuthToken,
   readIssue,
+  refreshOAuthToken,
   updateIssueStatus,
 } from "./client.js";
-
-// Webhook signature verification and payload parsing
-export {
-  verifyWebhookSignature,
-  validateWebhookTimestamp,
-  parseWebhookPayload,
-  isAgentSessionEvent,
-  isIssueEvent,
-} from "./webhooks.js";
-
-// Agent activity emitters
-export {
-  emitThought,
-  emitAction,
-  emitResponse,
-  emitError,
-  emitElicitation,
-  updateSessionPlan,
-} from "./activities.js";
-
 // Issue management
 export {
-  createIssue,
-  listTeams,
-  listLabels,
   type CreateIssueParams,
   type CreateIssueResult,
-  type TeamInfo,
+  createIssue,
   type LabelInfo,
+  listLabels,
+  listTeams,
+  type TeamInfo,
 } from "./issues.js";
-
 // Token persistence utilities
 export {
+  createLinearClientFromFile,
+  InvalidTokenFileError,
   loadLinearTokens,
   saveLinearTokens,
-  createLinearClientFromFile,
   TokenFileNotFoundError,
-  InvalidTokenFileError,
 } from "./token-store.js";
+// Types
+export type {
+  ActionActivityContent,
+  AgentActivityContent,
+  AgentActivityType,
+  AgentPlanItem,
+  AgentSessionPayload,
+  ElicitationActivityContent,
+  ErrorActivityContent,
+  IssueStatus,
+  LinearConfig,
+  ResponseActivityContent,
+  ThoughtActivityContent,
+  WebhookPayload,
+  WebhookPayloadBase,
+} from "./types.js";
+// Webhook signature verification and payload parsing
+export {
+  isAgentSessionEvent,
+  isIssueEvent,
+  parseWebhookPayload,
+  validateWebhookTimestamp,
+  verifyWebhookSignature,
+} from "./webhooks.js";

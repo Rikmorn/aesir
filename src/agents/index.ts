@@ -5,44 +5,40 @@
  */
 
 export {
-  devAgent,
   agent,
   agentLogger,
   type DevAgent,
+  devAgent,
 } from "./dev-agent.js";
-
-export {
-  runAgentWithGuardrails,
-  type AgentResult,
-  type TerminationReason,
-} from "./run-agent.js";
-
-export {
-  createLoopGuard,
-  incrementLoopCount,
-  hasExceededLimit,
-  type LoopGuardState,
-  type GuardRouting,
-} from "./guards.js";
-
 // Dev Workflow exports
 export {
-  createDevWorkflow,
-  routeAfterTest,
   type AfterTestRoute,
+  createDevWorkflow,
+  type DevWorkflow,
   type DevWorkflowDependencies,
   type DevWorkflowOptions,
   type GitHubConfig,
-  type DevWorkflow,
+  routeAfterTest,
 } from "./dev-workflow.js";
-
 export {
-  runDevWorkflow,
   type DevWorkflowResult,
+  runDevWorkflow,
 } from "./dev-workflow-runner.js";
+export {
+  createLoopGuard,
+  type GuardRouting,
+  hasExceededLimit,
+  incrementLoopCount,
+  type LoopGuardState,
+} from "./guards.js";
+export {
+  type AgentResult,
+  runAgentWithGuardrails,
+  type TerminationReason,
+} from "./run-agent.js";
 
 // Tracing exports
 export {
-  LangGraphTracer,
   createLangGraphTracer,
+  LangGraphTracer,
 } from "./tracing/index.js";

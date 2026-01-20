@@ -13,11 +13,17 @@
 
 import { ChatAnthropic } from "@langchain/anthropic";
 import { AIMessage } from "@langchain/core/messages";
-import type { ProductAgentState, ProductAgentStateUpdate, ProductAgentPhase } from "../state.js";
-import { GENERATE_CLARIFICATION_PROMPT } from "../prompts.js";
 import { createLogger } from "../../../logging/logger.js";
+import { GENERATE_CLARIFICATION_PROMPT } from "../prompts.js";
+import type {
+  ProductAgentPhase,
+  ProductAgentState,
+  ProductAgentStateUpdate,
+} from "../state.js";
 
-const logger = createLogger({ defaultContext: { module: "generate-clarification" } });
+const logger = createLogger({
+  defaultContext: { module: "generate-clarification" },
+});
 
 /**
  * Options for the generate clarification node
@@ -35,7 +41,9 @@ export interface GenerateClarificationNodeOptions {
  * @param options - Node options with optional LLM override
  * @returns Node function for LangGraph
  */
-export function generateClarificationNode(options: GenerateClarificationNodeOptions = {}) {
+export function generateClarificationNode(
+  options: GenerateClarificationNodeOptions = {},
+) {
   return async (state: ProductAgentState): Promise<ProductAgentStateUpdate> => {
     const nodeLogger = logger.child({ node: "generate-clarification" });
 
@@ -52,7 +60,9 @@ export function generateClarificationNode(options: GenerateClarificationNodeOpti
       // Use provided LLM or create default
       const llm =
         options.llm ??
-        new ChatAnthropic({ model: options.model ?? "claude-sonnet-4-20250514" });
+        new ChatAnthropic({
+          model: options.model ?? "claude-sonnet-4-20250514",
+        });
 
       // Build context for the clarification prompt
       const contextMessage = buildClarificationContext(state);
@@ -70,7 +80,9 @@ export function generateClarificationNode(options: GenerateClarificationNodeOpti
           ? response.content
           : Array.isArray(response.content)
             ? response.content
-                .map((c) => (typeof c === "string" ? c : "text" in c ? c.text : ""))
+                .map((c) =>
+                  typeof c === "string" ? c : "text" in c ? c.text : "",
+                )
                 .join("")
             : "";
 
@@ -91,7 +103,9 @@ export function generateClarificationNode(options: GenerateClarificationNodeOpti
       };
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : "Unknown error during clarification";
+        error instanceof Error
+          ? error.message
+          : "Unknown error during clarification";
 
       nodeLogger.error("generate_clarification_error", {
         outcome: "failure",
@@ -100,7 +114,7 @@ export function generateClarificationNode(options: GenerateClarificationNodeOpti
 
       // On error, create a generic fallback question
       const fallbackMessage = new AIMessage(
-        "I want to make sure I understand correctly. Could you tell me more about what you're trying to build?"
+        "I want to make sure I understand correctly. Could you tell me more about what you're trying to build?",
       );
 
       return {
@@ -115,7 +129,9 @@ export function generateClarificationNode(options: GenerateClarificationNodeOpti
  * Build context for the clarification prompt based on current state.
  */
 function buildClarificationContext(state: ProductAgentState): string {
-  const parts: string[] = ["Based on the conversation, here's what I understand so far:"];
+  const parts: string[] = [
+    "Based on the conversation, here's what I understand so far:",
+  ];
 
   if (state.requirements.what) {
     parts.push(`- What to build: ${state.requirements.what}`);
@@ -127,7 +143,9 @@ function buildClarificationContext(state: ProductAgentState): string {
     parts.push(`- For whom: ${state.requirements.who}`);
   }
   if (state.requirements.acceptanceCriteria.length > 0) {
-    parts.push(`- Acceptance criteria: ${state.requirements.acceptanceCriteria.join(", ")}`);
+    parts.push(
+      `- Acceptance criteria: ${state.requirements.acceptanceCriteria.join(", ")}`,
+    );
   }
   if (state.requirements.constraints.length > 0) {
     parts.push(`- Constraints: ${state.requirements.constraints.join(", ")}`);
@@ -153,7 +171,7 @@ function buildClarificationContext(state: ProductAgentState): string {
 
   parts.push("");
   parts.push(
-    "Generate a single, focused follow-up question to gather the most important missing information."
+    "Generate a single, focused follow-up question to gather the most important missing information.",
   );
 
   return parts.join("\n");

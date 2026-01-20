@@ -23,7 +23,7 @@ const logger = createLogger({
  */
 export async function createPullRequest(
   octokit: Octokit,
-  options: CreatePROptions
+  options: CreatePROptions,
 ): Promise<PullRequestInfo> {
   const { owner, repo, title, body, head, base } = options;
 
@@ -82,7 +82,7 @@ export async function getPullRequest(
   octokit: Octokit,
   owner: string,
   repo: string,
-  pullNumber: number
+  pullNumber: number,
 ): Promise<PullRequestInfo> {
   logger.debug("github_get_pr", {
     message: `Getting PR #${pullNumber}`,
@@ -122,7 +122,7 @@ export async function listPRComments(
   octokit: Octokit,
   owner: string,
   repo: string,
-  pullNumber: number
+  pullNumber: number,
 ): Promise<PRComment[]> {
   logger.debug("github_list_pr_comments", {
     message: `Listing comments on PR #${pullNumber}`,
@@ -162,7 +162,7 @@ export async function listPRComments(
 
   // Combine and sort by creation time
   const allComments = [...reviewMapped, ...issueMapped].sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
   );
 
   return allComments;
@@ -185,7 +185,7 @@ export async function addPRComment(
   owner: string,
   repo: string,
   pullNumber: number,
-  body: string
+  body: string,
 ): Promise<PRComment> {
   logger.debug("github_add_pr_comment_start", {
     message: `Adding comment to PR #${pullNumber}`,
@@ -235,11 +235,16 @@ export async function mergePullRequest(
     mergeMethod?: "merge" | "squash" | "rebase";
     commitTitle?: string;
     commitMessage?: string;
-  }
+  },
 ): Promise<{ sha: string; merged: boolean }> {
   logger.debug("github_merge_pr_start", {
     message: `Merging PR #${pullNumber}`,
-    context: { owner, repo, pullNumber, method: options?.mergeMethod ?? "squash" },
+    context: {
+      owner,
+      repo,
+      pullNumber,
+      method: options?.mergeMethod ?? "squash",
+    },
   });
 
   // Build request params, only including optional fields if defined (exactOptionalPropertyTypes)

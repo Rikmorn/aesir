@@ -14,22 +14,22 @@
  * - Complete workflow from task pickup to PR creation
  */
 
-import { StateGraph, END } from "@langchain/langgraph";
-import type { Octokit } from "@octokit/rest";
+import { END, StateGraph } from "@langchain/langgraph";
 import type { LinearClient } from "@linear/sdk";
+import type { Octokit } from "@octokit/rest";
+import type { Sandbox } from "../sandbox/types.js";
 import {
-  DevWorkflowState,
-  DevWorkflowConfig,
   DEFAULT_DEV_WORKFLOW_CONFIG,
+  type DevWorkflowConfig,
+  DevWorkflowState,
   type DevWorkflowStateType,
 } from "../state/dev-workflow-state.js";
-import { generateCodeNode } from "./nodes/generate-code.js";
-import { createRunTestsNode } from "./nodes/run-tests.js";
-import { fixCodeNode } from "./nodes/fix-code.js";
-import { createPickupTaskNode } from "./nodes/pickup-task.js";
-import { createBranchNode } from "./nodes/create-branch.js";
 import { createCommitPRNode } from "./nodes/commit-pr.js";
-import type { Sandbox } from "../sandbox/types.js";
+import { createBranchNode } from "./nodes/create-branch.js";
+import { fixCodeNode } from "./nodes/fix-code.js";
+import { generateCodeNode } from "./nodes/generate-code.js";
+import { createPickupTaskNode } from "./nodes/pickup-task.js";
+import { createRunTestsNode } from "./nodes/run-tests.js";
 
 /**
  * Routing result after test execution
@@ -50,7 +50,7 @@ export type AfterTestRoute = "fix_code" | "commit_pr" | "fail";
  */
 export function routeAfterTest(
   state: DevWorkflowStateType,
-  config: DevWorkflowConfig = DEFAULT_DEV_WORKFLOW_CONFIG
+  config: DevWorkflowConfig = DEFAULT_DEV_WORKFLOW_CONFIG,
 ): AfterTestRoute {
   // Tests passed - proceed to commit
   if (state.testResult?.passed) {
@@ -181,7 +181,7 @@ export function createDevWorkflow(options: DevWorkflowOptions) {
         fix_code: "fix_code",
         commit_pr: "commit_pr",
         fail: END,
-      }
+      },
     )
 
     // After fix, run tests again (the loop)

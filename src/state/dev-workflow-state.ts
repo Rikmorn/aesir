@@ -189,7 +189,7 @@ export type DevWorkflowStateUpdate = typeof DevWorkflowState.Update;
  */
 export function hasExceededTestLimit(
   state: DevWorkflowStateType,
-  config: DevWorkflowConfig = DEFAULT_DEV_WORKFLOW_CONFIG
+  config: DevWorkflowConfig = DEFAULT_DEV_WORKFLOW_CONFIG,
 ): boolean {
   return state.testAttempts >= config.maxTestAttempts;
 }
@@ -208,7 +208,7 @@ export function createDevWorkflowInitialState(
   taskId: string,
   sessionId: string,
   taskDescription: string,
-  repositoryUrl?: string
+  repositoryUrl?: string,
 ): Partial<DevWorkflowStateType> {
   return {
     taskId,

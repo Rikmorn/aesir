@@ -11,7 +11,7 @@
 import { BaseCallbackHandler } from "@langchain/core/callbacks/base";
 import type { Serialized } from "@langchain/core/load/serializable";
 import type { LLMResult } from "@langchain/core/outputs";
-import type { Logger, LogEntry, LogContext } from "../../logging/logger.js";
+import type { LogContext, LogEntry, Logger } from "../../logging/logger.js";
 import type { TraceStore } from "../../logging/trace-store.js";
 
 /**
@@ -44,7 +44,7 @@ export class LangGraphTracer extends BaseCallbackHandler {
     action: string,
     context: LogContext,
     outcome?: LogEntry["outcome"],
-    message?: string
+    message?: string,
   ): void {
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
@@ -66,7 +66,7 @@ export class LangGraphTracer extends BaseCallbackHandler {
     runId: string,
     parentRunId?: string,
     _tags?: string[],
-    _metadata?: Record<string, unknown>
+    _metadata?: Record<string, unknown>,
   ): void {
     try {
       const chainType = chain.id?.[chain.id.length - 1] ?? "unknown";
@@ -106,7 +106,13 @@ export class LangGraphTracer extends BaseCallbackHandler {
         message: error.message,
         context,
       });
-      this.appendToStore("error", "chain_error", context, "failure", error.message);
+      this.appendToStore(
+        "error",
+        "chain_error",
+        context,
+        "failure",
+        error.message,
+      );
     } catch {
       // Silently ignore - tracing errors should never crash workflow
     }
@@ -119,7 +125,7 @@ export class LangGraphTracer extends BaseCallbackHandler {
     llm: Serialized,
     prompts: string[],
     runId: string,
-    parentRunId?: string
+    parentRunId?: string,
   ): void {
     try {
       const modelName = llm.id?.[llm.id.length - 1] ?? "unknown";
@@ -142,7 +148,11 @@ export class LangGraphTracer extends BaseCallbackHandler {
   handleLLMEnd(output: LLMResult, runId: string): void {
     try {
       const tokenUsage = output.llmOutput?.tokenUsage as
-        | { totalTokens?: number; promptTokens?: number; completionTokens?: number }
+        | {
+            totalTokens?: number;
+            promptTokens?: number;
+            completionTokens?: number;
+          }
         | undefined;
 
       const context = {
@@ -167,7 +177,7 @@ export class LangGraphTracer extends BaseCallbackHandler {
     tool: Serialized,
     input: string,
     runId: string,
-    parentRunId?: string
+    parentRunId?: string,
   ): void {
     try {
       const toolName = tool.id?.[tool.id.length - 1] ?? "unknown";
@@ -210,7 +220,7 @@ export class LangGraphTracer extends BaseCallbackHandler {
  */
 export function createLangGraphTracer(
   logger: Logger,
-  store: TraceStore
+  store: TraceStore,
 ): LangGraphTracer {
   return new LangGraphTracer(logger, store);
 }

@@ -10,9 +10,9 @@
 
 import type { LinearClient } from "@linear/sdk";
 import {
+  emitThought,
   readIssue,
   updateIssueStatus,
-  emitThought,
 } from "../../integrations/linear/index.js";
 import type { DevWorkflowStateType } from "../../state/dev-workflow-state.js";
 
@@ -30,7 +30,7 @@ export function createPickupTaskNode(linearClient: LinearClient) {
    * @returns Partial state update with task description and coding status
    */
   return async function pickupTaskNode(
-    state: DevWorkflowStateType
+    state: DevWorkflowStateType,
   ): Promise<Partial<DevWorkflowStateType>> {
     // Read task details from Linear
     const issue = await readIssue(linearClient, state.taskId);
@@ -43,7 +43,7 @@ export function createPickupTaskNode(linearClient: LinearClient) {
     await emitThought(
       linearClient,
       state.sessionId,
-      `Starting work on: ${issue.title}`
+      `Starting work on: ${issue.title}`,
     );
 
     // Return state update

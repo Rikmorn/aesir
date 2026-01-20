@@ -35,7 +35,7 @@
             "conventions": [
               {
                 "selector": { "kind": "variable" },
-                "formats": ["camelCase", "CONSTANT_CASE"]
+                "formats": ["camelCase", "CONSTANT_CASE", "PascalCase"]
               },
               {
                 "selector": { "kind": "function" },
@@ -48,6 +48,14 @@
               {
                 "selector": { "kind": "const", "scope": "global" },
                 "formats": ["camelCase", "CONSTANT_CASE", "PascalCase"]
+              },
+              {
+                "selector": { "kind": "objectLiteralProperty" },
+                "formats": ["camelCase", "CONSTANT_CASE", "snake_case", "PascalCase"]
+              },
+              {
+                "selector": { "kind": "typeProperty" },
+                "formats": ["camelCase", "snake_case"]
               }
             ]
           }

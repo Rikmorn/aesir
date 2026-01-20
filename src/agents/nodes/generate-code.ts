@@ -13,11 +13,11 @@
 
 import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
-import {
-  FileChangeSchema,
-  type DevWorkflowStateType,
-} from "../../state/dev-workflow-state.js";
 import { logger } from "../../logging/index.js";
+import {
+  type DevWorkflowStateType,
+  FileChangeSchema,
+} from "../../state/dev-workflow-state.js";
 
 /**
  * Schema for code generation structured output
@@ -26,9 +26,7 @@ export const CodeGenerationOutputSchema = z.object({
   files: z
     .array(FileChangeSchema)
     .describe("Files to create or modify for this task"),
-  reasoning: z
-    .string()
-    .describe("Explanation of the implementation approach"),
+  reasoning: z.string().describe("Explanation of the implementation approach"),
 });
 
 export type CodeGenerationOutput = z.infer<typeof CodeGenerationOutputSchema>;
@@ -78,7 +76,7 @@ export interface GenerateCodeNodeOptions {
  */
 export async function generateCodeNode(
   state: DevWorkflowStateType,
-  options: GenerateCodeNodeOptions = {}
+  options: GenerateCodeNodeOptions = {},
 ): Promise<Partial<DevWorkflowStateType>> {
   const nodeLogger = logger.child({ node: "generate-code" });
 
@@ -93,10 +91,13 @@ export async function generateCodeNode(
   try {
     // Use provided LLM or create a new one
     const llm =
-      options.llm ?? new ChatAnthropic({ model: options.model ?? "claude-sonnet-4-20250514" });
+      options.llm ??
+      new ChatAnthropic({ model: options.model ?? "claude-sonnet-4-20250514" });
 
     // Bind structured output schema (explicit type breaks infinite inference)
-    const structuredLlm = llm.withStructuredOutput<CodeGenerationOutput>(CodeGenerationOutputSchema);
+    const structuredLlm = llm.withStructuredOutput<CodeGenerationOutput>(
+      CodeGenerationOutputSchema,
+    );
 
     // Build prompt and invoke
     const prompt = buildCodeGenPrompt(state.taskDescription);
@@ -121,7 +122,9 @@ export async function generateCodeNode(
     };
   } catch (error) {
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error during code generation";
+      error instanceof Error
+        ? error.message
+        : "Unknown error during code generation";
 
     timing.failure({ message: errorMessage });
 

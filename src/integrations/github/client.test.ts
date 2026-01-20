@@ -5,7 +5,7 @@
  * Verifies that Octokit is instantiated with correct authentication.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { GitHubConfig } from "./types.js";
 
 // Mock @octokit/rest

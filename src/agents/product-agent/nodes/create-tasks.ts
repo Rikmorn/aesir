@@ -14,19 +14,30 @@
 import { ChatAnthropic } from "@langchain/anthropic";
 import type { LinearClient } from "@linear/sdk";
 import { z } from "zod";
-import type { ProductAgentState, ProductAgentStateUpdate, ProductAgentPhase, CreatedTask } from "../state.js";
-import { createIssue, listLabels, type LabelInfo } from "../../../integrations/linear/issues.js";
-import { CREATE_TASKS_PROMPT } from "../prompts.js";
+import {
+  createIssue,
+  type LabelInfo,
+  listLabels,
+} from "../../../integrations/linear/issues.js";
 import { createLogger } from "../../../logging/logger.js";
+import { CREATE_TASKS_PROMPT } from "../prompts.js";
+import type {
+  CreatedTask,
+  ProductAgentPhase,
+  ProductAgentState,
+  ProductAgentStateUpdate,
+} from "../state.js";
 
 const logger = createLogger({ defaultContext: { module: "create-tasks" } });
 
 /**
  * Schema for a single generated task
  */
-const GeneratedTaskSchema = z.object({
+const GENERATED_TASK_SCHEMA = z.object({
   title: z.string().describe("Clear, actionable task title"),
-  description: z.string().describe("Detailed description with acceptance criteria"),
+  description: z
+    .string()
+    .describe("Detailed description with acceptance criteria"),
   priority: z
     .enum(["urgent", "high", "medium", "low"])
     .describe("Task priority level"),
@@ -35,13 +46,13 @@ const GeneratedTaskSchema = z.object({
     .describe("Relevant labels like 'feature', 'bug', 'frontend', 'backend'"),
 });
 
-export type GeneratedTask = z.infer<typeof GeneratedTaskSchema>;
+export type GeneratedTask = z.infer<typeof GENERATED_TASK_SCHEMA>;
 
 /**
  * Schema for task list generation output
  */
 export const TaskListSchema = z.object({
-  tasks: z.array(GeneratedTaskSchema).describe("List of tasks to create"),
+  tasks: z.array(GENERATED_TASK_SCHEMA).describe("List of tasks to create"),
   projectContext: z
     .string()
     .describe("Summary context for the dev agent to understand the project"),
@@ -67,7 +78,9 @@ export interface CreateTasksNodeOptions {
  * Map priority string to Linear priority number
  * Linear: 0=none, 1=urgent, 2=high, 3=medium, 4=low
  */
-function mapPriorityToLinear(priority: GeneratedTask["priority"]): 0 | 1 | 2 | 3 | 4 {
+function mapPriorityToLinear(
+  priority: GeneratedTask["priority"],
+): 0 | 1 | 2 | 3 | 4 {
   const mapping: Record<GeneratedTask["priority"], 0 | 1 | 2 | 3 | 4> = {
     urgent: 1,
     high: 2,
@@ -84,7 +97,7 @@ function mapPriorityToLinear(priority: GeneratedTask["priority"]): 0 | 1 | 2 | 3
 async function resolveLabelIds(
   linearClient: LinearClient,
   teamId: string,
-  labelNames: string[]
+  labelNames: string[],
 ): Promise<string[]> {
   if (labelNames.length === 0) {
     return [];
@@ -144,7 +157,9 @@ export function createTasksNode(options: CreateTasksNodeOptions) {
       // Use provided LLM or create default
       const llm =
         options.llm ??
-        new ChatAnthropic({ model: options.model ?? "claude-sonnet-4-20250514" });
+        new ChatAnthropic({
+          model: options.model ?? "claude-sonnet-4-20250514",
+        });
 
       // Bind structured output schema (explicit type breaks infinite inference)
       const structuredLlm = llm.withStructuredOutput<TaskList>(TaskListSchema);
@@ -174,7 +189,11 @@ export function createTasksNode(options: CreateTasksNodeOptions) {
       for (const task of taskList.tasks) {
         try {
           // Resolve label names to IDs
-          const labelIds = await resolveLabelIds(linearClient, teamId, task.labels);
+          const labelIds = await resolveLabelIds(
+            linearClient,
+            teamId,
+            task.labels,
+          );
 
           // Build issue params - handle exactOptionalPropertyTypes
           const issueParams: {
@@ -214,7 +233,9 @@ export function createTasksNode(options: CreateTasksNodeOptions) {
           });
         } catch (error) {
           const errorMessage =
-            error instanceof Error ? error.message : "Unknown error creating task";
+            error instanceof Error
+              ? error.message
+              : "Unknown error creating task";
 
           nodeLogger.error("task_creation_failed", {
             outcome: "failure",
@@ -240,7 +261,9 @@ export function createTasksNode(options: CreateTasksNodeOptions) {
       };
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : "Unknown error during task creation";
+        error instanceof Error
+          ? error.message
+          : "Unknown error during task creation";
 
       nodeLogger.error("create_tasks_error", {
         outcome: "failure",
@@ -259,7 +282,9 @@ export function createTasksNode(options: CreateTasksNodeOptions) {
  * Build context for the task creation prompt based on requirements.
  */
 function buildRequirementsContext(state: ProductAgentState): string {
-  const parts: string[] = ["Based on the conversation, create tasks for the following:"];
+  const parts: string[] = [
+    "Based on the conversation, create tasks for the following:",
+  ];
 
   if (state.requirements.what) {
     parts.push(`## What to Build`);
@@ -295,7 +320,9 @@ function buildRequirementsContext(state: ProductAgentState): string {
     parts.push("");
   }
 
-  parts.push("Create well-structured tasks that a developer can implement independently.");
+  parts.push(
+    "Create well-structured tasks that a developer can implement independently.",
+  );
 
   return parts.join("\n");
 }
@@ -303,7 +330,10 @@ function buildRequirementsContext(state: ProductAgentState): string {
 /**
  * Build the full task description for Linear.
  */
-function buildTaskDescription(task: GeneratedTask, projectContext: string): string {
+function buildTaskDescription(
+  task: GeneratedTask,
+  projectContext: string,
+): string {
   const parts: string[] = [];
 
   parts.push(task.description);

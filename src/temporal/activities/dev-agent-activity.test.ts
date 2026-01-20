@@ -5,12 +5,12 @@
  * Mocks runDevWorkflow to verify activity behavior.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { executeDevWorkflow } from "./dev-agent-activity.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
-  DevWorkflowResult,
   DevWorkflowDependencies,
+  DevWorkflowResult,
 } from "../../agents/dev-workflow-runner.js";
+import { executeDevWorkflow } from "./dev-agent-activity.js";
 
 // Mock the dev-workflow-runner module
 vi.mock("../../agents/dev-workflow-runner.js", () => ({
@@ -46,7 +46,11 @@ describe("executeDevWorkflow", () => {
 
     await executeDevWorkflow("TASK-123", "session-123", mockDeps);
 
-    expect(runDevWorkflow).toHaveBeenCalledWith("TASK-123", "session-123", mockDeps);
+    expect(runDevWorkflow).toHaveBeenCalledWith(
+      "TASK-123",
+      "session-123",
+      mockDeps,
+    );
   });
 
   it("returns result unchanged on success", async () => {
@@ -58,7 +62,11 @@ describe("executeDevWorkflow", () => {
     };
     vi.mocked(runDevWorkflow).mockResolvedValue(mockResult);
 
-    const result = await executeDevWorkflow("TASK-123", "session-123", mockDeps);
+    const result = await executeDevWorkflow(
+      "TASK-123",
+      "session-123",
+      mockDeps,
+    );
 
     expect(result).toEqual(mockResult);
     expect(result.success).toBe(true);
@@ -74,7 +82,11 @@ describe("executeDevWorkflow", () => {
     };
     vi.mocked(runDevWorkflow).mockResolvedValue(mockResult);
 
-    const result = await executeDevWorkflow("TASK-456", "session-456", mockDeps);
+    const result = await executeDevWorkflow(
+      "TASK-456",
+      "session-456",
+      mockDeps,
+    );
 
     expect(result).toEqual(mockResult);
     expect(result.success).toBe(false);
@@ -85,8 +97,8 @@ describe("executeDevWorkflow", () => {
     const error = new Error("Workflow crashed");
     vi.mocked(runDevWorkflow).mockRejectedValue(error);
 
-    await expect(executeDevWorkflow("TASK-789", "session-789", mockDeps)).rejects.toThrow(
-      "Workflow crashed"
-    );
+    await expect(
+      executeDevWorkflow("TASK-789", "session-789", mockDeps),
+    ).rejects.toThrow("Workflow crashed");
   });
 });

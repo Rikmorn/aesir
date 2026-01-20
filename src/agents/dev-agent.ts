@@ -16,11 +16,11 @@
  *   Example: postgresql://temporal:temporal@localhost:5432/temporal
  */
 
-import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { ChatAnthropic } from "@langchain/anthropic";
+import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
-import { codeGenTool } from "../tools/index.js";
 import { logger } from "../logging/index.js";
+import { codeGenTool } from "../tools/index.js";
 
 /**
  * Default model for the agent
@@ -48,28 +48,28 @@ function createLLM(model: string = DEFAULT_MODEL, temperature: number = 0) {
  * @throws Error if DATABASE_URL is not set
  */
 function createCheckpointer(connectionString?: string): PostgresSaver {
-  const connStr = connectionString ?? process.env["DATABASE_URL"];
+  const connStr = connectionString ?? process.env.DATABASE_URL;
   if (!connStr) {
     throw new Error(
       "DATABASE_URL environment variable is required for checkpointer. " +
-      "Example: DATABASE_URL=postgresql://temporal:temporal@localhost:5432/temporal"
+        "Example: DATABASE_URL=postgresql://temporal:temporal@localhost:5432/temporal",
     );
   }
   return PostgresSaver.fromConnString(connStr);
 }
 
 // Lazy checkpointer - created on first access
-let _checkpointer: PostgresSaver | undefined;
+let CHECKPOINTER: PostgresSaver | undefined;
 
 /**
  * Get or create the checkpointer instance
  * Uses lazy initialization to defer DATABASE_URL requirement until actual use
  */
 function getCheckpointer(): PostgresSaver {
-  if (!_checkpointer) {
-    _checkpointer = createCheckpointer();
+  if (!CHECKPOINTER) {
+    CHECKPOINTER = createCheckpointer();
   }
-  return _checkpointer;
+  return CHECKPOINTER;
 }
 
 /**

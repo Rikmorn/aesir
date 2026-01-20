@@ -6,7 +6,7 @@
  * as they are thin wrappers around the LinearClient SDK.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LinearConfig } from "./types.js";
 
 // Mock @linear/sdk
@@ -49,8 +49,8 @@ describe("createLinearClient", () => {
 
   beforeEach(() => {
     process.env = { ...originalEnv };
-    process.env["LINEAR_CLIENT_ID"] = "test-client-id";
-    process.env["LINEAR_CLIENT_SECRET"] = "test-client-secret";
+    process.env.LINEAR_CLIENT_ID = "test-client-id";
+    process.env.LINEAR_CLIENT_SECRET = "test-client-secret";
     vi.clearAllMocks();
   });
 
@@ -99,7 +99,7 @@ describe("createLinearClient", () => {
       "https://api.linear.app/oauth/token",
       expect.objectContaining({
         method: "POST",
-      })
+      }),
     );
     expect(client).toBeDefined();
     expect(LinearClient).toHaveBeenCalledWith({
@@ -133,7 +133,7 @@ describe("createLinearClient", () => {
       expect.objectContaining({
         accessToken: "new-access-token",
         refreshToken: "new-refresh-token",
-      })
+      }),
     );
   });
 });
@@ -143,8 +143,8 @@ describe("refreshOAuthToken", () => {
 
   beforeEach(() => {
     process.env = { ...originalEnv };
-    process.env["LINEAR_CLIENT_ID"] = "test-client-id";
-    process.env["LINEAR_CLIENT_SECRET"] = "test-client-secret";
+    process.env.LINEAR_CLIENT_ID = "test-client-id";
+    process.env.LINEAR_CLIENT_SECRET = "test-client-secret";
     vi.clearAllMocks();
   });
 
@@ -154,10 +154,10 @@ describe("refreshOAuthToken", () => {
   });
 
   it("throws error when client credentials are missing", async () => {
-    delete process.env["LINEAR_CLIENT_ID"];
+    delete process.env.LINEAR_CLIENT_ID;
 
     await expect(refreshOAuthToken("refresh-token")).rejects.toThrow(
-      "LINEAR_CLIENT_ID and LINEAR_CLIENT_SECRET must be set"
+      "LINEAR_CLIENT_ID and LINEAR_CLIENT_SECRET must be set",
     );
   });
 
@@ -191,7 +191,7 @@ describe("refreshOAuthToken", () => {
     } as Response);
 
     await expect(refreshOAuthToken("invalid-refresh-token")).rejects.toThrow(
-      "Failed to refresh Linear OAuth token: 401"
+      "Failed to refresh Linear OAuth token: 401",
     );
   });
 });

@@ -62,7 +62,7 @@ export type CodeGenOutput = z.infer<typeof CodeGenOutputSchema>;
  */
 function generatePlaceholderCode(
   taskDescription: string,
-  language: SupportedLanguage
+  language: SupportedLanguage,
 ): string {
   const commentSyntax = language === "python" ? "#" : "//";
 
@@ -131,7 +131,7 @@ export const codeGenTool = tool(
       "Generate code based on a task description. Use this to create new code files or functions. Returns generated code with explanation.",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     schema: CodeGenInputSchema as any,
-  }
+  },
 );
 
 /**

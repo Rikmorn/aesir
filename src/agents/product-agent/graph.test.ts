@@ -4,18 +4,18 @@
  * Tests for the StateGraph workflow definition and routing logic.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { LinearClient } from "@linear/sdk";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  routeAfterAnalysis,
-  createProductAgentGraph,
   type AfterAnalysisRoute,
+  createProductAgentGraph,
+  routeAfterAnalysis,
 } from "./graph.js";
 import {
   DEFAULT_REQUIREMENTS,
-  type ProductAgentState,
   type ProductAgentPhase,
+  type ProductAgentState,
 } from "./state.js";
-import type { LinearClient } from "@linear/sdk";
 
 // Mock the logger
 vi.mock("../../logging/logger.js", () => ({
@@ -48,7 +48,7 @@ vi.mock("./nodes/index.js", () => ({
  * Create a base state for testing
  */
 function createBaseState(
-  overrides: Partial<ProductAgentState> = {}
+  overrides: Partial<ProductAgentState> = {},
 ): ProductAgentState {
   return {
     messages: [],
@@ -210,7 +210,9 @@ describe("createProductAgentGraph", () => {
       get: vi.fn(),
       put: vi.fn(),
       list: vi.fn(),
-    } as unknown as NonNullable<Parameters<typeof createProductAgentGraph>[0]["checkpointer"]>;
+    } as unknown as NonNullable<
+      Parameters<typeof createProductAgentGraph>[0]["checkpointer"]
+    >;
 
     expect(() => {
       createProductAgentGraph({

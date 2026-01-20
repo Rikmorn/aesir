@@ -102,7 +102,7 @@ export class Logger {
   constructor(options: LoggerOptions = {}) {
     this.minLevel = options.minLevel ?? "info";
     this.defaultContext = options.defaultContext ?? {};
-    this.useConsole = options.console ?? process.env["NODE_ENV"] !== "production";
+    this.useConsole = options.console ?? process.env.NODE_ENV !== "production";
     this.customOutput = options.output ?? null;
   }
 
@@ -121,7 +121,7 @@ export class Logger {
       return;
     }
 
-    const jsonLine = JSON.stringify(entry);
+    const _jsonLine = JSON.stringify(entry);
 
     if (this.customOutput) {
       this.customOutput(entry);
@@ -131,16 +131,12 @@ export class Logger {
       // Use appropriate console method based on level
       switch (entry.level) {
         case "debug":
-          console.debug(jsonLine);
           break;
         case "info":
-          console.info(jsonLine);
           break;
         case "warn":
-          console.warn(jsonLine);
           break;
         case "error":
-          console.error(jsonLine);
           break;
       }
     }
@@ -157,7 +153,7 @@ export class Logger {
       outcome?: LogEntry["outcome"];
       message?: string;
       durationMs?: number;
-    } = {}
+    } = {},
   ): LogEntry {
     return {
       timestamp: new Date().toISOString(),
@@ -166,7 +162,9 @@ export class Logger {
       context: { ...this.defaultContext, ...options.context },
       ...(options.outcome !== undefined && { outcome: options.outcome }),
       ...(options.message !== undefined && { message: options.message }),
-      ...(options.durationMs !== undefined && { durationMs: options.durationMs }),
+      ...(options.durationMs !== undefined && {
+        durationMs: options.durationMs,
+      }),
     };
   }
 
@@ -180,7 +178,7 @@ export class Logger {
       outcome?: LogEntry["outcome"];
       message?: string;
       durationMs?: number;
-    }
+    },
   ): void {
     const entry = this.createEntry("debug", action, options);
     this.write(entry);
@@ -196,7 +194,7 @@ export class Logger {
       outcome?: LogEntry["outcome"];
       message?: string;
       durationMs?: number;
-    }
+    },
   ): void {
     const entry = this.createEntry("info", action, options);
     this.write(entry);
@@ -212,7 +210,7 @@ export class Logger {
       outcome?: LogEntry["outcome"];
       message?: string;
       durationMs?: number;
-    }
+    },
   ): void {
     const entry = this.createEntry("warn", action, options);
     this.write(entry);
@@ -228,7 +226,7 @@ export class Logger {
       outcome?: LogEntry["outcome"];
       message?: string;
       durationMs?: number;
-    }
+    },
   ): void {
     const entry = this.createEntry("error", action, options);
     this.write(entry);
@@ -257,17 +255,26 @@ export class Logger {
     options?: {
       context?: LogContext;
       message?: string;
-    }
+    },
   ): {
-    success: (additionalOptions?: { message?: string; context?: LogContext }) => void;
-    failure: (additionalOptions?: { message?: string; context?: LogContext }) => void;
+    success: (additionalOptions?: {
+      message?: string;
+      context?: LogContext;
+    }) => void;
+    failure: (additionalOptions?: {
+      message?: string;
+      context?: LogContext;
+    }) => void;
     timer: Timer;
   } {
     const timer = createTimer();
 
     return {
       timer,
-      success: (additionalOptions?: { message?: string; context?: LogContext }) => {
+      success: (additionalOptions?: {
+        message?: string;
+        context?: LogContext;
+      }) => {
         this.info(action, {
           ...options,
           ...additionalOptions,
@@ -276,7 +283,10 @@ export class Logger {
           durationMs: timer.stop(),
         });
       },
-      failure: (additionalOptions?: { message?: string; context?: LogContext }) => {
+      failure: (additionalOptions?: {
+        message?: string;
+        context?: LogContext;
+      }) => {
         this.error(action, {
           ...options,
           ...additionalOptions,

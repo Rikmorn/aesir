@@ -10,11 +10,11 @@ import { Client, Connection, type WorkflowHandle } from "@temporalio/client";
 import { createLogger } from "../logging/logger.js";
 import { approvalSignal, changesRequestedSignal } from "./signals.js";
 import type { ApprovalDecision, ChangesRequested } from "./types.js";
-import { prApprovalWorkflow } from "./workflows/approval-workflow.js";
 import type {
   ApprovalWorkflowInput,
   ApprovalWorkflowResult,
 } from "./workflows/approval-workflow.js";
+import { prApprovalWorkflow } from "./workflows/approval-workflow.js";
 
 const logger = createLogger({ defaultContext: { module: "temporal-client" } });
 
@@ -40,13 +40,17 @@ let cachedClient: Client | null = null;
  * @param config Optional connection configuration
  * @returns A connected Temporal client
  */
-export async function getTemporalClient(config: ClientConfig = {}): Promise<Client> {
+export async function getTemporalClient(
+  config: ClientConfig = {},
+): Promise<Client> {
   if (cachedClient) {
     return cachedClient;
   }
 
-  const address = config.address ?? process.env["TEMPORAL_ADDRESS"] ?? "localhost:7233";
-  const namespace = config.namespace ?? process.env["TEMPORAL_NAMESPACE"] ?? "default";
+  const address =
+    config.address ?? process.env.TEMPORAL_ADDRESS ?? "localhost:7233";
+  const namespace =
+    config.namespace ?? process.env.TEMPORAL_NAMESPACE ?? "default";
 
   logger.debug("temporal_client_connecting", {
     message: `Creating Temporal client for ${address}`,
@@ -83,7 +87,7 @@ export function clearClientCache(): void {
  */
 export async function sendApprovalSignal(
   workflowId: string,
-  decision: ApprovalDecision
+  decision: ApprovalDecision,
 ): Promise<void> {
   const client = await getTemporalClient();
   const handle = client.workflow.getHandle(workflowId);
@@ -112,7 +116,7 @@ export async function sendApprovalSignal(
  */
 export async function sendChangesRequestedSignal(
   workflowId: string,
-  changesRequested: ChangesRequested
+  changesRequested: ChangesRequested,
 ): Promise<void> {
   const client = await getTemporalClient();
   const handle = client.workflow.getHandle(workflowId);
@@ -144,7 +148,7 @@ const APPROVAL_TASK_QUEUE = "dev-agent-queue";
  */
 export async function startApprovalWorkflow(
   workflowId: string,
-  input: ApprovalWorkflowInput
+  input: ApprovalWorkflowInput,
 ): Promise<WorkflowHandle<typeof prApprovalWorkflow>> {
   const client = await getTemporalClient();
 

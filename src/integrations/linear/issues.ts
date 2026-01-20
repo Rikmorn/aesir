@@ -5,7 +5,7 @@
  * Used by the Product Agent to create tasks from gathered requirements.
  */
 
-import type { LinearClient, Team, IssueLabel } from "@linear/sdk";
+import type { IssueLabel, LinearClient, Team } from "@linear/sdk";
 import { createLogger } from "../../logging/logger.js";
 
 const logger = createLogger({ defaultContext: { module: "linear-issues" } });
@@ -74,13 +74,18 @@ export interface LabelInfo {
  */
 export async function createIssue(
   client: LinearClient,
-  params: CreateIssueParams
+  params: CreateIssueParams,
 ): Promise<CreateIssueResult> {
   const { teamId, title, description, priority, labelIds } = params;
 
   logger.debug("linear_create_issue", {
     message: `Creating issue: ${title}`,
-    context: { teamId, title, hasPriority: priority !== undefined, labelCount: labelIds?.length ?? 0 },
+    context: {
+      teamId,
+      title,
+      hasPriority: priority !== undefined,
+      labelCount: labelIds?.length ?? 0,
+    },
   });
 
   // Build params object, only including defined values for exactOptionalPropertyTypes
@@ -116,7 +121,11 @@ export async function createIssue(
   logger.info("linear_issue_created", {
     outcome: "success",
     message: `Created issue ${issue.identifier}: ${title}`,
-    context: { issueId: issue.id, identifier: issue.identifier, url: issue.url },
+    context: {
+      issueId: issue.id,
+      identifier: issue.identifier,
+      url: issue.url,
+    },
   });
 
   return {
@@ -164,7 +173,7 @@ export async function listTeams(client: LinearClient): Promise<TeamInfo[]> {
  */
 export async function listLabels(
   client: LinearClient,
-  teamId: string
+  teamId: string,
 ): Promise<LabelInfo[]> {
   logger.debug("linear_list_labels", {
     message: `Listing labels for team ${teamId}`,

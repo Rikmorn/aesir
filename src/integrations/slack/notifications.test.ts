@@ -4,26 +4,30 @@
  * Tests for notification formatting and posting functions.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { WebClient } from "@slack/web-api";
-import type { ApprovalNotification, StatusNotification } from "./types.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   formatApprovalMessage,
   formatStatusMessage,
+  openDmChannel,
   postNotification,
   sendApprovalRequest,
   sendStatusUpdate,
-  openDmChannel,
 } from "./notifications.js";
+import type { ApprovalNotification, StatusNotification } from "./types.js";
 
 // Create mock WebClient
 function createMockClient(overrides?: Partial<WebClient>): WebClient {
   return {
     chat: {
-      postMessage: vi.fn().mockResolvedValue({ ok: true, ts: "1234567890.123456" }),
+      postMessage: vi
+        .fn()
+        .mockResolvedValue({ ok: true, ts: "1234567890.123456" }),
     },
     conversations: {
-      open: vi.fn().mockResolvedValue({ ok: true, channel: { id: "D1234567890" } }),
+      open: vi
+        .fn()
+        .mockResolvedValue({ ok: true, channel: { id: "D1234567890" } }),
     },
     ...overrides,
   } as unknown as WebClient;
@@ -72,7 +76,7 @@ describe("formatApprovalMessage", () => {
         b.type === "section" &&
         "text" in b &&
         b.text?.type === "mrkdwn" &&
-        b.text.text.includes("github.com")
+        b.text.text.includes("github.com"),
     );
     expect(linkBlock).toBeDefined();
   });
@@ -227,7 +231,11 @@ describe("postNotification", () => {
       summary: "Test summary",
     };
 
-    const result = await postNotification(mockClient, notification, "C1234567890");
+    const result = await postNotification(
+      mockClient,
+      notification,
+      "C1234567890",
+    );
 
     expect(result).toEqual({
       success: true,
@@ -249,7 +257,11 @@ describe("postNotification", () => {
       details: null,
     };
 
-    const result = await postNotification(errorClient, notification, "CINVALID");
+    const result = await postNotification(
+      errorClient,
+      notification,
+      "CINVALID",
+    );
 
     expect(result).toEqual({
       success: false,
@@ -286,7 +298,11 @@ describe("sendApprovalRequest", () => {
       summary: "Test summary",
     };
 
-    const result = await sendApprovalRequest(mockClient, notification, "C1234567890");
+    const result = await sendApprovalRequest(
+      mockClient,
+      notification,
+      "C1234567890",
+    );
 
     expect(mockClient.chat.postMessage).toHaveBeenCalled();
     expect(result.success).toBe(true);
@@ -303,7 +319,11 @@ describe("sendStatusUpdate", () => {
       details: "Test failures detected",
     };
 
-    const result = await sendStatusUpdate(mockClient, notification, "C1234567890");
+    const result = await sendStatusUpdate(
+      mockClient,
+      notification,
+      "C1234567890",
+    );
 
     expect(mockClient.chat.postMessage).toHaveBeenCalled();
     expect(result.success).toBe(true);
@@ -337,7 +357,7 @@ describe("openDmChannel", () => {
     } as unknown as Partial<WebClient>);
 
     await expect(openDmChannel(errorClient, "U1234567890")).rejects.toThrow(
-      "Failed to open DM channel"
+      "Failed to open DM channel",
     );
   });
 });

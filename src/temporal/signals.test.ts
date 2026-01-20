@@ -6,7 +6,7 @@
  * we test the export behavior rather than the runtime behavior.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { approvalSignal, changesRequestedSignal } from "./signals.js";
 

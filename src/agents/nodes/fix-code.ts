@@ -13,11 +13,11 @@
 
 import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
-import {
-  FileChangeSchema,
-  type DevWorkflowStateType,
-} from "../../state/dev-workflow-state.js";
 import { logger } from "../../logging/index.js";
+import {
+  type DevWorkflowStateType,
+  FileChangeSchema,
+} from "../../state/dev-workflow-state.js";
 
 /**
  * Schema for fix code structured output
@@ -84,7 +84,7 @@ export interface FixCodeNodeOptions {
  */
 export async function fixCodeNode(
   state: DevWorkflowStateType,
-  options: FixCodeNodeOptions = {}
+  options: FixCodeNodeOptions = {},
 ): Promise<Partial<DevWorkflowStateType>> {
   const nodeLogger = logger.child({ node: "fix-code" });
 
@@ -104,7 +104,8 @@ export async function fixCodeNode(
       new ChatAnthropic({ model: options.model ?? "claude-sonnet-4-20250514" });
 
     // Bind structured output schema (explicit type breaks infinite inference)
-    const structuredLlm = llm.withStructuredOutput<FixCodeOutput>(FixCodeOutputSchema);
+    const structuredLlm =
+      llm.withStructuredOutput<FixCodeOutput>(FixCodeOutputSchema);
 
     // Build prompt and invoke
     const prompt = buildFixCodePrompt(state);

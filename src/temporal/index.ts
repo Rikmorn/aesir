@@ -26,6 +26,17 @@
  * ```
  */
 
+// Client (for API endpoints and webhook handlers)
+export {
+  type ClientConfig,
+  clearClientCache,
+  getTemporalClient,
+  sendApprovalSignal,
+  sendChangesRequestedSignal,
+} from "./client.js";
+
+// Signals (for workflow and client code)
+export { approvalSignal, changesRequestedSignal } from "./signals.js";
 // Types
 export type {
   ApprovalDecision,
@@ -34,27 +45,18 @@ export type {
   WorkflowConfig,
   WorkflowResult,
 } from "./types.js";
-
-// Signals (for workflow and client code)
-export { approvalSignal, changesRequestedSignal } from "./signals.js";
-
 // Worker (for worker process)
-export { createTemporalWorker, runWorker, type WorkerConfig } from "./worker.js";
-
-// Client (for API endpoints and webhook handlers)
 export {
-  getTemporalClient,
-  clearClientCache,
-  sendApprovalSignal,
-  sendChangesRequestedSignal,
-  type ClientConfig,
-} from "./client.js";
+  createTemporalWorker,
+  runWorker,
+  type WorkerConfig,
+} from "./worker.js";
 
 // Workflows (for worker registration and type-safe invocation)
 export {
-  prApprovalWorkflow,
-  approvalStatusQuery,
+  type ApprovalQueryStatus,
   type ApprovalWorkflowInput,
   type ApprovalWorkflowResult,
-  type ApprovalQueryStatus,
+  approvalStatusQuery,
+  prApprovalWorkflow,
 } from "./workflows/index.js";

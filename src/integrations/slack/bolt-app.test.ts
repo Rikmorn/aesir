@@ -6,20 +6,20 @@
  * and that start/stop operations are handled properly.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { BoltAppConfig } from "./types.js";
 
 // Mock @slack/bolt - factory must not reference top-level variables
 vi.mock("@slack/bolt", () => {
   const mockStart = vi.fn();
   const mockStop = vi.fn();
-  const MockApp = vi.fn().mockImplementation(() => ({
+  const MOCK_APP = vi.fn().mockImplementation(() => ({
     start: mockStart,
     stop: mockStop,
   }));
 
   return {
-    App: MockApp,
+    App: MOCK_APP,
     __mockStart: mockStart,
     __mockStop: mockStop,
   };
@@ -34,7 +34,10 @@ const getMockFunctions = () => {
   // Get the mock functions from the most recent mock instance
   const mockInstance = vi.mocked(App).mock.results[
     vi.mocked(App).mock.results.length - 1
-  ]?.value as { start: ReturnType<typeof vi.fn>; stop: ReturnType<typeof vi.fn> };
+  ]?.value as {
+    start: ReturnType<typeof vi.fn>;
+    stop: ReturnType<typeof vi.fn>;
+  };
   return mockInstance;
 };
 
@@ -72,7 +75,7 @@ describe("createBoltApp", () => {
     expect(App).toHaveBeenCalledWith(
       expect.objectContaining({
         token: "xoxb-different-token",
-      })
+      }),
     );
   });
 
@@ -88,7 +91,7 @@ describe("createBoltApp", () => {
     expect(App).toHaveBeenCalledWith(
       expect.objectContaining({
         socketMode: true,
-      })
+      }),
     );
   });
 });

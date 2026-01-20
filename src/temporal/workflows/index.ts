@@ -10,9 +10,9 @@
  */
 
 export {
-  prApprovalWorkflow,
-  approvalStatusQuery,
+  type ApprovalQueryStatus,
   type ApprovalWorkflowInput,
   type ApprovalWorkflowResult,
-  type ApprovalQueryStatus,
+  approvalStatusQuery,
+  prApprovalWorkflow,
 } from "./approval-workflow.js";

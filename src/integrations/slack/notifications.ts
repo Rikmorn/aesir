@@ -5,17 +5,18 @@
  * Formats messages using Block Kit for rich formatting.
  */
 
-import type { WebClient } from "@slack/web-api";
-import type { Block, KnownBlock } from "@slack/web-api";
+import type { Block, KnownBlock, WebClient } from "@slack/web-api";
 import { createLogger } from "../../logging/logger.js";
 import type {
   ApprovalNotification,
-  StatusNotification,
   Notification,
   NotificationResult,
+  StatusNotification,
 } from "./types.js";
 
-const logger = createLogger({ defaultContext: { module: "slack-notifications" } });
+const logger = createLogger({
+  defaultContext: { module: "slack-notifications" },
+});
 
 /**
  * Format an approval notification as Block Kit blocks
@@ -26,7 +27,7 @@ const logger = createLogger({ defaultContext: { module: "slack-notifications" } 
  * @returns Block Kit blocks array
  */
 export function formatApprovalMessage(
-  notification: ApprovalNotification
+  notification: ApprovalNotification,
 ): (Block | KnownBlock)[] {
   return [
     {
@@ -71,7 +72,7 @@ export function formatApprovalMessage(
  * @returns Block Kit blocks array
  */
 export function formatStatusMessage(
-  notification: StatusNotification
+  notification: StatusNotification,
 ): (Block | KnownBlock)[] {
   const statusEmoji: Record<StatusNotification["status"], string> = {
     started: ":arrow_forward:",
@@ -144,7 +145,7 @@ function getFallbackText(notification: Notification): string {
 export async function postNotification(
   client: WebClient,
   notification: Notification,
-  channel: string
+  channel: string,
 ): Promise<NotificationResult> {
   const blocks =
     notification.type === "approval_needed"
@@ -207,7 +208,7 @@ export async function postNotification(
 export async function sendApprovalRequest(
   client: WebClient,
   notification: ApprovalNotification,
-  channel: string
+  channel: string,
 ): Promise<NotificationResult> {
   return postNotification(client, notification, channel);
 }
@@ -225,7 +226,7 @@ export async function sendApprovalRequest(
 export async function sendStatusUpdate(
   client: WebClient,
   notification: StatusNotification,
-  channel: string
+  channel: string,
 ): Promise<NotificationResult> {
   return postNotification(client, notification, channel);
 }
@@ -243,7 +244,7 @@ export async function sendStatusUpdate(
  */
 export async function openDmChannel(
   client: WebClient,
-  userId: string
+  userId: string,
 ): Promise<string> {
   logger.debug("slack_dm_open", {
     message: `Opening DM channel with user ${userId}`,

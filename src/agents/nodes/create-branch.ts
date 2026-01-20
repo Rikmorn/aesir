@@ -39,7 +39,7 @@ export function createBranchNode(octokit: Octokit, config: CreateBranchConfig) {
    * @returns Partial state update with branch name
    */
   return async function createBranchNodeFn(
-    state: DevWorkflowStateType
+    state: DevWorkflowStateType,
   ): Promise<Partial<DevWorkflowStateType>> {
     // Generate branch name from task ID
     const branchName = `dev-agent/${state.taskId}`;

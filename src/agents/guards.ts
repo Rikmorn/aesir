@@ -15,8 +15,8 @@
  * early termination via the runner when building custom graphs.
  */
 
+import { AIMessage, type BaseMessage } from "@langchain/core/messages";
 import { END } from "@langchain/langgraph";
-import { AIMessage, BaseMessage } from "@langchain/core/messages";
 import { logger } from "../logging/index.js";
 
 /**
@@ -97,7 +97,7 @@ export function incrementLoopCount(state: { loopCount: number }): {
  */
 export function hasExceededLimit(
   state: { loopCount: number },
-  maxIterations: number
+  maxIterations: number,
 ): boolean {
   return state.loopCount >= maxIterations;
 }

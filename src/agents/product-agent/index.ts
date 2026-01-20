@@ -32,62 +32,57 @@
 
 // Graph factory and routing
 export {
+  type AfterAnalysisRoute,
   createProductAgentGraph,
-  routeAfterAnalysis,
   type ProductAgentGraph,
   type ProductAgentGraphOptions,
-  type AfterAnalysisRoute,
+  routeAfterAnalysis,
 } from "./graph.js";
 
 // Conversation nodes
 export {
-  analyzeRequirementsNode,
-  generateClarificationNode,
-  createTasksNode,
-  RequirementAnalysisSchema,
-  TaskListSchema,
-  type RequirementAnalysis,
-  type TaskList,
-  type GeneratedTask,
   type AnalyzeRequirementsNodeOptions,
-  type GenerateClarificationNodeOptions,
+  analyzeRequirementsNode,
   type CreateTasksNodeOptions,
+  createTasksNode,
+  type GenerateClarificationNodeOptions,
+  type GeneratedTask,
+  generateClarificationNode,
+  type RequirementAnalysis,
+  RequirementAnalysisSchema,
+  type TaskList,
+  TaskListSchema,
 } from "./nodes/index.js";
 
 // Prompts
 export {
   ANALYZE_REQUIREMENTS_PROMPT,
-  GENERATE_CLARIFICATION_PROMPT,
   CREATE_TASKS_PROMPT,
+  GENERATE_CLARIFICATION_PROMPT,
 } from "./prompts.js";
-
-// State schema and types
-export {
-  ProductAgentStateAnnotation,
-  hasMinimumRequirements,
-  createProductAgentInitialState,
-  DEFAULT_REQUIREMENTS,
-  type ProductAgentState,
-  type ProductAgentStateUpdate,
-  type ProductAgentPhase,
-  type Requirements,
-  type SlackContext,
-  type CreatedTask,
-} from "./state.js";
-
-// Zod schemas for validation
-export {
-  RequirementsSchema,
-  ProductAgentPhaseSchema,
-  SlackContextSchema,
-  CreatedTaskSchema,
-  ProductAgentStateSchema,
-} from "./state.js";
-
 // Runner for Slack integration
 export {
-  runProductAgent,
   type RunProductAgentInput,
-  type RunProductAgentOutput,
   type RunProductAgentOptions,
+  type RunProductAgentOutput,
+  runProductAgent,
 } from "./runner.js";
+// State schema and types
+// Zod schemas for validation
+export {
+  type CreatedTask,
+  CreatedTaskSchema,
+  createProductAgentInitialState,
+  DEFAULT_REQUIREMENTS,
+  hasMinimumRequirements,
+  type ProductAgentPhase,
+  ProductAgentPhaseSchema,
+  type ProductAgentState,
+  ProductAgentStateAnnotation,
+  ProductAgentStateSchema,
+  type ProductAgentStateUpdate,
+  type Requirements,
+  RequirementsSchema,
+  type SlackContext,
+  SlackContextSchema,
+} from "./state.js";

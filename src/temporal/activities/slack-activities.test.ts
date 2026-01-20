@@ -5,16 +5,16 @@
  * Mocks sendApprovalRequest and sendStatusUpdate.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  sendApprovalRequestActivity,
-  sendStatusUpdateActivity,
-} from "./slack-activities.js";
 import type { WebClient } from "@slack/web-api";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   ApprovalNotification,
   StatusNotification,
 } from "../../integrations/slack/types.js";
+import {
+  sendApprovalRequestActivity,
+  sendStatusUpdateActivity,
+} from "./slack-activities.js";
 
 // Mock the notifications module
 vi.mock("../../integrations/slack/notifications.js", () => ({
@@ -54,7 +54,7 @@ describe("sendApprovalRequestActivity", () => {
     expect(sendApprovalRequest).toHaveBeenCalledWith(
       mockClient,
       notification,
-      "C12345678"
+      "C12345678",
     );
   });
 
@@ -75,7 +75,7 @@ describe("sendApprovalRequestActivity", () => {
     const result = await sendApprovalRequestActivity(
       mockClient,
       notification,
-      "C12345678"
+      "C12345678",
     );
 
     expect(result).toEqual({
@@ -101,7 +101,7 @@ describe("sendApprovalRequestActivity", () => {
     const result = await sendApprovalRequestActivity(
       mockClient,
       notification,
-      "invalid"
+      "invalid",
     );
 
     expect(result.success).toBe(false);
@@ -134,7 +134,7 @@ describe("sendStatusUpdateActivity", () => {
     expect(sendStatusUpdate).toHaveBeenCalledWith(
       mockClient,
       notification,
-      "C98765432"
+      "C98765432",
     );
   });
 
@@ -154,7 +154,7 @@ describe("sendStatusUpdateActivity", () => {
     const result = await sendStatusUpdateActivity(
       mockClient,
       notification,
-      "C98765432"
+      "C98765432",
     );
 
     expect(result).toEqual({
@@ -185,7 +185,7 @@ describe("sendStatusUpdateActivity", () => {
       expect(sendStatusUpdate).toHaveBeenCalledWith(
         mockClient,
         notification,
-        "C12345"
+        "C12345",
       );
     }
   });

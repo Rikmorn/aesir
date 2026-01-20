@@ -5,10 +5,10 @@
  * Verifies that status is configurable (not hardcoded).
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { updateLinearStatusActivity } from "./linear-activities.js";
 import type { LinearClient } from "@linear/sdk";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IssueStatus } from "../../integrations/linear/types.js";
+import { updateLinearStatusActivity } from "./linear-activities.js";
 
 // Mock the Linear client module
 vi.mock("../../integrations/linear/client.js", () => ({
@@ -33,7 +33,7 @@ describe("updateLinearStatusActivity", () => {
     expect(updateIssueStatus).toHaveBeenCalledWith(
       mockClient,
       "TASK-123",
-      "Done"
+      "Done",
     );
   });
 
@@ -46,14 +46,19 @@ describe("updateLinearStatusActivity", () => {
     expect(updateIssueStatus).toHaveBeenCalledWith(
       mockClient,
       "TASK-456",
-      "In Progress"
+      "In Progress",
     );
   });
 
   it("supports all standard issue statuses", async () => {
     vi.mocked(updateIssueStatus).mockResolvedValue();
 
-    const statuses: IssueStatus[] = ["Ready", "In Progress", "Done", "Canceled"];
+    const statuses: IssueStatus[] = [
+      "Ready",
+      "In Progress",
+      "Done",
+      "Canceled",
+    ];
 
     for (const status of statuses) {
       vi.clearAllMocks();
@@ -63,7 +68,7 @@ describe("updateLinearStatusActivity", () => {
       expect(updateIssueStatus).toHaveBeenCalledWith(
         mockClient,
         `TASK-${status}`,
-        status
+        status,
       );
     }
   });
@@ -73,19 +78,19 @@ describe("updateLinearStatusActivity", () => {
     vi.mocked(updateIssueStatus).mockRejectedValue(error);
 
     await expect(
-      updateLinearStatusActivity(mockClient, "TASK-999", "Done")
+      updateLinearStatusActivity(mockClient, "TASK-999", "Done"),
     ).rejects.toThrow("Issue not found: TASK-999");
   });
 
   it("propagates errors for invalid status", async () => {
     const error = new Error(
-      'State "Invalid" not found for team. Available states: Todo, In Progress, Done, Canceled'
+      'State "Invalid" not found for team. Available states: Todo, In Progress, Done, Canceled',
     );
     vi.mocked(updateIssueStatus).mockRejectedValue(error);
 
     await expect(
       // @ts-expect-error - Testing with invalid status
-      updateLinearStatusActivity(mockClient, "TASK-123", "Invalid")
+      updateLinearStatusActivity(mockClient, "TASK-123", "Invalid"),
     ).rejects.toThrow('State "Invalid" not found');
   });
 });

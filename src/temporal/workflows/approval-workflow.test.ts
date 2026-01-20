@@ -8,12 +8,12 @@
  * will be added when Temporal test server is available in CI.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type {
+  ApprovalQueryStatus,
   ApprovalWorkflowInput,
   ApprovalWorkflowResult,
-  ApprovalQueryStatus,
 } from "./approval-workflow.js";
 
 describe("prApprovalWorkflow", () => {

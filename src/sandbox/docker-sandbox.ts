@@ -5,27 +5,27 @@
  * Uses Dockerode for container management.
  */
 
-import Docker from "dockerode"
-import type { Container } from "dockerode"
-import * as tar from "tar-stream"
-import * as path from "path"
-import { createLogger, type Logger } from "../logging/logger.js"
-import type { Sandbox, ExecutionResult, TestResult } from "./types.js"
+import * as path from "node:path";
+import type { Container } from "dockerode";
+import Docker from "dockerode";
+import * as tar from "tar-stream";
+import { createLogger, type Logger } from "../logging/logger.js";
+import type { ExecutionResult, Sandbox, TestResult } from "./types.js";
 
 /**
  * Configuration options for DockerSandbox
  */
 export interface DockerSandboxOptions {
   /** Docker image to use (default: 'node:20-slim') */
-  image?: string
+  image?: string;
   /** Memory limit in bytes (default: 512MB) */
-  memoryLimit?: number
+  memoryLimit?: number;
   /** CPU quota (default: 50000 = 50%) */
-  cpuQuota?: number
+  cpuQuota?: number;
   /** Docker client instance (for testing) */
-  docker?: Docker
+  docker?: Docker;
   /** Logger instance (optional) */
-  logger?: Logger
+  logger?: Logger;
 }
 
 /**
@@ -36,7 +36,7 @@ const DEFAULTS = {
   memoryLimit: 512 * 1024 * 1024, // 512MB
   cpuQuota: 50000, // 50% CPU
   stopTimeout: 10, // 10 seconds graceful shutdown
-} as const
+} as const;
 
 /**
  * DockerSandbox provides isolated code execution in Docker containers.
@@ -56,13 +56,13 @@ const DEFAULTS = {
  * ```
  */
 export class DockerSandbox implements Sandbox {
-  private readonly container: Container
-  private readonly logger: Logger
-  private isCleanedUp = false
+  private readonly container: Container;
+  private readonly logger: Logger;
+  private isCleanedUp = false;
 
   private constructor(container: Container, logger: Logger) {
-    this.container = container
-    this.logger = logger
+    this.container = container;
+    this.logger = logger;
   }
 
   /**
@@ -71,15 +71,21 @@ export class DockerSandbox implements Sandbox {
    * This is the preferred way to create a sandbox as it handles
    * container creation and startup asynchronously.
    */
-  static async create(options: DockerSandboxOptions = {}): Promise<DockerSandbox> {
-    const docker = options.docker ?? new Docker()
-    const logger = options.logger ?? createLogger({ defaultContext: { component: "DockerSandbox" } })
+  static async create(
+    options: DockerSandboxOptions = {},
+  ): Promise<DockerSandbox> {
+    const docker = options.docker ?? new Docker();
+    const logger =
+      options.logger ??
+      createLogger({ defaultContext: { component: "DockerSandbox" } });
 
-    const image = options.image ?? DEFAULTS.image
-    const memoryLimit = options.memoryLimit ?? DEFAULTS.memoryLimit
-    const cpuQuota = options.cpuQuota ?? DEFAULTS.cpuQuota
+    const image = options.image ?? DEFAULTS.image;
+    const memoryLimit = options.memoryLimit ?? DEFAULTS.memoryLimit;
+    const cpuQuota = options.cpuQuota ?? DEFAULTS.cpuQuota;
 
-    logger.info("container_create", { message: `Creating container with image ${image}` })
+    logger.info("container_create", {
+      message: `Creating container with image ${image}`,
+    });
 
     const container = await docker.createContainer({
       Image: image,
@@ -90,12 +96,15 @@ export class DockerSandbox implements Sandbox {
         Memory: memoryLimit,
         CpuQuota: cpuQuota,
       },
-    })
+    });
 
-    await container.start()
-    logger.info("container_start", { message: `Container ${container.id.slice(0, 12)} started`, outcome: "success" })
+    await container.start();
+    logger.info("container_start", {
+      message: `Container ${container.id.slice(0, 12)} started`,
+      outcome: "success",
+    });
 
-    return new DockerSandbox(container, logger)
+    return new DockerSandbox(container, logger);
   }
 
   /**
@@ -106,12 +115,12 @@ export class DockerSandbox implements Sandbox {
    */
   async execute(command: string[]): Promise<ExecutionResult> {
     if (this.isCleanedUp) {
-      throw new Error("Sandbox has been cleaned up")
+      throw new Error("Sandbox has been cleaned up");
     }
 
     const timedLog = this.logger.startTimer("container_exec", {
       context: { command: command.join(" ") },
-    })
+    });
 
     try {
       const exec = await this.container.exec({
@@ -119,42 +128,42 @@ export class DockerSandbox implements Sandbox {
         AttachStdout: true,
         AttachStderr: true,
         Tty: false, // Required for demuxing
-      })
+      });
 
-      const stream = await exec.start({ Detach: false })
+      const stream = await exec.start({ Detach: false });
 
       const result = await new Promise<ExecutionResult>((resolve, reject) => {
-        const stdout: string[] = []
-        const stderr: string[] = []
+        const stdout: string[] = [];
+        const stderr: string[] = [];
 
         // Demux stdout/stderr when Tty: false
         this.container.modem.demuxStream(
           stream,
           { write: (chunk: Buffer) => stdout.push(chunk.toString()) },
-          { write: (chunk: Buffer) => stderr.push(chunk.toString()) }
-        )
+          { write: (chunk: Buffer) => stderr.push(chunk.toString()) },
+        );
 
         stream.on("end", async () => {
           try {
-            const inspect = await exec.inspect()
+            const inspect = await exec.inspect();
             resolve({
               exitCode: inspect.ExitCode ?? 1,
               stdout: stdout.join(""),
               stderr: stderr.join(""),
-            })
+            });
           } catch (err) {
-            reject(err)
+            reject(err);
           }
-        })
+        });
 
-        stream.on("error", reject)
-      })
+        stream.on("error", reject);
+      });
 
-      timedLog.success({ context: { exitCode: result.exitCode } })
-      return result
+      timedLog.success({ context: { exitCode: result.exitCode } });
+      return result;
     } catch (error) {
-      timedLog.failure({ message: String(error) })
-      throw error
+      timedLog.failure({ message: String(error) });
+      throw error;
     }
   }
 
@@ -168,29 +177,29 @@ export class DockerSandbox implements Sandbox {
    */
   async writeFile(filePath: string, content: string): Promise<void> {
     if (this.isCleanedUp) {
-      throw new Error("Sandbox has been cleaned up")
+      throw new Error("Sandbox has been cleaned up");
     }
 
     const timedLog = this.logger.startTimer("file_write", {
       context: { path: filePath },
-    })
+    });
 
     try {
-      const fileName = path.basename(filePath)
-      const dirName = path.dirname(filePath)
+      const fileName = path.basename(filePath);
+      const dirName = path.dirname(filePath);
 
       // Create tar archive with single file
-      const pack = tar.pack()
-      pack.entry({ name: fileName }, content)
-      pack.finalize()
+      const pack = tar.pack();
+      pack.entry({ name: fileName }, content);
+      pack.finalize();
 
       // Write tar archive to container
-      await this.container.putArchive(pack, { path: dirName })
+      await this.container.putArchive(pack, { path: dirName });
 
-      timedLog.success()
+      timedLog.success();
     } catch (error) {
-      timedLog.failure({ message: String(error) })
-      throw error
+      timedLog.failure({ message: String(error) });
+      throw error;
     }
   }
 
@@ -206,24 +215,24 @@ export class DockerSandbox implements Sandbox {
    */
   async readFile(filePath: string): Promise<string> {
     if (this.isCleanedUp) {
-      throw new Error("Sandbox has been cleaned up")
+      throw new Error("Sandbox has been cleaned up");
     }
 
     const timedLog = this.logger.startTimer("file_read", {
       context: { path: filePath },
-    })
+    });
 
     try {
-      const stream = await this.container.getArchive({ path: filePath })
+      const stream = await this.container.getArchive({ path: filePath });
 
       // Extract file content from tar stream
-      const content = await this.extractFileFromTar(stream)
+      const content = await this.extractFileFromTar(stream);
 
-      timedLog.success()
-      return content
+      timedLog.success();
+      return content;
     } catch (error) {
-      timedLog.failure({ message: String(error) })
-      throw error
+      timedLog.failure({ message: String(error) });
+      throw error;
     }
   }
 
@@ -231,26 +240,28 @@ export class DockerSandbox implements Sandbox {
    * Extract file content from a tar stream.
    * @internal
    */
-  private extractFileFromTar(tarStream: NodeJS.ReadableStream): Promise<string> {
+  private extractFileFromTar(
+    tarStream: NodeJS.ReadableStream,
+  ): Promise<string> {
     return new Promise((resolve, reject) => {
-      const extract = tar.extract()
-      const chunks: Buffer[] = []
+      const extract = tar.extract();
+      const chunks: Buffer[] = [];
 
       extract.on("entry", (_header, stream, next) => {
-        stream.on("data", (chunk: Buffer) => chunks.push(chunk))
-        stream.on("end", next)
-        stream.resume()
-      })
+        stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+        stream.on("end", next);
+        stream.resume();
+      });
 
       extract.on("finish", () => {
-        resolve(Buffer.concat(chunks).toString("utf-8"))
-      })
+        resolve(Buffer.concat(chunks).toString("utf-8"));
+      });
 
-      extract.on("error", reject)
-      tarStream.on("error", reject)
+      extract.on("error", reject);
+      tarStream.on("error", reject);
 
-      tarStream.pipe(extract)
-    })
+      tarStream.pipe(extract);
+    });
   }
 
   /**
@@ -263,7 +274,7 @@ export class DockerSandbox implements Sandbox {
    * @returns TestResult with passed boolean and summary
    */
   async runTests(command: string[]): Promise<TestResult> {
-    const result = await this.execute(command)
+    const result = await this.execute(command);
 
     return {
       ...result,
@@ -272,7 +283,7 @@ export class DockerSandbox implements Sandbox {
         result.exitCode === 0
           ? "All tests passed"
           : `Tests failed with exit code ${result.exitCode}`,
-    }
+    };
   }
 
   /**
@@ -283,28 +294,28 @@ export class DockerSandbox implements Sandbox {
    */
   async cleanup(): Promise<void> {
     if (this.isCleanedUp) {
-      return
+      return;
     }
 
     const timedLog = this.logger.startTimer("container_cleanup", {
       context: { containerId: this.container.id.slice(0, 12) },
-    })
+    });
 
     try {
       // Try graceful stop first
       try {
-        await this.container.stop({ t: DEFAULTS.stopTimeout })
+        await this.container.stop({ t: DEFAULTS.stopTimeout });
       } catch {
         // Force kill if graceful stop fails
-        await this.container.kill()
+        await this.container.kill();
       }
 
-      await this.container.remove()
-      this.isCleanedUp = true
-      timedLog.success()
+      await this.container.remove();
+      this.isCleanedUp = true;
+      timedLog.success();
     } catch (error) {
-      timedLog.failure({ message: String(error) })
-      throw error
+      timedLog.failure({ message: String(error) });
+      throw error;
     }
   }
 }

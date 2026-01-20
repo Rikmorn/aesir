@@ -12,10 +12,10 @@
  * - Tracks call count for verification
  */
 
-import { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import { AIMessage, BaseMessage } from "@langchain/core/messages";
-import type { ChatResult } from "@langchain/core/outputs";
 import type { CallbackManagerForLLMRun } from "@langchain/core/callbacks/manager";
+import { BaseChatModel } from "@langchain/core/language_models/chat_models";
+import { AIMessage, type BaseMessage } from "@langchain/core/messages";
+import type { ChatResult } from "@langchain/core/outputs";
 
 /**
  * Options for configuring the mock LLM behavior
@@ -64,7 +64,7 @@ export class MockChatModel extends BaseChatModel {
   async _generate(
     _messages: BaseMessage[],
     _options?: this["ParsedCallOptions"],
-    _runManager?: CallbackManagerForLLMRun
+    _runManager?: CallbackManagerForLLMRun,
   ): Promise<ChatResult> {
     // Apply delay if configured (for timeout testing)
     if (this.delayMs > 0) {
@@ -105,7 +105,7 @@ export class MockChatModel extends BaseChatModel {
     // Return predetermined response (cycles through if more calls than responses)
     const responseIndex = Math.min(
       this.callCount - 1,
-      this.responses.length - 1
+      this.responses.length - 1,
     );
     const response = this.responses[responseIndex] ?? "Done.";
     return {
@@ -138,7 +138,9 @@ export class MockChatModel extends BaseChatModel {
 /**
  * Create a mock LLM that returns a simple completion
  */
-export function createCompletionMock(response: string = "Done."): MockChatModel {
+export function createCompletionMock(
+  response: string = "Done.",
+): MockChatModel {
   return new MockChatModel({ responses: [response] });
 }
 

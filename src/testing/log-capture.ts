@@ -100,7 +100,7 @@ export class LogCapture {
    */
   getByActionWithContext(
     action: string,
-    contextMatch: Partial<LogEntry["context"]>
+    contextMatch: Partial<LogEntry["context"]>,
   ): CapturedLog[] {
     return this.logs.filter((log) => {
       if (log.action !== action) return false;
@@ -123,7 +123,7 @@ export class LogCapture {
       level: LogLevel;
       outcome: LogEntry["outcome"];
       threadId: string;
-    }>
+    }>,
   ): CapturedLog {
     const match = this.logs.find((log) => {
       if (criteria.action && log.action !== criteria.action) return false;
@@ -140,7 +140,7 @@ export class LogCapture {
         .map((l) => `  ${l.action} (${l.level})`)
         .join("\n");
       throw new Error(
-        `No log matching ${criteriaStr} found.\nAvailable logs:\n${availableLogs || "  (none)"}`
+        `No log matching ${criteriaStr} found.\nAvailable logs:\n${availableLogs || "  (none)"}`,
       );
     }
 

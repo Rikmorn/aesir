@@ -88,17 +88,11 @@ const envSchema = z.object({
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  console.error("\n[ERROR] Environment validation failed:\n");
-
   const fieldErrors = parsed.error.flatten().fieldErrors;
-  for (const [field, errors] of Object.entries(fieldErrors)) {
+  for (const [_field, errors] of Object.entries(fieldErrors)) {
     if (errors && errors.length > 0) {
-      console.error(`   - ${field}: ${errors.join(", ")}`);
     }
   }
-
-  console.error("\nCheck your .env.local file or environment variables.");
-  console.error("See .env.example for required variables.\n");
   process.exit(1);
 }
 

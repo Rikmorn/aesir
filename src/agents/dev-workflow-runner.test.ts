@@ -2,9 +2,12 @@
  * Tests for Dev Workflow Runner
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { runDevWorkflow, type DevWorkflowDependencies } from "./dev-workflow-runner.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_DEV_WORKFLOW_CONFIG } from "../state/dev-workflow-state.js";
+import {
+  type DevWorkflowDependencies,
+  runDevWorkflow,
+} from "./dev-workflow-runner.js";
 
 // Mock the dev-workflow module
 vi.mock("./dev-workflow.js", () => ({
@@ -60,8 +63,8 @@ vi.mock("./tracing/index.js", () => ({
   })),
 }));
 
+import { emitError, updateIssueStatus } from "../integrations/linear/index.js";
 import { createDevWorkflow } from "./dev-workflow.js";
-import { updateIssueStatus, emitError } from "../integrations/linear/index.js";
 
 const mockCreateDevWorkflow = vi.mocked(createDevWorkflow);
 const mockUpdateIssueStatus = vi.mocked(updateIssueStatus);
@@ -101,7 +104,9 @@ describe("runDevWorkflow", () => {
         taskId: "ABC-123",
       }),
     };
-    mockCreateDevWorkflow.mockReturnValue(mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>);
+    mockCreateDevWorkflow.mockReturnValue(
+      mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>,
+    );
 
     const result = await runDevWorkflow("ABC-123", "session-abc", mockDeps);
 
@@ -117,7 +122,9 @@ describe("runDevWorkflow", () => {
         taskId: "ABC-123",
       }),
     };
-    mockCreateDevWorkflow.mockReturnValue(mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>);
+    mockCreateDevWorkflow.mockReturnValue(
+      mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>,
+    );
 
     await runDevWorkflow("ABC-123", "session-abc", mockDeps);
 
@@ -128,7 +135,9 @@ describe("runDevWorkflow", () => {
     const mockWorkflow = {
       invoke: vi.fn().mockRejectedValue(new Error("Workflow failed")),
     };
-    mockCreateDevWorkflow.mockReturnValue(mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>);
+    mockCreateDevWorkflow.mockReturnValue(
+      mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>,
+    );
     mockUpdateIssueStatus.mockResolvedValue(undefined);
     mockEmitError.mockResolvedValue(undefined);
 
@@ -141,7 +150,9 @@ describe("runDevWorkflow", () => {
     const mockWorkflow = {
       invoke: vi.fn().mockRejectedValue(new Error("Test error")),
     };
-    mockCreateDevWorkflow.mockReturnValue(mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>);
+    mockCreateDevWorkflow.mockReturnValue(
+      mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>,
+    );
     mockUpdateIssueStatus.mockResolvedValue(undefined);
     mockEmitError.mockResolvedValue(undefined);
 
@@ -150,12 +161,12 @@ describe("runDevWorkflow", () => {
     expect(mockUpdateIssueStatus).toHaveBeenCalledWith(
       mockLinearClient,
       "ABC-123",
-      "Todo"
+      "Todo",
     );
     expect(mockEmitError).toHaveBeenCalledWith(
       mockLinearClient,
       "ABC-123",
-      "Dev workflow failed: Test error"
+      "Dev workflow failed: Test error",
     );
   });
 
@@ -163,7 +174,9 @@ describe("runDevWorkflow", () => {
     const mockWorkflow = {
       invoke: vi.fn().mockRejectedValue(new Error("Test error")),
     };
-    mockCreateDevWorkflow.mockReturnValue(mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>);
+    mockCreateDevWorkflow.mockReturnValue(
+      mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>,
+    );
     mockUpdateIssueStatus.mockResolvedValue(undefined);
     mockEmitError.mockResolvedValue(undefined);
 
@@ -182,9 +195,14 @@ describe("runDevWorkflow", () => {
         taskId: "ABC-123",
       }),
     };
-    mockCreateDevWorkflow.mockReturnValue(mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>);
+    mockCreateDevWorkflow.mockReturnValue(
+      mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>,
+    );
 
-    const customConfig = { ...DEFAULT_DEV_WORKFLOW_CONFIG, recursionLimit: 100 };
+    const customConfig = {
+      ...DEFAULT_DEV_WORKFLOW_CONFIG,
+      recursionLimit: 100,
+    };
     await runDevWorkflow("ABC-123", "session-abc", mockDeps, customConfig);
 
     expect(mockWorkflow.invoke).toHaveBeenCalledWith(
@@ -193,7 +211,7 @@ describe("runDevWorkflow", () => {
         configurable: { thread_id: "ABC-123" },
         recursionLimit: 100,
         callbacks: expect.any(Array),
-      }
+      },
     );
   });
 
@@ -204,7 +222,9 @@ describe("runDevWorkflow", () => {
         taskId: "ABC-123",
       }),
     };
-    mockCreateDevWorkflow.mockReturnValue(mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>);
+    mockCreateDevWorkflow.mockReturnValue(
+      mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>,
+    );
 
     const result = await runDevWorkflow("ABC-123", "session-abc", mockDeps);
 
@@ -216,7 +236,9 @@ describe("runDevWorkflow", () => {
     const mockWorkflow = {
       invoke: vi.fn().mockRejectedValue(new Error("Workflow error")),
     };
-    mockCreateDevWorkflow.mockReturnValue(mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>);
+    mockCreateDevWorkflow.mockReturnValue(
+      mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>,
+    );
     mockUpdateIssueStatus.mockRejectedValue(new Error("Linear API error"));
 
     // Should not throw, just log the warning
@@ -235,8 +257,12 @@ describe("runDevWorkflow", () => {
         taskId: "ABC-123",
       }),
     };
-    mockCreateDevWorkflow.mockReturnValue(mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>);
-    (mockSandbox.cleanup as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("Cleanup failed"));
+    mockCreateDevWorkflow.mockReturnValue(
+      mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>,
+    );
+    (mockSandbox.cleanup as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error("Cleanup failed"),
+    );
 
     // Should not throw, just log the error
     const result = await runDevWorkflow("ABC-123", "session-abc", mockDeps);
@@ -253,7 +279,9 @@ describe("runDevWorkflow", () => {
         taskId: "ABC-123",
       }),
     };
-    mockCreateDevWorkflow.mockReturnValue(mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>);
+    mockCreateDevWorkflow.mockReturnValue(
+      mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>,
+    );
 
     await runDevWorkflow("ABC-123", "session-abc", mockDeps);
 
@@ -270,7 +298,9 @@ describe("runDevWorkflow", () => {
         taskId: "ABC-123",
       }),
     };
-    mockCreateDevWorkflow.mockReturnValue(mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>);
+    mockCreateDevWorkflow.mockReturnValue(
+      mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>,
+    );
 
     const customConfig = {
       ...DEFAULT_DEV_WORKFLOW_CONFIG,

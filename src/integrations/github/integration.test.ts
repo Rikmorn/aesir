@@ -5,15 +5,15 @@
  * Tests that all components work together correctly.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Octokit } from "@octokit/rest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  addPRComment,
   createBranch,
   createCommit,
   createPullRequest,
   getPullRequest,
   listPRComments,
-  addPRComment,
 } from "./index.js";
 
 // Create a fully mocked Octokit instance for integration testing
@@ -90,7 +90,11 @@ describe("GitHub Integration - Complete Branch to PR Workflow", () => {
         sha: "main-sha-abc123",
         tree: { sha: "base-tree-sha" },
         message: "Initial commit",
-        author: { name: "Test", email: "test@test.com", date: "2026-01-15T00:00:00Z" },
+        author: {
+          name: "Test",
+          email: "test@test.com",
+          date: "2026-01-15T00:00:00Z",
+        },
       },
     } as never);
 
@@ -102,12 +106,19 @@ describe("GitHub Integration - Complete Branch to PR Workflow", () => {
       data: {
         sha: "new-commit-sha-def456",
         message: "Add login feature",
-        author: { name: "Agent", email: "agent@example.com", date: "2026-01-16T10:00:00Z" },
+        author: {
+          name: "Agent",
+          email: "agent@example.com",
+          date: "2026-01-16T10:00:00Z",
+        },
       },
     } as never);
 
     vi.mocked(mockOctokit.rest.git.updateRef).mockResolvedValue({
-      data: { ref: "refs/heads/feature/test", object: { sha: "new-commit-sha-def456" } },
+      data: {
+        ref: "refs/heads/feature/test",
+        object: { sha: "new-commit-sha-def456" },
+      },
     } as never);
 
     // 3. createPullRequest needs pulls.create
@@ -156,8 +167,18 @@ describe("GitHub Integration - Complete Branch to PR Workflow", () => {
       repo,
       base_tree: "base-tree-sha",
       tree: [
-        { path: "src/auth/login.ts", mode: "100644", type: "blob", content: "export function login() {}" },
-        { path: "src/auth/login.test.ts", mode: "100644", type: "blob", content: "test('login', () => {})" },
+        {
+          path: "src/auth/login.ts",
+          mode: "100644",
+          type: "blob",
+          content: "export function login() {}",
+        },
+        {
+          path: "src/auth/login.test.ts",
+          mode: "100644",
+          type: "blob",
+          content: "test('login', () => {})",
+        },
       ],
     });
 
@@ -243,10 +264,10 @@ describe("GitHub Integration - Complete Branch to PR Workflow", () => {
     const comments = await listPRComments(mockOctokit, owner, repo, 123);
 
     expect(comments).toHaveLength(2);
-    expect(comments[0]!.body).toBe("This line could be simplified");
-    expect(comments[0]!.path).toBe("src/parser.ts"); // Review comment has path
-    expect(comments[1]!.body).toBe("Please also add tests");
-    expect(comments[1]!.path).toBeUndefined(); // Issue comment has no path
+    expect(comments[0]?.body).toBe("This line could be simplified");
+    expect(comments[0]?.path).toBe("src/parser.ts"); // Review comment has path
+    expect(comments[1]?.body).toBe("Please also add tests");
+    expect(comments[1]?.path).toBeUndefined(); // Issue comment has no path
 
     // Step 3: Respond to feedback
     const response = await addPRComment(
@@ -254,7 +275,7 @@ describe("GitHub Integration - Complete Branch to PR Workflow", () => {
       owner,
       repo,
       123,
-      "Thanks for the feedback! I'll simplify that line and add tests."
+      "Thanks for the feedback! I'll simplify that line and add tests.",
     );
 
     expect(response.id).toBe(200);

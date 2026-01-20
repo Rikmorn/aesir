@@ -5,12 +5,17 @@
  * Translates PR review actions into Temporal workflow signals.
  */
 
-import * as crypto from "crypto";
+import * as crypto from "node:crypto";
 
 import { createLogger } from "../../logging/logger.js";
-import { sendApprovalSignal, sendChangesRequestedSignal } from "../../temporal/client.js";
+import {
+  sendApprovalSignal,
+  sendChangesRequestedSignal,
+} from "../../temporal/client.js";
 
-const logger = createLogger({ defaultContext: { module: "github-pr-review-webhook" } });
+const logger = createLogger({
+  defaultContext: { module: "github-pr-review-webhook" },
+});
 
 /**
  * GitHub pull_request_review event payload (relevant fields)
@@ -48,9 +53,13 @@ export interface PRReviewEvent {
  * @param secret - Webhook secret configured in GitHub
  * @returns true if signature is valid
  */
-export function verifyWebhookSignature(payload: string, signature: string, secret: string): boolean {
+export function verifyWebhookSignature(
+  payload: string,
+  signature: string,
+  secret: string,
+): boolean {
   const hmac = crypto.createHmac("sha256", secret);
-  const digest = "sha256=" + hmac.update(payload).digest("hex");
+  const digest = `sha256=${hmac.update(payload).digest("hex")}`;
 
   // Use timing-safe comparison to prevent timing attacks
   try {
@@ -70,7 +79,10 @@ export function verifyWebhookSignature(payload: string, signature: string, secre
  * @param pr - Pull request data with title and body
  * @returns Task ID if found, null otherwise
  */
-export function extractTaskId(pr: { title: string; body: string | null | undefined }): string | null {
+export function extractTaskId(pr: {
+  title: string;
+  body: string | null | undefined;
+}): string | null {
   // Look for Linear task ID pattern (e.g., ABC-123, PROJ-42)
   const patterns = [
     /Task:\s*([A-Z]+-\d+)/i, // "Task: ABC-123"
@@ -82,7 +94,7 @@ export function extractTaskId(pr: { title: string; body: string | null | undefin
 
   for (const pattern of patterns) {
     const match = textToSearch.match(pattern);
-    if (match && match[1]) {
+    if (match?.[1]) {
       return match[1];
     }
   }
@@ -126,7 +138,9 @@ export interface HandlePRReviewResult {
  * @param event - GitHub webhook event payload
  * @returns Result indicating what action was taken
  */
-export async function handlePRReviewEvent(event: PRReviewEvent): Promise<HandlePRReviewResult> {
+export async function handlePRReviewEvent(
+  event: PRReviewEvent,
+): Promise<HandlePRReviewResult> {
   // Only handle 'submitted' action
   if (event.action !== "submitted") {
     logger.debug("github_pr_review_ignored", {
@@ -238,10 +252,10 @@ export interface WebhookResponse {
  */
 export async function prReviewWebhookHandler(
   req: WebhookRequest,
-  res: WebhookResponse
+  res: WebhookResponse,
 ): Promise<void> {
   const signature = req.headers["x-hub-signature-256"];
-  const webhookSecret = process.env["GITHUB_WEBHOOK_SECRET"];
+  const webhookSecret = process.env.GITHUB_WEBHOOK_SECRET;
 
   // Verify signature if secret is configured
   if (webhookSecret && signature) {

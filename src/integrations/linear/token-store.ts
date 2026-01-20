@@ -8,7 +8,7 @@
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import * as path from "node:path";
-import { LinearClient } from "@linear/sdk";
+import type { LinearClient } from "@linear/sdk";
 import { createLinearClient } from "./client.js";
 import type { LinearConfig } from "./types.js";
 
@@ -21,7 +21,7 @@ export class TokenFileNotFoundError extends Error {
   constructor(tokenFile: string) {
     super(
       `Linear tokens not found at "${tokenFile}". ` +
-        `Run "npm run linear-oauth" to authorize and obtain tokens.`
+        `Run "npm run linear-oauth" to authorize and obtain tokens.`,
     );
     this.name = "TokenFileNotFoundError";
   }
@@ -46,7 +46,7 @@ export class InvalidTokenFileError extends Error {
  * @throws InvalidTokenFileError if file format is invalid
  */
 export async function loadLinearTokens(
-  tokenFile: string = DEFAULT_TOKEN_FILE
+  tokenFile: string = DEFAULT_TOKEN_FILE,
 ): Promise<LinearConfig> {
   let content: string;
 
@@ -73,23 +73,26 @@ export async function loadLinearTokens(
 
   const obj = data as Record<string, unknown>;
 
-  if (typeof obj["accessToken"] !== "string" || !obj["accessToken"]) {
-    throw new InvalidTokenFileError(tokenFile, "Missing or invalid accessToken");
+  if (typeof obj.accessToken !== "string" || !obj.accessToken) {
+    throw new InvalidTokenFileError(
+      tokenFile,
+      "Missing or invalid accessToken",
+    );
   }
 
   // refreshToken is optional - Linear may not return one depending on app config
-  if (typeof obj["expiresAt"] !== "number" || obj["expiresAt"] <= 0) {
+  if (typeof obj.expiresAt !== "number" || obj.expiresAt <= 0) {
     throw new InvalidTokenFileError(tokenFile, "Missing or invalid expiresAt");
   }
 
   // Build config object conditionally to satisfy exactOptionalPropertyTypes
   const config: LinearConfig = {
-    accessToken: obj["accessToken"],
-    expiresAt: obj["expiresAt"],
+    accessToken: obj.accessToken,
+    expiresAt: obj.expiresAt,
   };
 
-  if (typeof obj["refreshToken"] === "string" && obj["refreshToken"]) {
-    config.refreshToken = obj["refreshToken"];
+  if (typeof obj.refreshToken === "string" && obj.refreshToken) {
+    config.refreshToken = obj.refreshToken;
   }
 
   return config;
@@ -103,7 +106,7 @@ export async function loadLinearTokens(
  */
 export async function saveLinearTokens(
   config: LinearConfig,
-  tokenFile: string = DEFAULT_TOKEN_FILE
+  tokenFile: string = DEFAULT_TOKEN_FILE,
 ): Promise<void> {
   const data = {
     accessToken: config.accessToken,
@@ -113,7 +116,7 @@ export async function saveLinearTokens(
 
   // Ensure directory exists
   await mkdir(path.dirname(tokenFile), { recursive: true });
-  await writeFile(tokenFile, JSON.stringify(data, null, 2) + "\n", {
+  await writeFile(tokenFile, `${JSON.stringify(data, null, 2)}\n`, {
     mode: 0o600, // Restrictive permissions: owner read/write only
   });
 }
@@ -140,7 +143,7 @@ export async function saveLinearTokens(
  * ```
  */
 export async function createLinearClientFromFile(
-  tokenFile: string = DEFAULT_TOKEN_FILE
+  tokenFile: string = DEFAULT_TOKEN_FILE,
 ): Promise<LinearClient> {
   const config = await loadLinearTokens(tokenFile);
 

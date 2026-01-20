@@ -5,9 +5,9 @@
  * Mocks mergePullRequest to verify activity behavior.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { mergePRActivity, type MergePRInput } from "./github-activities.js";
 import type { Octokit } from "@octokit/rest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { type MergePRInput, mergePRActivity } from "./github-activities.js";
 
 // Mock the pull-requests module
 vi.mock("../../integrations/github/pull-requests.js", () => ({
@@ -43,7 +43,7 @@ describe("mergePRActivity", () => {
       "test-owner",
       "test-repo",
       42,
-      undefined
+      undefined,
     );
   });
 
@@ -67,7 +67,7 @@ describe("mergePRActivity", () => {
       "owner",
       "repo",
       99,
-      { mergeMethod: "rebase" }
+      { mergeMethod: "rebase" },
     );
   });
 
@@ -102,7 +102,7 @@ describe("mergePRActivity", () => {
     };
 
     await expect(mergePRActivity(mockOctokit, input)).rejects.toThrow(
-      "PR has merge conflicts"
+      "PR has merge conflicts",
     );
   });
 });

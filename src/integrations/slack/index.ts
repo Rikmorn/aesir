@@ -64,37 +64,34 @@
  * ```
  */
 
-// Types
-export type {
-  SlackConfig,
-  NotificationType,
-  ApprovalNotification,
-  StatusNotification,
-  Notification,
-  NotificationResult,
-  BoltAppConfig,
-} from "./types.js";
-
-// Client factory
-export { createSlackClient, getSlackClient } from "./client.js";
-
+// Product Agent event handlers
+export {
+  handleAppMention,
+  handleDirectMessage,
+  registerHandlers,
+  type ThreadHandlerOptions,
+} from "./assistant/index.js";
 // Bolt app lifecycle
 export { createBoltApp, startBoltApp, stopBoltApp } from "./bolt-app.js";
+// Client factory
+export { createSlackClient, getSlackClient } from "./client.js";
 
 // Notification functions
 export {
   formatApprovalMessage,
   formatStatusMessage,
+  openDmChannel,
   postNotification,
   sendApprovalRequest,
   sendStatusUpdate,
-  openDmChannel,
 } from "./notifications.js";
-
-// Product Agent event handlers
-export {
-  registerHandlers,
-  handleAppMention,
-  handleDirectMessage,
-  type ThreadHandlerOptions,
-} from "./assistant/index.js";
+// Types
+export type {
+  ApprovalNotification,
+  BoltAppConfig,
+  Notification,
+  NotificationResult,
+  NotificationType,
+  SlackConfig,
+  StatusNotification,
+} from "./types.js";

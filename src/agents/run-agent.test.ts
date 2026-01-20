@@ -8,8 +8,16 @@
  * - Structured result format
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
 import { GraphRecursionError } from "@langchain/langgraph";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type Mock,
+  vi,
+} from "vitest";
 
 // Mock the devAgent
 vi.mock("./dev-agent.js", () => ({
@@ -38,8 +46,8 @@ vi.mock("../logging/index.js", () => ({
   },
 }));
 
-import { runAgentWithGuardrails } from "./run-agent.js";
 import { devAgent } from "./dev-agent.js";
+import { runAgentWithGuardrails } from "./run-agent.js";
 
 // Type assertion for the mocked invoke function
 const mockInvoke = devAgent.invoke as Mock;
@@ -60,7 +68,7 @@ describe("runAgentWithGuardrails", () => {
 
       const result = await runAgentWithGuardrails(
         "Generate a hello world function",
-        "test-thread-1"
+        "test-thread-1",
       );
 
       expect(result.success).toBe(true);
@@ -79,7 +87,7 @@ describe("runAgentWithGuardrails", () => {
         expect.objectContaining({
           recursionLimit: 25,
           configurable: { thread_id: "test-thread-2" },
-        })
+        }),
       );
     });
 
@@ -92,7 +100,7 @@ describe("runAgentWithGuardrails", () => {
         expect.anything(),
         expect.objectContaining({
           signal: expect.any(AbortSignal),
-        })
+        }),
       );
     });
   });
@@ -100,13 +108,10 @@ describe("runAgentWithGuardrails", () => {
   describe("recursion limit handling", () => {
     it("should handle GraphRecursionError gracefully", async () => {
       mockInvoke.mockRejectedValueOnce(
-        new GraphRecursionError("Recursion limit exceeded")
+        new GraphRecursionError("Recursion limit exceeded"),
       );
 
-      const result = await runAgentWithGuardrails(
-        "Test task",
-        "test-thread-4"
-      );
+      const result = await runAgentWithGuardrails("Test task", "test-thread-4");
 
       expect(result.success).toBe(false);
       expect(result.terminationReason).toBe("recursion_limit");
@@ -125,7 +130,7 @@ describe("runAgentWithGuardrails", () => {
       const result = await runAgentWithGuardrails(
         "Test task",
         "test-thread-5",
-        1000 // Short timeout for test
+        1000, // Short timeout for test
       );
 
       expect(result.success).toBe(false);
@@ -140,7 +145,7 @@ describe("runAgentWithGuardrails", () => {
       const result = await runAgentWithGuardrails(
         "Test task",
         "test-thread-6",
-        60000 // 1 minute custom timeout
+        60000, // 1 minute custom timeout
       );
 
       expect(result.success).toBe(true);
@@ -149,14 +154,9 @@ describe("runAgentWithGuardrails", () => {
 
   describe("error handling", () => {
     it("should handle generic errors", async () => {
-      mockInvoke.mockRejectedValueOnce(
-        new Error("Something went wrong")
-      );
+      mockInvoke.mockRejectedValueOnce(new Error("Something went wrong"));
 
-      const result = await runAgentWithGuardrails(
-        "Test task",
-        "test-thread-7"
-      );
+      const result = await runAgentWithGuardrails("Test task", "test-thread-7");
 
       expect(result.success).toBe(false);
       expect(result.terminationReason).toBe("error");
@@ -167,10 +167,7 @@ describe("runAgentWithGuardrails", () => {
     it("should handle non-Error thrown values", async () => {
       mockInvoke.mockRejectedValueOnce("string error");
 
-      const result = await runAgentWithGuardrails(
-        "Test task",
-        "test-thread-8"
-      );
+      const result = await runAgentWithGuardrails("Test task", "test-thread-8");
 
       expect(result.success).toBe(false);
       expect(result.terminationReason).toBe("error");
@@ -191,9 +188,7 @@ describe("runAgentWithGuardrails", () => {
       expect(errorResult).toHaveProperty("terminationReason");
 
       // Recursion limit case
-      mockInvoke.mockRejectedValueOnce(
-        new GraphRecursionError("limit")
-      );
+      mockInvoke.mockRejectedValueOnce(new GraphRecursionError("limit"));
       const recursionResult = await runAgentWithGuardrails("Task", "thread-3");
       expect(recursionResult).toHaveProperty("terminationReason");
     });

@@ -12,8 +12,8 @@ import {
 } from "../../integrations/slack/notifications.js";
 import type {
   ApprovalNotification,
-  StatusNotification,
   NotificationResult,
+  StatusNotification,
 } from "../../integrations/slack/types.js";
 import { createLogger } from "../../logging/logger.js";
 
@@ -32,7 +32,7 @@ const logger = createLogger({
 export async function sendApprovalRequestActivity(
   client: WebClient,
   notification: ApprovalNotification,
-  channel: string
+  channel: string,
 ): Promise<NotificationResult> {
   logger.info("activity_slack_approval_request", {
     message: `Sending approval request for task ${notification.taskId}`,
@@ -53,7 +53,7 @@ export async function sendApprovalRequestActivity(
 export async function sendStatusUpdateActivity(
   client: WebClient,
   notification: StatusNotification,
-  channel: string
+  channel: string,
 ): Promise<NotificationResult> {
   logger.info("activity_slack_status_update", {
     message: `Sending status update for task ${notification.taskId}`,

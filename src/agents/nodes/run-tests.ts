@@ -11,13 +11,13 @@
  * - Updates testAttempts and status based on result
  */
 
+import { logger } from "../../logging/index.js";
 import type { Sandbox, TestResult } from "../../sandbox/types.js";
 import type {
-  DevWorkflowStateType,
   DevWorkflowConfig,
+  DevWorkflowStateType,
 } from "../../state/dev-workflow-state.js";
 import { DEFAULT_DEV_WORKFLOW_CONFIG } from "../../state/dev-workflow-state.js";
-import { logger } from "../../logging/index.js";
 
 /**
  * Factory function that creates a runTestsNode with injected sandbox.
@@ -28,7 +28,7 @@ import { logger } from "../../logging/index.js";
 export function createRunTestsNode(sandbox: Sandbox) {
   return async function runTestsNode(
     state: DevWorkflowStateType,
-    config: DevWorkflowConfig = DEFAULT_DEV_WORKFLOW_CONFIG
+    config: DevWorkflowConfig = DEFAULT_DEV_WORKFLOW_CONFIG,
   ): Promise<Partial<DevWorkflowStateType>> {
     const nodeLogger = logger.child({ node: "run-tests" });
 

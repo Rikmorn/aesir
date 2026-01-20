@@ -14,19 +14,19 @@
  * - Optional checkpointer support for conversation persistence
  */
 
+import type { ChatAnthropic } from "@langchain/anthropic";
 import { StateGraph } from "@langchain/langgraph";
 import type { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import type { LinearClient } from "@linear/sdk";
-import { ChatAnthropic } from "@langchain/anthropic";
-import {
-  ProductAgentStateAnnotation,
-  type ProductAgentState,
-} from "./state.js";
 import {
   analyzeRequirementsNode,
-  generateClarificationNode,
   createTasksNode,
+  generateClarificationNode,
 } from "./nodes/index.js";
+import {
+  type ProductAgentState,
+  ProductAgentStateAnnotation,
+} from "./state.js";
 
 /**
  * Route destinations after analysis
@@ -44,7 +44,9 @@ export type AfterAnalysisRoute = "clarify" | "createTasks";
  * @param state - Current conversation state with phase
  * @returns Routing destination
  */
-export function routeAfterAnalysis(state: ProductAgentState): AfterAnalysisRoute {
+export function routeAfterAnalysis(
+  state: ProductAgentState,
+): AfterAnalysisRoute {
   if (state.phase === "complete" || state.phase === "creating") {
     return "createTasks";
   }

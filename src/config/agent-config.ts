@@ -111,7 +111,7 @@ export function validateAgentConfig(config: AgentConfigInput): AgentConfig {
  * @returns Complete configuration with overrides applied
  */
 export function mergeWithDefaults(
-  overrides: Partial<AgentConfigInput>
+  overrides: Partial<AgentConfigInput>,
 ): AgentConfig {
   return AgentConfigSchema.parse({
     ...devAgentConfig,

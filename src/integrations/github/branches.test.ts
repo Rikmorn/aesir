@@ -5,9 +5,9 @@
  * Uses mocked Octokit to verify correct API calls.
  */
 
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import type { Octokit } from "@octokit/rest";
-import { getBranch, listBranches, createBranch } from "./branches.js";
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
+import { createBranch, getBranch, listBranches } from "./branches.js";
 
 // Helper to get mock from Octokit methods
 function asMock<T>(fn: T): Mock {
@@ -64,7 +64,7 @@ describe("getBranch", () => {
     asMock(mockOctokit.rest.git.getRef).mockRejectedValue(error);
 
     await expect(
-      getBranch(mockOctokit, "owner", "repo", "nonexistent")
+      getBranch(mockOctokit, "owner", "repo", "nonexistent"),
     ).rejects.toThrow("Not found");
   });
 });
@@ -237,7 +237,7 @@ describe("createBranch", () => {
         repo: "repo",
         branchName: "feature/test",
         baseBranch: "nonexistent",
-      })
+      }),
     ).rejects.toThrow("Base branch not found");
   });
 
@@ -251,7 +251,7 @@ describe("createBranch", () => {
         repo: "repo",
         branchName: "main", // Already exists
         baseBranch: "main",
-      })
+      }),
     ).rejects.toThrow("Branch already exists");
   });
 });

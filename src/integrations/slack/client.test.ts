@@ -5,7 +5,7 @@
  * Verifies that WebClient is instantiated with correct authentication.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SlackConfig } from "./types.js";
 
 // Mock @slack/web-api
@@ -52,7 +52,7 @@ describe("createSlackClient", () => {
     createSlackClient(config);
 
     expect(WebClient).toHaveBeenCalledWith(
-      "xoxb-xxxxxxxxxx-xxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx"
+      "xoxb-xxxxxxxxxx-xxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx",
     );
   });
 });
