@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 13 of 22 (Data Layer)
-Plan: 5 of 5 in current phase
+Plan: 6 of 6 in current phase
 Status: Phase complete
-Last activity: 2026-01-20 - Completed 13-05-PLAN.md
+Last activity: 2026-01-20 - Completed 13-06-PLAN.md (final plan of Phase 13)
 
 Progress: [######              ] 38% (5 of 13 phases complete)
 
@@ -25,9 +25,9 @@ Progress: [######              ] 38% (5 of 13 phases complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 19 (v2.0)
+- Total plans completed: 20 (v2.0)
 - Average duration: ~8 min
-- Total execution time: ~152 min
+- Total execution time: ~160 min
 
 **By Phase:**
 
@@ -36,10 +36,10 @@ Progress: [######              ] 38% (5 of 13 phases complete)
 | 10-foundation-setup | 4/4 | ~44 min | ~11 min |
 | 11-monorepo-setup | 4/4 | ~41 min | ~10 min |
 | 12-observability | 8/8 | 78 min | 10 min |
-| 13-data-layer | 5/5 | 30 min | 6 min |
+| 13-data-layer | 6/6 | 38 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 13-05 (7 min), 13-04 (5 min), 13-03 (9 min), 13-02 (6 min), 13-01 (3 min)
+- Last 5 plans: 13-06 (8 min), 13-05 (7 min), 13-04 (5 min), 13-03 (9 min), 13-02 (6 min)
 - Trend: Data layer plans are fast (well-defined scope)
 
 *Updated after each plan completion*
@@ -116,6 +116,9 @@ Recent decisions affecting current work:
 - [13-05]: Retain legacy file functions with @deprecated for migration support
 - [13-05]: Database-first with file fallback in OAuth flow during transition
 - [13-05]: Use Awaited<ReturnType<>> for type annotations on dynamic import results
+- [13-06]: Direct DB connection in migration script to avoid full environment validation
+- [13-06]: Migration script inlines schema definition to prevent triggering config validation
+- [13-06]: File fallback removed from OAuth flow (database is sole storage)
 
 ### Pending Todos
 
@@ -142,9 +145,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-20
-Stopped at: Completed 13-05-PLAN.md (Phase 13 complete)
+Stopped at: Completed 13-06-PLAN.md (Phase 13 complete)
 Resume file: None
 Next action: Begin Phase 14 (Error Handling)
 
 ---
-*Updated: 2026-01-20 after 13-05-PLAN.md completed*
+*Updated: 2026-01-20 after 13-06-PLAN.md completed*
