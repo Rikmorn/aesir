@@ -24,6 +24,7 @@
   "dependencies": {
     "@aesir/common": "workspace:*",
     "@langchain/langgraph-checkpoint-postgres": "^0.1.0",
+    "pino": "^10.2.1",
     "@temporalio/activity": "^1.14.1",
     "@temporalio/client": "^1.14.1",
     "@temporalio/common": "^1.14.1",
