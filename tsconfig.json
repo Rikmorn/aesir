@@ -4,6 +4,7 @@
     { "path": "packages/common" },
     { "path": "packages/platform" },
     { "path": "packages/integrations" },
+    { "path": "packages/observability" },
     { "path": "packages/agents" }
   ]
 }
