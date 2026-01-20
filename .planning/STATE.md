@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 13 of 22 (Data Layer)
-Plan: 3 of 5 in current phase
+Plan: 4 of 5 in current phase
 Status: In progress
-Last activity: 2026-01-20 - Completed 13-03-PLAN.md
+Last activity: 2026-01-20 - Completed 13-04-PLAN.md
 
 Progress: [#####               ] 31% (4 of 13 phases complete)
 
@@ -36,10 +36,10 @@ Progress: [#####               ] 31% (4 of 13 phases complete)
 | 10-foundation-setup | 4/4 | ~44 min | ~11 min |
 | 11-monorepo-setup | 4/4 | ~41 min | ~10 min |
 | 12-observability | 8/8 | 78 min | 10 min |
-| 13-data-layer | 3/5 | 18 min | 6 min |
+| 13-data-layer | 4/5 | 23 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 13-03 (9 min), 13-02 (6 min), 13-01 (3 min), 12-07 (3 min), 12-08 (2 min)
+- Last 5 plans: 13-04 (5 min), 13-03 (9 min), 13-02 (6 min), 13-01 (3 min), 12-07 (3 min)
 - Trend: Foundation setup plans are fast (well-defined scope)
 
 *Updated after each plan completion*
@@ -109,6 +109,10 @@ Recent decisions affecting current work:
 - [13-03]: schema.drizzle.ts files for drizzle-kit (CJS bundler can't resolve workspace:* dependencies)
 - [13-03]: IF NOT EXISTS for CREATE SCHEMA for idempotent migrations
 - [13-03]: Direct DB connection in seed script to avoid full environment validation
+- [13-04]: AES-256-CBC with unique IV per encryption for security
+- [13-04]: iv:ciphertext hex format for encrypted token storage
+- [13-04]: Soft-delete existing credential when storing new one for same workspace+provider
+- [13-04]: Type contract tests for credential-store (full integration requires database)
 
 ### Pending Todos
 
@@ -135,9 +139,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-20
-Stopped at: Completed 13-03-PLAN.md
+Stopped at: Completed 13-04-PLAN.md
 Resume file: None
-Next action: Continue with 13-04 (Credential Encryption)
+Next action: Continue with 13-05 (CRUD Operations)
 
 ---
-*Updated: 2026-01-20 after 13-03-PLAN.md completed*
+*Updated: 2026-01-20 after 13-04-PLAN.md completed*
