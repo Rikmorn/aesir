@@ -80,10 +80,15 @@ Plans:
   2. Every HTTP request generates a unique correlation ID visible in all resulting log entries
   3. Log output is valid JSON that can be parsed by standard log aggregation tools
   4. Sensitive fields (passwords, tokens, API keys) are automatically redacted from logs
-**Plans:** TBD
+**Plans:** 6 plans
 
 Plans:
-- [ ] 12-01: TBD
+- [ ] 12-01-PLAN.md — Install pino dependencies, create correlation ID and redaction utilities
+- [ ] 12-02-PLAN.md — Create pino logger factory with dual timestamps, component naming, log levels
+- [ ] 12-03-PLAN.md — Create HTTP middleware (pino-http) and Temporal logger adapter
+- [ ] 12-04-PLAN.md — Migrate integrations and platform packages to pino
+- [ ] 12-05-PLAN.md — Migrate agents package to pino
+- [ ] 12-06-PLAN.md — Remove legacy logger, update test utilities, verify completion
 
 ### Phase 13: Data Layer
 **Goal:** PostgreSQL schema structure with encrypted credential storage replacing .tokens/ files
@@ -242,7 +247,7 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 |-------|-----------|----------------|--------|-----------|
 | 10. Foundation Setup | v2.0 | 4/4 | Complete | 2026-01-20 |
 | 11. Monorepo Setup | v2.0 | 4/4 | Complete | 2026-01-20 |
-| 12. Observability | v2.0 | 0/TBD | Not started | - |
+| 12. Observability | v2.0 | 0/6 | Not started | - |
 | 13. Data Layer | v2.0 | 0/TBD | Not started | - |
 | 14. Platform Services | v2.0 | 0/TBD | Not started | - |
 | 15. Code Quality | v2.0 | 0/TBD | Not started | - |
@@ -256,5 +261,5 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 
 ---
 *Created: 2026-01-19*
-*Updated: 2026-01-20 (Phase 11 complete)*
+*Updated: 2026-01-20 (Phase 12 planned)*
 *Milestone: v2.0 Foundation*
