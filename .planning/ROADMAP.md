@@ -17,7 +17,7 @@ The v2.0 Foundation milestone restructures Aesir from a working prototype to a m
 - Decimal phases (10.1, 10.2): Urgent insertions if needed
 
 - [x] **Phase 10: Foundation Setup** - Biome, npm, dotenv-flow, pre-commit hooks, .claude/.cursor files
-- [ ] **Phase 11: Monorepo Setup** - pnpm workspace structure with package boundaries
+- [x] **Phase 11: Monorepo Setup** - pnpm workspace structure with package boundaries
 - [ ] **Phase 12: Observability** - pino logging, correlation IDs, structured JSON logs
 - [ ] **Phase 13: Data Layer** - PostgreSQL schemas, credential migration from .tokens/
 - [ ] **Phase 14: Platform Services** - Webhook idempotency, execution tracking, cleanup, DI patterns
@@ -66,10 +66,10 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
-- [ ] 11-01-PLAN.md — Install pnpm, create workspace config, set up TypeScript project reference structure
-- [ ] 11-02-PLAN.md — Create package scaffolding (common, platform, integrations, agents)
-- [ ] 11-03-PLAN.md — Move source files from src/ to packages, rename src to src_old
-- [ ] 11-04-PLAN.md — Fix imports, run pnpm install, verify builds, re-enable hooks
+- [x] 11-01-PLAN.md — Install pnpm, create workspace config, set up TypeScript project reference structure
+- [x] 11-02-PLAN.md — Create package scaffolding (common, platform, integrations, agents)
+- [x] 11-03-PLAN.md — Move source files from src/ to packages, rename src to src_old
+- [x] 11-04-PLAN.md — Fix imports, run pnpm install, verify builds, re-enable hooks
 
 ### Phase 12: Observability
 **Goal:** Production-ready logging infrastructure with correlation across service boundaries
@@ -241,7 +241,7 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 10. Foundation Setup | v2.0 | 4/4 | Complete | 2026-01-20 |
-| 11. Monorepo Setup | v2.0 | 0/4 | Not started | - |
+| 11. Monorepo Setup | v2.0 | 4/4 | Complete | 2026-01-20 |
 | 12. Observability | v2.0 | 0/TBD | Not started | - |
 | 13. Data Layer | v2.0 | 0/TBD | Not started | - |
 | 14. Platform Services | v2.0 | 0/TBD | Not started | - |
@@ -256,5 +256,5 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 
 ---
 *Created: 2026-01-19*
-*Updated: 2026-01-20 (Phase 11 planned)*
+*Updated: 2026-01-20 (Phase 11 complete)*
 *Milestone: v2.0 Foundation*

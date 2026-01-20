@@ -29,7 +29,7 @@ Requirements for Foundation milestone. Full restructure from "prove it works" to
 - [ ] **ARCH-01**: Platform layer implemented (config, secrets, observability, state management)
 - [ ] **ARCH-02**: Integrations layer with Linear, GitHub, Slack as independent packages
 - [ ] **ARCH-03**: Agents layer using Platform and Integrations through normalized protocols
-- [ ] **ARCH-04**: pnpm workspace monorepo structure with clear package boundaries
+- [x] **ARCH-04**: pnpm workspace monorepo structure with clear package boundaries
 - [ ] **ARCH-05**: MCP servers in each integration for agent tool calls
 - [ ] **ARCH-06**: Factory functions for dependency injection (no global singletons)
 - [ ] **ARCH-07**: Layer dependency rules enforced (Agents -> Integrations -> Platform)
@@ -123,7 +123,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TOOL-03 | Phase 10 | Complete |
 | TOOL-04 | Phase 10 | Complete |
 | TOOL-05 | Phase 10 | Complete |
-| ARCH-04 | Phase 11 | Pending |
+| ARCH-04 | Phase 11 | Complete |
 | OBSV-01 | Phase 12 | Pending |
 | OBSV-02 | Phase 12 | Pending |
 | OBSV-03 | Phase 12 | Pending |
