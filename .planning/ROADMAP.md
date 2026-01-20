@@ -44,12 +44,15 @@ The v2.0 Foundation milestone restructures Aesir from a working prototype to a m
   5. Application fails fast at startup with clear error messages when required env vars are missing
   6. .claude files document current architecture, tooling decisions, and coding patterns
   7. cursor files provide AI tools with codebase understanding
-**Plans:** TBD
+**Plans:** 4 plans
 
 **ML Configuration Note:** All subsequent phases MUST update .claude and cursor files when making architectural changes. This ensures Claude Code and other AI tools always have current context.
 
 Plans:
-- [ ] 10-01: TBD
+- [ ] 10-01-PLAN.md - Migrate to npm, install and configure Biome
+- [ ] 10-02-PLAN.md - Configure dotenv-flow and Zod env validation
+- [ ] 10-03-PLAN.md - Set up pre-commit hooks and VS Code integration
+- [ ] 10-04-PLAN.md - Create .claude and .cursor AI context files
 
 ### Phase 11: Monorepo Setup
 **Goal:** pnpm workspace structure with clear package boundaries enabling independent package development
@@ -234,7 +237,7 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 10. Foundation Setup | v2.0 | 0/TBD | Not started | - |
+| 10. Foundation Setup | v2.0 | 0/4 | Planned | - |
 | 11. Monorepo Setup | v2.0 | 0/TBD | Not started | - |
 | 12. Observability | v2.0 | 0/TBD | Not started | - |
 | 13. Data Layer | v2.0 | 0/TBD | Not started | - |
