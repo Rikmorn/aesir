@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-19)
 
 **Core value:** Maintainable, scalable foundation for end-to-end automated development workflows
-**Current focus:** Phase 16 - Linear Extraction (complete)
+**Current focus:** Phase 17 - GitHub Extraction (in progress)
 
 ## Current Position
 
 Phase: 17 of 22 (GitHub Extraction)
-Plan: 0 of TBD in current phase
-Status: Not started
-Last activity: 2026-01-21 - Completed Phase 16 (Linear Extraction)
+Plan: 1 of TBD in current phase
+Status: In progress
+Last activity: 2026-01-21 - Completed 17-01-PLAN.md
 
-Progress: [############        ] 80% (54 plans complete)
+Progress: [############        ] 80% (55 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [############        ] 80% (54 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 54 (v2.0)
+- Total plans completed: 55 (v2.0)
 - Average duration: ~6 min
-- Total execution time: ~372 min
+- Total execution time: ~374 min
 
 **By Phase:**
 
@@ -40,10 +40,11 @@ Progress: [############        ] 80% (54 plans complete)
 | 14-platform-services | 8/8 | 14 min | 2 min |
 | 15-code-quality | 8/8 | 111 min | 14 min |
 | 16-linear-extraction | 11/11 | 55 min | 5 min |
+| 17-github-extraction | 1/TBD | 2 min | 2 min |
 
 **Recent Trend:**
-- Last 5 plans: 16-11 (10 min), 16-10 (7 min), 16-09 (5 min), 16-08 (0 min), 16-07 (2 min)
-- Trend: Phase 16 complete - Linear extracted as independent package
+- Last 5 plans: 17-01 (2 min), 16-11 (10 min), 16-10 (7 min), 16-09 (5 min), 16-08 (0 min)
+- Trend: Phase 17 started - GitHub extraction following Linear pattern
 
 *Updated after each plan completion*
 
@@ -208,6 +209,10 @@ Recent decisions affecting current work:
 - [16-10]: _legacy/ excluded from TypeScript compilation and Biome checks
 - [16-11]: Migration script placed in package directory for module resolution (drizzle-orm accessible)
 - [16-11]: `pnpm --filter @aesir/integration-linear migrate` as standard migration command
+- [17-01]: GitHub service PORT defaults to 3002 (Linear uses 3001, avoid conflicts)
+- [17-01]: github.* schema namespace for database isolation (parallel to linear.*)
+- [17-01]: @octokit/webhooks-methods for GitHub signature verification
+- [17-01]: GitHubError extends AppError with INT_GITHUB_* error codes
 
 ### Pending Todos
 
@@ -234,9 +239,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed Phase 16 (Linear Extraction)
+Stopped at: Completed 17-01-PLAN.md
 Resume file: None
-Next action: Plan Phase 17 (GitHub Extraction)
+Next action: Execute 17-02-PLAN.md (Database Schema)
 
 ---
 *Updated: 2026-01-21 after Phase 16 completed*
