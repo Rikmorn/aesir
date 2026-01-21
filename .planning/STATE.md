@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 
 ## Current Position
 
-Phase: 15 of 22 (Code Quality)
-Plan: 8 of 8 in current phase
-Status: Phase complete (all gaps closed)
-Last activity: 2026-01-21 - Completed 15-07-PLAN.md (service boundaries gap closure)
+Phase: 16 of 22 (Linear Extraction)
+Plan: 1 of 4 in current phase
+Status: In progress
+Last activity: 2026-01-21 - Completed 16-01-PLAN.md (package scaffolding)
 
-Progress: [##########          ] 65% (36 plans complete)
+Progress: [##########          ] 67% (37 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [##########          ] 65% (36 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 36 (v2.0)
+- Total plans completed: 37 (v2.0)
 - Average duration: ~8 min
-- Total execution time: ~281 min
+- Total execution time: ~284 min
 
 **By Phase:**
 
@@ -39,10 +39,11 @@ Progress: [##########          ] 65% (36 plans complete)
 | 13-data-layer | 6/6 | 38 min | 6 min |
 | 14-platform-services | 8/8 | 14 min | 2 min |
 | 15-code-quality | 8/8 | 111 min | 14 min |
+| 16-linear-extraction | 1/4 | 3 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 15-07 (7 min), 15-08 (10 min), 15-06 (11 min), 15-03 (45 min), 15-04 (20 min)
-- Trend: Phase 15 complete - all verification gaps closed
+- Last 5 plans: 16-01 (3 min), 15-07 (7 min), 15-08 (10 min), 15-06 (11 min), 15-03 (45 min)
+- Trend: Phase 16 started - integration extraction pattern established
 
 *Updated after each plan completion*
 
@@ -167,6 +168,11 @@ Recent decisions affecting current work:
 - [15-08]: Platform exports only its own modules without blanket re-export from @aesir/common
 - [15-08]: Consumers import from @aesir/common directly for proper package boundaries
 - [15-08]: @langchain/core added as platform devDependency to support mock-llm.ts
+- [16-01]: packages/integrations/* pattern added to pnpm-workspace.yaml for nested integration packages
+- [16-01]: Express over Hono for HTTP framework (familiar patterns, pino-http compatibility)
+- [16-01]: Self-contained env validation per integration package (dotenv-flow + zod at package level)
+- [16-01]: Linear-specific PostgreSQL schema namespace (linear.*) for full data isolation
+- [16-01]: HTTP status mapping based on error codes (401 webhook/token, 400 oauth, 500 API)
 
 ### Pending Todos
 
@@ -193,9 +199,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed 15-07-PLAN.md (service boundaries gap closure - Phase 15 complete)
+Stopped at: Completed 16-01-PLAN.md (Linear package scaffolding)
 Resume file: None
-Next action: Start Phase 16
+Next action: Continue Phase 16
 
 ---
-*Updated: 2026-01-21 after 15-07-PLAN.md completed*
+*Updated: 2026-01-21 after 16-01-PLAN.md completed*
