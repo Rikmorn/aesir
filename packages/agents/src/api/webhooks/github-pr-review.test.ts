@@ -1,4 +1,3 @@
-import * as crypto from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -6,7 +5,6 @@ import {
   getWorkflowId,
   handlePRReviewEvent,
   type PRReviewEvent,
-  verifyWebhookSignature,
 } from "./github-pr-review.js";
 
 // Mock the Temporal client module
@@ -81,40 +79,6 @@ describe("getWorkflowId", () => {
 
   it("preserves task ID case", () => {
     expect(getWorkflowId("DEV-42")).toBe("approval-DEV-42");
-  });
-});
-
-describe("verifyWebhookSignature", () => {
-  it("returns true for valid signature", () => {
-    const secret = "test-secret";
-    const payload = '{"test": "data"}';
-    // Generate valid signature using Node's crypto
-    const hmac = crypto.createHmac("sha256", secret);
-    const signature = `sha256=${hmac.update(payload).digest("hex")}`;
-
-    expect(verifyWebhookSignature(payload, signature, secret)).toBe(true);
-  });
-
-  it("returns false for invalid signature", () => {
-    expect(verifyWebhookSignature("payload", "sha256=invalid", "secret")).toBe(
-      false,
-    );
-  });
-
-  it("returns false for wrong secret", () => {
-    const payload = '{"test": "data"}';
-    const hmac = crypto.createHmac("sha256", "correct-secret");
-    const signature = `sha256=${hmac.update(payload).digest("hex")}`;
-
-    expect(verifyWebhookSignature(payload, signature, "wrong-secret")).toBe(
-      false,
-    );
-  });
-
-  it("returns false for mismatched signature lengths", () => {
-    expect(verifyWebhookSignature("payload", "sha256=short", "secret")).toBe(
-      false,
-    );
   });
 });
 

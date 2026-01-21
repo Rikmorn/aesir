@@ -12,7 +12,6 @@ export {
   handlePRReviewEvent,
   type PRReviewEvent,
   prReviewWebhookHandler,
-  verifyWebhookSignature,
   type WebhookRequest,
   type WebhookResponse,
 } from "./github-pr-review.js";

@@ -5,8 +5,6 @@
  * Translates PR review actions into Temporal workflow signals.
  */
 
-import * as crypto from "node:crypto";
-
 import {
   createChildLogger,
   createPinoLogger,
@@ -15,11 +13,14 @@ import {
   ValidationError,
 } from "@aesir/common";
 import {
+  type PRReviewPayload,
+  parsePRReviewPayload,
+  verifySignature,
+} from "@aesir/integration-github";
+import {
   sendApprovalSignal,
   sendChangesRequestedSignal,
 } from "@aesir/integrations";
-
-import { type PRReviewPayload, parsePRReviewPayload } from "./schemas/index.js";
 
 const baseLogger: PinoLogger = createPinoLogger({
   component: "agents:webhooks:github-pr-review",
@@ -50,33 +51,6 @@ export interface PRReviewEvent {
       login: string;
     };
   };
-}
-
-/**
- * Verify GitHub webhook signature
- *
- * Uses HMAC SHA-256 to verify the webhook payload was sent by GitHub.
- *
- * @param payload - Raw request body as string
- * @param signature - X-Hub-Signature-256 header value
- * @param secret - Webhook secret configured in GitHub
- * @returns true if signature is valid
- */
-export function verifyWebhookSignature(
-  payload: string,
-  signature: string,
-  secret: string,
-): boolean {
-  const hmac = crypto.createHmac("sha256", secret);
-  const digest = `sha256=${hmac.update(payload).digest("hex")}`;
-
-  // Use timing-safe comparison to prevent timing attacks
-  try {
-    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest));
-  } catch {
-    // Buffer lengths don't match
-    return false;
-  }
 }
 
 /**
@@ -270,7 +244,12 @@ export async function prReviewWebhookHandler(
 
   // Verify signature if secret is configured
   if (webhookSecret && signature) {
-    if (!verifyWebhookSignature(req.rawBody, signature, webhookSecret)) {
+    const isValid = await verifySignature(
+      req.rawBody,
+      signature,
+      webhookSecret,
+    );
+    if (!isValid) {
       logger.warn({}, "Invalid webhook signature");
       res.status(401).json({ error: "Invalid signature" });
       return;
