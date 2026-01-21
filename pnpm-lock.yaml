@@ -104,13 +104,13 @@ importers:
         version: link:../observability
       '@langchain/anthropic':
         specifier: ^0.3.0
-        version: 0.3.34(@langchain/core@0.3.80)(zod@4.3.5)
+        version: 0.3.34(@langchain/core@0.3.80)(zod@3.25.67)
       '@langchain/core':
         specifier: ^0.3.0
         version: 0.3.80
       '@langchain/langgraph':
         specifier: ^0.2.0
-        version: 0.2.74(@langchain/core@0.3.80)(zod-to-json-schema@3.25.1(zod@4.3.5))
+        version: 0.2.74(@langchain/core@0.3.80)(zod-to-json-schema@3.25.1(zod@3.25.67))
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@types/pg@8.16.0)(pg@8.17.2)(postgres@3.4.8)
@@ -120,6 +120,9 @@ importers:
       postgres:
         specifier: ^3.4.7
         version: 3.4.8
+      zod:
+        specifier: 3.25.67
+        version: 3.25.67
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -194,6 +197,9 @@ importers:
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@types/pg@8.16.0)(pg@8.17.2)(postgres@3.4.8)
+      neverthrow:
+        specifier: ^8.2.0
+        version: 8.2.0
       pg:
         specifier: ^8.17.2
         version: 8.17.2
@@ -219,6 +225,9 @@ importers:
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@types/pg@8.16.0)(pg@8.17.2)(postgres@3.4.8)
+      neverthrow:
+        specifier: ^8.2.0
+        version: 8.2.0
       pg:
         specifier: ^8.17.2
         version: 8.17.2
@@ -265,6 +274,9 @@ importers:
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@types/pg@8.16.0)(pg@8.17.2)(postgres@3.4.8)
+      neverthrow:
+        specifier: ^8.2.0
+        version: 8.2.0
       pg:
         specifier: ^8.17.2
         version: 8.17.2
@@ -3205,12 +3217,6 @@ snapshots:
     optionalDependencies:
       zod: 3.25.67
 
-  '@anthropic-ai/sdk@0.65.0(zod@4.3.5)':
-    dependencies:
-      json-schema-to-ts: 3.1.1
-    optionalDependencies:
-      zod: 4.3.5
-
   '@babel/runtime@7.28.6': {}
 
   '@balena/dockerignore@1.0.2': {}
@@ -3679,14 +3685,6 @@ snapshots:
     transitivePeerDependencies:
       - zod
 
-  '@langchain/anthropic@0.3.34(@langchain/core@0.3.80)(zod@4.3.5)':
-    dependencies:
-      '@anthropic-ai/sdk': 0.65.0(zod@4.3.5)
-      '@langchain/core': 0.3.80
-      fast-xml-parser: 4.5.3
-    transitivePeerDependencies:
-      - zod
-
   '@langchain/core@0.3.80':
     dependencies:
       '@cfworker/json-schema': 4.1.1
@@ -3738,19 +3736,6 @@ snapshots:
       zod: 3.25.67
     optionalDependencies:
       zod-to-json-schema: 3.25.1(zod@3.25.67)
-    transitivePeerDependencies:
-      - react
-      - react-dom
-
-  '@langchain/langgraph@0.2.74(@langchain/core@0.3.80)(zod-to-json-schema@3.25.1(zod@4.3.5))':
-    dependencies:
-      '@langchain/core': 0.3.80
-      '@langchain/langgraph-checkpoint': 0.0.18(@langchain/core@0.3.80)
-      '@langchain/langgraph-sdk': 0.0.112(@langchain/core@0.3.80)
-      uuid: 10.0.0
-      zod: 3.25.67
-    optionalDependencies:
-      zod-to-json-schema: 3.25.1(zod@4.3.5)
     transitivePeerDependencies:
       - react
       - react-dom
@@ -5976,11 +5961,6 @@ snapshots:
   zod-to-json-schema@3.25.1(zod@3.25.67):
     dependencies:
       zod: 3.25.67
-
-  zod-to-json-schema@3.25.1(zod@4.3.5):
-    dependencies:
-      zod: 4.3.5
-    optional: true
 
   zod@3.25.67: {}
 
