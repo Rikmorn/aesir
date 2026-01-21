@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 17 of 22 (GitHub Extraction)
-Plan: 3 of TBD in current phase
+Plan: 5 of TBD in current phase
 Status: In progress
-Last activity: 2026-01-21 - Completed 17-03-PLAN.md
+Last activity: 2026-01-21 - Completed 17-05-PLAN.md
 
-Progress: [#############       ] 81% (57 plans complete)
+Progress: [#############       ] 82% (59 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [#############       ] 81% (57 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 57 (v2.0)
+- Total plans completed: 59 (v2.0)
 - Average duration: ~6 min
-- Total execution time: ~379 min
+- Total execution time: ~384 min
 
 **By Phase:**
 
@@ -40,11 +40,11 @@ Progress: [#############       ] 81% (57 plans complete)
 | 14-platform-services | 8/8 | 14 min | 2 min |
 | 15-code-quality | 8/8 | 111 min | 14 min |
 | 16-linear-extraction | 11/11 | 55 min | 5 min |
-| 17-github-extraction | 3/TBD | 5 min | 2 min |
+| 17-github-extraction | 5/TBD | 10 min | 2 min |
 
 **Recent Trend:**
-- Last 5 plans: 17-03 (1 min), 17-02 (2 min), 17-01 (2 min), 16-11 (10 min), 16-10 (7 min)
-- Trend: Phase 17 progressing rapidly - webhook infrastructure complete
+- Last 5 plans: 17-05 (3 min), 17-04 (2 min), 17-03 (1 min), 17-02 (2 min), 17-01 (2 min)
+- Trend: Phase 17 progressing rapidly - OAuth flow complete
 
 *Updated after each plan completion*
 
@@ -219,6 +219,10 @@ Recent decisions affecting current work:
 - [17-03]: verifyWebhookRequest helper extracts metadata (deliveryId, eventType) along with verification
 - [17-03]: parsePRReviewPayload returns SafeParseReturnType for controlled error handling
 - [17-03]: Synthetic ZodError for JSON parse failures in webhook parser
+- [17-04]: Logger components follow integrations:github:{module} pattern for consistency
+- [17-04]: Operations accept Octokit instances for dependency injection and testability
+- [17-04]: exactOptionalPropertyTypes handled with conditional property assignment in API requests
+- [17-04]: File modes default to '100644' for regular files in commit operations
 
 ### Pending Todos
 
@@ -245,9 +249,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed 17-03-PLAN.md
+Stopped at: Completed 17-04-PLAN.md
 Resume file: None
-Next action: Execute 17-04-PLAN.md (Webhook HTTP Routes)
+Next action: Execute 17-06-PLAN.md (Webhook HTTP Routes)
 
 ---
 *Updated: 2026-01-21 after Phase 16 completed*
