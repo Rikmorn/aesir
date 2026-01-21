@@ -11,7 +11,8 @@ Agents (dev-agent, product-agent)
    ↓ uses
 Integrations (Linear, GitHub, Slack)
    ├── @aesir/integration-linear (independent package)
-   ├── @aesir/integrations (GitHub, Slack, shared)
+   ├── @aesir/integration-github (independent package)
+   ├── @aesir/integrations (Slack, shared, legacy)
    ↓ uses
 Platform (config, logging, state, temporal)
 ```
@@ -23,10 +24,12 @@ Platform (config, logging, state, temporal)
 - Never import in the reverse direction
 
 **Integration Extraction:**
-Each integration (starting with Linear) is extracted to its own package for independent deployment, versioning, and lifecycle management. The extraction pattern enables:
+Each integration is extracted to its own package for independent deployment, versioning, and lifecycle management. The extraction pattern enables:
 - Independent HTTP services with their own database schemas
 - Separate deployment and scaling decisions
 - Clear package boundaries with explicit dependencies
+
+**Extracted integrations:** Linear (Phase 16), GitHub (Phase 17). Slack extraction planned for future phase.
 
 ### Key Frameworks
 
@@ -62,8 +65,21 @@ packages/
 │   │   │   └── main.ts  # HTTP server entry
 │   │   ├── Dockerfile
 │   │   └── package.json
-│   └── src/             # @aesir/integrations - GitHub, Slack, shared
-│       ├── github/      # GitHub API via Octokit
+│   ├── github/          # @aesir/integration-github (independent)
+│   │   ├── src/
+│   │   │   ├── api/     # HTTP routes (webhooks, OAuth)
+│   │   │   ├── client/  # Octokit client factory
+│   │   │   ├── db/      # github.* schema, credential store
+│   │   │   ├── oauth/   # Token management
+│   │   │   ├── operations/ # Branch, commit, PR operations
+│   │   │   ├── webhooks/ # Signature verification, parsing
+│   │   │   ├── types/   # Config, errors
+│   │   │   ├── index.ts # Barrel export
+│   │   │   └── main.ts  # HTTP server entry
+│   │   ├── Dockerfile
+│   │   └── package.json
+│   └── src/             # @aesir/integrations - Slack, shared, legacy
+│       ├── _legacy/     # Old Linear/GitHub code (deprecated)
 │       ├── slack/       # Slack Bolt for messaging
 │       └── index.ts     # Re-exports
 ├── platform/            # @aesir/platform - Core services
@@ -82,6 +98,31 @@ packages/
         ├── types/       # Domain types
         └── state/       # LangGraph state definitions
 ```
+
+## Integration Packages
+
+Independent integration packages in `packages/integrations/`:
+
+### Linear (`@aesir/integration-linear`)
+- Location: `packages/integrations/linear/`
+- Port: 3001
+- Database schema: `linear.*`
+- Webhook secret env: `LINEAR_WEBHOOK_SECRET`
+- Client: Linear SDK via `@linear/sdk`
+
+### GitHub (`@aesir/integration-github`)
+- Location: `packages/integrations/github/`
+- Port: 3002
+- Database schema: `github.*`
+- Webhook secret env: `GITHUB_WEBHOOK_SECRET`
+- Client: `@octokit/rest` for API operations
+- Webhook verification: `@octokit/webhooks-methods` (timing-safe)
+
+Each integration:
+- Self-contained environment validation (own .env, Zod schema)
+- Own database schema namespace (isolated data)
+- HTTP API (webhooks, OAuth, health check)
+- Can be deployed independently via Docker
 
 ## Common Commands
 
@@ -173,6 +214,38 @@ const isValid = await verifyWebhookSignature({
   signature: headers["linear-signature"],
   secret: config.linear.webhookSigningSecret,
 });
+```
+
+### GitHub Integration
+
+For GitHub functionality, import from the dedicated package:
+
+```typescript
+// GitHub is extracted to its own package
+import {
+  createGitHubClientFromDatabase,
+  createBranch,
+  createCommit,
+  createPR,
+} from "@aesir/integration-github";
+
+// Use the factory to create a client with DB-backed credentials
+const client = await createGitHubClientFromDatabase({
+  owner: "my-org",
+  db,
+  logger,
+});
+
+// Verify webhook signatures (timing-safe)
+import { verifyWebhookRequest } from "@aesir/integration-github";
+const { isValid, deliveryId, eventType } = await verifyWebhookRequest({
+  body: rawBody,
+  signature: headers["x-hub-signature-256"],
+  secret: config.github.webhookSecret,
+});
+
+// Re-export from @aesir/integrations for backward compatibility
+import { createGitHubClient, createBranch } from "@aesir/integrations";
 ```
 
 ### Zod Validation
@@ -335,14 +408,17 @@ describe("ComponentName", () => {
 ### OAuth Tokens
 
 - Linear OAuth tokens stored in PostgreSQL `linear.credentials` table (encrypted)
-- Linear uses its own database schema (`linear.*`), separate from shared `integrations.*` schema
-- Run `npm run linear-oauth` to authenticate
+- GitHub OAuth tokens stored in PostgreSQL `github.credentials` table (encrypted)
+- Each integration uses its own database schema (`linear.*`, `github.*`)
+- Run `npm run linear-oauth` or `npm run github-oauth` to authenticate
 - Requires `CREDENTIAL_ENCRYPTION_KEY` environment variable (generate with `openssl rand -hex 32`)
 
 ### Package Imports
 
 - Import Linear from `@aesir/integration-linear`, not from `@aesir/integrations`
+- Import GitHub from `@aesir/integration-github`, not from `@aesir/integrations`
 - Each extracted integration has its own package scope and dependencies
+- `@aesir/integrations` maintains re-exports for backward compatibility
 - Platform utilities imported via `@aesir/platform`
 - Shared types imported via `@aesir/common`
 
@@ -363,19 +439,21 @@ Current milestone is v2.0 Foundation - full architectural restructure for mainta
 - **Phase 13**: Data Layer (Drizzle ORM, PostgreSQL schemas, credential encryption)
 - **Phase 14**: Platform Services (ExecutionTracker, IdempotencyChecker, CursorStore)
 - **Phase 15**: Code Quality (Result types, error handling, boundaries)
-- **Phase 16**: Linear Extraction (independent package) - **Current**
+- **Phase 16**: Linear Extraction (independent package)
+- **Phase 17**: GitHub Extraction (independent package) - **Current**
 
 ### Integration Extraction Pattern
 
-Phase 16 establishes the pattern for extracting integrations into independent packages:
+Phases 16-17 establish the pattern for extracting integrations into independent packages:
 
 1. **Dedicated package** under `packages/integrations/{integration}/`
-2. **Own database schema** (e.g., `linear.*` for Linear)
+2. **Own database schema** (e.g., `linear.*`, `github.*`)
 3. **HTTP service** with Express server for webhooks and OAuth
-4. **Credential management** via schema-specific store
+4. **Credential management** via schema-specific store with encryption
 5. **Dockerfile** for independent deployment
 
-This pattern will be replicated for GitHub and Slack in future phases.
+**Completed extractions:** Linear (Phase 16), GitHub (Phase 17)
+**Future:** Slack extraction planned for future phase.
 
 ### Upcoming Phases
 
@@ -388,3 +466,4 @@ This pattern will be replicated for GitHub and Slack in future phases.
 - PostgreSQL-based credentials storage (complete)
 - Result types for error handling (complete)
 - Linear as independent package (complete)
+- GitHub as independent package (complete)
