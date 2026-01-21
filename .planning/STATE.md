@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 17 of 22 (GitHub Extraction)
-Plan: 9 of TBD in current phase
+Plan: 10 of TBD in current phase
 Status: In progress
-Last activity: 2026-01-21 - Completed 17-09-PLAN.md
+Last activity: 2026-01-21 - Completed 17-10-PLAN.md
 
-Progress: [#############       ] 87% (63 plans complete)
+Progress: [#############       ] 88% (64 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [#############       ] 87% (63 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 63 (v2.0)
+- Total plans completed: 64 (v2.0)
 - Average duration: ~6 min
-- Total execution time: ~402 min
+- Total execution time: ~408 min
 
 **By Phase:**
 
@@ -40,11 +40,11 @@ Progress: [#############       ] 87% (63 plans complete)
 | 14-platform-services | 8/8 | 14 min | 2 min |
 | 15-code-quality | 8/8 | 111 min | 14 min |
 | 16-linear-extraction | 11/11 | 55 min | 5 min |
-| 17-github-extraction | 7/TBD | 27 min | 4 min |
+| 17-github-extraction | 10/TBD | 33 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 17-09 (5 min), 17-06 (6 min), 17-08 (3 min), 17-07 (3 min), 17-05 (3 min)
-- Trend: Phase 17 progressing rapidly - tests complete
+- Last 5 plans: 17-10 (6 min), 17-09 (5 min), 17-06 (6 min), 17-08 (3 min), 17-07 (3 min)
+- Trend: Phase 17 progressing rapidly - consumer migration complete
 
 *Updated after each plan completion*
 
@@ -241,6 +241,10 @@ Recent decisions affecting current work:
 - [17-09]: vi.mock @aesir/common to prevent config validation during tests
 - [17-09]: Type contract tests only for credential-store (full integration tests Phase 20)
 - [17-09]: Test error wrapping behavior without checking message text (focus on error codes)
+- [17-10]: GitHubConfig renamed to GitHubServiceConfig (avoid conflict with client config type)
+- [17-10]: Removed verifyWebhookSignature from agents (now in @aesir/integration-github)
+- [17-10]: Re-export pattern for backward compatibility during package extraction
+- [17-10]: _legacy/ directory pattern for preserving old code during migration
 
 ### Pending Todos
 
@@ -267,9 +271,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed 17-09-PLAN.md
+Stopped at: Completed 17-10-PLAN.md
 Resume file: None
 Next action: Execute next plan in phase 17
 
 ---
-*Updated: 2026-01-21 after completing plan 17-09*
+*Updated: 2026-01-21 after completing plan 17-10*
