@@ -223,6 +223,11 @@ Recent decisions affecting current work:
 - [17-04]: Operations accept Octokit instances for dependency injection and testability
 - [17-04]: exactOptionalPropertyTypes handled with conditional property assignment in API requests
 - [17-04]: File modes default to '100644' for regular files in commit operations
+- [17-05]: loadGitHubTokens returns null for missing credentials (allows graceful handling)
+- [17-05]: createGitHubClientFromDatabase throws for missing credentials (fail-fast at client creation)
+- [17-05]: DEFAULT_OWNER = 'default' for single-tenant deployments (matches Linear pattern)
+- [17-05]: 32-byte random hex for OAuth state (CSRF protection)
+- [17-05]: Default scope 'repo,read:org' for GitHub OAuth
 
 ### Pending Todos
 
@@ -249,7 +254,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed 17-04-PLAN.md
+Stopped at: Completed 17-05-PLAN.md
 Resume file: None
 Next action: Execute 17-06-PLAN.md (Webhook HTTP Routes)
 
