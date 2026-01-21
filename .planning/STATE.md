@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 16 of 22 (Linear Extraction)
-Plan: 8 of 11 in current phase
+Plan: 7 of 11 in current phase
 Status: In progress
-Last activity: 2026-01-21 - Completed 16-08-PLAN.md (Containerization and documentation)
+Last activity: 2026-01-21 - Completed 16-07-PLAN.md (Database migration infrastructure)
 
-Progress: [##########          ] 74% (42 plans complete)
+Progress: [##########          ] 72% (41 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [##########          ] 74% (42 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 42 (v2.0)
+- Total plans completed: 41 (v2.0)
 - Average duration: ~7 min
-- Total execution time: ~308 min
+- Total execution time: ~310 min
 
 **By Phase:**
 
@@ -39,11 +39,11 @@ Progress: [##########          ] 74% (42 plans complete)
 | 13-data-layer | 6/6 | 38 min | 6 min |
 | 14-platform-services | 8/8 | 14 min | 2 min |
 | 15-code-quality | 8/8 | 111 min | 14 min |
-| 16-linear-extraction | 8/11 | 31 min | 4 min |
+| 16-linear-extraction | 7/11 | 33 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 16-08 (2 min), 16-06 (5 min), 16-05 (4 min), 16-04 (6 min), 16-03 (7 min)
-- Trend: Phase 16 progressing efficiently - containerization complete, ready for data migration
+- Last 5 plans: 16-07 (2 min), 16-06 (5 min), 16-05 (4 min), 16-04 (6 min), 16-03 (7 min)
+- Trend: Phase 16 progressing very efficiently - migration infrastructure ready
 
 *Updated after each plan completion*
 
@@ -191,6 +191,10 @@ Recent decisions affecting current work:
 - [16-05]: createLinearClientFromDatabase bridges credential store and client factory
 - [16-05]: Token refresh automatically persisted via onTokenRefresh callback
 - [16-05]: DEFAULT_WORKSPACE_ID = ws_default for single-tenant deployments
+- [16-07]: Migration SQL uses IF NOT EXISTS for idempotent schema creation
+- [16-07]: Migration script checks for schema existence before running SQL
+- [16-07]: Credential migration filters by provider='linear' to isolate Linear data
+- [16-07]: Migration scripts reuse existing IDs when migrating credentials
 - [16-08]: Multi-stage Docker build separates builder and runtime for smaller final image
 - [16-08]: Non-root user (aesir:1001) runs service in container for security
 - [16-08]: README documents both service and library usage patterns
@@ -221,9 +225,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed 16-08-PLAN.md (Containerization and documentation)
+Stopped at: Completed 16-07-PLAN.md (Database migration infrastructure)
 Resume file: None
-Next action: Continue Phase 16 (data migration in 16-09)
+Next action: Continue Phase 16
 
 ---
-*Updated: 2026-01-21 after 16-08-PLAN.md completed*
+*Updated: 2026-01-21 after 16-07-PLAN.md completed*
