@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-19)
 
 **Core value:** Maintainable, scalable foundation for end-to-end automated development workflows
-**Current focus:** Phase 13 - Data Layer (complete)
+**Current focus:** Phase 14 - Platform Services (in progress)
 
 ## Current Position
 
-Phase: 13 of 22 (Data Layer)
-Plan: 6 of 6 in current phase
-Status: Phase complete
-Last activity: 2026-01-20 - Completed 13-06-PLAN.md (final plan of Phase 13)
+Phase: 14 of 22 (Platform Services)
+Plan: 2 of 4 in current phase
+Status: In progress
+Last activity: 2026-01-21 - Completed 14-02-PLAN.md
 
-Progress: [######              ] 38% (5 of 13 phases complete)
+Progress: [######              ] 40% (6 phases worth of plans complete)
 
 ## Milestone History
 
@@ -37,10 +37,11 @@ Progress: [######              ] 38% (5 of 13 phases complete)
 | 11-monorepo-setup | 4/4 | ~41 min | ~10 min |
 | 12-observability | 8/8 | 78 min | 10 min |
 | 13-data-layer | 6/6 | 38 min | 6 min |
+| 14-platform-services | 2/4 | 1 min | 1 min |
 
 **Recent Trend:**
-- Last 5 plans: 13-06 (8 min), 13-05 (7 min), 13-04 (5 min), 13-03 (9 min), 13-02 (6 min)
-- Trend: Data layer plans are fast (well-defined scope)
+- Last 5 plans: 14-02 (1 min), 13-06 (8 min), 13-05 (7 min), 13-04 (5 min), 13-03 (9 min)
+- Trend: Small plans execute quickly (14-02 was lint config only)
 
 *Updated after each plan completion*
 
@@ -119,6 +120,7 @@ Recent decisions affecting current work:
 - [13-06]: Direct DB connection in migration script to avoid full environment validation
 - [13-06]: Migration script inlines schema definition to prevent triggering config validation
 - [13-06]: File fallback removed from OAuth flow (database is sole storage)
+- [14-02]: Biome noRestrictedImports for layer boundary enforcement (clearer DX than TS project refs alone)
 
 ### Pending Todos
 
@@ -144,10 +146,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-01-20
-Stopped at: Completed 13-06-PLAN.md (Phase 13 complete)
+Last session: 2026-01-21
+Stopped at: Completed 14-02-PLAN.md
 Resume file: None
-Next action: Begin Phase 14 (Error Handling)
+Next action: Continue Phase 14 (14-03-PLAN.md)
 
 ---
-*Updated: 2026-01-20 after 13-06-PLAN.md completed*
+*Updated: 2026-01-21 after 14-02-PLAN.md completed*
