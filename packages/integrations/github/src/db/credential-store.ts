@@ -10,7 +10,7 @@
 import type { PinoLogger } from "@aesir/common";
 import { createId } from "@aesir/common";
 import { and, eq, isNull, sql } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { fromPromise, type ResultAsync } from "neverthrow";
 import { GitHubError } from "../types/errors.js";
 import { decryptToken, encryptToken } from "./encryption.js";
@@ -43,7 +43,7 @@ export interface DecryptedCredential {
 
 /** Options for creating a GitHub credential store */
 export interface GitHubCredentialStoreOptions {
-  db: PostgresJsDatabase;
+  db: NodePgDatabase;
   logger: PinoLogger;
 }
 
@@ -244,7 +244,7 @@ export function createGitHubCredentialStore(
 // Internal implementation functions (throw is OK - wrapped by fromPromise)
 
 async function storeCredentialImpl(
-  db: PostgresJsDatabase,
+  db: NodePgDatabase,
   logger: PinoLogger,
   input: StoreCredentialInput,
 ): Promise<string> {
@@ -302,7 +302,7 @@ async function storeCredentialImpl(
 }
 
 async function getCredentialImpl(
-  db: PostgresJsDatabase,
+  db: NodePgDatabase,
   id: string,
 ): Promise<DecryptedCredential | null> {
   const rows = await db
@@ -319,7 +319,7 @@ async function getCredentialImpl(
 }
 
 async function getByOwnerImpl(
-  db: PostgresJsDatabase,
+  db: NodePgDatabase,
   owner: string,
 ): Promise<DecryptedCredential | null> {
   const rows = await db
@@ -336,7 +336,7 @@ async function getByOwnerImpl(
 }
 
 async function updateTokensImpl(
-  db: PostgresJsDatabase,
+  db: NodePgDatabase,
   logger: PinoLogger,
   id: string,
   tokens: {
@@ -363,7 +363,7 @@ async function updateTokensImpl(
 }
 
 async function deleteCredentialImpl(
-  db: PostgresJsDatabase,
+  db: NodePgDatabase,
   logger: PinoLogger,
   id: string,
 ): Promise<boolean> {

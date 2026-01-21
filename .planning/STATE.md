@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 17 of 22 (GitHub Extraction)
-Plan: 7 of TBD in current phase
+Plan: 8 of TBD in current phase
 Status: In progress
-Last activity: 2026-01-21 - Completed 17-07-PLAN.md
+Last activity: 2026-01-21 - Completed 17-08-PLAN.md
 
-Progress: [#############       ] 84% (60 plans complete)
+Progress: [#############       ] 85% (61 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [#############       ] 84% (60 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 60 (v2.0)
+- Total plans completed: 61 (v2.0)
 - Average duration: ~6 min
-- Total execution time: ~387 min
+- Total execution time: ~390 min
 
 **By Phase:**
 
@@ -40,11 +40,11 @@ Progress: [#############       ] 84% (60 plans complete)
 | 14-platform-services | 8/8 | 14 min | 2 min |
 | 15-code-quality | 8/8 | 111 min | 14 min |
 | 16-linear-extraction | 11/11 | 55 min | 5 min |
-| 17-github-extraction | 7/TBD | 13 min | 2 min |
+| 17-github-extraction | 8/TBD | 16 min | 2 min |
 
 **Recent Trend:**
-- Last 5 plans: 17-07 (3 min), 17-05 (3 min), 17-04 (2 min), 17-03 (1 min), 17-02 (2 min)
-- Trend: Phase 17 progressing rapidly - database migration complete
+- Last 5 plans: 17-08 (3 min), 17-07 (3 min), 17-05 (3 min), 17-04 (2 min), 17-03 (1 min)
+- Trend: Phase 17 progressing rapidly - Docker and documentation complete
 
 *Updated after each plan completion*
 
@@ -228,6 +228,10 @@ Recent decisions affecting current work:
 - [17-05]: DEFAULT_OWNER = 'default' for single-tenant deployments (matches Linear pattern)
 - [17-05]: 32-byte random hex for OAuth state (CSRF protection)
 - [17-05]: Default scope 'repo,read:org' for GitHub OAuth
+- [17-08]: Node 22-slim base image for GitHub integration (updated from Linear's Node 20)
+- [17-08]: Port 3002 for GitHub service Docker container (avoids Linear's 3001)
+- [17-08]: Multi-stage Docker build pattern established for all extracted integrations
+- [17-08]: README documents dual usage patterns (standalone service + library import)
 - [17-07]: GitHub migration uses GITHUB_TOKEN env var (not integrations.credentials table)
 - [17-07]: Updated_at trigger function in github schema for automatic timestamp updates
 
@@ -256,9 +260,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed 17-07-PLAN.md
+Stopped at: Completed 17-08-PLAN.md
 Resume file: None
-Next action: Execute 17-08-PLAN.md (if exists, else continue phase planning)
+Next action: Execute 17-09-PLAN.md (if exists, else continue phase planning)
 
 ---
 *Updated: 2026-01-21 after Phase 16 completed*

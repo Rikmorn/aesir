@@ -7,13 +7,13 @@
 
 import { createId, type PinoLogger } from "@aesir/common";
 import { eq } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { fromPromise, type ResultAsync } from "neverthrow";
 import { GitHubError } from "../types/errors.js";
 import { webhookDeliveries } from "./schema.js";
 
 export interface WebhookDeliveryStoreOptions {
-  db: PostgresJsDatabase;
+  db: NodePgDatabase;
   logger: PinoLogger;
 }
 
