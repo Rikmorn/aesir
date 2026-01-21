@@ -1,9 +1,7 @@
 /**
- * GitHub Integration Types
+ * GitHub Client Types
  *
- * Type definitions for GitHub API configuration, branch operations,
- * commits, and pull requests. These types support the agent's
- * interaction with GitHub's REST API via Octokit.
+ * Type definitions for GitHub client configuration and operations.
  */
 
 /**
