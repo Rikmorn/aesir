@@ -81,7 +81,23 @@ export {
   mergePullRequest,
 } from "./github/index.js";
 // === Linear ===
-// Linear SDK integration with OAuth
+/**
+ * @deprecated Import from @aesir/integration-linear directly.
+ * Linear has been extracted to a standalone package for independent deployment.
+ * These re-exports are provided for backward compatibility only.
+ *
+ * @example
+ * ```typescript
+ * // Old (deprecated)
+ * import { createLinearClient } from '@aesir/integrations';
+ *
+ * // New (recommended)
+ * import { createLinearClient } from '@aesir/integration-linear';
+ * ```
+ */
+// IssueStatus re-exported from @aesir/common (shared type)
+export type { IssueStatus } from "@aesir/common";
+// Re-exported from @aesir/integration-linear for backward compatibility
 export type {
   ActionActivityContent,
   AgentActivityContent,
@@ -92,7 +108,6 @@ export type {
   CreateIssueResult,
   ElicitationActivityContent,
   ErrorActivityContent,
-  IssueStatus,
   LabelInfo,
   LinearConfig,
   ResponseActivityContent,
