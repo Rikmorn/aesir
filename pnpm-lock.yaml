@@ -177,6 +177,55 @@ importers:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@22.19.7)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)
 
+  packages/integrations/github:
+    dependencies:
+      '@aesir/common':
+        specifier: workspace:*
+        version: link:../../common
+      '@octokit/rest':
+        specifier: ^22.0.1
+        version: 22.0.1
+      '@octokit/webhooks-methods':
+        specifier: ^5.1.0
+        version: 5.1.1
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.1(@types/pg@8.16.0)(pg@8.17.2)(postgres@3.4.8)
+      express:
+        specifier: ^4.21.0
+        version: 4.22.1
+      neverthrow:
+        specifier: ^8.2.0
+        version: 8.2.0
+      pg:
+        specifier: ^8.17.2
+        version: 8.17.2
+      zod:
+        specifier: 3.25.67
+        version: 3.25.67
+    devDependencies:
+      '@types/express':
+        specifier: ^4.17.21
+        version: 4.17.25
+      '@types/pg':
+        specifier: ^8.16.0
+        version: 8.16.0
+      dotenv-flow:
+        specifier: ^4.1.0
+        version: 4.1.0
+      drizzle-kit:
+        specifier: ^0.31.8
+        version: 0.31.8
+      tsx:
+        specifier: ^4.19.3
+        version: 4.21.0
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.19.7)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)
+
   packages/integrations/linear:
     dependencies:
       '@aesir/common':
@@ -1152,6 +1201,10 @@ packages:
 
   '@octokit/types@16.0.0':
     resolution: {integrity: sha512-sKq+9r1Mm4efXW1FCk7hFSeJo4QKreL/tTbR0rz/qx/r1Oa2VV83LTA/H/MuCOX7uCIJmQVRKBcbmWoySjAnSg==}
+
+  '@octokit/webhooks-methods@5.1.1':
+    resolution: {integrity: sha512-NGlEHZDseJTCj8TMMFehzwa9g7On4KJMPVHDSrHxCQumL6uSQR8wIkP/qesv52fXqV1BPf4pTxwtS31ldAt9Xg==}
+    engines: {node: '>= 18'}
 
   '@oxc-resolver/binding-android-arm-eabi@11.16.3':
     resolution: {integrity: sha512-CVyWHu6ACDqDcJxR4nmGiG8vDF4TISJHqRNzac5z/gPQycs/QrP/1pDsJBy0MD7jSw8nVq2E5WqeHQKabBG/Jg==}
@@ -4138,6 +4191,8 @@ snapshots:
   '@octokit/types@16.0.0':
     dependencies:
       '@octokit/openapi-types': 27.0.0
+
+  '@octokit/webhooks-methods@5.1.1': {}
 
   '@oxc-resolver/binding-android-arm-eabi@11.16.3':
     optional: true

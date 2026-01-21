@@ -1,0 +1,49 @@
+{
+  "name": "@aesir/integration-github",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./*": {
+      "import": "./dist/*.js",
+      "types": "./dist/*.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "biome check --max-diagnostics=1000 src/",
+    "lint:fix": "biome check --write --max-diagnostics=1000 src/",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "migrate": "tsx -r dotenv-flow/config scripts/migrate-credentials.ts"
+  },
+  "dependencies": {
+    "@aesir/common": "workspace:*",
+    "@octokit/rest": "^22.0.1",
+    "@octokit/webhooks-methods": "^5.1.0",
+    "drizzle-orm": "^0.45.1",
+    "express": "^4.21.0",
+    "neverthrow": "^8.2.0",
+    "pg": "^8.17.2",
+    "zod": "3.25.67"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/pg": "^8.16.0",
+    "dotenv-flow": "^4.1.0",
+    "drizzle-kit": "^0.31.8",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
