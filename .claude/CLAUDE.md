@@ -10,6 +10,8 @@ Agentic development platform that automates software workflows - from feature re
 Agents (dev-agent, product-agent)
    ↓ uses
 Integrations (Linear, GitHub, Slack)
+   ├── @aesir/integration-linear (independent package)
+   ├── @aesir/integrations (GitHub, Slack, shared)
    ↓ uses
 Platform (config, logging, state, temporal)
 ```
@@ -19,6 +21,12 @@ Platform (config, logging, state, temporal)
 - Integrations import from Platform only
 - Platform imports nothing from Agents or Integrations
 - Never import in the reverse direction
+
+**Integration Extraction:**
+Each integration (starting with Linear) is extracted to its own package for independent deployment, versioning, and lifecycle management. The extraction pattern enables:
+- Independent HTTP services with their own database schemas
+- Separate deployment and scaling decisions
+- Clear package boundaries with explicit dependencies
 
 ### Key Frameworks
 
@@ -36,21 +44,43 @@ Platform (config, logging, state, temporal)
 ## Directory Structure
 
 ```
-src/
-├── agents/          # Agent definitions (dev-agent, product-agent)
-├── api/             # HTTP endpoints for webhooks (Linear, GitHub, Slack)
-├── config/          # Configuration and environment validation
-├── integrations/    # External service connectors
-│   ├── github/      # GitHub API via Octokit
-│   ├── linear/      # Linear SDK integration
-│   └── slack/       # Slack Bolt for messaging
-├── logging/         # Pino-based logging utilities
-├── sandbox/         # Docker sandbox for code execution
-├── scripts/         # CLI entry points (start-dev-agent, etc.)
-├── state/           # LangGraph state definitions
-├── temporal/        # Temporal workflow and activity definitions
-├── testing/         # Test utilities and helpers
-└── tools/           # Agent tools (code generation, etc.)
+packages/
+├── agents/              # @aesir/agents - Agent definitions
+│   └── src/
+│       ├── dev-agent/   # Development workflow automation
+│       └── product-agent/ # Product roadmap management
+├── integrations/
+│   ├── linear/          # @aesir/integration-linear (independent)
+│   │   ├── src/
+│   │   │   ├── api/     # HTTP routes (webhooks, OAuth)
+│   │   │   ├── client/  # Linear SDK wrapper
+│   │   │   ├── db/      # linear.* schema, credential store
+│   │   │   ├── oauth/   # Token management
+│   │   │   ├── webhooks/ # Signature verification, parsing
+│   │   │   ├── types/   # Config, errors
+│   │   │   ├── index.ts # Barrel export
+│   │   │   └── main.ts  # HTTP server entry
+│   │   ├── Dockerfile
+│   │   └── package.json
+│   └── src/             # @aesir/integrations - GitHub, Slack, shared
+│       ├── github/      # GitHub API via Octokit
+│       ├── slack/       # Slack Bolt for messaging
+│       └── index.ts     # Re-exports
+├── platform/            # @aesir/platform - Core services
+│   └── src/
+│       ├── config/      # Configuration and environment
+│       ├── db/          # Database connection, migrations
+│       ├── logging/     # Pino-based logging
+│       └── sandbox/     # Docker sandbox for code execution
+├── observability/       # @aesir/observability - Execution tracking
+│   └── src/
+│       ├── db/          # observability.* schema
+│       └── services/    # ExecutionTracker, IdempotencyChecker
+└── common/              # @aesir/common - Shared types
+    └── src/
+        ├── errors/      # Error classes
+        ├── types/       # Domain types
+        └── state/       # LangGraph state definitions
 ```
 
 ## Common Commands
@@ -116,6 +146,33 @@ import { config } from "./config/index.js";
 // Use typed config object
 const apiKey = config.anthropic.apiKey;
 const dbUrl = config.database.url;
+```
+
+### Linear Integration
+
+For Linear functionality, import from the dedicated package:
+
+```typescript
+// Linear is extracted to its own package
+import {
+  createLinearClientFromDatabase,
+  verifyWebhookSignature,
+  emitThought,
+} from "@aesir/integration-linear";
+
+// Use the factory to create a client with DB-backed credentials
+const client = await createLinearClientFromDatabase({
+  workspaceId: "ws_default",
+  db,
+  logger,
+});
+
+// Verify webhook signatures
+const isValid = await verifyWebhookSignature({
+  body: rawBody,
+  signature: headers["linear-signature"],
+  secret: config.linear.webhookSigningSecret,
+});
 ```
 
 ### Zod Validation
@@ -277,9 +334,17 @@ describe("ComponentName", () => {
 
 ### OAuth Tokens
 
-- Linear OAuth tokens stored in PostgreSQL `integrations.credentials` table (encrypted)
+- Linear OAuth tokens stored in PostgreSQL `linear.credentials` table (encrypted)
+- Linear uses its own database schema (`linear.*`), separate from shared `integrations.*` schema
 - Run `npm run linear-oauth` to authenticate
 - Requires `CREDENTIAL_ENCRYPTION_KEY` environment variable (generate with `openssl rand -hex 32`)
+
+### Package Imports
+
+- Import Linear from `@aesir/integration-linear`, not from `@aesir/integrations`
+- Each extracted integration has its own package scope and dependencies
+- Platform utilities imported via `@aesir/platform`
+- Shared types imported via `@aesir/common`
 
 ### npm Install
 
@@ -290,23 +355,36 @@ describe("ComponentName", () => {
 
 Current milestone is v2.0 Foundation - full architectural restructure for maintainability.
 
-### Phase 10: Foundation Setup (current)
+### Completed Phases
 
-- Biome linting/formatting (complete)
-- dotenv-flow configuration (complete)
-- Pre-commit hooks (complete)
-- AI context files (.claude, .cursor)
+- **Phase 10**: Foundation Setup (Biome, dotenv-flow, pre-commit hooks, AI context)
+- **Phase 11**: Monorepo Setup (pnpm workspaces, TypeScript project references)
+- **Phase 12**: Observability (pino logging, correlation IDs, Temporal adapter)
+- **Phase 13**: Data Layer (Drizzle ORM, PostgreSQL schemas, credential encryption)
+- **Phase 14**: Platform Services (ExecutionTracker, IdempotencyChecker, CursorStore)
+- **Phase 15**: Code Quality (Result types, error handling, boundaries)
+- **Phase 16**: Linear Extraction (independent package) - **Current**
+
+### Integration Extraction Pattern
+
+Phase 16 establishes the pattern for extracting integrations into independent packages:
+
+1. **Dedicated package** under `packages/integrations/{integration}/`
+2. **Own database schema** (e.g., `linear.*` for Linear)
+3. **HTTP service** with Express server for webhooks and OAuth
+4. **Credential management** via schema-specific store
+5. **Dockerfile** for independent deployment
+
+This pattern will be replicated for GitHub and Slack in future phases.
 
 ### Upcoming Phases
 
-- Phase 11: Logging consolidation (pino everywhere)
-- Phase 12: Error handling patterns
-- Phase 13: Testing infrastructure
-- Phase 14+: See `.planning/ROADMAP.md`
+- Phase 17+: See `.planning/ROADMAP.md`
 
-### Key Changes Coming
+### Key Achievements
 
 - pnpm monorepo structure (complete)
 - Centralized pino logging (complete)
 - PostgreSQL-based credentials storage (complete)
-- Result types for error handling (neverthrow)
+- Result types for error handling (complete)
+- Linear as independent package (complete)
