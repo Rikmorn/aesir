@@ -213,6 +213,9 @@ Recent decisions affecting current work:
 - [17-01]: github.* schema namespace for database isolation (parallel to linear.*)
 - [17-01]: @octokit/webhooks-methods for GitHub signature verification
 - [17-01]: GitHubError extends AppError with INT_GITHUB_* error codes
+- [17-02]: owner field for GitHub credentials (org or user - unique identifier)
+- [17-02]: installation_id field for future GitHub Apps support (nullable)
+- [17-02]: Exact Linear pattern replication for credential encryption and storage
 - [17-03]: verifyWebhookRequest helper extracts metadata (deliveryId, eventType) along with verification
 - [17-03]: parsePRReviewPayload returns SafeParseReturnType for controlled error handling
 - [17-03]: Synthetic ZodError for JSON parse failures in webhook parser
