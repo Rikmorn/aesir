@@ -128,6 +128,9 @@ Recent decisions affecting current work:
 - [14-03]: Duplicates logged at debug level (expected behavior, not error)
 - [14-04]: Warn (not error) when execution not found for complete/fail - defensive against race conditions
 - [14-04]: Duration calculated server-side by fetching started_at from DB
+- [14-05]: Raw pg Pool for cross-schema queries (integrations.*, observability.*, public.*)
+- [14-05]: Thread ID pattern: approval-{issue_id} derived from existing codebase
+- [14-05]: Delete order for checkpoints: writes -> blobs -> checkpoints (dependency order)
 - [14-06]: Use onConflictDoUpdate for atomic cursor upsert
 - [14-06]: Return boolean from clear() to indicate whether cursor existed
 
