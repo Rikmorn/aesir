@@ -21,7 +21,7 @@ The v2.0 Foundation milestone restructures Aesir from a working prototype to a m
 - [x] **Phase 12: Observability** - pino logging, correlation IDs, structured JSON logs
 - [x] **Phase 13: Data Layer** - PostgreSQL schemas, credential migration from .tokens/
 - [x] **Phase 14: Platform Services** - Webhook idempotency, execution tracking, cleanup, DI patterns
-- [ ] **Phase 15: Code Quality** - Error handling, validation, branded types, dead code removal
+- [ ] **Phase 15: Code Quality** - Error handling, validation, barrel exports, dead code removal
 - [ ] **Phase 16: Linear Extraction** - Extract Linear integration to independent package
 - [ ] **Phase 17: GitHub Extraction** - Extract GitHub integration to independent package
 - [ ] **Phase 18: Slack Extraction** - Extract Slack integration to independent package
@@ -137,18 +137,22 @@ Plans:
 ### Phase 15: Code Quality
 **Goal:** Consistent error handling, validation, and type safety patterns across the codebase
 **Depends on:** Phase 14
-**Requirements:** QUAL-01, QUAL-02, QUAL-03, QUAL-04, QUAL-05, QUAL-06
+**Requirements:** QUAL-01, QUAL-02, QUAL-03, QUAL-05, QUAL-06 (QUAL-04 descoped - named params instead)
 **Success Criteria** (what must be TRUE):
   1. Service boundary functions return Result<T, E> types (neverthrow), not thrown exceptions
   2. All external API inputs (webhooks, HTTP endpoints) validated with Zod before processing
   3. Each package exports its public API via index.ts (no deep imports into internal modules)
-  4. Cross-service IDs are branded types (LinearIssueId, GitHubPRId) that prevent accidental mixing
-  5. Error classes extend AppError base class with unique error codes
-  6. Running dead code analysis reports no unreachable code or unused exports
-**Plans:** TBD
+  4. Error classes extend AppError base class with unique error codes
+  5. Running dead code analysis reports no unreachable code or unused exports
+**Plans:** 6 plans
 
 Plans:
-- [ ] 15-01: TBD
+- [ ] 15-01-PLAN.md — Install neverthrow/knip, create AppError hierarchy in common package
+- [ ] 15-02-PLAN.md — Create integration error classes, migrate CredentialStore to ResultAsync
+- [ ] 15-03-PLAN.md — Create platform/observability errors, migrate CleanupService and ExecutionTracker
+- [ ] 15-04-PLAN.md — Add Zod validation schemas to webhook handlers
+- [ ] 15-05-PLAN.md — Audit and reorganize barrel exports in all packages
+- [ ] 15-06-PLAN.md — Configure knip and remove dead code
 
 ### Phase 16: Linear Extraction
 **Goal:** Linear integration extracted as independent package with its own lifecycle
@@ -264,7 +268,7 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 | 12. Observability | v2.0 | 8/8 | Complete | 2026-01-20 |
 | 13. Data Layer | v2.0 | 6/6 | Complete | 2026-01-20 |
 | 14. Platform Services | v2.0 | 8/8 | Complete | 2026-01-21 |
-| 15. Code Quality | v2.0 | 0/TBD | Not started | - |
+| 15. Code Quality | v2.0 | 0/6 | Planned | - |
 | 16. Linear Extraction | v2.0 | 0/TBD | Not started | - |
 | 17. GitHub Extraction | v2.0 | 0/TBD | Not started | - |
 | 18. Slack Extraction | v2.0 | 0/TBD | Not started | - |
@@ -275,5 +279,5 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 
 ---
 *Created: 2026-01-19*
-*Updated: 2026-01-21 (Phase 14 complete)*
+*Updated: 2026-01-21 (Phase 15 planned)*
 *Milestone: v2.0 Foundation*
