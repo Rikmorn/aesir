@@ -96,6 +96,9 @@ importers:
       '@aesir/integrations':
         specifier: workspace:*
         version: link:../integrations
+      '@aesir/observability':
+        specifier: workspace:*
+        version: link:../observability
       '@langchain/anthropic':
         specifier: ^0.3.0
         version: 0.3.34(@langchain/core@0.3.80)(zod@3.25.67)
@@ -105,9 +108,15 @@ importers:
       '@langchain/langgraph':
         specifier: ^0.2.0
         version: 0.2.74(@langchain/core@0.3.80)(zod-to-json-schema@3.25.1(zod@3.25.67))
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.1(@types/pg@8.16.0)(pg@8.17.2)(postgres@3.4.8)
       langsmith:
         specifier: ^0.3.0
         version: 0.3.87
+      postgres:
+        specifier: ^3.4.7
+        version: 3.4.8
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -178,7 +187,7 @@ importers:
         version: 7.13.0
       drizzle-orm:
         specifier: ^0.45.1
-        version: 0.45.1(@types/pg@8.16.0)(pg@8.17.2)
+        version: 0.45.1(@types/pg@8.16.0)(pg@8.17.2)(postgres@3.4.8)
       pg:
         specifier: ^8.17.2
         version: 8.17.2
@@ -203,7 +212,7 @@ importers:
         version: link:../common
       drizzle-orm:
         specifier: ^0.45.1
-        version: 0.45.1(@types/pg@8.16.0)(pg@8.17.2)
+        version: 0.45.1(@types/pg@8.16.0)(pg@8.17.2)(postgres@3.4.8)
       pg:
         specifier: ^8.17.2
         version: 8.17.2
@@ -249,7 +258,7 @@ importers:
         version: 4.0.9
       drizzle-orm:
         specifier: ^0.45.1
-        version: 0.45.1(@types/pg@8.16.0)(pg@8.17.2)
+        version: 0.45.1(@types/pg@8.16.0)(pg@8.17.2)(postgres@3.4.8)
       pg:
         specifier: ^8.17.2
         version: 8.17.2
@@ -2447,6 +2456,10 @@ packages:
     resolution: {integrity: sha512-9ZhXKM/rw350N1ovuWHbGxnGh/SNJ4cnxHiM0rxE4VN41wsg8P8zWn9hv/buK00RP4WvlOyr/RBDiptyxVbkZQ==}
     engines: {node: '>=0.10.0'}
 
+  postgres@3.4.8:
+    resolution: {integrity: sha512-d+JFcLM17njZaOLkv6SCev7uoLaBtfK86vMUXhW1Z4glPWh4jozno9APvW/XKFJ3CCxVoC7OL38BqRydtu5nGg==}
+    engines: {node: '>=12'}
+
   process-warning@5.0.0:
     resolution: {integrity: sha512-a39t9ApHNx2L4+HBnQKqxxHNs1r7KF+Intd8Q/g1bUh6q0WIp9voPXJ/x0j+ZL45KF1pJd9+q2jLIRMfvEshkA==}
 
@@ -4291,10 +4304,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.45.1(@types/pg@8.16.0)(pg@8.17.2):
+  drizzle-orm@0.45.1(@types/pg@8.16.0)(pg@8.17.2)(postgres@3.4.8):
     optionalDependencies:
       '@types/pg': 8.16.0
       pg: 8.17.2
+      postgres: 3.4.8
 
   dunder-proto@1.0.1:
     dependencies:
@@ -4921,6 +4935,8 @@ snapshots:
   postgres-interval@1.2.0:
     dependencies:
       xtend: 4.0.2
+
+  postgres@3.4.8: {}
 
   process-warning@5.0.0: {}
 

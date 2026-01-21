@@ -14,6 +14,7 @@ import {
 } from "@aesir/common";
 import type {
   AgentSessionPayload,
+  WebhookIdempotencyService,
   WebhookPayloadBase,
 } from "@aesir/integrations";
 import {
@@ -24,6 +25,7 @@ import {
   validateWebhookTimestamp,
   verifyWebhookSignature,
 } from "@aesir/integrations";
+import type { ExecutionTracker } from "@aesir/observability";
 
 const baseLogger: PinoLogger = createPinoLogger({
   component: "agents:webhooks:linear-agent-session",
@@ -142,6 +144,16 @@ export interface WebhookRequest {
  */
 export interface WebhookResponse {
   status: (code: number) => { json: (body: unknown) => void };
+  setHeader?: (name: string, value: string) => void;
+}
+
+/**
+ * Services for webhook processing
+ */
+export interface WebhookServices {
+  webhookIdempotency: WebhookIdempotencyService;
+  executionTracker: ExecutionTracker;
+  workspaceId: string;
 }
 
 /**
@@ -151,12 +163,14 @@ export interface WebhookResponse {
  * @param res - HTTP response object
  * @param config - Workflow configuration
  * @param webhookSecret - Linear webhook signing secret
+ * @param services - Optional services for idempotency and execution tracking
  */
 export async function linearWebhookHandler(
   req: WebhookRequest,
   res: WebhookResponse,
   config: LinearWebhookConfig,
   webhookSecret: string,
+  services?: WebhookServices,
 ): Promise<void> {
   // Generate correlation ID for this request
   const correlationId = generateCorrelationId("req");
@@ -176,8 +190,30 @@ export async function linearWebhookHandler(
 
   logger.info({}, "Webhook signature verified");
 
-  // Parse payload
+  // Parse payload for idempotency check (before full validation)
   const payload = parseWebhookPayload<WebhookPayloadBase>(req.rawBody);
+
+  // Check idempotency FIRST after signature verification
+  if (services?.webhookIdempotency) {
+    const deliveryId = req.headers["linear-delivery"];
+    if (deliveryId) {
+      const { isDuplicate } = await services.webhookIdempotency.checkAndRecord(
+        "linear",
+        deliveryId,
+        payload.type ?? "unknown",
+      );
+
+      if (isDuplicate) {
+        // Set header for duplicate indication
+        res.setHeader?.("X-Duplicate", "true");
+        res.status(200).json({
+          success: true,
+          message: "Duplicate webhook - already processed",
+        });
+        return;
+      }
+    }
+  }
 
   // Validate timestamp (prevent replay attacks)
   if (!validateWebhookTimestamp(payload.webhookTimestamp)) {
@@ -205,7 +241,35 @@ export async function linearWebhookHandler(
     "AgentSession payload received",
   );
 
-  // Handle the AgentSession event
-  const result = await handleAgentSessionWebhook(payload, config, logger);
-  res.status(200).json(result);
+  // Extract issue ID for execution tracking
+  const issueId = payload.agentSession?.issueId;
+
+  // Start execution tracking
+  let executionId: string | undefined;
+  if (services?.executionTracker && issueId) {
+    executionId = await services.executionTracker.start({
+      agentType: "dev-agent",
+      issueId,
+      workspaceId: services.workspaceId,
+    });
+  }
+
+  try {
+    // Handle the AgentSession event
+    const result = await handleAgentSessionWebhook(payload, config, logger);
+
+    // Mark execution complete
+    if (executionId && services?.executionTracker) {
+      await services.executionTracker.complete(executionId);
+    }
+
+    res.status(200).json(result);
+  } catch (error) {
+    // Mark execution failed
+    if (executionId && services?.executionTracker) {
+      const lastState = error instanceof Error ? error.message : "unknown";
+      await services.executionTracker.fail(executionId, lastState);
+    }
+    throw error;
+  }
 }

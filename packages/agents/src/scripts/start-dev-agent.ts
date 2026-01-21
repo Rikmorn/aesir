@@ -36,6 +36,7 @@ import {
 } from "node:http";
 import type { LinearWebhookConfig } from "../api/webhooks/linear-agent-session.js";
 import type { ActivityDependencies } from "../temporal/activities/index.js";
+import type { WebhookServices } from "../api/webhooks/linear-agent-session.js";
 
 async function bootstrap(): Promise<void> {
   const {
@@ -44,7 +45,11 @@ async function bootstrap(): Promise<void> {
     getLinearClient,
     createLinearClientFromDatabase,
     CredentialNotFoundError,
+    createWebhookIdempotencyService,
   } = await import("@aesir/integrations");
+  const { createExecutionTracker } = await import("@aesir/observability");
+  const { drizzle } = await import("drizzle-orm/postgres-js");
+  const postgres = (await import("postgres")).default;
   const { makeActivities } = await import("../temporal/activities/index.js");
   const { linearWebhookHandler } = await import(
     "../api/webhooks/linear-agent-session.js"
@@ -57,6 +62,30 @@ async function bootstrap(): Promise<void> {
   const { createPinoLogger } = await import("@aesir/common");
 
   const logger = createPinoLogger({ component: "agents:scripts:dev-agent" });
+
+  // Create database connection for services
+  const connectionString = `postgresql://${process.env.DATABASE_USER ?? "temporal"}:${process.env.DATABASE_PASSWORD ?? "temporal"}@${process.env.DATABASE_HOST ?? "localhost"}:${process.env.DATABASE_PORT ?? "5432"}/${process.env.DATABASE_NAME ?? "temporal"}`;
+  const sql = postgres(connectionString);
+  const db = drizzle(sql);
+
+  // Create services at startup (not per-request)
+  const webhookIdempotency = createWebhookIdempotencyService({
+    db,
+    logger: logger.child({ service: "webhook-idempotency" }),
+  });
+
+  const executionTracker = createExecutionTracker({
+    db,
+    logger: logger.child({ service: "execution-tracker" }),
+  });
+
+  // Note: workspace_id is hardcoded to "ws_default" for single-tenant MVP.
+  // Multi-tenant workspace extraction will be implemented when workspace management is added.
+  const webhookServices: WebhookServices = {
+    webhookIdempotency,
+    executionTracker,
+    workspaceId: "ws_default",
+  };
 
   // Note: Required environment variables are validated by ../config/env.js at import time
 
@@ -202,6 +231,10 @@ async function bootstrap(): Promise<void> {
             res.end(JSON.stringify(body));
           },
         }),
+        // Add header support for duplicate indication
+        setHeader: (name: string, value: string) => {
+          res.setHeader(name, value);
+        },
       };
 
       // Route to appropriate handler
@@ -216,6 +249,7 @@ async function bootstrap(): Promise<void> {
             webhookRes,
             webhookConfig,
             webhookSecret,
+            webhookServices,
           );
         } catch (err) {
           const errorMessage = err instanceof Error ? err.message : String(err);
@@ -263,6 +297,12 @@ async function bootstrap(): Promise<void> {
 
     // Cleanup sandbox
     await sandbox.cleanup();
+
+    // Close services
+    await webhookIdempotency.close();
+    await executionTracker.close();
+    await sql.end();
+
     process.exit(0);
   };
 

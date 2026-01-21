@@ -26,10 +26,13 @@
   "dependencies": {
     "@aesir/common": "workspace:*",
     "@aesir/integrations": "workspace:*",
+    "@aesir/observability": "workspace:*",
     "@langchain/anthropic": "^0.3.0",
     "@langchain/core": "^0.3.0",
     "@langchain/langgraph": "^0.2.0",
-    "langsmith": "^0.3.0"
+    "drizzle-orm": "^0.45.1",
+    "langsmith": "^0.3.0",
+    "postgres": "^3.4.7"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

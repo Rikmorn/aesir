@@ -17,6 +17,8 @@ export {
   startApprovalWorkflow,
   type WorkerConfig,
 } from "@aesir/platform";
+// Database (credentials, schema)
+export * from "./db/index.js";
 // GitHub
 export * from "./github/index.js";
 // Linear
