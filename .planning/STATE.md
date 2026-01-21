@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 16 of 22 (Linear Extraction)
-Plan: 2 of 4 in current phase
+Plan: 4 of 11 in current phase
 Status: In progress
-Last activity: 2026-01-21 - Completed 16-02-PLAN.md (database layer)
+Last activity: 2026-01-21 - Completed 16-04-PLAN.md (SDK client migration)
 
-Progress: [##########          ] 68% (38 plans complete)
+Progress: [##########          ] 70% (39 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [##########          ] 68% (38 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 37 (v2.0)
+- Total plans completed: 39 (v2.0)
 - Average duration: ~8 min
-- Total execution time: ~284 min
+- Total execution time: ~297 min
 
 **By Phase:**
 
@@ -39,11 +39,11 @@ Progress: [##########          ] 68% (38 plans complete)
 | 13-data-layer | 6/6 | 38 min | 6 min |
 | 14-platform-services | 8/8 | 14 min | 2 min |
 | 15-code-quality | 8/8 | 111 min | 14 min |
-| 16-linear-extraction | 2/4 | 7 min | 3.5 min |
+| 16-linear-extraction | 4/11 | 20 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 16-02 (4 min), 16-01 (3 min), 15-07 (7 min), 15-08 (10 min), 15-06 (11 min)
-- Trend: Phase 16 progressing - database layer complete
+- Last 5 plans: 16-04 (6 min), 16-03 (7 min), 16-02 (4 min), 16-01 (3 min), 15-08 (10 min)
+- Trend: Phase 16 progressing steadily - SDK client layer complete
 
 *Updated after each plan completion*
 
@@ -173,6 +173,9 @@ Recent decisions affecting current work:
 - [16-01]: Self-contained env validation per integration package (dotenv-flow + zod at package level)
 - [16-01]: Linear-specific PostgreSQL schema namespace (linear.*) for full data isolation
 - [16-01]: HTTP status mapping based on error codes (401 webhook/token, 400 oauth, 500 API)
+- [16-04]: LinearConfig renamed to LinearOAuthConfig (naming conflict with env config type)
+- [16-04]: WebhookPayloadBase.data optional (not all webhook types use it)
+- [16-04]: Explicit | undefined for optional types with exactOptionalPropertyTypes
 - [16-02]: Linear credentials table has no provider field (Linear-specific, workspace_id unique only)
 - [16-02]: schema.drizzle.ts with inline nanoid for migration generation (CJS bundler compatibility)
 - [16-02]: LinearCredentialStore.getByWorkspace() replaces getByProvider() (Linear-specific)
@@ -206,9 +209,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed 16-02-PLAN.md (database layer)
+Stopped at: Completed 16-04-PLAN.md (SDK client migration)
 Resume file: None
-Next action: Continue Phase 16 (16-03 or 16-04)
+Next action: Continue Phase 16
 
 ---
-*Updated: 2026-01-21 after 16-02-PLAN.md completed*
+*Updated: 2026-01-21 after 16-04-PLAN.md completed*
