@@ -93,6 +93,81 @@
           }
         }
       }
+    },
+    {
+      "includes": ["packages/platform/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {},
+                "patterns": [
+                  {
+                    "group": ["@aesir/agents", "@aesir/agents/*"],
+                    "message": "Platform layer cannot import from agents layer. Layer order: Agents -> Integrations -> Platform -> Common"
+                  },
+                  {
+                    "group": ["@aesir/integrations", "@aesir/integrations/*"],
+                    "message": "Platform layer cannot import from integrations layer. Layer order: Agents -> Integrations -> Platform -> Common"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/integrations/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {},
+                "patterns": [
+                  {
+                    "group": ["@aesir/agents", "@aesir/agents/*"],
+                    "message": "Integrations layer cannot import from agents layer. Layer order: Agents -> Integrations -> Platform -> Common"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/common/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {},
+                "patterns": [
+                  {
+                    "group": ["@aesir/agents", "@aesir/agents/*"],
+                    "message": "Common layer cannot import from agents layer. Layer order: Agents -> Integrations -> Platform -> Common"
+                  },
+                  {
+                    "group": ["@aesir/integrations", "@aesir/integrations/*"],
+                    "message": "Common layer cannot import from integrations layer. Layer order: Agents -> Integrations -> Platform -> Common"
+                  },
+                  {
+                    "group": ["@aesir/platform", "@aesir/platform/*"],
+                    "message": "Common layer cannot import from platform layer. Layer order: Agents -> Integrations -> Platform -> Common"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   ]
 }
