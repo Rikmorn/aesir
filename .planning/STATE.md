@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-19)
 
 **Core value:** Maintainable, scalable foundation for end-to-end automated development workflows
-**Current focus:** Phase 15 - Code Quality (complete)
+**Current focus:** Phase 16 - Linear Extraction (complete)
 
 ## Current Position
 
-Phase: 16 of 22 (Linear Extraction)
-Plan: 10 of 11 in current phase
-Status: In progress
-Last activity: 2026-01-21 - Completed 16-10-PLAN.md (Consumer migration)
+Phase: 17 of 22 (GitHub Extraction)
+Plan: 0 of TBD in current phase
+Status: Not started
+Last activity: 2026-01-21 - Completed Phase 16 (Linear Extraction)
 
-Progress: [##########          ] 75% (43 plans complete)
+Progress: [############        ] 80% (54 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [##########          ] 75% (43 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 43 (v2.0)
-- Average duration: ~7 min
-- Total execution time: ~317 min
+- Total plans completed: 54 (v2.0)
+- Average duration: ~6 min
+- Total execution time: ~372 min
 
 **By Phase:**
 
@@ -39,11 +39,11 @@ Progress: [##########          ] 75% (43 plans complete)
 | 13-data-layer | 6/6 | 38 min | 6 min |
 | 14-platform-services | 8/8 | 14 min | 2 min |
 | 15-code-quality | 8/8 | 111 min | 14 min |
-| 16-linear-extraction | 10/11 | 45 min | 5 min |
+| 16-linear-extraction | 11/11 | 55 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 16-10 (7 min), 16-09 (5 min), 16-08 (0 min), 16-07 (2 min), 16-06 (5 min)
-- Trend: Phase 16 near completion - consumer migration complete
+- Last 5 plans: 16-11 (10 min), 16-10 (7 min), 16-09 (5 min), 16-08 (0 min), 16-07 (2 min)
+- Trend: Phase 16 complete - Linear extracted as independent package
 
 *Updated after each plan completion*
 
@@ -206,6 +206,8 @@ Recent decisions affecting current work:
 - [16-10]: Old Linear source preserved in _legacy/ for reference during migration
 - [16-10]: Disable Biome organizeImports for integrations/src/index.ts (intentional section headers)
 - [16-10]: _legacy/ excluded from TypeScript compilation and Biome checks
+- [16-11]: Migration script placed in package directory for module resolution (drizzle-orm accessible)
+- [16-11]: `pnpm --filter @aesir/integration-linear migrate` as standard migration command
 
 ### Pending Todos
 
@@ -232,9 +234,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed 16-10-PLAN.md (Consumer migration)
+Stopped at: Completed Phase 16 (Linear Extraction)
 Resume file: None
-Next action: Continue Phase 16
+Next action: Plan Phase 17 (GitHub Extraction)
 
 ---
-*Updated: 2026-01-21 after 16-10-PLAN.md completed*
+*Updated: 2026-01-21 after Phase 16 completed*

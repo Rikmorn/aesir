@@ -168,17 +168,17 @@ Plans:
 **Plans:** 11 plans
 
 Plans:
-- [ ] 16-01-PLAN.md — Create package scaffolding and workspace configuration
-- [ ] 16-02-PLAN.md — Create database layer with linear.* schema and credential store
-- [ ] 16-03-PLAN.md — Move webhook handling (signature, parser, types)
-- [ ] 16-04-PLAN.md — Move Linear client (factory, issues, activities)
-- [ ] 16-05-PLAN.md — Create OAuth flow module (token store, client from database)
-- [ ] 16-06-PLAN.md — Create HTTP API layer (routes, webhooks, OAuth, main.ts)
-- [ ] 16-07-PLAN.md — Create database migration and credential migration script
-- [ ] 16-08-PLAN.md — Create Dockerfile and README documentation
-- [ ] 16-09-PLAN.md — Move and adapt tests
-- [ ] 16-10-PLAN.md — Update consumers and create backward-compatible re-exports
-- [ ] 16-11-PLAN.md — Update AI context files, final verification checkpoint
+- [x] 16-01-PLAN.md — Create package scaffolding and workspace configuration
+- [x] 16-02-PLAN.md — Create database layer with linear.* schema and credential store
+- [x] 16-03-PLAN.md — Move webhook handling (signature, parser, types)
+- [x] 16-04-PLAN.md — Move Linear client (factory, issues, activities)
+- [x] 16-05-PLAN.md — Create OAuth flow module (token store, client from database)
+- [x] 16-06-PLAN.md — Create HTTP API layer (routes, webhooks, OAuth, main.ts)
+- [x] 16-07-PLAN.md — Create database migration and credential migration script
+- [x] 16-08-PLAN.md — Create Dockerfile and README documentation
+- [x] 16-09-PLAN.md — Move and adapt tests
+- [x] 16-10-PLAN.md — Update consumers and create backward-compatible re-exports
+- [x] 16-11-PLAN.md — Update AI context files, final verification checkpoint
 
 ### Phase 17: GitHub Extraction
 **Goal:** GitHub integration extracted as independent package with its own lifecycle
@@ -281,7 +281,7 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 | 13. Data Layer | v2.0 | 6/6 | Complete | 2026-01-20 |
 | 14. Platform Services | v2.0 | 8/8 | Complete | 2026-01-21 |
 | 15. Code Quality | v2.0 | 8/8 | Complete | 2026-01-21 |
-| 16. Linear Extraction | v2.0 | 0/11 | Not started | - |
+| 16. Linear Extraction | v2.0 | 11/11 | Complete | 2026-01-21 |
 | 17. GitHub Extraction | v2.0 | 0/TBD | Not started | - |
 | 18. Slack Extraction | v2.0 | 0/TBD | Not started | - |
 | 19. MCP Layer | v2.0 | 0/TBD | Not started | - |
@@ -291,5 +291,5 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 
 ---
 *Created: 2026-01-19*
-*Updated: 2026-01-21 (Phase 16 planned)*
+*Updated: 2026-01-21 (Phase 16 complete)*
 *Milestone: v2.0 Foundation*
