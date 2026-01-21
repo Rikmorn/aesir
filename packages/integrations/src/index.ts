@@ -21,5 +21,7 @@ export {
 export * from "./github/index.js";
 // Linear
 export * from "./linear/index.js";
+// Services
+export * from "./services/index.js";
 // Slack
 export * from "./slack/index.js";
