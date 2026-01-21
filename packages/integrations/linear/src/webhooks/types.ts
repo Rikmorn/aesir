@@ -55,7 +55,7 @@ export interface AgentSessionPayload
     /** Creator information */
     creator?: {
       id: string;
-    } | undefined;
+    };
   };
 }
 
