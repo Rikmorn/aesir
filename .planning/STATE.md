@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 16 of 22 (Linear Extraction)
-Plan: 7 of 11 in current phase
+Plan: 9 of 11 in current phase
 Status: In progress
-Last activity: 2026-01-21 - Completed 16-07-PLAN.md (Database migration infrastructure)
+Last activity: 2026-01-21 - Completed 16-09-PLAN.md (Test migration)
 
-Progress: [##########          ] 72% (41 plans complete)
+Progress: [##########          ] 74% (42 plans complete)
 
 ## Milestone History
 
@@ -39,11 +39,11 @@ Progress: [##########          ] 72% (41 plans complete)
 | 13-data-layer | 6/6 | 38 min | 6 min |
 | 14-platform-services | 8/8 | 14 min | 2 min |
 | 15-code-quality | 8/8 | 111 min | 14 min |
-| 16-linear-extraction | 7/11 | 33 min | 5 min |
+| 16-linear-extraction | 9/11 | 38 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 16-07 (2 min), 16-06 (5 min), 16-05 (4 min), 16-04 (6 min), 16-03 (7 min)
-- Trend: Phase 16 progressing very efficiently - migration infrastructure ready
+- Last 5 plans: 16-09 (5 min), 16-08 (0 min), 16-07 (2 min), 16-06 (5 min), 16-05 (4 min)
+- Trend: Phase 16 near completion - test migration complete
 
 *Updated after each plan completion*
 
@@ -199,6 +199,9 @@ Recent decisions affecting current work:
 - [16-08]: Non-root user (aesir:1001) runs service in container for security
 - [16-08]: README documents both service and library usage patterns
 - [16-08]: .env.example includes all required and optional variables with defaults
+- [16-09]: vi.mock pattern for isolating tests from config validation in Linear package
+- [16-09]: Type contract tests for credential-store (full integration tests deferred to Phase 20)
+- [16-09]: Focus factory tests on token type detection (refresh flow requires complex fetch mocking)
 
 ### Pending Todos
 
@@ -225,9 +228,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed 16-07-PLAN.md (Database migration infrastructure)
+Stopped at: Completed 16-09-PLAN.md (Test migration)
 Resume file: None
 Next action: Continue Phase 16
 
 ---
-*Updated: 2026-01-21 after 16-07-PLAN.md completed*
+*Updated: 2026-01-21 after 16-09-PLAN.md completed*
