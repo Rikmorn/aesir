@@ -7,7 +7,7 @@
 /**
  * OAuth configuration for Linear API access
  */
-export interface LinearConfig {
+export interface LinearOAuthConfig {
   /** OAuth access token for API calls */
   accessToken: string;
   /** OAuth refresh token for token renewal (may be absent if Linear didn't provide one) */

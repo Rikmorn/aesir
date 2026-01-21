@@ -7,7 +7,7 @@
 
 import { createPinoLogger } from "@aesir/common";
 import { LinearClient } from "@linear/sdk";
-import type { LinearConfig } from "./types.js";
+import type { LinearOAuthConfig } from "./types.js";
 
 const logger = createPinoLogger({ component: "integrations:linear" });
 
@@ -108,8 +108,8 @@ function stripBearerPrefix(token: string): string {
  * @returns LinearClient instance with valid access token
  */
 export async function createLinearClient(
-  config: LinearConfig,
-  onTokenRefresh?: (newConfig: LinearConfig) => Promise<void>,
+  config: LinearOAuthConfig,
+  onTokenRefresh?: (newConfig: LinearOAuthConfig) => Promise<void>,
 ): Promise<LinearClient> {
   // Check if token needs refresh (within 60 seconds of expiration)
   const now = Date.now();
