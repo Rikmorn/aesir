@@ -23,7 +23,7 @@ The v2.0 Foundation milestone restructures Aesir from a working prototype to a m
 - [x] **Phase 14: Platform Services** - Webhook idempotency, execution tracking, cleanup, DI patterns
 - [x] **Phase 15: Code Quality** - Error handling, validation, barrel exports, dead code removal
 - [x] **Phase 16: Linear Extraction** - Extract Linear integration to independent package
-- [ ] **Phase 17: GitHub Extraction** - Extract GitHub integration to independent package
+- [x] **Phase 17: GitHub Extraction** - Extract GitHub integration to independent package
 - [ ] **Phase 18: Slack Extraction** - Extract Slack integration to independent package
 - [ ] **Phase 19: MCP Layer** - MCP servers in each integration for agent tool calls
 - [ ] **Phase 20: Testing Pyramid** - Coverage, testcontainers, fixtures, isolation
@@ -192,17 +192,17 @@ Plans:
 **Plans:** 11 plans
 
 Plans:
-- [ ] 17-01-PLAN.md — Create package scaffolding and workspace configuration
-- [ ] 17-02-PLAN.md — Create database layer with github.* schema and credential store
-- [ ] 17-03-PLAN.md — Move webhook handling (signature with @octokit/webhooks-methods, parser, types)
-- [ ] 17-04-PLAN.md — Move GitHub client (factory, types) and operations (branches, commits, PRs)
-- [ ] 17-05-PLAN.md — Create OAuth flow module (token store, client from database)
-- [ ] 17-06-PLAN.md — Create HTTP API layer (routes, webhooks, OAuth, main.ts)
-- [ ] 17-07-PLAN.md — Create database migration and credential migration script
-- [ ] 17-08-PLAN.md — Create Dockerfile and README documentation
-- [ ] 17-09-PLAN.md — Move and adapt tests
-- [ ] 17-10-PLAN.md — Update consumers and create backward-compatible re-exports
-- [ ] 17-11-PLAN.md — Update AI context files, final verification checkpoint
+- [x] 17-01-PLAN.md — Create package scaffolding and workspace configuration
+- [x] 17-02-PLAN.md — Create database layer with github.* schema and credential store
+- [x] 17-03-PLAN.md — Move webhook handling (signature with @octokit/webhooks-methods, parser, types)
+- [x] 17-04-PLAN.md — Move GitHub client (factory, types) and operations (branches, commits, PRs)
+- [x] 17-05-PLAN.md — Create OAuth flow module (token store, client from database)
+- [x] 17-06-PLAN.md — Create HTTP API layer (routes, webhooks, OAuth, main.ts)
+- [x] 17-07-PLAN.md — Create database migration and credential migration script
+- [x] 17-08-PLAN.md — Create Dockerfile and README documentation
+- [x] 17-09-PLAN.md — Move and adapt tests
+- [x] 17-10-PLAN.md — Update consumers and create backward-compatible re-exports
+- [x] 17-11-PLAN.md — Update AI context files, final verification checkpoint
 
 ### Phase 18: Slack Extraction
 **Goal:** Slack integration extracted as independent package with its own lifecycle
@@ -292,7 +292,7 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 | 14. Platform Services | v2.0 | 8/8 | Complete | 2026-01-21 |
 | 15. Code Quality | v2.0 | 8/8 | Complete | 2026-01-21 |
 | 16. Linear Extraction | v2.0 | 11/11 | Complete | 2026-01-21 |
-| 17. GitHub Extraction | v2.0 | 0/11 | Planned | - |
+| 17. GitHub Extraction | v2.0 | 11/11 | Complete | 2026-01-21 |
 | 18. Slack Extraction | v2.0 | 0/TBD | Not started | - |
 | 19. MCP Layer | v2.0 | 0/TBD | Not started | - |
 | 20. Testing Pyramid | v2.0 | 0/TBD | Not started | - |
@@ -301,5 +301,5 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 
 ---
 *Created: 2026-01-19*
-*Updated: 2026-01-21 (Phase 17 planned)*
+*Updated: 2026-01-21 (Phase 17 complete)*
 *Milestone: v2.0 Foundation*
