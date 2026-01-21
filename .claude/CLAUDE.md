@@ -168,6 +168,67 @@ try {
 - Use `unknown` over `any` when type is truly unknown
 - Export types alongside implementations
 
+### Dependency Injection Pattern
+
+Services use factory functions with explicit dependencies for testability.
+
+**Factory Function Pattern:**
+
+```typescript
+interface MyServiceOptions {
+  db: PostgresJsDatabase;
+  logger: PinoLogger;
+}
+
+interface MyService {
+  doWork(): Promise<void>;
+  health(): Promise<{ healthy: boolean; latencyMs: number }>;
+  close(): Promise<void>;
+}
+
+export function createMyService(options: MyServiceOptions): MyService {
+  const { db, logger } = options;
+
+  if (!db) throw new Error("db is required for MyService");
+  if (!logger) throw new Error("logger is required for MyService");
+
+  return {
+    async doWork() { /* implementation */ },
+    async health() { /* connectivity check */ },
+    async close() { /* cleanup */ },
+  };
+}
+```
+
+**Rules:**
+
+1. Create services at application startup, pass to handlers
+2. Dependencies via options object (db, logger, config)
+3. Fail fast on missing required dependencies
+4. Include `health()` and `close()` methods for lifecycle management
+5. Export interface and factory function
+
+**Testing with Mocks:**
+
+```typescript
+import { describe, expect, it, vi } from "vitest";
+
+describe("MyService", () => {
+  it("should do work", async () => {
+    const mockDb = { execute: vi.fn().mockResolvedValue([]) };
+    const mockLogger = { info: vi.fn(), error: vi.fn() };
+
+    const service = createMyService({
+      db: mockDb as unknown as PostgresJsDatabase,
+      logger: mockLogger as unknown as PinoLogger,
+    });
+
+    await service.doWork();
+    expect(mockDb.execute).toHaveBeenCalled();
+  });
+});
+```
+
 ## Testing
 
 - Test files: `*.test.ts` next to source files
