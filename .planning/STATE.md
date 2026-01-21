@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-19)
 
 **Core value:** Maintainable, scalable foundation for end-to-end automated development workflows
-**Current focus:** Phase 14 - Platform Services (in progress)
+**Current focus:** Phase 14 - Platform Services (complete)
 
 ## Current Position
 
 Phase: 14 of 22 (Platform Services)
-Plan: 6 of 8 in current phase
-Status: In progress
-Last activity: 2026-01-21 - Completed 14-06-PLAN.md
+Plan: 8 of 8 in current phase
+Status: Phase complete
+Last activity: 2026-01-21 - Completed 14-08-PLAN.md
 
-Progress: [#######             ] 46% (26 plans complete)
+Progress: [########            ] 50% (28 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [#######             ] 46% (26 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 20 (v2.0)
-- Average duration: ~8 min
-- Total execution time: ~160 min
+- Total plans completed: 28 (v2.0)
+- Average duration: ~7 min
+- Total execution time: ~170 min
 
 **By Phase:**
 
@@ -37,10 +37,10 @@ Progress: [#######             ] 46% (26 plans complete)
 | 11-monorepo-setup | 4/4 | ~41 min | ~10 min |
 | 12-observability | 8/8 | 78 min | 10 min |
 | 13-data-layer | 6/6 | 38 min | 6 min |
-| 14-platform-services | 6/8 | 8 min | 1 min |
+| 14-platform-services | 8/8 | 14 min | 2 min |
 
 **Recent Trend:**
-- Last 5 plans: 14-06 (2 min), 14-05 (2 min), 14-04 (3 min), 14-03 (3 min), 14-01 (2 min)
+- Last 5 plans: 14-08 (3 min), 14-06 (2 min), 14-05 (2 min), 14-04 (3 min), 14-03 (3 min)
 - Trend: Service creation plans execute quickly with factory pattern
 
 *Updated after each plan completion*
@@ -133,6 +133,8 @@ Recent decisions affecting current work:
 - [14-05]: Delete order for checkpoints: writes -> blobs -> checkpoints (dependency order)
 - [14-06]: Use onConflictDoUpdate for atomic cursor upsert
 - [14-06]: Return boolean from clear() to indicate whether cursor existed
+- [14-08]: Use single legacyStore instance for deprecated functions (performance)
+- [14-08]: Type assertion for NodePgDatabase to PostgresJsDatabase (compatible interfaces)
 
 ### Pending Todos
 
@@ -152,6 +154,11 @@ Recent decisions affecting current work:
    - phase-1.test.ts - may need to move to agents integration tests
    - old index.ts - likely obsolete, can be deleted after verification
 
+5. **Fix agents package build error** (code quality)
+   - Uncommitted work from 14-07 in packages/agents/
+   - WebhookServices import and handler signature mismatch
+   - Pre-commit hooks failing due to this
+
 ### Blockers/Concerns
 
 None.
@@ -159,9 +166,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed 14-06-PLAN.md
+Stopped at: Completed 14-08-PLAN.md (Phase 14 complete)
 Resume file: None
-Next action: Continue Phase 14 (14-07-PLAN.md)
+Next action: Start Phase 15
 
 ---
-*Updated: 2026-01-21 after 14-06-PLAN.md completed*
+*Updated: 2026-01-21 after 14-08-PLAN.md completed*
