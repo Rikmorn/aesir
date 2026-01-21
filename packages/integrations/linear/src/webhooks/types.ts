@@ -11,8 +11,8 @@
 export interface WebhookPayloadBase {
   /** Type of resource that changed */
   type: string;
-  /** Resource data */
-  data: unknown;
+  /** Resource data (optional - some webhook types use different field names) */
+  data?: unknown;
   /** Timestamp when webhook was created (milliseconds since epoch) */
   webhookTimestamp: number;
   /** Unique identifier for this webhook delivery */
@@ -34,11 +34,14 @@ export interface WebhookPayload extends WebhookPayloadBase {
  * Note: Linear sends "AgentSessionEvent" as the type, with session data
  * in the "agentSession" field (not "data").
  */
-export interface AgentSessionPayload extends Omit<WebhookPayloadBase, "type"> {
+export interface AgentSessionPayload
+  extends Omit<WebhookPayloadBase, "type" | "data"> {
   /** Action type: 'created' for new delegation, 'prompted' for follow-up */
   action: "created" | "prompted";
   /** Resource type is always 'AgentSessionEvent' */
   type: "AgentSessionEvent";
+  /** Resource data - unused for AgentSession events (session data is in agentSession field) */
+  data?: unknown;
   /** Agent session data */
   agentSession: {
     /** Agent session ID */
@@ -52,7 +55,7 @@ export interface AgentSessionPayload extends Omit<WebhookPayloadBase, "type"> {
     /** Creator information */
     creator?: {
       id: string;
-    };
+    } | undefined;
   };
 }
 
