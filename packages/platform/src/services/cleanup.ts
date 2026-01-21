@@ -10,7 +10,9 @@
  */
 
 import type { PinoLogger } from "@aesir/common";
+import { fromPromise, type ResultAsync } from "neverthrow";
 import type { Pool } from "pg";
+import { CleanupError } from "../errors/index.js";
 
 export interface CleanupServiceOptions {
   pool: Pool; // Raw pg Pool for cross-schema queries
@@ -40,8 +42,9 @@ export interface CleanupService {
   /**
    * Run cleanup for all tables
    * @param options.dryRun - If true, only count what would be deleted
+   * @returns ResultAsync with CleanupReport on success, CleanupError on failure
    */
-  run(options: { dryRun: boolean }): Promise<CleanupReport>;
+  run(options: { dryRun: boolean }): ResultAsync<CleanupReport, CleanupError>;
 
   /**
    * Health check
@@ -71,68 +74,31 @@ export function createCleanupService(
     new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
 
   return {
-    async run({ dryRun }): Promise<CleanupReport> {
-      const start = Date.now();
-      const cutoffDate = getCutoffDate();
-
-      logger.info(
-        {
-          dryRun,
+    run({ dryRun }): ResultAsync<CleanupReport, CleanupError> {
+      return fromPromise(
+        runCleanup(
+          pool,
+          logger,
           retentionDays,
-          cutoffDate: cutoffDate.toISOString(),
           batchSize,
+          getCutoffDate,
+          dryRun,
+        ),
+        (error) => {
+          logger.error(
+            { err: error, dryRun, retentionDays },
+            "Cleanup operation failed",
+          );
+          return new CleanupError(
+            "PLT_CLEANUP_CHECKPOINTS",
+            "Failed to run cleanup operation",
+            {
+              cause: error instanceof Error ? error : new Error(String(error)),
+              metadata: { dryRun, retentionDays },
+            },
+          );
         },
-        "Starting cleanup run",
       );
-
-      const report: CleanupReport = {
-        webhookDeliveries: { deleted: 0, scanned: 0 },
-        agentExecutions: { deleted: 0, scanned: 0, skippedInProgress: 0 },
-        checkpoints: {
-          deletedThreads: 0,
-          deletedCheckpoints: 0,
-          deletedBlobs: 0,
-          deletedWrites: 0,
-        },
-        dryRun,
-        durationMs: 0,
-      };
-
-      // Clean webhook deliveries
-      await cleanupWebhookDeliveries(
-        pool,
-        cutoffDate,
-        batchSize,
-        dryRun,
-        report,
-        logger,
-      );
-
-      // Clean agent executions (protect in-progress)
-      await cleanupAgentExecutions(
-        pool,
-        cutoffDate,
-        batchSize,
-        dryRun,
-        report,
-        logger,
-      );
-
-      // Clean LangGraph checkpoints
-      await cleanupCheckpoints(
-        pool,
-        cutoffDate,
-        batchSize,
-        dryRun,
-        report,
-        logger,
-      );
-
-      report.durationMs = Date.now() - start;
-
-      logger.info({ report }, "Cleanup run completed");
-
-      return report;
     },
 
     async health(): Promise<{ healthy: boolean }> {
@@ -148,6 +114,73 @@ export function createCleanupService(
       // No resources to clean up - pool managed externally
     },
   };
+}
+
+/**
+ * Internal implementation of cleanup logic
+ */
+async function runCleanup(
+  pool: Pool,
+  logger: PinoLogger,
+  retentionDays: number,
+  batchSize: number,
+  getCutoffDate: () => Date,
+  dryRun: boolean,
+): Promise<CleanupReport> {
+  const start = Date.now();
+  const cutoffDate = getCutoffDate();
+
+  logger.info(
+    {
+      dryRun,
+      retentionDays,
+      cutoffDate: cutoffDate.toISOString(),
+      batchSize,
+    },
+    "Starting cleanup run",
+  );
+
+  const report: CleanupReport = {
+    webhookDeliveries: { deleted: 0, scanned: 0 },
+    agentExecutions: { deleted: 0, scanned: 0, skippedInProgress: 0 },
+    checkpoints: {
+      deletedThreads: 0,
+      deletedCheckpoints: 0,
+      deletedBlobs: 0,
+      deletedWrites: 0,
+    },
+    dryRun,
+    durationMs: 0,
+  };
+
+  // Clean webhook deliveries
+  await cleanupWebhookDeliveries(
+    pool,
+    cutoffDate,
+    batchSize,
+    dryRun,
+    report,
+    logger,
+  );
+
+  // Clean agent executions (protect in-progress)
+  await cleanupAgentExecutions(
+    pool,
+    cutoffDate,
+    batchSize,
+    dryRun,
+    report,
+    logger,
+  );
+
+  // Clean LangGraph checkpoints
+  await cleanupCheckpoints(pool, cutoffDate, batchSize, dryRun, report, logger);
+
+  report.durationMs = Date.now() - start;
+
+  logger.info({ report }, "Cleanup run completed");
+
+  return report;
 }
 
 async function cleanupWebhookDeliveries(

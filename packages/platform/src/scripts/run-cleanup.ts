@@ -37,9 +37,18 @@ async function main(): Promise<void> {
       batchSize: 1000,
     });
 
-    const report = await cleanup.run({ dryRun });
+    const result = await cleanup.run({ dryRun });
 
-    logger.info({ report }, "Cleanup complete");
+    if (result.isErr()) {
+      logger.error(
+        { err: result.error, code: result.error.code },
+        "Cleanup failed",
+      );
+      await pool.end();
+      process.exit(1);
+    }
+
+    logger.info({ report: result.value }, "Cleanup complete");
 
     // Exit with success
     await pool.end();
