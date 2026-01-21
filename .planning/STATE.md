@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 16 of 22 (Linear Extraction)
-Plan: 4 of 11 in current phase
+Plan: 5 of 11 in current phase
 Status: In progress
-Last activity: 2026-01-21 - Completed 16-04-PLAN.md (SDK client migration)
+Last activity: 2026-01-21 - Completed 16-05-PLAN.md (OAuth flow module)
 
-Progress: [##########          ] 70% (39 plans complete)
+Progress: [##########          ] 71% (40 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [##########          ] 70% (39 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 39 (v2.0)
+- Total plans completed: 40 (v2.0)
 - Average duration: ~8 min
-- Total execution time: ~297 min
+- Total execution time: ~301 min
 
 **By Phase:**
 
@@ -39,11 +39,11 @@ Progress: [##########          ] 70% (39 plans complete)
 | 13-data-layer | 6/6 | 38 min | 6 min |
 | 14-platform-services | 8/8 | 14 min | 2 min |
 | 15-code-quality | 8/8 | 111 min | 14 min |
-| 16-linear-extraction | 4/11 | 20 min | 5 min |
+| 16-linear-extraction | 5/11 | 24 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 16-04 (6 min), 16-03 (7 min), 16-02 (4 min), 16-01 (3 min), 15-08 (10 min)
-- Trend: Phase 16 progressing steadily - SDK client layer complete
+- Last 5 plans: 16-05 (4 min), 16-04 (6 min), 16-03 (7 min), 16-02 (4 min), 16-01 (3 min)
+- Trend: Phase 16 progressing efficiently - OAuth flow module complete
 
 *Updated after each plan completion*
 
@@ -183,6 +183,10 @@ Recent decisions affecting current work:
 - [16-03]: timingSafeEqual for HMAC signature verification to prevent timing attacks
 - [16-03]: Zod SafeParseResult from parseAgentSessionPayload for controlled error handling
 - [16-03]: data field in AgentSessionSchema matches WebhookPayloadBase contract (required even if unused)
+- [16-05]: loadLinearTokens and saveLinearTokens use Linear's credential store directly
+- [16-05]: createLinearClientFromDatabase bridges credential store and client factory
+- [16-05]: Token refresh automatically persisted via onTokenRefresh callback
+- [16-05]: DEFAULT_WORKSPACE_ID = ws_default for single-tenant deployments
 
 ### Pending Todos
 
@@ -209,9 +213,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed 16-04-PLAN.md (SDK client migration)
+Stopped at: Completed 16-05-PLAN.md (OAuth flow module)
 Resume file: None
 Next action: Continue Phase 16
 
 ---
-*Updated: 2026-01-21 after 16-04-PLAN.md completed*
+*Updated: 2026-01-21 after 16-05-PLAN.md completed*
