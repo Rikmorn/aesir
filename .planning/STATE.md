@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 15 of 22 (Code Quality)
-Plan: 6 of 6 in current phase
-Status: Phase complete
-Last activity: 2026-01-21 - Completed 15-06-PLAN.md
+Plan: 8 of 8 in current phase
+Status: Phase complete (with gap closure)
+Last activity: 2026-01-21 - Completed 15-08-PLAN.md (gap closure)
 
-Progress: [##########          ] 62% (34 plans complete)
+Progress: [##########          ] 64% (35 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [##########          ] 62% (34 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 34 (v2.0)
+- Total plans completed: 35 (v2.0)
 - Average duration: ~8 min
-- Total execution time: ~264 min
+- Total execution time: ~274 min
 
 **By Phase:**
 
@@ -38,11 +38,11 @@ Progress: [##########          ] 62% (34 plans complete)
 | 12-observability | 8/8 | 78 min | 10 min |
 | 13-data-layer | 6/6 | 38 min | 6 min |
 | 14-platform-services | 8/8 | 14 min | 2 min |
-| 15-code-quality | 6/6 | 94 min | 16 min |
+| 15-code-quality | 8/8 | 104 min | 13 min |
 
 **Recent Trend:**
-- Last 5 plans: 15-06 (11 min), 15-03 (45 min), 15-04 (20 min), 15-05 (8 min), 15-02 (7 min)
-- Trend: Phase 15 complete with dead code cleanup
+- Last 5 plans: 15-08 (10 min), 15-06 (11 min), 15-03 (45 min), 15-04 (20 min), 15-05 (8 min)
+- Trend: Phase 15 complete including gap closure plans
 
 *Updated after each plan completion*
 
@@ -161,6 +161,9 @@ Recent decisions affecting current work:
 - [15-06]: SDK types as devDependencies in agents (type-only imports from @linear/sdk etc)
 - [15-06]: db/scripts excluded from knip (migration scripts with inline dependencies)
 - [15-06]: pino-pretty in ignoreDependencies (pino transport, not direct import)
+- [15-08]: Platform exports only its own modules without blanket re-export from @aesir/common
+- [15-08]: Consumers import from @aesir/common directly for proper package boundaries
+- [15-08]: @langchain/core added as platform devDependency to support mock-llm.ts
 
 ### Pending Todos
 
@@ -187,9 +190,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed 15-06-PLAN.md (Phase 15 complete)
+Stopped at: Completed 15-08-PLAN.md (gap closure - Phase 15 complete)
 Resume file: None
 Next action: Start Phase 16
 
 ---
-*Updated: 2026-01-21 after 15-06-PLAN.md completed*
+*Updated: 2026-01-21 after 15-08-PLAN.md completed*
