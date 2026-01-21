@@ -122,10 +122,17 @@ Plans:
   4. LangGraph checkpoints older than retention policy are automatically cleaned up
   5. All services created via factory functions, no global singletons
   6. Importing from agents/ into platform/ fails TypeScript compilation (layer rules enforced)
-**Plans:** TBD
+**Plans:** 8 plans
 
 Plans:
-- [ ] 14-01: TBD
+- [ ] 14-01-PLAN.md — Add agent_executions schema to observability, RETENTION_DAYS env var
+- [ ] 14-02-PLAN.md — Add Biome noRestrictedImports rules for layer boundary enforcement
+- [ ] 14-03-PLAN.md — Create webhook idempotency service with factory pattern
+- [ ] 14-04-PLAN.md — Create execution tracker service with factory pattern
+- [ ] 14-05-PLAN.md — Create cleanup service for retention-based deletion
+- [ ] 14-06-PLAN.md — Create sync cursor service for integration state persistence
+- [ ] 14-07-PLAN.md — Wire services to webhook handlers and entry points
+- [ ] 14-08-PLAN.md — Refactor credential store to factory pattern, update CLAUDE.md
 
 ### Phase 15: Code Quality
 **Goal:** Consistent error handling, validation, and type safety patterns across the codebase
@@ -256,7 +263,7 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 | 11. Monorepo Setup | v2.0 | 4/4 | Complete | 2026-01-20 |
 | 12. Observability | v2.0 | 8/8 | Complete | 2026-01-20 |
 | 13. Data Layer | v2.0 | 6/6 | Complete | 2026-01-20 |
-| 14. Platform Services | v2.0 | 0/TBD | Not started | - |
+| 14. Platform Services | v2.0 | 0/8 | Not started | - |
 | 15. Code Quality | v2.0 | 0/TBD | Not started | - |
 | 16. Linear Extraction | v2.0 | 0/TBD | Not started | - |
 | 17. GitHub Extraction | v2.0 | 0/TBD | Not started | - |
@@ -268,5 +275,5 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 
 ---
 *Created: 2026-01-19*
-*Updated: 2026-01-20 (Phase 13 complete)*
+*Updated: 2026-01-21 (Phase 14 planned)*
 *Milestone: v2.0 Foundation*
