@@ -90,6 +90,9 @@ const envSchema = z.object({
 
   // Cloudflare Tunnel (optional)
   CLOUDFLARE_TUNNEL_TOKEN: z.string().optional(),
+
+  // Observability retention (optional with default)
+  RETENTION_DAYS: z.coerce.number().int().positive().optional().default(14),
 });
 
 // Parse and validate environment
@@ -181,5 +184,9 @@ export const config = {
 
   cloudflare: {
     tunnelToken: env.CLOUDFLARE_TUNNEL_TOKEN,
+  },
+
+  retention: {
+    days: env.RETENTION_DAYS,
   },
 } as const;
