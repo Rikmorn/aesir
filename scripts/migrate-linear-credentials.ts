@@ -1,11 +1,11 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env -S npx tsx -r dotenv-flow/config
 /**
  * Linear Credential Migration Script
  *
  * Migrates Linear OAuth credentials from integrations.credentials to linear.credentials.
  * This is part of Linear extraction to its own package with isolated schema namespace.
  *
- * Run with: npx tsx scripts/migrate-linear-credentials.ts
+ * Run with: npx tsx -r dotenv-flow/config scripts/migrate-linear-credentials.ts
  *
  * This script uses direct database connection to avoid full environment validation.
  * Only database env vars are required.
@@ -17,16 +17,14 @@ import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import dotenvFlow from "dotenv-flow";
 import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { pgSchema, text, timestamp } from "drizzle-orm/pg-core";
 import pg from "pg";
 
-// Load environment variables from project root (bypasses full validation)
+// Environment variables loaded via -r dotenv-flow/config flag
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(scriptDir, "..");
-dotenvFlow.config({ path: projectRoot });
 
 const { Pool } = pg;
 
