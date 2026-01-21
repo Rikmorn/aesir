@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 15 of 22 (Code Quality)
-Plan: 2 of 5 in current phase
+Plan: 3 of 5 in current phase
 Status: In progress
-Last activity: 2026-01-21 - Completed 15-02-PLAN.md
+Last activity: 2026-01-21 - Completed 15-05-PLAN.md
 
-Progress: [#########           ] 54% (30 plans complete)
+Progress: [#########           ] 56% (31 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [#########           ] 54% (30 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 30 (v2.0)
+- Total plans completed: 31 (v2.0)
 - Average duration: ~6 min
-- Total execution time: ~180 min
+- Total execution time: ~188 min
 
 **By Phase:**
 
@@ -38,11 +38,11 @@ Progress: [#########           ] 54% (30 plans complete)
 | 12-observability | 8/8 | 78 min | 10 min |
 | 13-data-layer | 6/6 | 38 min | 6 min |
 | 14-platform-services | 8/8 | 14 min | 2 min |
-| 15-code-quality | 2/5 | 10 min | 5 min |
+| 15-code-quality | 3/5 | 18 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 15-02 (7 min), 15-01 (3 min), 14-08 (3 min), 14-06 (2 min), 14-05 (2 min)
-- Trend: Integration errors and ResultAsync migration complete
+- Last 5 plans: 15-05 (8 min), 15-02 (7 min), 15-01 (3 min), 14-08 (3 min), 14-06 (2 min)
+- Trend: Barrel exports reorganized with explicit public API
 
 *Updated after each plan completion*
 
@@ -147,6 +147,10 @@ Recent decisions affecting current work:
 - [15-02]: Legacy deprecated functions unwrap Results to maintain backward compatibility
 - [15-02]: delete() now returns boolean (true=deleted, false=not found) instead of void
 - [15-02]: Errors logged at wrap point with full context before returning
+- [15-05]: Removed `export * from @aesir/common` from platform to prevent namespace pollution
+- [15-05]: Observability hides db internals (only ExecutionTracker service is public API)
+- [15-05]: Common uses `export *` with section headers (sub-modules have explicit exports)
+- [15-05]: Re-exports from dependencies placed at end of file for clarity
 
 ### Pending Todos
 
@@ -173,9 +177,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed 15-02-PLAN.md
+Stopped at: Completed 15-05-PLAN.md
 Resume file: None
-Next action: Continue Phase 15 with 15-03-PLAN.md
+Next action: Continue Phase 15 with 15-03-PLAN.md or 15-04-PLAN.md
 
 ---
-*Updated: 2026-01-21 after 15-02-PLAN.md completed*
+*Updated: 2026-01-21 after 15-05-PLAN.md completed*
