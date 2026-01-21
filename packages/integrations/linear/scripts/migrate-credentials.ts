@@ -5,7 +5,11 @@
  * Migrates Linear OAuth credentials from integrations.credentials to linear.credentials.
  * This is part of Linear extraction to its own package with isolated schema namespace.
  *
- * Run with: npx tsx -r dotenv-flow/config scripts/migrate-linear-credentials.ts
+ * Run from project root:
+ *   pnpm --filter @aesir/integration-linear migrate
+ *
+ * Or directly:
+ *   npx tsx -r dotenv-flow/config packages/integrations/linear/scripts/migrate-credentials.ts
  *
  * This script uses direct database connection to avoid full environment validation.
  * Only database env vars are required.
@@ -24,7 +28,7 @@ import pg from "pg";
 
 // Environment variables loaded via -r dotenv-flow/config flag
 const scriptDir = dirname(fileURLToPath(import.meta.url));
-const projectRoot = resolve(scriptDir, "..");
+const packageRoot = resolve(scriptDir, "..");
 
 const { Pool } = pg;
 
@@ -119,8 +123,8 @@ async function migrate(): Promise<void> {
     if (schemaCheck.rows.length === 0) {
       log.info("Linear schema does not exist, creating it...");
       const migrationPath = resolve(
-        projectRoot,
-        "packages/integrations/linear/src/db/migrations/0000_create_linear_schema.sql",
+        packageRoot,
+        "src/db/migrations/0000_create_linear_schema.sql",
       );
       const migrationSql = await readFile(migrationPath, "utf-8");
       await pool.query(migrationSql);
