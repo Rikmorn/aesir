@@ -22,3 +22,10 @@ export {
 } from "./encryption.js";
 // === SCHEMA ===
 export * from "./schema.js";
+// === WEBHOOK DELIVERY STORE ===
+export type {
+  RecordDeliveryInput,
+  WebhookDeliveryStore,
+  WebhookDeliveryStoreOptions,
+} from "./webhook-delivery-store.js";
+export { createWebhookDeliveryStore } from "./webhook-delivery-store.js";
