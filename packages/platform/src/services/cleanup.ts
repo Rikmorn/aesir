@@ -286,12 +286,78 @@ async function cleanupAgentExecutions(
 }
 
 async function cleanupCheckpoints(
-  _pool: Pool,
-  _cutoffDate: Date,
-  _batchSize: number,
-  _dryRun: boolean,
-  _report: CleanupReport,
-  _logger: PinoLogger,
+  pool: Pool,
+  cutoffDate: Date,
+  batchSize: number,
+  dryRun: boolean,
+  report: CleanupReport,
+  logger: PinoLogger,
 ): Promise<void> {
-  // LangGraph checkpoint cleanup will be implemented in Task 2
+  // LangGraph checkpoints don't have timestamps, so we use agent_executions as proxy
+  // Find thread_ids from completed executions older than retention
+  // Thread ID format: approval-{issue_id} (from existing codebase pattern)
+
+  const threadsResult = await pool.query(
+    `SELECT DISTINCT CONCAT('approval-', issue_id) as thread_id
+     FROM observability.agent_executions
+     WHERE status IN ('completed', 'failed')
+     AND ended_at < $1
+     AND CONCAT('approval-', issue_id) NOT IN (
+       SELECT CONCAT('approval-', issue_id)
+       FROM observability.agent_executions
+       WHERE status = 'started'
+     )
+     LIMIT $2`,
+    [cutoffDate, batchSize],
+  );
+
+  const threadIds = threadsResult.rows.map(
+    (r: { thread_id: string }) => r.thread_id,
+  );
+  report.checkpoints.deletedThreads = threadIds.length;
+
+  if (dryRun) {
+    logger.info(
+      { threadCount: threadIds.length },
+      "[DRY RUN] Would delete checkpoints for threads",
+    );
+    return;
+  }
+
+  // Delete checkpoint data for each thread
+  // Order: writes -> blobs -> checkpoints (logical dependency order)
+  for (const threadId of threadIds) {
+    // checkpoint_writes
+    const writesResult = await pool.query(
+      "DELETE FROM checkpoint_writes WHERE thread_id = $1",
+      [threadId],
+    );
+    report.checkpoints.deletedWrites += writesResult.rowCount ?? 0;
+
+    // checkpoint_blobs
+    const blobsResult = await pool.query(
+      "DELETE FROM checkpoint_blobs WHERE thread_id = $1",
+      [threadId],
+    );
+    report.checkpoints.deletedBlobs += blobsResult.rowCount ?? 0;
+
+    // checkpoints
+    const checkpointsResult = await pool.query(
+      "DELETE FROM checkpoints WHERE thread_id = $1",
+      [threadId],
+    );
+    report.checkpoints.deletedCheckpoints += checkpointsResult.rowCount ?? 0;
+
+    logger.debug({ threadId }, "Checkpoint data deleted for thread");
+  }
+
+  logger.info(
+    {
+      threads: report.checkpoints.deletedThreads,
+      checkpoints: report.checkpoints.deletedCheckpoints,
+      blobs: report.checkpoints.deletedBlobs,
+      writes: report.checkpoints.deletedWrites,
+    },
+    "LangGraph checkpoints cleaned up",
+  );
 }
