@@ -133,6 +133,9 @@ Recent decisions affecting current work:
 - [14-05]: Delete order for checkpoints: writes -> blobs -> checkpoints (dependency order)
 - [14-06]: Use onConflictDoUpdate for atomic cursor upsert
 - [14-06]: Return boolean from clear() to indicate whether cursor existed
+- [14-07]: Services created at startup, not per-request (single db connection shared)
+- [14-07]: workspace_id hardcoded to ws_default for single-tenant MVP
+- [14-07]: WebhookServices interface optional for backward compatibility
 - [14-08]: Use single legacyStore instance for deprecated functions (performance)
 - [14-08]: Type assertion for NodePgDatabase to PostgresJsDatabase (compatible interfaces)
 
@@ -153,11 +156,6 @@ Recent decisions affecting current work:
 4. **Review _legacy/ files** (code cleanup)
    - phase-1.test.ts - may need to move to agents integration tests
    - old index.ts - likely obsolete, can be deleted after verification
-
-5. **Fix agents package build error** (code quality)
-   - Uncommitted work from 14-07 in packages/agents/
-   - WebhookServices import and handler signature mismatch
-   - Pre-commit hooks failing due to this
 
 ### Blockers/Concerns
 
