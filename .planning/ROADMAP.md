@@ -21,7 +21,7 @@ The v2.0 Foundation milestone restructures Aesir from a working prototype to a m
 - [x] **Phase 12: Observability** - pino logging, correlation IDs, structured JSON logs
 - [x] **Phase 13: Data Layer** - PostgreSQL schemas, credential migration from .tokens/
 - [x] **Phase 14: Platform Services** - Webhook idempotency, execution tracking, cleanup, DI patterns
-- [ ] **Phase 15: Code Quality** - Error handling, validation, barrel exports, dead code removal
+- [x] **Phase 15: Code Quality** - Error handling, validation, barrel exports, dead code removal
 - [ ] **Phase 16: Linear Extraction** - Extract Linear integration to independent package
 - [ ] **Phase 17: GitHub Extraction** - Extract GitHub integration to independent package
 - [ ] **Phase 18: Slack Extraction** - Extract Slack integration to independent package
@@ -144,15 +144,17 @@ Plans:
   3. Each package exports its public API via index.ts (no deep imports into internal modules)
   4. Error classes extend AppError base class with unique error codes
   5. Running dead code analysis reports no unreachable code or unused exports
-**Plans:** 6 plans
+**Plans:** 8 plans (6 original + 2 gap closure)
 
 Plans:
-- [ ] 15-01-PLAN.md — Install neverthrow/knip, create AppError hierarchy in common package
-- [ ] 15-02-PLAN.md — Create integration error classes, migrate CredentialStore to ResultAsync
-- [ ] 15-03-PLAN.md — Create platform/observability errors, migrate CleanupService and ExecutionTracker
-- [ ] 15-04-PLAN.md — Add Zod validation schemas to webhook handlers
-- [ ] 15-05-PLAN.md — Audit and reorganize barrel exports in all packages
-- [ ] 15-06-PLAN.md — Configure knip and remove dead code
+- [x] 15-01-PLAN.md — Install neverthrow/knip, create AppError hierarchy in common package
+- [x] 15-02-PLAN.md — Create integration error classes, migrate CredentialStore to ResultAsync
+- [x] 15-03-PLAN.md — Create platform/observability errors, migrate CleanupService and ExecutionTracker
+- [x] 15-04-PLAN.md — Add Zod validation schemas to webhook handlers
+- [x] 15-05-PLAN.md — Audit and reorganize barrel exports in all packages
+- [x] 15-06-PLAN.md — Configure knip and remove dead code
+- [x] 15-07-PLAN.md — [Gap closure] Migrate remaining services to ResultAsync
+- [x] 15-08-PLAN.md — [Gap closure] Remove platform blanket re-export
 
 ### Phase 16: Linear Extraction
 **Goal:** Linear integration extracted as independent package with its own lifecycle
@@ -268,7 +270,7 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 | 12. Observability | v2.0 | 8/8 | Complete | 2026-01-20 |
 | 13. Data Layer | v2.0 | 6/6 | Complete | 2026-01-20 |
 | 14. Platform Services | v2.0 | 8/8 | Complete | 2026-01-21 |
-| 15. Code Quality | v2.0 | 0/6 | Planned | - |
+| 15. Code Quality | v2.0 | 8/8 | Complete | 2026-01-21 |
 | 16. Linear Extraction | v2.0 | 0/TBD | Not started | - |
 | 17. GitHub Extraction | v2.0 | 0/TBD | Not started | - |
 | 18. Slack Extraction | v2.0 | 0/TBD | Not started | - |
@@ -279,5 +281,5 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 
 ---
 *Created: 2026-01-19*
-*Updated: 2026-01-21 (Phase 15 planned)*
+*Updated: 2026-01-21 (Phase 15 complete)*
 *Milestone: v2.0 Foundation*
