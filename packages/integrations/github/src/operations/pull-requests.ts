@@ -7,9 +7,15 @@
 
 import { createPinoLogger } from "@aesir/common";
 import type { Octokit } from "@octokit/rest";
-import type { CreatePROptions, PRComment, PullRequestInfo } from "../client/types.js";
+import type {
+  CreatePROptions,
+  PRComment,
+  PullRequestInfo,
+} from "../client/types.js";
 
-const logger = createPinoLogger({ component: "integrations:github:pull-requests" });
+const logger = createPinoLogger({
+  component: "integrations:github:pull-requests",
+});
 
 /**
  * Create a new pull request

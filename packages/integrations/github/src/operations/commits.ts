@@ -7,8 +7,8 @@
 
 import { createPinoLogger } from "@aesir/common";
 import type { Octokit } from "@octokit/rest";
-import { getBranch } from "./branches.js";
 import type { CommitInfo, CreateCommitOptions } from "../client/types.js";
+import { getBranch } from "./branches.js";
 
 const logger = createPinoLogger({ component: "integrations:github:commits" });
 
