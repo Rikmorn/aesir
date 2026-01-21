@@ -43,12 +43,14 @@ export {
 export type {
   CredentialErrorCode,
   GitHubErrorCode,
+  IntegrationServiceErrorCode,
   LinearErrorCode,
   SlackErrorCode,
 } from "./errors/index.js";
 export {
   CredentialError,
   GitHubError,
+  IntegrationServiceError,
   LinearError,
   SlackError,
 } from "./errors/index.js";

@@ -145,3 +145,26 @@ export class CredentialError extends AppError {
     this.code = code;
   }
 }
+
+// Integration service error codes (webhook idempotency, sync cursors, etc.)
+export type IntegrationServiceErrorCode =
+  | "INT_SVC_DATABASE" // Database operation failed
+  | "INT_SVC_NOT_FOUND" // Resource not found
+  | "INT_SVC_DUPLICATE"; // Duplicate operation (for idempotency)
+
+export class IntegrationServiceError extends AppError {
+  readonly code: IntegrationServiceErrorCode;
+
+  constructor(
+    code: IntegrationServiceErrorCode,
+    message: string,
+    options?: {
+      cause?: Error;
+      metadata?: ErrorMetadata;
+      recovery?: RecoveryHint;
+    },
+  ) {
+    super(message, options);
+    this.code = code;
+  }
+}

@@ -3,6 +3,8 @@ export {
   type CredentialErrorCode,
   GitHubError,
   type GitHubErrorCode,
+  IntegrationServiceError,
+  type IntegrationServiceErrorCode,
   LinearError,
   type LinearErrorCode,
   SlackError,
