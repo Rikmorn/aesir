@@ -4,8 +4,9 @@
 export * from "@aesir/common";
 // Sandbox
 export * from "./sandbox/index.js";
+// Services
+export * from "./services/index.js";
 // Temporal
 export * from "./temporal/index.js";
-
 // Testing utilities
 export * from "./testing/index.js";
