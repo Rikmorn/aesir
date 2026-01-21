@@ -11,10 +11,10 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 
 Phase: 15 of 22 (Code Quality)
 Plan: 8 of 8 in current phase
-Status: Phase complete (with gap closure)
-Last activity: 2026-01-21 - Completed 15-08-PLAN.md (gap closure)
+Status: Phase complete (all gaps closed)
+Last activity: 2026-01-21 - Completed 15-07-PLAN.md (service boundaries gap closure)
 
-Progress: [##########          ] 64% (35 plans complete)
+Progress: [##########          ] 65% (36 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [##########          ] 64% (35 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 35 (v2.0)
+- Total plans completed: 36 (v2.0)
 - Average duration: ~8 min
-- Total execution time: ~274 min
+- Total execution time: ~281 min
 
 **By Phase:**
 
@@ -38,11 +38,11 @@ Progress: [##########          ] 64% (35 plans complete)
 | 12-observability | 8/8 | 78 min | 10 min |
 | 13-data-layer | 6/6 | 38 min | 6 min |
 | 14-platform-services | 8/8 | 14 min | 2 min |
-| 15-code-quality | 8/8 | 104 min | 13 min |
+| 15-code-quality | 8/8 | 111 min | 14 min |
 
 **Recent Trend:**
-- Last 5 plans: 15-08 (10 min), 15-06 (11 min), 15-03 (45 min), 15-04 (20 min), 15-05 (8 min)
-- Trend: Phase 15 complete including gap closure plans
+- Last 5 plans: 15-07 (7 min), 15-08 (10 min), 15-06 (11 min), 15-03 (45 min), 15-04 (20 min)
+- Trend: Phase 15 complete - all verification gaps closed
 
 *Updated after each plan completion*
 
@@ -161,6 +161,9 @@ Recent decisions affecting current work:
 - [15-06]: SDK types as devDependencies in agents (type-only imports from @linear/sdk etc)
 - [15-06]: db/scripts excluded from knip (migration scripts with inline dependencies)
 - [15-06]: pino-pretty in ignoreDependencies (pino transport, not direct import)
+- [15-07]: IntegrationServiceError separate from CredentialError (semantic clarity)
+- [15-07]: Idempotency check failures are best-effort (don't block webhook processing)
+- [15-07]: @langchain/core in dependencies not devDependencies (runtime import in exported mock-llm)
 - [15-08]: Platform exports only its own modules without blanket re-export from @aesir/common
 - [15-08]: Consumers import from @aesir/common directly for proper package boundaries
 - [15-08]: @langchain/core added as platform devDependency to support mock-llm.ts
@@ -190,9 +193,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed 15-08-PLAN.md (gap closure - Phase 15 complete)
+Stopped at: Completed 15-07-PLAN.md (service boundaries gap closure - Phase 15 complete)
 Resume file: None
 Next action: Start Phase 16
 
 ---
-*Updated: 2026-01-21 after 15-08-PLAN.md completed*
+*Updated: 2026-01-21 after 15-07-PLAN.md completed*
