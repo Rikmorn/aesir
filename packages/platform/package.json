@@ -29,21 +29,20 @@
   },
   "dependencies": {
     "@aesir/common": "workspace:*",
-    "@langchain/langgraph-checkpoint-postgres": "^0.1.0",
-    "@temporalio/activity": "^1.14.1",
     "@temporalio/client": "^1.14.1",
-    "@temporalio/common": "^1.14.1",
     "@temporalio/worker": "^1.14.1",
     "@temporalio/workflow": "^1.14.1",
     "dockerode": "^4.0.9",
     "drizzle-orm": "^0.45.1",
     "neverthrow": "^8.2.0",
     "pg": "^8.17.2",
-    "pino": "^10.2.1"
+    "pino": "^10.2.1",
+    "tar-stream": "^3.1.7"
   },
   "devDependencies": {
     "@types/dockerode": "^4.0.0",
     "@types/pg": "^8.16.0",
+    "@types/tar-stream": "^3.1.4",
     "drizzle-kit": "^0.31.8",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"

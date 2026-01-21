@@ -1,33 +1,25 @@
 {
   "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "exclude": ["duplicates"],
   "workspaces": {
     "packages/common": {
-      "entry": ["src/index.ts"],
       "project": ["src/**/*.ts"],
       "ignore": ["**/*.test.ts", "**/testing/**"]
     },
     "packages/platform": {
-      "entry": ["src/index.ts"],
       "project": ["src/**/*.ts"],
       "ignore": ["**/*.test.ts", "**/testing/**"]
     },
     "packages/integrations": {
-      "entry": ["src/index.ts"],
       "project": ["src/**/*.ts"],
       "ignore": ["**/*.test.ts", "**/testing/**"]
     },
     "packages/observability": {
-      "entry": ["src/index.ts"],
       "project": ["src/**/*.ts"],
       "ignore": ["**/*.test.ts", "**/testing/**"]
     },
     "packages/agents": {
-      "entry": [
-        "src/index.ts",
-        "src/scripts/*.ts",
-        "src/dev-agent.ts",
-        "src/product-agent.ts"
-      ],
+      "entry": ["src/scripts/*.ts"],
       "project": ["src/**/*.ts"],
       "ignore": ["**/*.test.ts", "**/testing/**"]
     }
@@ -37,7 +29,8 @@
     "**/testing/**",
     "**/_legacy/**",
     "**/dist/**",
-    "**/node_modules/**"
+    "**/node_modules/**",
+    "**/db/scripts/**"
   ],
-  "ignoreDependencies": ["@types/*"]
+  "ignoreDependencies": ["@types/*", "pino-pretty"]
 }

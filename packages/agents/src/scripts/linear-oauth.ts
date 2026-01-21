@@ -21,10 +21,10 @@
  */
 
 // Environment must be loaded FIRST before any other imports
-// Note: We import env.ts to use dotenv-flow but this script has additional
+// Note: We import @aesir/common to use dotenv-flow but this script has additional
 // validation for OAuth-specific vars (LINEAR_CLIENT_ID, LINEAR_CLIENT_SECRET, OAUTH_CALLBACK_URL)
 // which are optional in the main schema
-import "../config/env.js";
+import "@aesir/common/config/env.js";
 
 import * as http from "node:http";
 
