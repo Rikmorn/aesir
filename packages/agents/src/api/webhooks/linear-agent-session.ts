@@ -237,13 +237,20 @@ export async function linearWebhookHandler(
   if (services?.webhookIdempotency) {
     const deliveryId = req.headers["linear-delivery"];
     if (deliveryId) {
-      const { isDuplicate } = await services.webhookIdempotency.checkAndRecord(
+      const checkResult = await services.webhookIdempotency.checkAndRecord(
         "linear",
         deliveryId,
         payload.type,
       );
 
-      if (isDuplicate) {
+      if (checkResult.isErr()) {
+        // Log warning but don't fail the request - idempotency check failure shouldn't block processing
+        logger.warn(
+          { err: checkResult.error, deliveryId },
+          "Failed to check webhook idempotency, proceeding anyway",
+        );
+        // Continue processing - idempotency is best-effort
+      } else if (checkResult.value.isDuplicate) {
         // Set header for duplicate indication
         res.setHeader?.("X-Duplicate", "true");
         res.status(200).json({

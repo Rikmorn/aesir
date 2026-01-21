@@ -8,7 +8,9 @@
 import type { PinoLogger } from "@aesir/common";
 import { sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import { fromPromise, type ResultAsync } from "neverthrow";
 import { webhookDeliveries } from "../db/schema.js";
+import { IntegrationServiceError } from "../errors/index.js";
 
 /**
  * Webhook delivery ID headers by provider
@@ -39,13 +41,13 @@ export interface WebhookIdempotencyService {
    * @param provider - Webhook provider (linear, github, slack)
    * @param deliveryId - Provider's unique delivery identifier
    * @param eventType - Type of webhook event for logging
-   * @returns isDuplicate: true if already processed, false if newly recorded
+   * @returns ResultAsync with isDuplicate: true if already processed, false if newly recorded
    */
   checkAndRecord(
     provider: WebhookProvider,
     deliveryId: string,
     eventType: string,
-  ): Promise<CheckAndRecordResult>;
+  ): ResultAsync<CheckAndRecordResult, IntegrationServiceError>;
 
   /**
    * Health check for the service
@@ -75,45 +77,28 @@ export function createWebhookIdempotencyService(
     throw new Error("logger is required for WebhookIdempotencyService");
 
   return {
-    async checkAndRecord(
+    checkAndRecord(
       provider: WebhookProvider,
       deliveryId: string,
       eventType: string,
-    ): Promise<CheckAndRecordResult> {
-      // Atomic insert-or-skip: ON CONFLICT DO NOTHING
-      // If a row is returned, the insert succeeded (new delivery)
-      // If no row is returned, there was a conflict (duplicate)
-      const result = await db
-        .insert(webhookDeliveries)
-        .values({
-          provider,
-          delivery_id: deliveryId,
-          event_type: eventType,
-          // payload_hash and processed_at left null initially
-        })
-        .onConflictDoNothing({
-          target: [webhookDeliveries.provider, webhookDeliveries.delivery_id],
-        })
-        .returning({ id: webhookDeliveries.id });
-
-      const isDuplicate = result.length === 0;
-
-      if (isDuplicate) {
-        logger.debug(
-          { provider, deliveryId, eventType },
-          "Duplicate webhook delivery detected",
-        );
-      } else {
-        logger.info(
-          { provider, deliveryId, eventType, recordId: result[0]?.id },
-          "Webhook delivery recorded",
-        );
-      }
-
-      return {
-        isDuplicate,
-        deliveryRecordId: result[0]?.id,
-      };
+    ): ResultAsync<CheckAndRecordResult, IntegrationServiceError> {
+      return fromPromise(
+        checkAndRecordImpl(db, logger, provider, deliveryId, eventType),
+        (error) => {
+          logger.error(
+            { err: error, provider, deliveryId, eventType },
+            "Failed to check/record webhook delivery",
+          );
+          return new IntegrationServiceError(
+            "INT_SVC_DATABASE",
+            "Failed to check/record webhook delivery",
+            {
+              cause: error instanceof Error ? error : new Error(String(error)),
+              metadata: { provider, deliveryId, eventType },
+            },
+          );
+        },
+      );
     },
 
     async health(): Promise<{ healthy: boolean; latencyMs: number }> {
@@ -130,5 +115,47 @@ export function createWebhookIdempotencyService(
     async close(): Promise<void> {
       // No resources to clean up - db connection is managed externally
     },
+  };
+}
+
+// Internal implementation function (throw is OK - wrapped by fromPromise)
+
+async function checkAndRecordImpl(
+  db: PostgresJsDatabase,
+  logger: PinoLogger,
+  provider: WebhookProvider,
+  deliveryId: string,
+  eventType: string,
+): Promise<CheckAndRecordResult> {
+  // Atomic insert-or-skip: ON CONFLICT DO NOTHING
+  const result = await db
+    .insert(webhookDeliveries)
+    .values({
+      provider,
+      delivery_id: deliveryId,
+      event_type: eventType,
+    })
+    .onConflictDoNothing({
+      target: [webhookDeliveries.provider, webhookDeliveries.delivery_id],
+    })
+    .returning({ id: webhookDeliveries.id });
+
+  const isDuplicate = result.length === 0;
+
+  if (isDuplicate) {
+    logger.debug(
+      { provider, deliveryId, eventType },
+      "Duplicate webhook delivery detected",
+    );
+  } else {
+    logger.info(
+      { provider, deliveryId, eventType, recordId: result[0]?.id },
+      "Webhook delivery recorded",
+    );
+  }
+
+  return {
+    isDuplicate,
+    deliveryRecordId: result[0]?.id,
   };
 }
