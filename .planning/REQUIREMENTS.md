@@ -26,22 +26,22 @@ Requirements for Foundation milestone. Full restructure from "prove it works" to
 
 ### Architecture
 
-- [ ] **ARCH-01**: Platform layer implemented (config, secrets, observability, state management)
+- [x] **ARCH-01**: Platform layer implemented (config, secrets, observability, state management)
 - [ ] **ARCH-02**: Integrations layer with Linear, GitHub, Slack as independent packages
 - [ ] **ARCH-03**: Agents layer using Platform and Integrations through normalized protocols
 - [x] **ARCH-04**: pnpm workspace monorepo structure with clear package boundaries
 - [ ] **ARCH-05**: MCP servers in each integration for agent tool calls
-- [ ] **ARCH-06**: Factory functions for dependency injection (no global singletons)
-- [ ] **ARCH-07**: Layer dependency rules enforced (Agents -> Integrations -> Platform)
+- [x] **ARCH-06**: Factory functions for dependency injection (no global singletons)
+- [x] **ARCH-07**: Layer dependency rules enforced (Agents -> Integrations -> Platform)
 
 ### Data Layer
 
 - [x] **DATA-01**: PostgreSQL schema structure (platform, integrations, observability schemas)
 - [x] **DATA-02**: Credential storage with encryption (migrate from .tokens/ files to database)
-- [ ] **DATA-03**: Webhook idempotency tracking (integrations.webhook_deliveries table)
-- [ ] **DATA-04**: Agent execution records for observability (observability.agent_executions table)
-- [ ] **DATA-05**: Sync cursor management for integrations (integrations.sync_cursors table)
-- [ ] **DATA-06**: LangGraph checkpoint cleanup policy implemented
+- [x] **DATA-03**: Webhook idempotency tracking (integrations.webhook_deliveries table)
+- [x] **DATA-04**: Agent execution records for observability (observability.agent_executions table)
+- [x] **DATA-05**: Sync cursor management for integrations (integrations.sync_cursors table)
+- [x] **DATA-06**: LangGraph checkpoint cleanup policy implemented
 
 ### Testing
 
@@ -129,13 +129,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OBSV-03 | Phase 12 | Complete |
 | DATA-01 | Phase 13 | Complete |
 | DATA-02 | Phase 13 | Complete |
-| DATA-03 | Phase 14 | Pending |
-| DATA-04 | Phase 14 | Pending |
-| DATA-05 | Phase 14 | Pending |
-| DATA-06 | Phase 14 | Pending |
-| ARCH-01 | Phase 14 | Pending |
-| ARCH-06 | Phase 14 | Pending |
-| ARCH-07 | Phase 14 | Pending |
+| DATA-03 | Phase 14 | Complete |
+| DATA-04 | Phase 14 | Complete |
+| DATA-05 | Phase 14 | Complete |
+| DATA-06 | Phase 14 | Complete |
+| ARCH-01 | Phase 14 | Complete |
+| ARCH-06 | Phase 14 | Complete |
+| ARCH-07 | Phase 14 | Complete |
 | QUAL-01 | Phase 15 | Pending |
 | QUAL-02 | Phase 15 | Pending |
 | QUAL-03 | Phase 15 | Pending |
@@ -173,4 +173,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-01-19*
-*Last updated: 2026-01-20 after Phase 13 completion*
+*Last updated: 2026-01-21 after Phase 14 completion*
