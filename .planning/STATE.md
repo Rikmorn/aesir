@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 16 of 22 (Linear Extraction)
-Plan: 9 of 11 in current phase
+Plan: 10 of 11 in current phase
 Status: In progress
-Last activity: 2026-01-21 - Completed 16-09-PLAN.md (Test migration)
+Last activity: 2026-01-21 - Completed 16-10-PLAN.md (Consumer migration)
 
-Progress: [##########          ] 74% (42 plans complete)
+Progress: [##########          ] 75% (43 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [##########          ] 74% (42 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 41 (v2.0)
+- Total plans completed: 43 (v2.0)
 - Average duration: ~7 min
-- Total execution time: ~310 min
+- Total execution time: ~317 min
 
 **By Phase:**
 
@@ -39,11 +39,11 @@ Progress: [##########          ] 74% (42 plans complete)
 | 13-data-layer | 6/6 | 38 min | 6 min |
 | 14-platform-services | 8/8 | 14 min | 2 min |
 | 15-code-quality | 8/8 | 111 min | 14 min |
-| 16-linear-extraction | 9/11 | 38 min | 4 min |
+| 16-linear-extraction | 10/11 | 45 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 16-09 (5 min), 16-08 (0 min), 16-07 (2 min), 16-06 (5 min), 16-05 (4 min)
-- Trend: Phase 16 near completion - test migration complete
+- Last 5 plans: 16-10 (7 min), 16-09 (5 min), 16-08 (0 min), 16-07 (2 min), 16-06 (5 min)
+- Trend: Phase 16 near completion - consumer migration complete
 
 *Updated after each plan completion*
 
@@ -202,6 +202,10 @@ Recent decisions affecting current work:
 - [16-09]: vi.mock pattern for isolating tests from config validation in Linear package
 - [16-09]: Type contract tests for credential-store (full integration tests deferred to Phase 20)
 - [16-09]: Focus factory tests on token type detection (refresh flow requires complex fetch mocking)
+- [16-10]: IssueStatus re-exported from @aesir/common (shared type, not Linear-specific)
+- [16-10]: Old Linear source preserved in _legacy/ for reference during migration
+- [16-10]: Disable Biome organizeImports for integrations/src/index.ts (intentional section headers)
+- [16-10]: _legacy/ excluded from TypeScript compilation and Biome checks
 
 ### Pending Todos
 
@@ -228,9 +232,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed 16-09-PLAN.md (Test migration)
+Stopped at: Completed 16-10-PLAN.md (Consumer migration)
 Resume file: None
 Next action: Continue Phase 16
 
 ---
-*Updated: 2026-01-21 after 16-09-PLAN.md completed*
+*Updated: 2026-01-21 after 16-10-PLAN.md completed*
