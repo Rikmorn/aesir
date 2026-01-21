@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 16 of 22 (Linear Extraction)
-Plan: 1 of 4 in current phase
+Plan: 2 of 4 in current phase
 Status: In progress
-Last activity: 2026-01-21 - Completed 16-01-PLAN.md (package scaffolding)
+Last activity: 2026-01-21 - Completed 16-02-PLAN.md (database layer)
 
-Progress: [##########          ] 67% (37 plans complete)
+Progress: [##########          ] 68% (38 plans complete)
 
 ## Milestone History
 
@@ -39,11 +39,11 @@ Progress: [##########          ] 67% (37 plans complete)
 | 13-data-layer | 6/6 | 38 min | 6 min |
 | 14-platform-services | 8/8 | 14 min | 2 min |
 | 15-code-quality | 8/8 | 111 min | 14 min |
-| 16-linear-extraction | 1/4 | 3 min | 3 min |
+| 16-linear-extraction | 2/4 | 7 min | 3.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 16-01 (3 min), 15-07 (7 min), 15-08 (10 min), 15-06 (11 min), 15-03 (45 min)
-- Trend: Phase 16 started - integration extraction pattern established
+- Last 5 plans: 16-02 (4 min), 16-01 (3 min), 15-07 (7 min), 15-08 (10 min), 15-06 (11 min)
+- Trend: Phase 16 progressing - database layer complete
 
 *Updated after each plan completion*
 
@@ -173,6 +173,13 @@ Recent decisions affecting current work:
 - [16-01]: Self-contained env validation per integration package (dotenv-flow + zod at package level)
 - [16-01]: Linear-specific PostgreSQL schema namespace (linear.*) for full data isolation
 - [16-01]: HTTP status mapping based on error codes (401 webhook/token, 400 oauth, 500 API)
+- [16-02]: Linear credentials table has no provider field (Linear-specific, workspace_id unique only)
+- [16-02]: schema.drizzle.ts with inline nanoid for migration generation (CJS bundler compatibility)
+- [16-02]: LinearCredentialStore.getByWorkspace() replaces getByProvider() (Linear-specific)
+- [16-02]: All LinearCredentialStore methods return ResultAsync<T, LinearError>
+- [16-03]: timingSafeEqual for HMAC signature verification to prevent timing attacks
+- [16-03]: Zod SafeParseResult from parseAgentSessionPayload for controlled error handling
+- [16-03]: data field in AgentSessionSchema matches WebhookPayloadBase contract (required even if unused)
 
 ### Pending Todos
 
@@ -199,9 +206,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed 16-01-PLAN.md (Linear package scaffolding)
+Stopped at: Completed 16-02-PLAN.md (database layer)
 Resume file: None
-Next action: Continue Phase 16
+Next action: Continue Phase 16 (16-03 or 16-04)
 
 ---
-*Updated: 2026-01-21 after 16-01-PLAN.md completed*
+*Updated: 2026-01-21 after 16-02-PLAN.md completed*
