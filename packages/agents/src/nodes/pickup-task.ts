@@ -9,7 +9,11 @@
  */
 
 import type { DevWorkflowStateType } from "@aesir/common";
-import { emitThought, readIssue, updateIssueStatus } from "@aesir/integrations";
+import {
+  emitThought,
+  readIssue,
+  updateIssueStatus,
+} from "@aesir/integration-linear";
 import type { LinearClient } from "@linear/sdk";
 
 /**

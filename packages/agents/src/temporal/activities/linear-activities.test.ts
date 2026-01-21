@@ -11,12 +11,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { updateLinearStatusActivity } from "./linear-activities.js";
 
 // Mock the integrations module
-vi.mock("@aesir/integrations", () => ({
+vi.mock("@aesir/integration-linear", () => ({
   updateIssueStatus: vi.fn(),
 }));
 
 // Import the mocked function
-import { updateIssueStatus } from "@aesir/integrations";
+import { updateIssueStatus } from "@aesir/integration-linear";
 
 describe("updateLinearStatusActivity", () => {
   const mockClient = {} as LinearClient;

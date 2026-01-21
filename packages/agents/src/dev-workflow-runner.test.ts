@@ -15,7 +15,7 @@ vi.mock("./dev-workflow.js", () => ({
 }));
 
 // Mock Linear integration
-vi.mock("../integrations/linear/index.js", () => ({
+vi.mock("@aesir/integration-linear", () => ({
   updateIssueStatus: vi.fn(),
   emitError: vi.fn(),
 }));
@@ -63,7 +63,7 @@ vi.mock("./tracing/index.js", () => ({
   })),
 }));
 
-import { emitError, updateIssueStatus } from "@aesir/integrations";
+import { emitError, updateIssueStatus } from "@aesir/integration-linear";
 import { createDevWorkflow } from "./dev-workflow.js";
 
 const mockCreateDevWorkflow = vi.mocked(createDevWorkflow);

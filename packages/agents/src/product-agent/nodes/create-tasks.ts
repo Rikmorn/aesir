@@ -12,7 +12,11 @@
  */
 
 import { createPinoLogger, type PinoLogger } from "@aesir/common";
-import { createIssue, type LabelInfo, listLabels } from "@aesir/integrations";
+import {
+  createIssue,
+  type LabelInfo,
+  listLabels,
+} from "@aesir/integration-linear";
 import { ChatAnthropic } from "@langchain/anthropic";
 import type { LinearClient } from "@linear/sdk";
 import { z } from "zod";

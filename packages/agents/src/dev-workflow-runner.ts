@@ -20,7 +20,7 @@ import {
   type PinoLogger,
   type TraceEntry,
 } from "@aesir/common";
-import { emitError, updateIssueStatus } from "@aesir/integrations";
+import { emitError, updateIssueStatus } from "@aesir/integration-linear";
 import {
   createDevWorkflow,
   type DevWorkflowDependencies,

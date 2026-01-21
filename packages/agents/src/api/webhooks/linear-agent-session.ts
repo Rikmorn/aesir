@@ -13,12 +13,14 @@ import {
   type PinoLogger,
   ValidationError,
 } from "@aesir/common";
+import {
+  validateWebhookTimestamp,
+  verifyWebhookSignature,
+} from "@aesir/integration-linear";
 import type { WebhookIdempotencyService } from "@aesir/integrations";
 import {
   type ApprovalWorkflowInput,
   startApprovalWorkflow,
-  validateWebhookTimestamp,
-  verifyWebhookSignature,
 } from "@aesir/integrations";
 import type { ExecutionTracker } from "@aesir/observability";
 

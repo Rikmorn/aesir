@@ -7,13 +7,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createPickupTaskNode } from "./pickup-task.js";
 
 // Mock the Linear integration module
-vi.mock("../../integrations/linear/index.js", () => ({
+vi.mock("@aesir/integration-linear", () => ({
   readIssue: vi.fn(),
   updateIssueStatus: vi.fn(),
   emitThought: vi.fn(),
 }));
 
-import { emitThought, readIssue, updateIssueStatus } from "@aesir/integrations";
+import {
+  emitThought,
+  readIssue,
+  updateIssueStatus,
+} from "@aesir/integration-linear";
 
 const mockReadIssue = vi.mocked(readIssue);
 const mockUpdateIssueStatus = vi.mocked(updateIssueStatus);

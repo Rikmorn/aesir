@@ -101,7 +101,7 @@ async function saveTokens(tokens: {
   refreshToken: string;
   expiresAt: number;
 }): Promise<void> {
-  const { saveLinearTokens } = await import("@aesir/integrations");
+  const { saveLinearTokens } = await import("@aesir/integration-linear");
   const credentialId = await saveLinearTokens({
     accessToken: tokens.accessToken,
     refreshToken: tokens.refreshToken,

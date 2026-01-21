@@ -10,7 +10,7 @@ import {
   type IssueStatus,
   type PinoLogger,
 } from "@aesir/common";
-import { updateIssueStatus } from "@aesir/integrations";
+import { updateIssueStatus } from "@aesir/integration-linear";
 import type { LinearClient } from "@linear/sdk";
 
 const logger: PinoLogger = createPinoLogger({

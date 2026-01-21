@@ -35,6 +35,9 @@ importers:
       '@aesir/common':
         specifier: workspace:*
         version: link:../common
+      '@aesir/integration-linear':
+        specifier: workspace:*
+        version: link:../integrations/linear
       '@aesir/integrations':
         specifier: workspace:*
         version: link:../integrations
