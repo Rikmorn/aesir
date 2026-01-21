@@ -136,6 +136,9 @@ importers:
       '@aesir/common':
         specifier: workspace:*
         version: link:../common
+      '@aesir/integration-github':
+        specifier: workspace:*
+        version: link:github
       '@aesir/integration-linear':
         specifier: workspace:*
         version: link:linear

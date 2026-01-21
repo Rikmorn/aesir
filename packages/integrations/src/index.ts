@@ -55,7 +55,21 @@ export {
   SlackError,
 } from "./errors/index.js";
 // === GitHub ===
-// GitHub API operations via Octokit
+/**
+ * @deprecated Import from @aesir/integration-github directly.
+ * GitHub has been extracted to a standalone package for independent deployment.
+ * These re-exports are provided for backward compatibility only.
+ *
+ * @example
+ * ```typescript
+ * // Old (deprecated)
+ * import { createGitHubClient } from '@aesir/integrations';
+ *
+ * // New (recommended)
+ * import { createGitHubClient } from '@aesir/integration-github';
+ * ```
+ */
+// Re-exported from @aesir/integration-github for backward compatibility
 export type {
   BranchInfo,
   CommitInfo,
@@ -66,7 +80,7 @@ export type {
   GitHubConfig,
   PRComment,
   PullRequestInfo,
-} from "./github/index.js";
+} from "@aesir/integration-github";
 export {
   addPRComment,
   createBranch,
@@ -79,7 +93,7 @@ export {
   listBranches,
   listPRComments,
   mergePullRequest,
-} from "./github/index.js";
+} from "@aesir/integration-github";
 // === Linear ===
 /**
  * @deprecated Import from @aesir/integration-linear directly.

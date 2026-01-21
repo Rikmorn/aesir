@@ -65,4 +65,4 @@ export const config = {
   },
 } as const;
 
-export type GitHubConfig = typeof config;
+export type GitHubServiceConfig = typeof config;

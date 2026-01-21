@@ -1,9 +1,9 @@
 export { closeDatabase, db } from "./client.js";
 export {
-  createCredentialStore,
   type CredentialProvider,
   type CredentialStore,
   type CredentialStoreOptions,
+  createCredentialStore,
   type DecryptedCredential,
   deleteCredential,
   getCredential,
