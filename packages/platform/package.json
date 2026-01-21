@@ -37,6 +37,7 @@
     "@temporalio/workflow": "^1.14.1",
     "dockerode": "^4.0.9",
     "drizzle-orm": "^0.45.1",
+    "neverthrow": "^8.2.0",
     "pg": "^8.17.2",
     "pino": "^10.2.1"
   },
