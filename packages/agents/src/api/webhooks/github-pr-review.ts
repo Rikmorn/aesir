@@ -12,11 +12,14 @@ import {
   createPinoLogger,
   generateCorrelationId,
   type PinoLogger,
+  ValidationError,
 } from "@aesir/common";
 import {
   sendApprovalSignal,
   sendChangesRequestedSignal,
 } from "@aesir/integrations";
+
+import { type PRReviewPayload, parsePRReviewPayload } from "./schemas/index.js";
 
 const baseLogger: PinoLogger = createPinoLogger({
   component: "agents:webhooks:github-pr-review",
@@ -24,6 +27,7 @@ const baseLogger: PinoLogger = createPinoLogger({
 
 /**
  * GitHub pull_request_review event payload (relevant fields)
+ * @deprecated Use PRReviewPayload from ./schemas/index.js instead
  */
 export interface PRReviewEvent {
   action: "submitted" | "edited" | "dismissed";
@@ -140,12 +144,12 @@ export interface HandlePRReviewResult {
  * - commented -> ignored (no signal)
  * - dismissed -> ignored
  *
- * @param event - GitHub webhook event payload
+ * @param event - Validated GitHub webhook event payload
  * @param logger - Optional request-scoped logger (falls back to base logger)
  * @returns Result indicating what action was taken
  */
 export async function handlePRReviewEvent(
-  event: PRReviewEvent,
+  event: PRReviewPayload | PRReviewEvent,
   logger: PinoLogger = baseLogger,
 ): Promise<HandlePRReviewResult> {
   // Only handle 'submitted' action
@@ -234,7 +238,6 @@ export async function handlePRReviewEvent(
  * HTTP request interface for webhook handler
  */
 export interface WebhookRequest {
-  body: PRReviewEvent;
   headers: Record<string, string | undefined>;
   rawBody: string;
 }
@@ -251,7 +254,7 @@ export interface WebhookResponse {
  *
  * This is the HTTP endpoint handler. Wire this up to your router.
  *
- * @param req - HTTP request with parsed body and raw body string
+ * @param req - HTTP request with raw body string
  * @param res - HTTP response object
  */
 export async function prReviewWebhookHandler(
@@ -274,6 +277,29 @@ export async function prReviewWebhookHandler(
     }
   }
 
-  const result = await handlePRReviewEvent(req.body, logger);
+  logger.info({}, "Processing GitHub PR review webhook");
+
+  // Validate payload with Zod schema
+  const parseResult = parsePRReviewPayload(req.rawBody);
+
+  if (!parseResult.success) {
+    const validationError = new ValidationError(
+      "AGT_WEBHOOK_VALIDATION",
+      "Invalid GitHub webhook payload",
+      {
+        validationErrors: parseResult.error.flatten(),
+        metadata: { webhookType: "github-pr-review" },
+      },
+    );
+    logger.warn({ err: validationError }, "Webhook validation failed");
+    res.status(400).json({
+      error: validationError.code,
+      message: validationError.message,
+      details: validationError.validationErrors,
+    });
+    return;
+  }
+
+  const result = await handlePRReviewEvent(parseResult.data, logger);
   res.status(200).json(result);
 }

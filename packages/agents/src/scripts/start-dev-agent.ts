@@ -34,9 +34,11 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
-import type { LinearWebhookConfig } from "../api/webhooks/linear-agent-session.js";
+import type {
+  LinearWebhookConfig,
+  WebhookServices,
+} from "../api/webhooks/linear-agent-session.js";
 import type { ActivityDependencies } from "../temporal/activities/index.js";
-import type { WebhookServices } from "../api/webhooks/linear-agent-session.js";
 
 async function bootstrap(): Promise<void> {
   const {
@@ -265,11 +267,16 @@ async function bootstrap(): Promise<void> {
 
       if (req.url === "/webhooks/github") {
         try {
-          const body = JSON.parse(rawBody);
-          await prReviewWebhookHandler({ ...webhookReq, body }, webhookRes);
-        } catch {
-          res.writeHead(400, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: "Invalid JSON body" }));
+          // prReviewWebhookHandler now handles JSON parsing and Zod validation
+          await prReviewWebhookHandler(webhookReq, webhookRes);
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          logger.error(
+            { err },
+            `Unhandled error in GitHub webhook handler: ${errorMessage}`,
+          );
+          res.writeHead(500, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Internal server error" }));
         }
         return;
       }

@@ -11,21 +11,21 @@ import {
   createPinoLogger,
   generateCorrelationId,
   type PinoLogger,
+  ValidationError,
 } from "@aesir/common";
-import type {
-  AgentSessionPayload,
-  WebhookIdempotencyService,
-  WebhookPayloadBase,
-} from "@aesir/integrations";
+import type { WebhookIdempotencyService } from "@aesir/integrations";
 import {
   type ApprovalWorkflowInput,
-  isAgentSessionEvent,
-  parseWebhookPayload,
   startApprovalWorkflow,
   validateWebhookTimestamp,
   verifyWebhookSignature,
 } from "@aesir/integrations";
 import type { ExecutionTracker } from "@aesir/observability";
+
+import {
+  type AgentSessionPayload,
+  parseAgentSessionPayload,
+} from "./schemas/index.js";
 
 const baseLogger: PinoLogger = createPinoLogger({
   component: "agents:webhooks:linear-agent-session",
@@ -190,17 +190,57 @@ export async function linearWebhookHandler(
 
   logger.info({}, "Webhook signature verified");
 
-  // Parse payload for idempotency check (before full validation)
-  const payload = parseWebhookPayload<WebhookPayloadBase>(req.rawBody);
+  // Validate payload with Zod schema
+  const parseResult = parseAgentSessionPayload(req.rawBody);
 
-  // Check idempotency FIRST after signature verification
+  if (!parseResult.success) {
+    // Check if this is a non-AgentSession webhook (different type)
+    // Try to parse as basic JSON to check the type field
+    try {
+      const basicPayload = JSON.parse(req.rawBody) as { type?: string };
+      if (basicPayload.type !== "AgentSessionEvent") {
+        // Not an AgentSession event - ignore without error
+        logger.info(
+          { type: basicPayload.type },
+          `Ignoring webhook type: ${basicPayload.type}`,
+        );
+        res
+          .status(200)
+          .json({ action: "ignored", reason: "not_agent_session" });
+        return;
+      }
+    } catch {
+      // JSON parse failed - fall through to validation error
+    }
+
+    // This is an AgentSession event with invalid payload structure
+    const validationError = new ValidationError(
+      "AGT_WEBHOOK_VALIDATION",
+      "Invalid Linear webhook payload",
+      {
+        validationErrors: parseResult.error.flatten(),
+        metadata: { webhookType: "linear-agent-session" },
+      },
+    );
+    logger.warn({ err: validationError }, "Webhook validation failed");
+    res.status(400).json({
+      error: validationError.code,
+      message: validationError.message,
+      details: validationError.validationErrors,
+    });
+    return;
+  }
+
+  const payload = parseResult.data;
+
+  // Check idempotency after validation
   if (services?.webhookIdempotency) {
     const deliveryId = req.headers["linear-delivery"];
     if (deliveryId) {
       const { isDuplicate } = await services.webhookIdempotency.checkAndRecord(
         "linear",
         deliveryId,
-        payload.type ?? "unknown",
+        payload.type,
       );
 
       if (isDuplicate) {
@@ -225,16 +265,6 @@ export async function linearWebhookHandler(
     return;
   }
 
-  // Only handle AgentSession events
-  if (!isAgentSessionEvent(payload)) {
-    logger.info(
-      { type: payload.type },
-      `Ignoring webhook type: ${payload.type}`,
-    );
-    res.status(200).json({ action: "ignored", reason: "not_agent_session" });
-    return;
-  }
-
   // Log the payload structure for debugging
   logger.info(
     { payload: JSON.stringify(payload).substring(0, 1000) },
@@ -242,16 +272,25 @@ export async function linearWebhookHandler(
   );
 
   // Extract issue ID for execution tracking
-  const issueId = payload.agentSession?.issueId;
+  const issueId = payload.agentSession.issueId;
 
   // Start execution tracking
   let executionId: string | undefined;
   if (services?.executionTracker && issueId) {
-    executionId = await services.executionTracker.start({
+    const startResult = await services.executionTracker.start({
       agentType: "dev-agent",
       issueId,
       workspaceId: services.workspaceId,
     });
+    if (startResult.isOk()) {
+      executionId = startResult.value;
+    } else {
+      // Log but don't fail the request - tracking is best-effort
+      logger.warn(
+        { err: startResult.error, issueId },
+        "Failed to start execution tracking",
+      );
+    }
   }
 
   try {
@@ -260,7 +299,14 @@ export async function linearWebhookHandler(
 
     // Mark execution complete
     if (executionId && services?.executionTracker) {
-      await services.executionTracker.complete(executionId);
+      const completeResult =
+        await services.executionTracker.complete(executionId);
+      if (completeResult.isErr()) {
+        logger.warn(
+          { err: completeResult.error, executionId },
+          "Failed to mark execution complete",
+        );
+      }
     }
 
     res.status(200).json(result);
@@ -268,7 +314,16 @@ export async function linearWebhookHandler(
     // Mark execution failed
     if (executionId && services?.executionTracker) {
       const lastState = error instanceof Error ? error.message : "unknown";
-      await services.executionTracker.fail(executionId, lastState);
+      const failResult = await services.executionTracker.fail(
+        executionId,
+        lastState,
+      );
+      if (failResult.isErr()) {
+        logger.warn(
+          { err: failResult.error, executionId },
+          "Failed to mark execution failed",
+        );
+      }
     }
     throw error;
   }
