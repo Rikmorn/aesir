@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-19)
 
 **Core value:** Maintainable, scalable foundation for end-to-end automated development workflows
-**Current focus:** Phase 15 - Code Quality (in progress)
+**Current focus:** Phase 15 - Code Quality (complete)
 
 ## Current Position
 
 Phase: 15 of 22 (Code Quality)
-Plan: 5 of 5 in current phase
+Plan: 6 of 6 in current phase
 Status: Phase complete
-Last activity: 2026-01-21 - Completed 15-03-PLAN.md
+Last activity: 2026-01-21 - Completed 15-06-PLAN.md
 
-Progress: [#########           ] 60% (33 plans complete)
+Progress: [##########          ] 62% (34 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [#########           ] 60% (33 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 33 (v2.0)
-- Average duration: ~7 min
-- Total execution time: ~253 min
+- Total plans completed: 34 (v2.0)
+- Average duration: ~8 min
+- Total execution time: ~264 min
 
 **By Phase:**
 
@@ -38,11 +38,11 @@ Progress: [#########           ] 60% (33 plans complete)
 | 12-observability | 8/8 | 78 min | 10 min |
 | 13-data-layer | 6/6 | 38 min | 6 min |
 | 14-platform-services | 8/8 | 14 min | 2 min |
-| 15-code-quality | 5/5 | 83 min | 17 min |
+| 15-code-quality | 6/6 | 94 min | 16 min |
 
 **Recent Trend:**
-- Last 5 plans: 15-03 (45 min), 15-04 (20 min), 15-05 (8 min), 15-02 (7 min), 15-01 (3 min)
-- Trend: Result types migrated to all services, Phase 15 complete
+- Last 5 plans: 15-06 (11 min), 15-03 (45 min), 15-04 (20 min), 15-05 (8 min), 15-02 (7 min)
+- Trend: Phase 15 complete with dead code cleanup
 
 *Updated after each plan completion*
 
@@ -157,6 +157,10 @@ Recent decisions affecting current work:
 - [15-03]: PLT_* prefix for platform errors, OBS_* prefix for observability errors
 - [15-03]: health() and close() remain Promise-based (lifecycle methods not service boundaries)
 - [15-03]: Execution tracking failures logged but don't fail request (best-effort)
+- [15-06]: Exclude duplicate exports check in knip (agent alias intentional for LangGraph)
+- [15-06]: SDK types as devDependencies in agents (type-only imports from @linear/sdk etc)
+- [15-06]: db/scripts excluded from knip (migration scripts with inline dependencies)
+- [15-06]: pino-pretty in ignoreDependencies (pino transport, not direct import)
 
 ### Pending Todos
 
@@ -183,9 +187,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed 15-03-PLAN.md (Phase 15 complete)
+Stopped at: Completed 15-06-PLAN.md (Phase 15 complete)
 Resume file: None
 Next action: Start Phase 16
 
 ---
-*Updated: 2026-01-21 after 15-03-PLAN.md completed*
+*Updated: 2026-01-21 after 15-06-PLAN.md completed*
