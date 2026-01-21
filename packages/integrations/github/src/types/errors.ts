@@ -8,7 +8,8 @@ export type GitHubErrorCode =
   | "INT_GITHUB_API" // GitHub API errors (rate limit, network, etc)
   | "INT_GITHUB_WEBHOOK" // Webhook signature verification, parsing errors
   | "INT_GITHUB_TOKEN" // Token encryption/decryption, storage errors
-  | "INT_GITHUB_OAUTH"; // OAuth flow errors (invalid state, token exchange)
+  | "INT_GITHUB_OAUTH" // OAuth flow errors (invalid state, token exchange)
+  | "INT_GITHUB_DB"; // Database operation errors
 
 /**
  * GitHubError - Error type for GitHub integration
