@@ -24,6 +24,7 @@
   "dependencies": {
     "dotenv-flow": "^4.1.0",
     "nanoid": "^5.1.6",
+    "neverthrow": "^8.2.0",
     "pg": "^8.17.2",
     "pino": "^10.2.1",
     "pino-http": "^11.0.0",
