@@ -1,0 +1,187 @@
+---
+description: Slack integration development guidelines
+globs: ["packages/integrations/slack/**/*"]
+---
+
+# Slack Integration
+
+This is the `@aesir/integration-slack` package - an independent Slack integration using Bolt framework.
+
+## Package Structure
+
+```
+packages/integrations/slack/
+├── src/
+│   ├── api/           # HTTP routes (events, oauth, routes)
+│   ├── client/        # Bolt app factory, WebClient creation
+│   ├── db/            # Database schema (slack.*), credential store
+│   ├── events/        # Event handling with deduplication
+│   ├── messages/      # Block Kit builders, message posting
+│   ├── oauth/         # Token management, flow utilities
+│   ├── types/         # Config, errors
+│   └── main.ts        # Service entry point
+├── Dockerfile
+└── package.json
+```
+
+## Bolt Framework Patterns
+
+### App Creation with PostgreSQL InstallationStore
+```typescript
+import { createBoltApp } from "@aesir/integration-slack";
+
+const app = await createBoltApp({
+  db,
+  logger,
+  socketMode: true, // for development
+});
+```
+
+### Event Handling
+Events use deduplication via event_id to prevent duplicate processing:
+```typescript
+import { createEventHandler } from "@aesir/integration-slack";
+
+const handler = createEventHandler({
+  deliveryStore,
+  logger,
+});
+
+// Returns null for duplicates
+const result = await handler.handleEvent(payload);
+```
+
+### Message Posting with Block Kit
+```typescript
+import { sendApprovalRequest, buildApprovalBlocks } from "@aesir/integration-slack";
+
+await sendApprovalRequest(client, {
+  type: "approval_needed",
+  taskId: "ABC-123",
+  prUrl: "https://github.com/org/repo/pull/42",
+  title: "Review needed",
+  summary: "Changes ready for review",
+}, channelId);
+```
+
+## Critical Patterns
+
+### Event Deduplication
+- Slack may deliver events multiple times
+- Use `event_id` (or generated ID for block_actions) for deduplication
+- ON CONFLICT DO NOTHING for atomic duplicate detection
+- Return null/skip for duplicate events
+
+### Bot Message Filtering
+Filter out bot's own messages to prevent loops:
+```typescript
+if (event.subtype === "bot_message" ||
+    event.subtype === "message_changed" ||
+    event.subtype === "message_deleted") {
+  return; // Skip
+}
+```
+
+### 3-Second Rule
+Slack expects acknowledgment within 3 seconds:
+- Acknowledge immediately, process asynchronously
+- Fire-and-forget pattern for event callbacks
+- Use async handlers that don't block acknowledgment
+
+### Threading
+Maintain conversation context:
+```typescript
+const threadTs = event.thread_ts || event.ts;
+await client.chat.postMessage({
+  channel,
+  thread_ts: threadTs,
+  text: "Reply in thread",
+});
+```
+
+## Credential Storage
+
+- Database schema: `slack.*` (separate from Linear/GitHub)
+- Credentials keyed by `team_id` + `enterprise_id` (composite unique)
+- Encryption via `CREDENTIAL_ENCRYPTION_KEY` environment variable
+- Bolt's InstallationStore interface backed by PostgreSQL
+
+### Credential Store Usage
+```typescript
+import { createSlackCredentialStore } from "@aesir/integration-slack";
+
+const store = createSlackCredentialStore({ db, logger });
+await store.storeInstallation(installation);
+const cred = await store.fetchInstallation({ teamId: "T123" });
+```
+
+## Error Handling
+```typescript
+import { SlackError } from "@aesir/integration-slack";
+throw new SlackError("INT_SLACK_API", "Failed to post message", { cause: err });
+```
+
+All errors extend `AppError` with `INT_SLACK_*` error codes.
+
+## Connection Modes
+
+### Socket Mode (Development)
+- Requires `SLACK_APP_TOKEN` (xapp-...)
+- No public URL needed
+- Set `SLACK_MODE=socket`
+
+### HTTP Mode (Production)
+- Uses `SLACK_SIGNING_SECRET` for request verification
+- Requires public URL for event delivery
+- Set `SLACK_MODE=http`
+
+## Running Locally
+
+```bash
+# Set env vars
+export SLACK_BOT_TOKEN=xoxb-...
+export SLACK_SIGNING_SECRET=xxx
+export SLACK_CLIENT_ID=xxx
+export SLACK_CLIENT_SECRET=xxx
+export SLACK_APP_TOKEN=xapp-...  # for socket mode
+export SLACK_MODE=socket
+export DB_HOST=localhost
+export DB_PORT=5432
+export DB_NAME=aesir
+export DB_USER=aesir
+export DB_PASSWORD=password
+export CREDENTIAL_ENCRYPTION_KEY=$(openssl rand -hex 32)
+
+# Run migration
+pnpm --filter @aesir/integration-slack migrate
+
+# Build and start service
+pnpm --filter @aesir/integration-slack build
+node packages/integrations/slack/dist/main.js
+
+# Or use dev mode
+pnpm --filter @aesir/integration-slack dev
+```
+
+## Testing
+
+```bash
+# Run all tests
+pnpm --filter @aesir/integration-slack test
+
+# Run single test file
+pnpm --filter @aesir/integration-slack test path/to/file.test.ts
+
+# Watch mode
+pnpm --filter @aesir/integration-slack test --watch
+```
+
+## Don't
+
+- Don't respond to Slack more than 3 seconds after event delivery
+- Don't process duplicate events (check event_id first)
+- Don't respond to bot_message, message_changed, message_deleted subtypes
+- Don't import from `packages/integrations/src/slack/` (use `@aesir/integration-slack`)
+- Don't skip encryption for tokens (always use `CREDENTIAL_ENCRYPTION_KEY`)
+- Don't add Slack-specific logic to `@aesir/integrations` package (belongs in Slack package)
+- Don't block event acknowledgment with long-running operations
