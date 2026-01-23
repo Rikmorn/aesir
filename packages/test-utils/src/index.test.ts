@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   createMockCredentialStore,
   createMockLogger,
+  createTestAgent,
   createTestCredential,
+  createTestDevWorkflowState,
   createTestIssue,
   createTestPR,
   resetAllCounters,
@@ -14,6 +16,65 @@ describe("@aesir/test-utils", () => {
   beforeEach(() => {
     resetAllCounters();
     resetMockCredentialStoreCounter();
+  });
+
+  describe("agent factories", () => {
+    it("createTestAgent creates agent with defaults", () => {
+      const agent = createTestAgent();
+      expect(agent.messages).toEqual([]);
+      expect(agent.loopCount).toBe(0);
+      expect(agent.status).toBe("running");
+      expect(agent.taskDescription).toBe("Test task 0");
+      expect(agent.generatedCode).toBeNull();
+    });
+
+    it("createTestAgent accepts overrides", () => {
+      const agent = createTestAgent({
+        status: "completed",
+        taskDescription: "Custom task",
+        generatedCode: "console.log('hello')",
+      });
+      expect(agent.status).toBe("completed");
+      expect(agent.taskDescription).toBe("Custom task");
+      expect(agent.generatedCode).toBe("console.log('hello')");
+    });
+
+    it("createTestAgent increments counter", () => {
+      const agent1 = createTestAgent();
+      const agent2 = createTestAgent();
+      expect(agent1.taskDescription).toBe("Test task 0");
+      expect(agent2.taskDescription).toBe("Test task 1");
+    });
+
+    it("createTestDevWorkflowState creates workflow with defaults", () => {
+      const workflow = createTestDevWorkflowState();
+      expect(workflow.taskId).toBe("TASK-0");
+      expect(workflow.sessionId).toBe("session_0");
+      expect(workflow.status).toBe("pending");
+      expect(workflow.files).toEqual([]);
+      expect(workflow.testResult).toBeNull();
+    });
+
+    it("createTestDevWorkflowState accepts overrides", () => {
+      const workflow = createTestDevWorkflowState({
+        taskId: "ABC-123",
+        status: "coding",
+        branchName: "feature/test",
+      });
+      expect(workflow.taskId).toBe("ABC-123");
+      expect(workflow.status).toBe("coding");
+      expect(workflow.branchName).toBe("feature/test");
+    });
+
+    it("resetAllCounters resets agent counters", () => {
+      createTestAgent();
+      createTestDevWorkflowState();
+      resetAllCounters();
+      const agent = createTestAgent();
+      const workflow = createTestDevWorkflowState();
+      expect(agent.taskDescription).toBe("Test task 0");
+      expect(workflow.taskId).toBe("TASK-0");
+    });
   });
 
   describe("createTestCredential", () => {
