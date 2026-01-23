@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-19)
 
 **Core value:** Maintainable, scalable foundation for end-to-end automated development workflows
-**Current focus:** Phase 20 - Testing Pyramid (next)
+**Current focus:** Phase 20 - Testing Pyramid (in progress)
 
 ## Current Position
 
-Phase: 19 of 22 (MCP Layer) - Complete
-Plan: 8 of 8 in current phase
-Status: Phase verified and complete
-Last activity: 2026-01-23 - Phase 19 verified
+Phase: 20 of 22 (Testing Pyramid) - In Progress
+Plan: 1 of ? in current phase
+Status: Plan 20-01 complete
+Last activity: 2026-01-23 - Completed 20-01 (Coverage Configuration)
 
-Progress: [##################  ] 100% (89 plans complete)
+Progress: [##################  ] ~90% (90 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [##################  ] 100% (89 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 89 (v2.0)
+- Total plans completed: 90 (v2.0)
 - Average duration: ~6 min
-- Total execution time: ~495 min
+- Total execution time: ~503 min
 
 **By Phase:**
 
@@ -43,10 +43,11 @@ Progress: [##################  ] 100% (89 plans complete)
 | 17-github-extraction | 11/11 | 36 min | 3 min |
 | 18-slack-extraction | 12/12 | 35 min | 3 min |
 | 19-mcp-layer | 8/8 | 47 min | 5.9 min |
+| 20-testing-pyramid | 1/? | 8 min | 8 min |
 
 **Recent Trend:**
-- Last 5 plans: 19-08 (3 min), 19-07 (6 min), 19-06 (12 min), 19-05 (3 min), 19-04 (9 min)
-- Trend: Phase 19 complete - MCP HTTP routes with permission seeding and documentation
+- Last 5 plans: 20-01 (8 min), 19-08 (3 min), 19-07 (6 min), 19-06 (12 min), 19-05 (3 min)
+- Trend: Phase 20 started - Coverage configuration complete
 
 *Updated after each plan completion*
 
@@ -303,6 +304,10 @@ Recent decisions affecting current work:
 - [19-06]: JSON middleware separate from webhook routes (webhooks need raw body for HMAC)
 - [19-08]: Biome override for **/scripts/**/*.ts to allow console.log in CLI scripts
 - [19-08]: Permission seeding via onConflictDoUpdate for idempotent re-runs
+- [20-01]: V8 coverage provider over Istanbul (native, faster)
+- [20-01]: Coverage disabled by default, enabled via --coverage flag
+- [20-01]: Explicit project paths to avoid tsbuildinfo glob match
+- [20-01]: 70% thresholds for core packages, 50% for integrations/agents
 
 ### Pending Todos
 
@@ -329,9 +334,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-23
-Stopped at: Phase 19 verified and complete
+Stopped at: Completed 20-01-PLAN.md
 Resume file: None
-Next action: Start Phase 20 (Testing Pyramid)
+Next action: Continue Phase 20 (next plan)
 
 ---
-*Updated: 2026-01-23 after Phase 19 verification*
+*Updated: 2026-01-23 after 20-01 completion*
