@@ -24,7 +24,7 @@ The v2.0 Foundation milestone restructures Aesir from a working prototype to a m
 - [x] **Phase 15: Code Quality** - Error handling, validation, barrel exports, dead code removal
 - [x] **Phase 16: Linear Extraction** - Extract Linear integration to independent package
 - [x] **Phase 17: GitHub Extraction** - Extract GitHub integration to independent package
-- [ ] **Phase 18: Slack Extraction** - Extract Slack integration to independent package
+- [x] **Phase 18: Slack Extraction** - Extract Slack integration to independent package
 - [ ] **Phase 19: MCP Layer** - MCP servers in each integration for agent tool calls
 - [ ] **Phase 20: Testing Pyramid** - Coverage, testcontainers, fixtures, isolation
 - [ ] **Phase 21: CI/CD Pipeline** - GitHub Actions, quality gates, branch protection
@@ -216,18 +216,18 @@ Plans:
 **Plans:** 12 plans
 
 Plans:
-- [ ] 18-01-PLAN.md — Create package scaffolding and workspace configuration
-- [ ] 18-02-PLAN.md — Create database layer with slack.* schema, credential store, event delivery store
-- [ ] 18-03-PLAN.md — Create event handling layer (types, parser, handler with deduplication)
-- [ ] 18-04-PLAN.md — Create client layer (Bolt factory with installationStore, WebClient wrapper)
-- [ ] 18-05-PLAN.md — Create message layer (Block Kit builders, thread-aware sender)
-- [ ] 18-06-PLAN.md — Create OAuth module (installationStore adapter, token store, flow)
-- [ ] 18-07-PLAN.md — Create HTTP API layer (events endpoint, OAuth routes, main.ts)
-- [ ] 18-08-PLAN.md — Create database migration and credential migration script
-- [ ] 18-09-PLAN.md — Create Dockerfile and README documentation
-- [ ] 18-10-PLAN.md — Create tests (parser, handler, credential store, blocks)
-- [ ] 18-11-PLAN.md — Update consumers and create backward-compatible re-exports
-- [ ] 18-12-PLAN.md — Update AI context files, final verification checkpoint
+- [x] 18-01-PLAN.md — Create package scaffolding and workspace configuration
+- [x] 18-02-PLAN.md — Create database layer with slack.* schema, credential store, event delivery store
+- [x] 18-03-PLAN.md — Create event handling layer (types, parser, handler with deduplication)
+- [x] 18-04-PLAN.md — Create client layer (Bolt factory with installationStore, WebClient wrapper)
+- [x] 18-05-PLAN.md — Create message layer (Block Kit builders, thread-aware sender)
+- [x] 18-06-PLAN.md — Create OAuth module (installationStore adapter, token store, flow)
+- [x] 18-07-PLAN.md — Create HTTP API layer (events endpoint, OAuth routes, main.ts)
+- [x] 18-08-PLAN.md — Create database migration and credential migration script
+- [x] 18-09-PLAN.md — Create Dockerfile and README documentation
+- [x] 18-10-PLAN.md — Create tests (parser, handler, credential store, blocks)
+- [x] 18-11-PLAN.md — Update consumers and create backward-compatible re-exports
+- [x] 18-12-PLAN.md — Update AI context files, final verification checkpoint
 
 ### Phase 19: MCP Layer
 **Goal:** MCP servers in each integration enabling standardized agent tool calls
@@ -304,7 +304,7 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 | 15. Code Quality | v2.0 | 8/8 | Complete | 2026-01-21 |
 | 16. Linear Extraction | v2.0 | 11/11 | Complete | 2026-01-21 |
 | 17. GitHub Extraction | v2.0 | 11/11 | Complete | 2026-01-21 |
-| 18. Slack Extraction | v2.0 | 0/12 | Planned | - |
+| 18. Slack Extraction | v2.0 | 12/12 | Complete | 2026-01-23 |
 | 19. MCP Layer | v2.0 | 0/TBD | Not started | - |
 | 20. Testing Pyramid | v2.0 | 0/TBD | Not started | - |
 | 21. CI/CD Pipeline | v2.0 | 0/TBD | Not started | - |
@@ -312,5 +312,5 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 
 ---
 *Created: 2026-01-19*
-*Updated: 2026-01-23 (Phase 18 planned)*
+*Updated: 2026-01-23 (Phase 18 complete)*
 *Milestone: v2.0 Foundation*
