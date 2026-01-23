@@ -6,7 +6,21 @@
  */
 
 import { createId } from "@aesir/common";
-import { pgSchema, text, timestamp, unique } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  pgSchema,
+  text,
+  timestamp,
+  unique,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
+import { customAlphabet } from "nanoid";
+
+// ID generator for MCP permissions (not yet in common package)
+const nanoid = customAlphabet(
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+  24,
+);
 
 export const githubSchema = pgSchema("github");
 
@@ -68,8 +82,40 @@ export const webhookDeliveries = githubSchema.table(
   ],
 );
 
+/**
+ * MCP Tool Permissions
+ * Stores agent-to-tool permission mappings for MCP tool whitelisting.
+ * Uses allow-list approach: if no row exists, permission is denied.
+ */
+export const mcpToolPermissions = githubSchema.table(
+  "mcp_tool_permissions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => `mcp_perm_${nanoid()}`),
+    agentId: text("agent_id").notNull(), // e.g., 'dev-agent', 'product-agent'
+    toolName: text("tool_name").notNull(), // e.g., 'create_branch', 'create_pr'
+    allowed: boolean("allowed").notNull().default(true), // Allow-list: row exists = allowed
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    // Unique constraint on agent + tool combination
+    uniqueIndex("github_mcp_perm_agent_tool_idx").on(
+      table.agentId,
+      table.toolName,
+    ),
+  ],
+);
+
 // Type exports
 export type Credential = typeof credentials.$inferSelect;
 export type NewCredential = typeof credentials.$inferInsert;
 export type WebhookDelivery = typeof webhookDeliveries.$inferSelect;
 export type NewWebhookDelivery = typeof webhookDeliveries.$inferInsert;
+export type McpToolPermission = typeof mcpToolPermissions.$inferSelect;
+export type NewMcpToolPermission = typeof mcpToolPermissions.$inferInsert;

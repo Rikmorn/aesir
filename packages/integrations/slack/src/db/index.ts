@@ -29,5 +29,7 @@ export type {
   SlackEventDeliveryStoreOptions,
 } from "./event-delivery-store.js";
 export { createSlackEventDeliveryStore } from "./event-delivery-store.js";
+// === PERMISSIONS ===
+export * from "./permissions.js";
 // === SCHEMA ===
 export * from "./schema.js";

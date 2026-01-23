@@ -17,7 +17,15 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { customAlphabet } from "nanoid";
+
+// ID generator for MCP permissions (not yet in common package)
+const nanoid = customAlphabet(
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+  24,
+);
 
 export const slackSchema = pgSchema("slack");
 
@@ -112,8 +120,40 @@ export const eventDeliveries = slackSchema.table(
   ],
 );
 
+/**
+ * MCP Tool Permissions
+ * Stores agent-to-tool permission mappings for MCP tool whitelisting.
+ * Uses allow-list approach: if no row exists, permission is denied.
+ */
+export const mcpToolPermissions = slackSchema.table(
+  "mcp_tool_permissions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => `mcp_perm_${nanoid()}`),
+    agentId: text("agent_id").notNull(), // e.g., 'dev-agent', 'product-agent'
+    toolName: text("tool_name").notNull(), // e.g., 'send_message', 'post_approval'
+    allowed: boolean("allowed").notNull().default(true), // Allow-list: row exists = allowed
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    // Unique constraint on agent + tool combination
+    uniqueIndex("slack_mcp_perm_agent_tool_idx").on(
+      table.agentId,
+      table.toolName,
+    ),
+  ],
+);
+
 // Type exports
 export type Installation = typeof installations.$inferSelect;
 export type NewInstallation = typeof installations.$inferInsert;
 export type EventDelivery = typeof eventDeliveries.$inferSelect;
 export type NewEventDelivery = typeof eventDeliveries.$inferInsert;
+export type McpToolPermission = typeof mcpToolPermissions.$inferSelect;
+export type NewMcpToolPermission = typeof mcpToolPermissions.$inferInsert;
