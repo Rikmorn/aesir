@@ -142,7 +142,7 @@ export function createSlackMCPServer(options: SlackMCPServerOptions): Server {
     }
 
     // Create Slack client
-    let client;
+    let client: Awaited<ReturnType<typeof createSlackClientFromDatabase>>;
     try {
       client = await createSlackClientFromDatabase({
         teamId,
@@ -162,7 +162,10 @@ export function createSlackMCPServer(options: SlackMCPServerOptions): Server {
     }
 
     // Route to appropriate handler and get result
-    let result;
+    let result: {
+      content: Array<{ type: "text"; text: string }>;
+      isError: boolean;
+    };
     try {
       switch (toolName) {
         case "send_message": {
@@ -388,7 +391,8 @@ export function createSlackMCPServer(options: SlackMCPServerOptions): Server {
 
           const replyResult = await sendMessage(replyOptions);
 
-          const output = MessageOutputSchema.parse({
+          // Validate result structure
+          MessageOutputSchema.parse({
             ts: replyResult.ts,
             channel: replyResult.channel,
           });
@@ -452,8 +456,6 @@ export function createSlackMCPServer(options: SlackMCPServerOptions): Server {
               topic: channel.topic?.value,
             });
           });
-
-          const output: ListChannelsOutput = { channels };
 
           result = {
             content: [
