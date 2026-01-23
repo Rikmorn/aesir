@@ -145,8 +145,9 @@ describe("DevWorkflowState defaults", () => {
       "Test task",
     );
 
-    expect(state.taskId).toBe("");
-    expect(state.taskDescription).toBe("");
+    expect(state.taskId).toBe("task-123");
+    expect(state.sessionId).toBe("session-123");
+    expect(state.taskDescription).toBe("Test task");
     expect(state.repositoryUrl).toBe(null);
     expect(state.branchName).toBe(null);
     expect(state.files).toEqual([]);
@@ -309,8 +310,9 @@ describe("createDevWorkflowInitialState", () => {
       "Test task",
     );
 
-    expect(state.taskId).toBe("TASK-123");
-    expect(state.taskDescription).toBe("Implement feature X");
+    expect(state.taskId).toBe("task-123");
+    expect(state.sessionId).toBe("session-123");
+    expect(state.taskDescription).toBe("Test task");
     expect(state.repositoryUrl).toBe(null);
     expect(state.branchName).toBe(null);
     expect(state.files).toEqual([]);
@@ -324,11 +326,13 @@ describe("createDevWorkflowInitialState", () => {
   it("creates initial state with optional repository URL", () => {
     const state = createDevWorkflowInitialState(
       "TASK-456",
+      "session-456",
       "Fix bug Y",
       "owner/repo",
     );
 
     expect(state.taskId).toBe("TASK-456");
+    expect(state.sessionId).toBe("session-456");
     expect(state.taskDescription).toBe("Fix bug Y");
     expect(state.repositoryUrl).toBe("owner/repo");
   });
