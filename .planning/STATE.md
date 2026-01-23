@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 Phase: 19 of 22 (MCP Layer)
 Plan: 7 of 7 in current phase
 Status: Phase complete
-Last activity: 2026-01-23 - Completed 19-07-PLAN.md
+Last activity: 2026-01-23 - Completed 19-06-PLAN.md
 
 Progress: [##################  ] 100% (88 plans complete)
 
@@ -42,11 +42,11 @@ Progress: [##################  ] 100% (88 plans complete)
 | 16-linear-extraction | 11/11 | 55 min | 5 min |
 | 17-github-extraction | 11/11 | 36 min | 3 min |
 | 18-slack-extraction | 12/12 | 35 min | 3 min |
-| 19-mcp-layer | 7/7 | 32 min | 4.5 min |
+| 19-mcp-layer | 7/7 | 44 min | 6.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 19-07 (6 min), 19-05 (3 min), 19-04 (9 min), 19-03 (3 min), 19-02 (8 min)
-- Trend: Phase 19 complete - MCP layer with permission checkers and schema validation tests
+- Last 5 plans: 19-06 (12 min), 19-07 (6 min), 19-05 (3 min), 19-04 (9 min), 19-03 (3 min)
+- Trend: Phase 19 complete - MCP HTTP routes with rate limiting for all integrations
 
 *Updated after each plan completion*
 
@@ -297,6 +297,10 @@ Recent decisions affecting current work:
 - [19-05]: Type assertion pattern for NodePgDatabase/PostgresJsDatabase compatibility (runtime-compatible interfaces)
 - [19-05]: Direct tool implementation in server switch statement for simpler tools (no separate handler functions)
 - [19-05]: Schema validation only without storing unused output variables (call for side-effects)
+- [19-06]: MCP tools invoked directly via HTTP handlers instead of MCP SDK Server.request() method
+- [19-06]: Rate limiting keyed by X-Agent-ID header (100 req/min per agent)
+- [19-06]: 429 status code with retry_after_seconds=60 for rate limit exceeded
+- [19-06]: JSON middleware separate from webhook routes (webhooks need raw body for HMAC)
 
 ### Pending Todos
 
@@ -323,9 +327,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-23
-Stopped at: Completed 19-07-PLAN.md
+Stopped at: Completed 19-06-PLAN.md
 Resume file: None
 Next action: Phase 19 complete - ready for Phase 20
 
 ---
-*Updated: 2026-01-23 after completing 19-07*
+*Updated: 2026-01-23 after completing 19-06*
