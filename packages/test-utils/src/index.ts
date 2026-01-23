@@ -11,6 +11,8 @@ export * from "./containers/index.js";
 export * from "./db/index.js";
 // Factories
 export * from "./factories/index.js";
+// Migrations (SQL for test schemas)
+export * from "./migrations/index.js";
 // Mocks
 export * from "./mocks/index.js";
 // MSW (Mock Service Worker)
