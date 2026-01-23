@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 18 of 22 (Slack Extraction)
-Plan: 5 of 12 in current phase
+Plan: 6 of 12 in current phase
 Status: In progress
-Last activity: 2026-01-23 - Completed 18-05-PLAN.md
+Last activity: 2026-01-23 - Completed 18-06-PLAN.md
 
-Progress: [################    ] 93% (70 plans complete)
+Progress: [################    ] 94% (71 plans complete)
 
 ## Milestone History
 
@@ -43,8 +43,8 @@ Progress: [################    ] 93% (70 plans complete)
 | 17-github-extraction | 11/11 | 36 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 18-05 (6 min), 18-04 (8 min), 18-03 (4 min), 18-02 (6 min), 18-01 (1 min)
-- Trend: Phase 18 in progress - Slack message layer complete
+- Last 5 plans: 18-06 (2 min), 18-05 (6 min), 18-04 (8 min), 18-03 (4 min), 18-02 (6 min)
+- Trend: Phase 18 in progress - Slack OAuth layer complete
 
 *Updated after each plan completion*
 
@@ -261,6 +261,9 @@ Recent decisions affecting current work:
 - [18-05]: MessageResult returns ts and channel (not NotificationResult with success/error)
 - [18-05]: Block Kit action_id uses configurable actionPrefix (default 'approve')
 - [18-05]: Thread context via event.thread_ts || event.ts pattern
+- [18-06]: fetchInstallation throws on not found (Bolt requires Installation, not undefined)
+- [18-06]: DEFAULT_TEAM_ID = "default" for single-tenant deployments (matches GitHub DEFAULT_OWNER pattern)
+- [18-06]: Default OAuth scopes: app_mentions:read, chat:write, channels:history, im:history, groups:history
 
 ### Pending Todos
 
@@ -287,9 +290,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-23
-Stopped at: Completed 18-05-PLAN.md
+Stopped at: Completed 18-06-PLAN.md
 Resume file: None
-Next action: Execute 18-06-PLAN.md
+Next action: Execute 18-07-PLAN.md
 
 ---
-*Updated: 2026-01-23 after 18-05 completed*
+*Updated: 2026-01-23 after 18-06 completed*
