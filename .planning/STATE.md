@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 19 of 22 (MCP Layer)
-Plan: 7 of 7 in current phase
+Plan: 8 of 8 in current phase
 Status: Phase complete
-Last activity: 2026-01-23 - Completed 19-06-PLAN.md
+Last activity: 2026-01-23 - Completed 19-08-PLAN.md
 
-Progress: [##################  ] 100% (88 plans complete)
+Progress: [##################  ] 100% (89 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [##################  ] 100% (88 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 88 (v2.0)
+- Total plans completed: 89 (v2.0)
 - Average duration: ~6 min
-- Total execution time: ~492 min
+- Total execution time: ~495 min
 
 **By Phase:**
 
@@ -42,11 +42,11 @@ Progress: [##################  ] 100% (88 plans complete)
 | 16-linear-extraction | 11/11 | 55 min | 5 min |
 | 17-github-extraction | 11/11 | 36 min | 3 min |
 | 18-slack-extraction | 12/12 | 35 min | 3 min |
-| 19-mcp-layer | 7/7 | 44 min | 6.3 min |
+| 19-mcp-layer | 8/8 | 47 min | 5.9 min |
 
 **Recent Trend:**
-- Last 5 plans: 19-06 (12 min), 19-07 (6 min), 19-05 (3 min), 19-04 (9 min), 19-03 (3 min)
-- Trend: Phase 19 complete - MCP HTTP routes with rate limiting for all integrations
+- Last 5 plans: 19-08 (3 min), 19-07 (6 min), 19-06 (12 min), 19-05 (3 min), 19-04 (9 min)
+- Trend: Phase 19 complete - MCP HTTP routes with permission seeding and documentation
 
 *Updated after each plan completion*
 
@@ -301,6 +301,8 @@ Recent decisions affecting current work:
 - [19-06]: Rate limiting keyed by X-Agent-ID header (100 req/min per agent)
 - [19-06]: 429 status code with retry_after_seconds=60 for rate limit exceeded
 - [19-06]: JSON middleware separate from webhook routes (webhooks need raw body for HMAC)
+- [19-08]: Biome override for **/scripts/**/*.ts to allow console.log in CLI scripts
+- [19-08]: Permission seeding via onConflictDoUpdate for idempotent re-runs
 
 ### Pending Todos
 
@@ -327,9 +329,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-23
-Stopped at: Completed 19-06-PLAN.md
+Stopped at: Completed 19-08-PLAN.md
 Resume file: None
 Next action: Phase 19 complete - ready for Phase 20
 
 ---
-*Updated: 2026-01-23 after completing 19-06*
+*Updated: 2026-01-23 after completing 19-08*
