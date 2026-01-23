@@ -5,5 +5,8 @@
  * Provides factories, mocks, and utilities for consistent testing.
  */
 
-// Placeholder - will be replaced with actual exports
-export {};
+// Factories
+export * from "./factories/index.js";
+
+// Mocks
+export * from "./mocks/index.js";
