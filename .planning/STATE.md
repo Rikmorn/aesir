@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 20 of 22 (Testing Pyramid) - Complete
-Plan: 8 of 6 in current phase (2 gap closure plans)
+Plan: 7 of 6 in current phase (1 gap closure plan)
 Status: Phase 20 complete with gap closure
-Last activity: 2026-01-23 - Completed 20-08 (Agent Factories)
+Last activity: 2026-01-23 - Completed 20-07 (Test Assertion Fixes)
 
-Progress: [##################  ] ~94% (97 plans complete)
+Progress: [##################  ] ~94% (96 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [##################  ] ~94% (97 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 97 (v2.0)
+- Total plans completed: 96 (v2.0)
 - Average duration: ~5.4 min
-- Total execution time: ~520 min
+- Total execution time: ~524 min
 
 **By Phase:**
 
@@ -43,11 +43,11 @@ Progress: [##################  ] ~94% (97 plans complete)
 | 17-github-extraction | 11/11 | 36 min | 3 min |
 | 18-slack-extraction | 12/12 | 35 min | 3 min |
 | 19-mcp-layer | 8/8 | 47 min | 5.9 min |
-| 20-testing-pyramid | 8/6 | 31 min | 3.9 min |
+| 20-testing-pyramid | 7/6 | 32 min | 4.6 min |
 
 **Recent Trend:**
-- Last 5 plans: 20-08 (3 min), 20-07 (parallel), 20-06 (6 min), 20-05 (parallel), 20-04 (3 min)
-- Trend: Phase 20 complete with gap closure - testing infrastructure ready
+- Last 5 plans: 20-07 (4 min), 20-06 (6 min), 20-05 (parallel), 20-04 (3 min), 20-03 (8 min)
+- Trend: Phase 20 complete - testing infrastructure ready, all critical test failures fixed
 
 *Updated after each plan completion*
 
@@ -330,6 +330,9 @@ Recent decisions affecting current work:
 - [20-06]: postgres.js driver added to Linear devDependencies for drizzle
 - [20-08]: Use simple message type instead of BaseMessage to avoid LangChain dependency in test-utils
 - [20-08]: Use TestTestResult type instead of importing from platform to avoid circular dependencies
+- [20-07]: Mock @aesir/common to prevent env validation in test files
+- [20-07]: Non-async vi.mock for config module (hoisting issues with async imports)
+- [20-07]: Logger integration tests verify completion, not console calls
 
 ### Pending Todos
 
@@ -340,10 +343,11 @@ Recent decisions affecting current work:
    - 34 noNonNullAssertion, 8 noExplicitAny, 7 other
    - Track in: 10-01-SUMMARY.md Remaining Violations section
 
-3. **Fix pre-existing test failures** (code quality)
-   - dev-workflow-state.test.ts - wrong assertions
+3. **Fix remaining test failures** (code quality)
    - commit-pr.test.ts - mock setup issues
-   - linear/integration.test.ts - assertion mismatch
+   - create-branch.test.ts - mock setup issues
+   - github-pr-review.test.ts - config import issues
+   - linear/integration.test.ts - module resolution with _legacy/
 
 4. **Review _legacy/ files** (code cleanup)
    - phase-1.test.ts - may need to move to agents integration tests
@@ -356,9 +360,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-23
-Stopped at: Completed 20-08-PLAN.md (Phase 20 gap closure complete)
+Stopped at: Completed 20-07-PLAN.md (Test Assertion Fixes)
 Resume file: None
 Next action: Begin Phase 21 (CI/CD Pipeline)
 
 ---
-*Updated: 2026-01-23 after 20-08 completion*
+*Updated: 2026-01-23 after 20-07 completion*
