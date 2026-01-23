@@ -3,7 +3,18 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     // Projects mode for monorepo - each package has its own vitest.config.ts
-    projects: ["packages/*", "packages/integrations/*"],
+    // Note: packages/integrations/{linear,github,slack} are nested packages
+    projects: [
+      "packages/common",
+      "packages/platform",
+      "packages/observability",
+      "packages/agents",
+      "packages/integrations",
+      "packages/integrations/linear",
+      "packages/integrations/github",
+      "packages/integrations/slack",
+      "packages/test-utils",
+    ],
     // Coverage configuration at workspace level
     // Note: Vitest ignores project-level coverage settings when running from root
     coverage: {
