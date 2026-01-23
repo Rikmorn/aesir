@@ -59,6 +59,7 @@ packages/
 │   │   │   ├── api/     # HTTP routes (webhooks, OAuth)
 │   │   │   ├── client/  # Linear SDK wrapper
 │   │   │   ├── db/      # linear.* schema, credential store
+│   │   │   ├── mcp/     # MCP server and tools
 │   │   │   ├── oauth/   # Token management
 │   │   │   ├── webhooks/ # Signature verification, parsing
 │   │   │   ├── types/   # Config, errors
@@ -71,6 +72,7 @@ packages/
 │   │   │   ├── api/     # HTTP routes (webhooks, OAuth)
 │   │   │   ├── client/  # Octokit client factory
 │   │   │   ├── db/      # github.* schema, credential store
+│   │   │   ├── mcp/     # MCP server and tools
 │   │   │   ├── oauth/   # Token management
 │   │   │   ├── operations/ # Branch, commit, PR operations
 │   │   │   ├── webhooks/ # Signature verification, parsing
@@ -85,6 +87,7 @@ packages/
 │   │   │   ├── client/  # Bolt app factory, WebClient
 │   │   │   ├── db/      # slack.* schema, credential store
 │   │   │   ├── events/  # Event handling with deduplication
+│   │   │   ├── mcp/     # MCP server and tools
 │   │   │   ├── messages/ # Block Kit builders, message posting
 │   │   │   ├── oauth/   # Token management
 │   │   │   ├── types/   # Config, errors
@@ -309,6 +312,68 @@ await sendApprovalRequest(client, {
 // Re-export from @aesir/integrations for backward compatibility
 import { sendSlackNotification } from "@aesir/integrations";
 ```
+
+### MCP Layer
+
+Each integration exposes an MCP (Model Context Protocol) server for standardized agent tool calls:
+
+**Endpoints:**
+- GET `/mcp/tools` - List available tools
+- POST `/mcp/tools/:name` - Invoke a specific tool
+
+**Headers:**
+- `X-Correlation-ID` - Optional. Propagated to all logs and responses.
+- `X-Agent-ID` - Required for tool invocation. Identifies the calling agent for permission checks.
+
+**Ports:**
+- Linear MCP: http://localhost:3001/mcp/*
+- GitHub MCP: http://localhost:3002/mcp/*
+- Slack MCP: http://localhost:3003/mcp/*
+
+**Tool Permissions:**
+Tool access is controlled via database-backed permissions (allow-list approach):
+- Permissions stored in `{integration}.mcp_tool_permissions` table
+- Check permissions with `checkLinearToolPermission`, `checkGitHubToolPermission`, `checkSlackToolPermission`
+- Seed default permissions: `pnpm --filter @aesir/integration-{integration} seed:permissions`
+
+**Available Tools:**
+
+Linear:
+- `get_issue` - Retrieve issue details
+- `create_issue` - Create new issue
+- `update_issue_status` - Change issue workflow state
+- `list_teams` - List all teams
+- `list_labels` - List labels (optionally by team)
+
+GitHub:
+- `get_repository` - Get repository info
+- `create_branch` - Create a new branch
+- `create_commit` - Create a commit with files
+- `create_pull_request` - Open a PR
+- `get_pull_request` - Get PR details
+- `list_pull_requests` - List PRs
+- `merge_pull_request` - Merge a PR
+- `get_file_contents` - Read file content
+- `list_files` - List directory contents
+
+Slack:
+- `send_message` - Send a message
+- `send_approval_request` - Send approval buttons
+- `get_message` - Retrieve a message
+- `reply_to_thread` - Reply in a thread
+- `list_channels` - List channels
+
+**Example Tool Invocation:**
+```bash
+curl -X POST http://localhost:3001/mcp/tools/get_issue \
+  -H "Content-Type: application/json" \
+  -H "X-Agent-ID: dev-agent" \
+  -H "X-Correlation-ID: req_abc123" \
+  -d '{"issueId": "ABC-123"}'
+```
+
+**Rate Limiting:**
+MCP endpoints are rate-limited to 100 requests per minute per agent (by X-Agent-ID header).
 
 ### Zod Validation
 
