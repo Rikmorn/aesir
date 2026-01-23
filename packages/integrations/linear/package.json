@@ -40,6 +40,7 @@
     "zod": "3.25.67"
   },
   "devDependencies": {
+    "@aesir/test-utils": "workspace:^",
     "@types/express": "^4.17.21",
     "@types/pg": "^8.16.0",
     "dotenv-flow": "^4.1.0",

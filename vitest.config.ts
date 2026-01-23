@@ -2,6 +2,9 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
+    // Default test timeout (10s for unit tests, packages can override for integration)
+    testTimeout: 10000,
+
     // Projects mode for monorepo - each package has its own vitest.config.ts
     // Note: packages/integrations/{linear,github,slack} are nested packages
     projects: [
@@ -87,6 +90,8 @@ export default defineConfig({
         "**/vitest.config.ts",
         // Drizzle schema files (for migration generation)
         "**/*.drizzle.ts",
+        // Test utilities (helpers shouldn't count toward coverage)
+        "**/test-utils/**",
       ],
     },
   },

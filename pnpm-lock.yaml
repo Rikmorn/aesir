@@ -271,6 +271,9 @@ importers:
         specifier: 3.25.67
         version: 3.25.67
     devDependencies:
+      '@aesir/test-utils':
+        specifier: workspace:^
+        version: link:../../test-utils
       '@types/express':
         specifier: ^4.17.21
         version: 4.17.25
