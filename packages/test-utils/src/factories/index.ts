@@ -4,8 +4,22 @@
  * Deterministic factory functions for creating test data.
  */
 
+import { resetAgentCounter, resetWorkflowCounter } from "./agents.js";
 import { resetCredentialCounter } from "./credentials.js";
 import { resetIssueCounter, resetPRCounter } from "./issues.js";
+
+export {
+  type CreateTestAgentOptions,
+  type CreateTestDevWorkflowStateOptions,
+  createTestAgent,
+  createTestDevWorkflowState,
+  resetAgentCounter,
+  resetWorkflowCounter,
+  type TestAgent,
+  type TestDevWorkflowState,
+  type TestMessage,
+  type TestTestResult,
+} from "./agents.js";
 
 export {
   type CreateTestCredentialOptions,
@@ -30,7 +44,9 @@ export {
  * Call in beforeEach() for consistent test data across runs.
  */
 export function resetAllCounters(): void {
+  resetAgentCounter();
   resetCredentialCounter();
   resetIssueCounter();
   resetPRCounter();
+  resetWorkflowCounter();
 }
