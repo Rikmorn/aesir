@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 20 of 22 (Testing Pyramid) - In Progress
-Plan: 1 of ? in current phase
-Status: Plan 20-01 complete
-Last activity: 2026-01-23 - Completed 20-01 (Coverage Configuration)
+Plan: 2 of ? in current phase
+Status: Plan 20-02 complete
+Last activity: 2026-01-23 - Completed 20-02 (Test Utilities Package)
 
-Progress: [##################  ] ~90% (90 plans complete)
+Progress: [##################  ] ~90% (91 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [##################  ] ~90% (90 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 90 (v2.0)
+- Total plans completed: 91 (v2.0)
 - Average duration: ~6 min
-- Total execution time: ~503 min
+- Total execution time: ~511 min
 
 **By Phase:**
 
@@ -43,11 +43,11 @@ Progress: [##################  ] ~90% (90 plans complete)
 | 17-github-extraction | 11/11 | 36 min | 3 min |
 | 18-slack-extraction | 12/12 | 35 min | 3 min |
 | 19-mcp-layer | 8/8 | 47 min | 5.9 min |
-| 20-testing-pyramid | 1/? | 8 min | 8 min |
+| 20-testing-pyramid | 2/? | 16 min | 8 min |
 
 **Recent Trend:**
-- Last 5 plans: 20-01 (8 min), 19-08 (3 min), 19-07 (6 min), 19-06 (12 min), 19-05 (3 min)
-- Trend: Phase 20 started - Coverage configuration complete
+- Last 5 plans: 20-02 (8 min), 20-01 (8 min), 19-08 (3 min), 19-07 (6 min), 19-06 (12 min)
+- Trend: Phase 20 continues - Test utilities package complete
 
 *Updated after each plan completion*
 
@@ -308,6 +308,10 @@ Recent decisions affecting current work:
 - [20-01]: Coverage disabled by default, enabled via --coverage flag
 - [20-01]: Explicit project paths to avoid tsbuildinfo glob match
 - [20-01]: 70% thresholds for core packages, 50% for integrations/agents
+- [20-02]: Counter-based deterministic IDs for test factories (no Faker)
+- [20-02]: Factory functions with defaults and option overrides pattern
+- [20-02]: MockCredentialStore follows ResultAsync interface from real stores
+- [20-02]: Type guard pattern instead of non-null assertions in tests
 
 ### Pending Todos
 
@@ -334,9 +338,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-23
-Stopped at: Completed 20-01-PLAN.md
+Stopped at: Completed 20-02-PLAN.md
 Resume file: None
 Next action: Continue Phase 20 (next plan)
 
 ---
-*Updated: 2026-01-23 after 20-01 completion*
+*Updated: 2026-01-23 after 20-02 completion*
