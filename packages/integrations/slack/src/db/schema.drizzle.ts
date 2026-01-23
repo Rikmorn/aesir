@@ -14,6 +14,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { customAlphabet } from "nanoid";
 
@@ -99,5 +100,33 @@ export const eventDeliveries = slackSchema.table(
   (table) => [
     index("event_deliveries_event_id_idx").on(table.event_id),
     index("event_deliveries_created_at_idx").on(table.created_at),
+  ],
+);
+
+/**
+ * MCP Tool Permissions
+ * Stores agent-to-tool permission mappings for MCP tool whitelisting.
+ */
+export const mcpToolPermissions = slackSchema.table(
+  "mcp_tool_permissions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => `mcp_perm_${nanoid()}`),
+    agentId: text("agent_id").notNull(),
+    toolName: text("tool_name").notNull(),
+    allowed: boolean("allowed").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("slack_mcp_perm_agent_tool_idx").on(
+      table.agentId,
+      table.toolName,
+    ),
   ],
 );

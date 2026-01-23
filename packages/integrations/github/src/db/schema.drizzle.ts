@@ -7,7 +7,14 @@
  * DO NOT import this file in application code - use schema.ts instead.
  */
 
-import { pgSchema, text, timestamp, unique } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  pgSchema,
+  text,
+  timestamp,
+  unique,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 import { customAlphabet } from "nanoid";
 
 const nanoid = customAlphabet(
@@ -72,5 +79,33 @@ export const webhookDeliveries = githubSchema.table(
   (table) => [
     // Unique delivery per GitHub delivery ID
     unique("webhook_deliveries_delivery_unique").on(table.delivery_id),
+  ],
+);
+
+/**
+ * MCP Tool Permissions
+ * Stores agent-to-tool permission mappings for MCP tool whitelisting.
+ */
+export const mcpToolPermissions = githubSchema.table(
+  "mcp_tool_permissions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => `mcp_perm_${nanoid()}`),
+    agentId: text("agent_id").notNull(),
+    toolName: text("tool_name").notNull(),
+    allowed: boolean("allowed").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("github_mcp_perm_agent_tool_idx").on(
+      table.agentId,
+      table.toolName,
+    ),
   ],
 );
