@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-19)
 
 **Core value:** Maintainable, scalable foundation for end-to-end automated development workflows
-**Current focus:** Phase 17 - GitHub Extraction (complete)
+**Current focus:** Phase 18 - Slack Extraction (in progress)
 
 ## Current Position
 
 Phase: 18 of 22 (Slack Extraction)
-Plan: 0 of TBD in current phase
-Status: Not started
-Last activity: 2026-01-21 - Completed Phase 17 (GitHub Extraction)
+Plan: 2 of 12 in current phase
+Status: In progress
+Last activity: 2026-01-23 - Completed 18-02-PLAN.md
 
-Progress: [##############      ] 90% (65 plans complete)
+Progress: [###############     ] 92% (67 plans complete)
 
 ## Milestone History
 
@@ -43,8 +43,8 @@ Progress: [##############      ] 90% (65 plans complete)
 | 17-github-extraction | 11/11 | 36 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 17-11 (3 min), 17-10 (6 min), 17-09 (5 min), 17-06 (6 min), 17-08 (3 min)
-- Trend: Phase 17 complete - GitHub extraction fully operational
+- Last 5 plans: 18-02 (6 min), 18-01 (1 min), 17-11 (3 min), 17-10 (6 min), 17-09 (5 min)
+- Trend: Phase 18 in progress - Slack database layer complete
 
 *Updated after each plan completion*
 
@@ -245,6 +245,13 @@ Recent decisions affecting current work:
 - [17-10]: Removed verifyWebhookSignature from agents (now in @aesir/integration-github)
 - [17-10]: Re-export pattern for backward compatibility during package extraction
 - [17-10]: _legacy/ directory pattern for preserving old code during migration
+- [18-01]: PORT 3003 for Slack service (Linear=3001, GitHub=3002)
+- [18-01]: SLACK_MODE config supports both socket and http modes
+- [18-01]: Socket mode requires SLACK_APP_TOKEN (validated with superRefine)
+- [18-01]: SlackError extends AppError with INT_SLACK_* error codes
+- [18-02]: Composite unique constraint on (team_id, enterprise_id) - soft-delete handled at application layer
+- [18-02]: Event deduplication uses ON CONFLICT DO NOTHING for atomic operations
+- [18-02]: StoreInstallationInput matches Bolt's Installation model structure
 
 ### Pending Todos
 
@@ -270,10 +277,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-01-21
-Stopped at: Completed Phase 17 (GitHub Extraction)
+Last session: 2026-01-23
+Stopped at: Completed 18-02-PLAN.md
 Resume file: None
-Next action: Plan Phase 18 (Slack Extraction)
+Next action: Execute 18-03-PLAN.md
 
 ---
-*Updated: 2026-01-21 after Phase 17 completed*
+*Updated: 2026-01-23 after 18-02 completed*
