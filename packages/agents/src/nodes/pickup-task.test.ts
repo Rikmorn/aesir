@@ -91,7 +91,7 @@ describe("createPickupTaskNode", () => {
 
     expect(mockEmitThought).toHaveBeenCalledWith(
       mockLinearClient,
-      "ABC-123",
+      "session-test",
       "Starting work on: Test issue title",
     );
   });
