@@ -19,7 +19,8 @@ export * from "./client/index.js";
 export * from "./db/index.js";
 // === EVENTS ===
 export * from "./events/index.js";
-
+// === MCP ===
+export * from "./mcp/index.js";
 // === MESSAGES ===
 export * from "./messages/index.js";
 

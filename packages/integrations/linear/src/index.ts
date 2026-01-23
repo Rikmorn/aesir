@@ -10,6 +10,8 @@ export {
 export * from "./client/index.js";
 // === DATABASE ===
 export * from "./db/index.js";
+// === MCP ===
+export * from "./mcp/index.js";
 // === OAUTH ===
 export * from "./oauth/index.js";
 // === TYPES ===
