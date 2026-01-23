@@ -82,3 +82,7 @@ export function createRoutes(deps: CreateRoutesDeps): Router {
 
   return router;
 }
+
+// Re-export MCP router factory
+export type { CreateMCPRouterOptions } from "./mcp.js";
+export { createMCPRouter } from "./mcp.js";

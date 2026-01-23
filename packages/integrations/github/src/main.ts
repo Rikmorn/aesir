@@ -7,7 +7,7 @@
 
 import { createPinoLogger } from "@aesir/common";
 import express from "express";
-import { createRoutes } from "./api/routes.js";
+import { createMCPRouter, createRoutes } from "./api/routes.js";
 import { db } from "./db/client.js";
 import { createGitHubCredentialStore } from "./db/credential-store.js";
 import { createWebhookDeliveryStore } from "./db/webhook-delivery-store.js";
@@ -30,7 +30,7 @@ export async function startServer(): Promise<void> {
   const credentialStore = createGitHubCredentialStore({ db, logger });
   const deliveryStore = createWebhookDeliveryStore({ db, logger });
 
-  // Mount routes
+  // Mount webhook and OAuth routes
   const routes = createRoutes({
     logger,
     credentialStore,
@@ -50,6 +50,16 @@ export async function startServer(): Promise<void> {
   });
 
   app.use("/", routes);
+
+  // Mount MCP routes with JSON middleware
+  // MCP routes need parsed JSON body, unlike webhooks which need raw body
+  const mcpRouter = createMCPRouter({
+    db,
+    credentialStore,
+    logger,
+    owner: "default",
+  });
+  app.use("/", express.json(), mcpRouter);
 
   // Start server
   const server = app.listen(config.server.port, () => {

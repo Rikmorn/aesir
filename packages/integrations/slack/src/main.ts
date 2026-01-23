@@ -139,6 +139,17 @@ export async function startServer(): Promise<void> {
 
     app.use("/", router);
 
+    // Mount MCP routes (already have JSON middleware)
+    // Import MCP router from routes barrel export
+    const { createMCPRouter } = await import("./api/routes.js");
+    const mcpRouter = createMCPRouter({
+      db,
+      credentialStore,
+      logger,
+      teamId: "default",
+    });
+    app.use("/", mcpRouter);
+
     // Start HTTP server
     const server = app.listen(port, () => {
       logger.info(
