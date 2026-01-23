@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 18 of 22 (Slack Extraction)
-Plan: 7 of 12 in current phase
+Plan: 8 of 12 in current phase
 Status: In progress
-Last activity: 2026-01-23 - Completed 18-07-PLAN.md
+Last activity: 2026-01-23 - Completed 18-08-PLAN.md
 
-Progress: [################    ] 95% (72 plans complete)
+Progress: [################    ] 96% (73 plans complete)
 
 ## Milestone History
 
@@ -43,8 +43,8 @@ Progress: [################    ] 95% (72 plans complete)
 | 17-github-extraction | 11/11 | 36 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 18-07 (4 min), 18-06 (2 min), 18-05 (6 min), 18-04 (8 min), 18-03 (4 min)
-- Trend: Phase 18 in progress - Slack HTTP API layer complete
+- Last 5 plans: 18-08 (2 min), 18-07 (4 min), 18-06 (2 min), 18-05 (6 min), 18-04 (8 min)
+- Trend: Phase 18 in progress - Database migration and credential migration ready
 
 *Updated after each plan completion*
 
@@ -268,6 +268,10 @@ Recent decisions affecting current work:
 - [18-07]: Fire-and-forget event callback to respect Slack 3-second rule
 - [18-07]: Dual mode support via SLACK_MODE config (socket/http)
 - [18-07]: OAuth callback returns HTML pages for user-friendly experience
+- [18-08]: Composite unique constraint on (team_id, enterprise_id) for workspace identification
+- [18-08]: Event deduplication via unique event_id constraint (not delivery_id like Linear/GitHub)
+- [18-08]: Default team_id "default" for single-tenant deployments (matches GitHub DEFAULT_OWNER pattern)
+- [18-08]: Migration script uses default scopes from 18-06 decision
 
 ### Pending Todos
 
@@ -294,9 +298,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-23
-Stopped at: Completed 18-07-PLAN.md
+Stopped at: Completed 18-08-PLAN.md
 Resume file: None
-Next action: Execute 18-08-PLAN.md
+Next action: Execute 18-09-PLAN.md
 
 ---
-*Updated: 2026-01-23 after 18-07 completed*
+*Updated: 2026-01-23 after 18-08 completed*
