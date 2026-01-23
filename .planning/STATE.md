@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 18 of 22 (Slack Extraction)
-Plan: 8 of 12 in current phase
+Plan: 9 of 12 in current phase
 Status: In progress
-Last activity: 2026-01-23 - Completed 18-08-PLAN.md
+Last activity: 2026-01-23 - Completed 18-09-PLAN.md
 
-Progress: [################    ] 96% (73 plans complete)
+Progress: [################    ] 97% (74 plans complete)
 
 ## Milestone History
 
@@ -43,8 +43,8 @@ Progress: [################    ] 96% (73 plans complete)
 | 17-github-extraction | 11/11 | 36 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 18-08 (2 min), 18-07 (4 min), 18-06 (2 min), 18-05 (6 min), 18-04 (8 min)
-- Trend: Phase 18 in progress - Database migration and credential migration ready
+- Last 5 plans: 18-09 (2 min), 18-08 (2 min), 18-07 (4 min), 18-06 (2 min), 18-05 (6 min)
+- Trend: Phase 18 Wave 6 complete - Dockerfile and documentation ready
 
 *Updated after each plan completion*
 
@@ -272,6 +272,10 @@ Recent decisions affecting current work:
 - [18-08]: Event deduplication via unique event_id constraint (not delivery_id like Linear/GitHub)
 - [18-08]: Default team_id "default" for single-tenant deployments (matches GitHub DEFAULT_OWNER pattern)
 - [18-08]: Migration script uses default scopes from 18-06 decision
+- [18-09]: Port 3003 for Slack service (Linear=3001, GitHub=3002, Slack=3003)
+- [18-09]: Node 22-slim base image consistent with GitHub integration
+- [18-09]: Non-root user aesir:1001 for container security
+- [18-09]: Health check on /health endpoint with 30s interval
 
 ### Pending Todos
 
@@ -298,9 +302,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-23
-Stopped at: Completed 18-08-PLAN.md
+Stopped at: Completed 18-09-PLAN.md
 Resume file: None
-Next action: Execute 18-09-PLAN.md
+Next action: Execute 18-10-PLAN.md (Testing)
 
 ---
-*Updated: 2026-01-23 after 18-08 completed*
+*Updated: 2026-01-23 after 18-09 completed*
