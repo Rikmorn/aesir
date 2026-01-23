@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 
 ## Current Position
 
-Phase: 18 of 22 (Slack Extraction) - COMPLETE
-Plan: 12 of 12 in current phase
-Status: Complete
-Last activity: 2026-01-23 - Completed Phase 18
+Phase: 19 of 22 (MCP Layer)
+Plan: 1 of 4 in current phase
+Status: In progress
+Last activity: 2026-01-23 - Completed 19-01-PLAN.md
 
-Progress: [#################   ] 100% (82 plans complete)
+Progress: [#################   ] 100% (83 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [#################   ] 100% (82 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 82 (v2.0)
+- Total plans completed: 83 (v2.0)
 - Average duration: ~6 min
-- Total execution time: ~460 min
+- Total execution time: ~463 min
 
 **By Phase:**
 
@@ -42,10 +42,11 @@ Progress: [#################   ] 100% (82 plans complete)
 | 16-linear-extraction | 11/11 | 55 min | 5 min |
 | 17-github-extraction | 11/11 | 36 min | 3 min |
 | 18-slack-extraction | 12/12 | 35 min | 3 min |
+| 19-mcp-layer | 1/4 | 3 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 18-12 (5 min), 18-11 (9 min), 18-10 (4 min), 18-09 (2 min), 18-08 (2 min)
-- Trend: Phase 18 complete - All integrations now extracted
+- Last 5 plans: 19-01 (3 min), 18-12 (5 min), 18-11 (9 min), 18-10 (4 min), 18-09 (2 min)
+- Trend: Phase 19 started - MCP foundation established
 
 *Updated after each plan completion*
 
@@ -284,6 +285,12 @@ Recent decisions affecting current work:
 - [18-11]: Socket Mode scripts use App constructor directly (new createBoltApp requires deps)
 - [18-11]: MessageResult breaking change accepted (old NotificationResult had different interface)
 - [18-11]: .biomeignore added to exclude _legacy from linting
+- [19-01]: @modelcontextprotocol/sdk@1.25.3 as MCP SDK version (v1.x stable, v2 Q1 2026)
+- [19-01]: No @modelcontextprotocol/express or @modelcontextprotocol/node packages (core SDK handles transport)
+- [19-01]: Shared MCP types in @aesir/common for consistent tool implementations
+- [19-01]: MCPToolContext includes logger, correlationId, agentId, startTime
+- [19-01]: isError flag for LLM-visible recoverable errors in tool results
+- [19-01]: Duration calculated via Date.now() - context.startTime in helper functions
 
 ### Pending Todos
 
@@ -310,9 +317,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-23
-Stopped at: Completed Phase 18 (Slack Extraction)
+Stopped at: Completed 19-01-PLAN.md
 Resume file: None
-Next action: Plan Phase 19 (MCP Layer)
+Next action: Execute 19-02-PLAN.md
 
 ---
-*Updated: 2026-01-23 after Phase 18 completed*
+*Updated: 2026-01-23 after completing 19-01*
