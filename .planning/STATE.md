@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 18 of 22 (Slack Extraction)
-Plan: 2 of 12 in current phase
+Plan: 3 of 12 in current phase
 Status: In progress
-Last activity: 2026-01-23 - Completed 18-02-PLAN.md
+Last activity: 2026-01-23 - Completed 18-03-PLAN.md
 
-Progress: [###############     ] 92% (67 plans complete)
+Progress: [###############     ] 92% (68 plans complete)
 
 ## Milestone History
 
@@ -43,8 +43,8 @@ Progress: [###############     ] 92% (67 plans complete)
 | 17-github-extraction | 11/11 | 36 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 18-02 (6 min), 18-01 (1 min), 17-11 (3 min), 17-10 (6 min), 17-09 (5 min)
-- Trend: Phase 18 in progress - Slack database layer complete
+- Last 5 plans: 18-03 (4 min), 18-02 (6 min), 18-01 (1 min), 17-11 (3 min), 17-10 (6 min)
+- Trend: Phase 18 in progress - Slack event handling complete
 
 *Updated after each plan completion*
 
@@ -252,6 +252,9 @@ Recent decisions affecting current work:
 - [18-02]: Composite unique constraint on (team_id, enterprise_id) - soft-delete handled at application layer
 - [18-02]: Event deduplication uses ON CONFLICT DO NOTHING for atomic operations
 - [18-02]: StoreInstallationInput matches Bolt's Installation model structure
+- [18-03]: Generated event IDs for block_actions (no native event_id)
+- [18-03]: Filter bot_message, message_changed, message_deleted subtypes
+- [18-03]: Use okAsync<T, E> explicit types in andThen chains for type safety
 
 ### Pending Todos
 
@@ -278,9 +281,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-23
-Stopped at: Completed 18-02-PLAN.md
+Stopped at: Completed 18-03-PLAN.md
 Resume file: None
-Next action: Execute 18-03-PLAN.md
+Next action: Execute 18-04-PLAN.md
 
 ---
-*Updated: 2026-01-23 after 18-02 completed*
+*Updated: 2026-01-23 after 18-03 completed*

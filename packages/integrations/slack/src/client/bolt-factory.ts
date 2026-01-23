@@ -59,8 +59,8 @@ export function createInstallationStoreAdapter(
 
       // Build input with conditional property assignment for exactOptionalPropertyTypes
       // biome-ignore lint/suspicious/noExplicitAny: Conditional property assignment for exactOptionalPropertyTypes
-      // biome-ignore lint/style/noNonNullAssertion: Validated above that at least one of teamId or enterpriseId exists
       const storeInput: any = {
+        // biome-ignore lint/style/noNonNullAssertion: Validated above that at least one of teamId or enterpriseId exists
         teamId: teamId ?? enterpriseId!,
         isEnterpriseInstall,
         botToken: installation.bot?.token ?? "",

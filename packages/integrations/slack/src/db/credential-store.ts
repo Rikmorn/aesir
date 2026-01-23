@@ -402,6 +402,7 @@ async function deleteInstallationImpl(
   await db
     .update(installations)
     .set({ deleted_at: new Date() })
+    // biome-ignore lint/style/noNonNullAssertion: Existence checked above with existing.length > 0
     .where(eq(installations.id, existing[0]!.id));
 
   return true;
