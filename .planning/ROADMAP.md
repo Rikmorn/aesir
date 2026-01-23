@@ -295,10 +295,14 @@ Plans:
   3. Services handle SIGTERM gracefully (drain connections, complete in-flight work, exit cleanly)
   4. Code changes trigger automatic rebuild without manual restart (hot reload)
   5. .claude and cursor files reflect final v2.0 architecture (final update after all phases)
-**Plans:** TBD
+**Plans:** 5 plans
 
 Plans:
-- [ ] 22-01: TBD
+- [ ] 22-01-PLAN.md — Add tini to Dockerfiles, enhance health checks with DB validation
+- [ ] 22-02-PLAN.md — Add integration services to docker-compose.yml
+- [ ] 22-03-PLAN.md — Add Docker Compose watch configuration
+- [ ] 22-04-PLAN.md — Enhance agent shutdown with logging
+- [ ] 22-05-PLAN.md — Update AI context files, final verification checkpoint
 
 ## Progress
 
@@ -320,9 +324,9 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 | 19. MCP Layer | v2.0 | 8/8 | Complete | 2026-01-23 |
 | 20. Testing Pyramid | v2.0 | 8/8 | Complete | 2026-01-23 |
 | 21. CI/CD Pipeline | v3.0 | - | Deferred | - |
-| 22. Local Dev Environment | v2.0 | 0/TBD | Not started | - |
+| 22. Local Dev Environment | v2.0 | 0/5 | Not started | - |
 
 ---
 *Created: 2026-01-19*
-*Updated: 2026-01-23 (Phase 20 complete)*
+*Updated: 2026-01-23 (Phase 22 planned)*
 *Milestone: v2.0 Foundation*
