@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 18 of 22 (Slack Extraction)
-Plan: 10 of 12 in current phase
+Plan: 11 of 12 in current phase
 Status: In progress
-Last activity: 2026-01-23 - Completed 18-10-PLAN.md
+Last activity: 2026-01-23 - Completed 18-11-PLAN.md
 
-Progress: [################    ] 98% (75 plans complete)
+Progress: [################    ] 99% (76 plans complete)
 
 ## Milestone History
 
@@ -43,8 +43,8 @@ Progress: [################    ] 98% (75 plans complete)
 | 17-github-extraction | 11/11 | 36 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 18-10 (4 min), 18-09 (2 min), 18-08 (2 min), 18-07 (4 min), 18-06 (2 min)
-- Trend: Phase 18 Wave 7 complete - Testing infrastructure ready
+- Last 5 plans: 18-11 (9 min), 18-10 (4 min), 18-09 (2 min), 18-08 (2 min), 18-07 (4 min)
+- Trend: Phase 18 Wave 8 complete - Consumer updates and backward compatibility
 
 *Updated after each plan completion*
 
@@ -279,6 +279,10 @@ Recent decisions affecting current work:
 - [18-10]: vi.mock @aesir/common to prevent config validation during tests
 - [18-10]: Type contract tests for credential store (full integration tests Phase 20)
 - [18-10]: Test error code verification not message text (mock AppError differs)
+- [18-11]: Re-export with type aliases for backward compatibility (SlackConfig, BoltAppConfig)
+- [18-11]: Socket Mode scripts use App constructor directly (new createBoltApp requires deps)
+- [18-11]: MessageResult breaking change accepted (old NotificationResult had different interface)
+- [18-11]: .biomeignore added to exclude _legacy from linting
 
 ### Pending Todos
 
@@ -305,9 +309,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-23
-Stopped at: Completed 18-10-PLAN.md
+Stopped at: Completed 18-11-PLAN.md
 Resume file: None
-Next action: Execute 18-11-PLAN.md (Agents Update)
+Next action: Execute 18-12-PLAN.md (Migration and Cleanup)
 
 ---
-*Updated: 2026-01-23 after 18-10 completed*
+*Updated: 2026-01-23 after 18-11 completed*
