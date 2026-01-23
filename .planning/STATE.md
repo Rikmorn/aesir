@@ -12,9 +12,9 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 Phase: 19 of 22 (MCP Layer)
 Plan: 3 of 4 in current phase
 Status: In progress
-Last activity: 2026-01-23 - Completed 19-04-PLAN.md
+Last activity: 2026-01-23 - Completed 19-03-PLAN.md
 
-Progress: [#################   ] 100% (85 plans complete)
+Progress: [#################   ] 100% (86 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [#################   ] 100% (85 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 85 (v2.0)
+- Total plans completed: 86 (v2.0)
 - Average duration: ~6 min
-- Total execution time: ~480 min
+- Total execution time: ~483 min
 
 **By Phase:**
 
@@ -42,11 +42,11 @@ Progress: [#################   ] 100% (85 plans complete)
 | 16-linear-extraction | 11/11 | 55 min | 5 min |
 | 17-github-extraction | 11/11 | 36 min | 3 min |
 | 18-slack-extraction | 12/12 | 35 min | 3 min |
-| 19-mcp-layer | 3/4 | 20 min | 6.7 min |
+| 19-mcp-layer | 3/4 | 23 min | 5.75 min |
 
 **Recent Trend:**
-- Last 5 plans: 19-04 (9 min), 19-02 (8 min), 19-01 (3 min), 18-12 (5 min), 18-11 (9 min)
-- Trend: Phase 19 progressing - GitHub MCP server complete with 9 tools
+- Last 5 plans: 19-03 (3 min), 19-04 (9 min), 19-02 (8 min), 19-01 (3 min), 18-12 (5 min)
+- Trend: Phase 19 progressing - Linear MCP server complete with 5 tools
 
 *Updated after each plan completion*
 
@@ -291,6 +291,9 @@ Recent decisions affecting current work:
 - [19-01]: MCPToolContext includes logger, correlationId, agentId, startTime
 - [19-01]: isError flag for LLM-visible recoverable errors in tool results
 - [19-01]: Duration calculated via Date.now() - context.startTime in helper functions
+- [19-03]: Switch statement for tool routing in MCP server (centralized request handling)
+- [19-03]: Underscore prefix for unused logger from deps (handlers use context.logger)
+- [19-03]: Tool result transformation strips meta/structuredContent for SDK compatibility
 
 ### Pending Todos
 
@@ -317,9 +320,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-23
-Stopped at: Completed 19-04-PLAN.md
+Stopped at: Completed 19-03-PLAN.md
 Resume file: None
-Next action: Execute 19-05-PLAN.md or 19-06-PLAN.md
+Next action: Continue Phase 19 MCP Layer
 
 ---
-*Updated: 2026-01-23 after completing 19-02*
+*Updated: 2026-01-23 after completing 19-03*
