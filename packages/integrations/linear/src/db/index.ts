@@ -20,5 +20,7 @@ export {
   EncryptionKeyError,
   encryptToken,
 } from "./encryption.js";
+// === PERMISSIONS ===
+export * from "./permissions.js";
 // === SCHEMA ===
 export * from "./schema.js";
