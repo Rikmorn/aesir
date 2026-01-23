@@ -27,7 +27,7 @@ The v2.0 Foundation milestone restructures Aesir from a working prototype to a m
 - [x] **Phase 18: Slack Extraction** - Extract Slack integration to independent package
 - [x] **Phase 19: MCP Layer** - MCP servers in each integration for agent tool calls
 - [x] **Phase 20: Testing Pyramid** - Coverage, testcontainers, fixtures, isolation
-- [ ] **Phase 21: CI/CD Pipeline** - GitHub Actions, quality gates, branch protection
+- [ ] ~~**Phase 21: CI/CD Pipeline**~~ - *Deferred to v3.0* - GitHub Actions, quality gates, branch protection
 - [ ] **Phase 22: Local Dev Environment** - Docker hot reload, health checks, graceful shutdown
 
 ## Phase Details
@@ -272,7 +272,8 @@ Plans:
 - [x] 20-07-PLAN.md — [Gap closure] Fix pre-existing test failures (7 tests)
 - [x] 20-08-PLAN.md — [Gap closure] Add agent state factories
 
-### Phase 21: CI/CD Pipeline
+### Phase 21: CI/CD Pipeline *(Deferred to v3.0)*
+**Status:** Deferred — CI/CD is not needed for local-only development. Will implement when deployment becomes relevant.
 **Goal:** Automated quality gates blocking PRs until quality bar is met
 **Depends on:** Phase 20
 **Requirements:** TEST-06, CICD-01, CICD-02, CICD-03, CICD-04, CICD-05, CICD-06
@@ -282,14 +283,11 @@ Plans:
   3. CI uses pnpm and TypeScript caching (subsequent runs significantly faster than cold runs)
   4. Independent jobs (lint, typecheck) run in parallel
   5. All GitHub Actions pinned to SHA, not tags (supply chain security)
-**Plans:** TBD
-
-Plans:
-- [ ] 21-01: TBD
+**Plans:** TBD (deferred)
 
 ### Phase 22: Local Dev Environment
 **Goal:** One-command local development with fast iteration and proper shutdown handling
-**Depends on:** Phase 21
+**Depends on:** Phase 20
 **Requirements:** LDEV-01, LDEV-02, LDEV-03, LDEV-04
 **Success Criteria** (what must be TRUE):
   1. Running `docker compose up` starts all services (PostgreSQL, Temporal, agents) ready to use
@@ -321,7 +319,7 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 | 18. Slack Extraction | v2.0 | 12/12 | Complete | 2026-01-23 |
 | 19. MCP Layer | v2.0 | 8/8 | Complete | 2026-01-23 |
 | 20. Testing Pyramid | v2.0 | 8/8 | Complete | 2026-01-23 |
-| 21. CI/CD Pipeline | v2.0 | 0/TBD | Not started | - |
+| 21. CI/CD Pipeline | v3.0 | - | Deferred | - |
 | 22. Local Dev Environment | v2.0 | 0/TBD | Not started | - |
 
 ---

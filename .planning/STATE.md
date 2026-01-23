@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-01-19)
 
 **Core value:** Maintainable, scalable foundation for end-to-end automated development workflows
-**Current focus:** Phase 21 - CI/CD Pipeline (next)
+**Current focus:** Phase 22 - Local Dev Environment (next) — Phase 21 deferred to v3.0
 
 ## Current Position
 
@@ -362,7 +362,7 @@ None.
 Last session: 2026-01-23
 Stopped at: Phase 20 complete (8/8 plans including gap closure)
 Resume file: None
-Next action: `/gsd:discuss-phase 21` or `/gsd:plan-phase 21`
+Next action: `/gsd:discuss-phase 22` or `/gsd:plan-phase 22`
 
 ---
 *Updated: 2026-01-23 after Phase 20 completion*
