@@ -17,6 +17,7 @@ import type { Block, KnownBlock } from "@slack/web-api";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { Request, Response, Router } from "express";
 import { Router as createRouter } from "express";
+import rateLimit from "express-rate-limit";
 import { createSlackClientFromDatabase } from "../client/factory.js";
 import type { SlackCredentialStore } from "../db/credential-store.js";
 import {
@@ -153,6 +154,37 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
   const childLogger = logger.child({
     component: "integrations:slack:api:mcp",
   });
+
+  // Add rate limiting middleware - 100 requests per minute per agent
+  const mcpRateLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 100, // 100 requests per minute per agent
+    keyGenerator: (req) => {
+      // Use agent ID as rate limit key
+      return (req.headers["x-agent-id"] as string) || "unknown";
+    },
+    handler: (req, res) => {
+      const agentId = req.headers["x-agent-id"] as string;
+      const correlationId =
+        (req.headers["x-correlation-id"] as string) || "unknown";
+
+      childLogger.warn({ agentId, correlationId }, "MCP rate limit exceeded");
+
+      res.status(429).json({
+        error: "Rate limit exceeded. Try again later.",
+        isError: true,
+        meta: {
+          correlation_id: correlationId,
+          retry_after_seconds: 60,
+        },
+      });
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // Apply rate limiter to all MCP routes
+  router.use("/mcp/*", mcpRateLimiter);
 
   /**
    * List available MCP tools
