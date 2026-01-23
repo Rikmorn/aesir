@@ -12,7 +12,8 @@ Agents (dev-agent, product-agent)
 Integrations (Linear, GitHub, Slack)
    ├── @aesir/integration-linear (independent package)
    ├── @aesir/integration-github (independent package)
-   ├── @aesir/integrations (Slack, shared, legacy)
+   ├── @aesir/integration-slack (independent package)
+   ├── @aesir/integrations (shared, legacy)
    ↓ uses
 Platform (config, logging, state, temporal)
 ```
@@ -29,7 +30,7 @@ Each integration is extracted to its own package for independent deployment, ver
 - Separate deployment and scaling decisions
 - Clear package boundaries with explicit dependencies
 
-**Extracted integrations:** Linear (Phase 16), GitHub (Phase 17). Slack extraction planned for future phase.
+**Extracted integrations:** Linear (Phase 16), GitHub (Phase 17), Slack (Phase 18).
 
 ### Key Frameworks
 
@@ -78,9 +79,21 @@ packages/
 │   │   │   └── main.ts  # HTTP server entry
 │   │   ├── Dockerfile
 │   │   └── package.json
-│   └── src/             # @aesir/integrations - Slack, shared, legacy
-│       ├── _legacy/     # Old Linear/GitHub code (deprecated)
-│       ├── slack/       # Slack Bolt for messaging
+│   ├── slack/           # @aesir/integration-slack (independent)
+│   │   ├── src/
+│   │   │   ├── api/     # HTTP routes (events, OAuth)
+│   │   │   ├── client/  # Bolt app factory, WebClient
+│   │   │   ├── db/      # slack.* schema, credential store
+│   │   │   ├── events/  # Event handling with deduplication
+│   │   │   ├── messages/ # Block Kit builders, message posting
+│   │   │   ├── oauth/   # Token management
+│   │   │   ├── types/   # Config, errors
+│   │   │   ├── index.ts # Barrel export
+│   │   │   └── main.ts  # HTTP server entry
+│   │   ├── Dockerfile
+│   │   └── package.json
+│   └── src/             # @aesir/integrations - shared, legacy
+│       ├── _legacy/     # Old Linear/GitHub/Slack code (deprecated)
 │       └── index.ts     # Re-exports
 ├── platform/            # @aesir/platform - Core services
 │   └── src/
@@ -117,6 +130,15 @@ Independent integration packages in `packages/integrations/`:
 - Webhook secret env: `GITHUB_WEBHOOK_SECRET`
 - Client: `@octokit/rest` for API operations
 - Webhook verification: `@octokit/webhooks-methods` (timing-safe)
+
+### Slack (`@aesir/integration-slack`)
+- Location: `packages/integrations/slack/`
+- Port: 3003
+- Database schema: `slack.*`
+- Signing secret env: `SLACK_SIGNING_SECRET`
+- Client: `@slack/bolt` for Slack app framework
+- Modes: Socket Mode (development) or HTTP (production)
+- OAuth storage: PostgreSQL via Bolt's installationStore
 
 Each integration:
 - Self-contained environment validation (own .env, Zod schema)
@@ -246,6 +268,46 @@ const { isValid, deliveryId, eventType } = await verifyWebhookRequest({
 
 // Re-export from @aesir/integrations for backward compatibility
 import { createGitHubClient, createBranch } from "@aesir/integrations";
+```
+
+### Slack Integration
+
+For Slack functionality, import from the dedicated package:
+
+```typescript
+// Slack is extracted to its own package
+import {
+  createBoltApp,
+  createSlackClientFromDatabase,
+  sendApprovalRequest,
+  buildApprovalBlocks,
+} from "@aesir/integration-slack";
+
+// Create Bolt app with database-backed OAuth
+const app = await createBoltApp({
+  db,
+  logger,
+  socketMode: true, // or false for HTTP mode
+});
+
+// Create WebClient from database credentials
+const client = await createSlackClientFromDatabase({
+  teamId: "T1234567890",
+  credentialStore,
+  logger,
+});
+
+// Send approval request with Block Kit
+await sendApprovalRequest(client, {
+  type: "approval_needed",
+  taskId: "ABC-123",
+  prUrl: "https://github.com/org/repo/pull/42",
+  title: "feat: Add user authentication",
+  summary: "Implements JWT-based auth",
+}, "C1234567890");
+
+// Re-export from @aesir/integrations for backward compatibility
+import { sendSlackNotification } from "@aesir/integrations";
 ```
 
 ### Zod Validation
@@ -409,14 +471,17 @@ describe("ComponentName", () => {
 
 - Linear OAuth tokens stored in PostgreSQL `linear.credentials` table (encrypted)
 - GitHub OAuth tokens stored in PostgreSQL `github.credentials` table (encrypted)
-- Each integration uses its own database schema (`linear.*`, `github.*`)
+- Slack OAuth tokens stored in PostgreSQL `slack.credentials` table (encrypted)
+- Each integration uses its own database schema (`linear.*`, `github.*`, `slack.*`)
 - Run `npm run linear-oauth` or `npm run github-oauth` to authenticate
+- Slack uses Bolt's built-in OAuth flow with PostgreSQL installationStore
 - Requires `CREDENTIAL_ENCRYPTION_KEY` environment variable (generate with `openssl rand -hex 32`)
 
 ### Package Imports
 
 - Import Linear from `@aesir/integration-linear`, not from `@aesir/integrations`
 - Import GitHub from `@aesir/integration-github`, not from `@aesir/integrations`
+- Import Slack from `@aesir/integration-slack`, not from `@aesir/integrations`
 - Each extracted integration has its own package scope and dependencies
 - `@aesir/integrations` maintains re-exports for backward compatibility
 - Platform utilities imported via `@aesir/platform`
@@ -440,20 +505,20 @@ Current milestone is v2.0 Foundation - full architectural restructure for mainta
 - **Phase 14**: Platform Services (ExecutionTracker, IdempotencyChecker, CursorStore)
 - **Phase 15**: Code Quality (Result types, error handling, boundaries)
 - **Phase 16**: Linear Extraction (independent package)
-- **Phase 17**: GitHub Extraction (independent package) - **Current**
+- **Phase 17**: GitHub Extraction (independent package)
+- **Phase 18**: Slack Extraction (independent package) - **Current**
 
 ### Integration Extraction Pattern
 
-Phases 16-17 establish the pattern for extracting integrations into independent packages:
+Phases 16-18 establish the pattern for extracting integrations into independent packages:
 
 1. **Dedicated package** under `packages/integrations/{integration}/`
-2. **Own database schema** (e.g., `linear.*`, `github.*`)
+2. **Own database schema** (e.g., `linear.*`, `github.*`, `slack.*`)
 3. **HTTP service** with Express server for webhooks and OAuth
 4. **Credential management** via schema-specific store with encryption
 5. **Dockerfile** for independent deployment
 
-**Completed extractions:** Linear (Phase 16), GitHub (Phase 17)
-**Future:** Slack extraction planned for future phase.
+**Completed extractions:** Linear (Phase 16), GitHub (Phase 17), Slack (Phase 18)
 
 ### Upcoming Phases
 
@@ -467,3 +532,4 @@ Phases 16-17 establish the pattern for extracting integrations into independent 
 - Result types for error handling (complete)
 - Linear as independent package (complete)
 - GitHub as independent package (complete)
+- Slack as independent package (complete)
