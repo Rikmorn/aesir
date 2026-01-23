@@ -238,10 +238,17 @@ Plans:
   2. Agents can discover and call integration tools via MCP protocol
   3. MCP tool calls are logged with correlation IDs for traceability
   4. MCP server configuration specifies available tools per agent (tool whitelisting)
-**Plans:** TBD
+**Plans:** 8 plans
 
 Plans:
-- [ ] 19-01: TBD
+- [ ] 19-01-PLAN.md — Install MCP SDK, create shared MCP types and utilities
+- [ ] 19-02-PLAN.md — Create database schemas and permission checkers for tool whitelisting
+- [ ] 19-03-PLAN.md — Create Linear MCP server with tools (issues, teams, labels)
+- [ ] 19-04-PLAN.md — Create GitHub MCP server with tools (repository, PRs, files)
+- [ ] 19-05-PLAN.md — Create Slack MCP server with tools (messages, channels)
+- [ ] 19-06-PLAN.md — Wire MCP servers to HTTP routes with rate limiting
+- [ ] 19-07-PLAN.md — Create tests for permission checkers and schema validation
+- [ ] 19-08-PLAN.md — Create permission seed scripts, update AI context documentation
 
 ### Phase 20: Testing Pyramid
 **Goal:** Comprehensive testing infrastructure with fast local tests and reliable integration tests
@@ -305,12 +312,12 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 | 16. Linear Extraction | v2.0 | 11/11 | Complete | 2026-01-21 |
 | 17. GitHub Extraction | v2.0 | 11/11 | Complete | 2026-01-21 |
 | 18. Slack Extraction | v2.0 | 12/12 | Complete | 2026-01-23 |
-| 19. MCP Layer | v2.0 | 0/TBD | Not started | - |
+| 19. MCP Layer | v2.0 | 0/8 | Not started | - |
 | 20. Testing Pyramid | v2.0 | 0/TBD | Not started | - |
 | 21. CI/CD Pipeline | v2.0 | 0/TBD | Not started | - |
 | 22. Local Dev Environment | v2.0 | 0/TBD | Not started | - |
 
 ---
 *Created: 2026-01-19*
-*Updated: 2026-01-23 (Phase 18 complete)*
+*Updated: 2026-01-23 (Phase 19 planned)*
 *Milestone: v2.0 Foundation*
