@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@aesir/common": "workspace:*",
+    "@modelcontextprotocol/sdk": "1",
     "@slack/bolt": "^4.3.0",
     "@slack/web-api": "^7.10.0",
     "drizzle-orm": "^0.45.1",

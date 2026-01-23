@@ -30,6 +30,7 @@
   "dependencies": {
     "@aesir/common": "workspace:*",
     "@linear/sdk": "^70.0.0",
+    "@modelcontextprotocol/sdk": "1",
     "drizzle-orm": "^0.45.1",
     "express": "^4.21.0",
     "neverthrow": "^8.2.0",
