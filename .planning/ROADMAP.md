@@ -26,7 +26,7 @@ The v2.0 Foundation milestone restructures Aesir from a working prototype to a m
 - [x] **Phase 17: GitHub Extraction** - Extract GitHub integration to independent package
 - [x] **Phase 18: Slack Extraction** - Extract Slack integration to independent package
 - [x] **Phase 19: MCP Layer** - MCP servers in each integration for agent tool calls
-- [ ] **Phase 20: Testing Pyramid** - Coverage, testcontainers, fixtures, isolation
+- [x] **Phase 20: Testing Pyramid** - Coverage, testcontainers, fixtures, isolation
 - [ ] **Phase 21: CI/CD Pipeline** - GitHub Actions, quality gates, branch protection
 - [ ] **Phase 22: Local Dev Environment** - Docker hot reload, health checks, graceful shutdown
 
@@ -269,8 +269,8 @@ Plans:
 - [x] 20-04-PLAN.md — Add MSW for HTTP mocking of external APIs
 - [x] 20-05-PLAN.md — Configure test:fast and test:integration commands
 - [x] 20-06-PLAN.md — Create example integration test demonstrating pattern
-- [ ] 20-07-PLAN.md — [Gap closure] Fix pre-existing test failures (7 tests)
-- [ ] 20-08-PLAN.md — [Gap closure] Add agent state factories
+- [x] 20-07-PLAN.md — [Gap closure] Fix pre-existing test failures (7 tests)
+- [x] 20-08-PLAN.md — [Gap closure] Add agent state factories
 
 ### Phase 21: CI/CD Pipeline
 **Goal:** Automated quality gates blocking PRs until quality bar is met
@@ -320,11 +320,11 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 | 17. GitHub Extraction | v2.0 | 11/11 | Complete | 2026-01-21 |
 | 18. Slack Extraction | v2.0 | 12/12 | Complete | 2026-01-23 |
 | 19. MCP Layer | v2.0 | 8/8 | Complete | 2026-01-23 |
-| 20. Testing Pyramid | v2.0 | 6/8 | Gap closure | - |
+| 20. Testing Pyramid | v2.0 | 8/8 | Complete | 2026-01-23 |
 | 21. CI/CD Pipeline | v2.0 | 0/TBD | Not started | - |
 | 22. Local Dev Environment | v2.0 | 0/TBD | Not started | - |
 
 ---
 *Created: 2026-01-19*
-*Updated: 2026-01-23 (Phase 20 gap closure plans added)*
+*Updated: 2026-01-23 (Phase 20 complete)*
 *Milestone: v2.0 Foundation*
