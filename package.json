@@ -11,6 +11,8 @@
     "start": "node dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:fast": "vitest run --exclude='**/*.integration.test.ts' --exclude='**/*.e2e.test.ts' --exclude='**/sandbox/**/*.test.ts'",
+    "test:integration": "vitest run --include='**/*.integration.test.ts'",
     "test:coverage": "vitest run --coverage",
     "test:coverage:open": "vitest run --coverage && open coverage/index.html",
     "lint": "biome check .",
