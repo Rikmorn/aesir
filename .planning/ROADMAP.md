@@ -258,12 +258,17 @@ Plans:
   1. Test coverage report shows 70%+ coverage on core platform and integration modules
   2. Integration tests use testcontainers for isolated PostgreSQL instances
   3. Test fixtures and factories exist for all major domain objects (agents, issues, PRs)
-  4. Running `npm test:fast` skips slow Docker tests for rapid iteration (<5s)
+  4. Running `pnpm test:fast` skips slow Docker tests for rapid iteration (<10s)
   5. Tests are isolated via transaction rollback or testcontainers (no shared database state)
-**Plans:** TBD
+**Plans:** 6 plans
 
 Plans:
-- [ ] 20-01: TBD
+- [ ] 20-01-PLAN.md — Configure workspace-level coverage with per-package thresholds
+- [ ] 20-02-PLAN.md — Create @aesir/test-utils package with factories and mocks
+- [ ] 20-03-PLAN.md — Add testcontainers utilities for PostgreSQL integration tests
+- [ ] 20-04-PLAN.md — Add MSW for HTTP mocking of external APIs
+- [ ] 20-05-PLAN.md — Configure test:fast and test:integration commands
+- [ ] 20-06-PLAN.md — Create example integration test demonstrating pattern
 
 ### Phase 21: CI/CD Pipeline
 **Goal:** Automated quality gates blocking PRs until quality bar is met
@@ -313,11 +318,11 @@ Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
 | 17. GitHub Extraction | v2.0 | 11/11 | Complete | 2026-01-21 |
 | 18. Slack Extraction | v2.0 | 12/12 | Complete | 2026-01-23 |
 | 19. MCP Layer | v2.0 | 8/8 | Complete | 2026-01-23 |
-| 20. Testing Pyramid | v2.0 | 0/TBD | Not started | - |
+| 20. Testing Pyramid | v2.0 | 0/6 | Not started | - |
 | 21. CI/CD Pipeline | v2.0 | 0/TBD | Not started | - |
 | 22. Local Dev Environment | v2.0 | 0/TBD | Not started | - |
 
 ---
 *Created: 2026-01-19*
-*Updated: 2026-01-23 (Phase 19 complete)*
+*Updated: 2026-01-23 (Phase 20 planned)*
 *Milestone: v2.0 Foundation*
