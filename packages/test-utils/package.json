@@ -28,7 +28,10 @@
     "neverthrow": "^8.2.0"
   },
   "devDependencies": {
+    "@testcontainers/postgresql": "^11.11.0",
     "@types/node": "^22.0.0",
+    "msw": "^2.12.7",
+    "postgres": "^3.4.7",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   }
