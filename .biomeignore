@@ -1,0 +1,2 @@
+# Ignore legacy code from linting
+**/_legacy/**
