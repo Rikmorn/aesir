@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 20 of 22 (Testing Pyramid) - Complete
-Plan: 6 of 6 in current phase
-Status: Phase 20 complete
-Last activity: 2026-01-23 - Completed 20-06 (Integration Test Example)
+Plan: 8 of 6 in current phase (2 gap closure plans)
+Status: Phase 20 complete with gap closure
+Last activity: 2026-01-23 - Completed 20-08 (Agent Factories)
 
-Progress: [##################  ] ~93% (95 plans complete)
+Progress: [##################  ] ~94% (97 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [##################  ] ~93% (95 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 93 (v2.0)
-- Average duration: ~6 min
-- Total execution time: ~517 min
+- Total plans completed: 97 (v2.0)
+- Average duration: ~5.4 min
+- Total execution time: ~520 min
 
 **By Phase:**
 
@@ -43,11 +43,11 @@ Progress: [##################  ] ~93% (95 plans complete)
 | 17-github-extraction | 11/11 | 36 min | 3 min |
 | 18-slack-extraction | 12/12 | 35 min | 3 min |
 | 19-mcp-layer | 8/8 | 47 min | 5.9 min |
-| 20-testing-pyramid | 6/6 | 28 min | 4.7 min |
+| 20-testing-pyramid | 8/6 | 31 min | 3.9 min |
 
 **Recent Trend:**
-- Last 5 plans: 20-06 (6 min), 20-05 (parallel), 20-04 (3 min), 20-03 (3 min), 20-02 (8 min)
-- Trend: Phase 20 complete - testing infrastructure ready
+- Last 5 plans: 20-08 (3 min), 20-07 (parallel), 20-06 (6 min), 20-05 (parallel), 20-04 (3 min)
+- Trend: Phase 20 complete with gap closure - testing infrastructure ready
 
 *Updated after each plan completion*
 
@@ -328,6 +328,8 @@ Recent decisions affecting current work:
 - [20-06]: Unique workspace IDs per test for reliable cleanup
 - [20-06]: Type assertion for MockLogger (as unknown as PinoLogger)
 - [20-06]: postgres.js driver added to Linear devDependencies for drizzle
+- [20-08]: Use simple message type instead of BaseMessage to avoid LangChain dependency in test-utils
+- [20-08]: Use TestTestResult type instead of importing from platform to avoid circular dependencies
 
 ### Pending Todos
 
@@ -354,9 +356,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-23
-Stopped at: Completed 20-06-PLAN.md (Phase 20 complete)
+Stopped at: Completed 20-08-PLAN.md (Phase 20 gap closure complete)
 Resume file: None
 Next action: Begin Phase 21 (CI/CD Pipeline)
 
 ---
-*Updated: 2026-01-23 after 20-06 completion*
+*Updated: 2026-01-23 after 20-08 completion*
