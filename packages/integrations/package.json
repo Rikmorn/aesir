@@ -29,6 +29,7 @@
     "@aesir/common": "workspace:*",
     "@aesir/integration-github": "workspace:*",
     "@aesir/integration-linear": "workspace:*",
+    "@aesir/integration-slack": "workspace:*",
     "@aesir/platform": "workspace:*",
     "@linear/sdk": "^70.0.0",
     "@octokit/rest": "^22.0.1",

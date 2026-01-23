@@ -173,25 +173,46 @@ export {
   WEBHOOK_DELIVERY_HEADERS,
 } from "./services/index.js";
 // === Slack ===
-// Slack WebClient and Bolt app
+/**
+ * @deprecated Import from @aesir/integration-slack directly.
+ * Slack has been extracted to a standalone package for independent deployment.
+ * These re-exports are provided for backward compatibility only.
+ *
+ * @example
+ * ```typescript
+ * // Old (deprecated)
+ * import { createSlackClient } from '@aesir/integrations';
+ *
+ * // New (recommended)
+ * import { createSlackClient } from '@aesir/integration-slack';
+ * ```
+ */
+// Re-exported from @aesir/integration-slack for backward compatibility
 export type {
   ApprovalNotification,
   BoltAppConfig,
+  BoltAppDependencies,
+  BoltAppOptions,
+  MessageResult,
   Notification,
-  NotificationResult,
   NotificationType,
+  SlackClientConfig,
   SlackConfig,
   StatusNotification,
 } from "./slack/index.js";
 export {
+  buildApprovalBlocks,
+  buildStatusBlocks,
   createBoltApp,
   createSlackClient,
+  createSlackClientFromDatabase,
   formatApprovalMessage,
   formatStatusMessage,
   getSlackClient,
   openDmChannel,
   postNotification,
   sendApprovalRequest,
+  sendMessage,
   sendStatusUpdate,
   startBoltApp,
   stopBoltApp,
