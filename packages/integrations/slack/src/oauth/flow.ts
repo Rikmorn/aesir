@@ -1,46 +1,19 @@
 /**
  * Slack OAuth Flow Helpers
  *
- * High-level functions for creating WebClient instances from database credentials
- * and managing OAuth authorization flow.
+ * OAuth flow utilities for Slack app installation:
+ * - State generation for CSRF protection
+ * - Authorization URL building
+ * - Default OAuth scopes
+ *
+ * For creating WebClient from database credentials, use:
+ * import { createSlackClientFromDatabase } from "../client/factory.js";
  */
 
 import crypto from "node:crypto";
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
-import type { WebClient } from "@slack/web-api";
-import { createSlackClientFromDatabase as createClientFromDb } from "../client/factory.js";
-import type { SlackCredentialStore } from "../db/credential-store.js";
+import { createPinoLogger } from "@aesir/common";
 
 const logger = createPinoLogger({ component: "integrations:slack:oauth" });
-
-/**
- * Options for creating a Slack client from database credentials
- */
-export interface CreateSlackClientFromDatabaseOptions {
-  /** Slack workspace/team ID */
-  teamId: string;
-  /** Credential store instance */
-  credentialStore: SlackCredentialStore;
-  /** Logger instance */
-  logger: PinoLogger;
-}
-
-/**
- * Create a WebClient from database-backed credentials
- *
- * Loads OAuth tokens from database and creates a WebClient
- * with the bot token.
- *
- * @param options - Database and authentication options
- * @returns WebClient instance with valid bot token
- * @throws SlackError if credentials not found in database
- */
-export async function createSlackClientFromDatabase(
-  options: CreateSlackClientFromDatabaseOptions,
-): Promise<WebClient> {
-  // Delegate to the factory function with the same signature
-  return createClientFromDb(options);
-}
 
 /**
  * Generate a cryptographically secure random state string for OAuth CSRF protection
