@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 20 of 22 (Testing Pyramid) - In Progress
-Plan: 2 of ? in current phase
-Status: Plan 20-02 complete
-Last activity: 2026-01-23 - Completed 20-02 (Test Utilities Package)
+Plan: 3 of 6 in current phase
+Status: Plan 20-03 complete
+Last activity: 2026-01-23 - Completed 20-03 (Testcontainers Utilities)
 
-Progress: [##################  ] ~90% (91 plans complete)
+Progress: [##################  ] ~91% (92 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [##################  ] ~90% (91 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 91 (v2.0)
+- Total plans completed: 92 (v2.0)
 - Average duration: ~6 min
-- Total execution time: ~511 min
+- Total execution time: ~514 min
 
 **By Phase:**
 
@@ -43,11 +43,11 @@ Progress: [##################  ] ~90% (91 plans complete)
 | 17-github-extraction | 11/11 | 36 min | 3 min |
 | 18-slack-extraction | 12/12 | 35 min | 3 min |
 | 19-mcp-layer | 8/8 | 47 min | 5.9 min |
-| 20-testing-pyramid | 2/? | 16 min | 8 min |
+| 20-testing-pyramid | 3/6 | 19 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 20-02 (8 min), 20-01 (8 min), 19-08 (3 min), 19-07 (6 min), 19-06 (12 min)
-- Trend: Phase 20 continues - Test utilities package complete
+- Last 5 plans: 20-03 (3 min), 20-02 (8 min), 20-01 (8 min), 19-08 (3 min), 19-07 (6 min)
+- Trend: Phase 20 continues - Testcontainers utilities complete
 
 *Updated after each plan completion*
 
@@ -312,6 +312,10 @@ Recent decisions affecting current work:
 - [20-02]: Factory functions with defaults and option overrides pattern
 - [20-02]: MockCredentialStore follows ResultAsync interface from real stores
 - [20-02]: Type guard pattern instead of non-null assertions in tests
+- [20-03]: postgres.js driver for testcontainers (same as production)
+- [20-03]: postgres:16-alpine as default test image
+- [20-03]: Static container pattern (setupPostgresContainer in beforeAll)
+- [20-03]: Transaction isolation via reserve() for per-test cleanup
 
 ### Pending Todos
 
@@ -338,9 +342,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-23
-Stopped at: Completed 20-02-PLAN.md
+Stopped at: Completed 20-03-PLAN.md
 Resume file: None
 Next action: Continue Phase 20 (next plan)
 
 ---
-*Updated: 2026-01-23 after 20-02 completion*
+*Updated: 2026-01-23 after 20-03 completion*
