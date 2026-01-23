@@ -119,6 +119,16 @@
       }
     },
     {
+      "includes": ["**/scripts/**/*.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["packages/platform/**/*.ts"],
       "linter": {
         "rules": {
