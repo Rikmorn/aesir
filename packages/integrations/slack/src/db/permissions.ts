@@ -7,7 +7,7 @@
 
 import type { PinoLogger } from "@aesir/common";
 import { and, eq } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { mcpToolPermissions } from "./schema.js";
 
 export interface CheckPermissionOptions {
@@ -16,7 +16,7 @@ export interface CheckPermissionOptions {
 }
 
 export interface CheckPermissionDeps {
-  db: PostgresJsDatabase;
+  db: NodePgDatabase;
   logger: PinoLogger;
 }
 
