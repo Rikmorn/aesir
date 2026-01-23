@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 
 ## Current Position
 
-Phase: 20 of 22 (Testing Pyramid) - In Progress
-Plan: 4 of 6 in current phase
-Status: Plan 20-04 complete
-Last activity: 2026-01-23 - Completed 20-04 (MSW API Mocking)
+Phase: 20 of 22 (Testing Pyramid) - Complete
+Plan: 6 of 6 in current phase
+Status: Phase 20 complete
+Last activity: 2026-01-23 - Completed 20-06 (Integration Test Example)
 
-Progress: [##################  ] ~92% (93 plans complete)
+Progress: [##################  ] ~93% (95 plans complete)
 
 ## Milestone History
 
@@ -43,11 +43,11 @@ Progress: [##################  ] ~92% (93 plans complete)
 | 17-github-extraction | 11/11 | 36 min | 3 min |
 | 18-slack-extraction | 12/12 | 35 min | 3 min |
 | 19-mcp-layer | 8/8 | 47 min | 5.9 min |
-| 20-testing-pyramid | 4/6 | 22 min | 5.5 min |
+| 20-testing-pyramid | 6/6 | 28 min | 4.7 min |
 
 **Recent Trend:**
-- Last 5 plans: 20-04 (3 min), 20-03 (3 min), 20-02 (8 min), 20-01 (8 min), 19-08 (3 min)
-- Trend: Phase 20 continues - MSW API mocking complete
+- Last 5 plans: 20-06 (6 min), 20-05 (parallel), 20-04 (3 min), 20-03 (3 min), 20-02 (8 min)
+- Trend: Phase 20 complete - testing infrastructure ready
 
 *Updated after each plan completion*
 
@@ -321,6 +321,10 @@ Recent decisions affecting current work:
 - [20-04]: Re-export http and HttpResponse for test overrides
 - [20-04]: setupMSW helper accepts vitest lifecycle hooks
 - [20-04]: onUnhandledRequest defaults to bypass
+- [20-06]: Cleanup-based isolation over transaction isolation (simpler, avoids driver mismatch)
+- [20-06]: Unique workspace IDs per test for reliable cleanup
+- [20-06]: Type assertion for MockLogger (as unknown as PinoLogger)
+- [20-06]: postgres.js driver added to Linear devDependencies for drizzle
 
 ### Pending Todos
 
@@ -347,9 +351,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-23
-Stopped at: Completed 20-04-PLAN.md
+Stopped at: Completed 20-06-PLAN.md (Phase 20 complete)
 Resume file: None
-Next action: Continue Phase 20 (next plan)
+Next action: Begin Phase 21 (CI/CD Pipeline)
 
 ---
-*Updated: 2026-01-23 after 20-04 completion*
+*Updated: 2026-01-23 after 20-06 completion*
