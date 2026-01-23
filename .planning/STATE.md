@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 20 of 22 (Testing Pyramid) - In Progress
-Plan: 3 of 6 in current phase
-Status: Plan 20-03 complete
-Last activity: 2026-01-23 - Completed 20-03 (Testcontainers Utilities)
+Plan: 4 of 6 in current phase
+Status: Plan 20-04 complete
+Last activity: 2026-01-23 - Completed 20-04 (MSW API Mocking)
 
-Progress: [##################  ] ~91% (92 plans complete)
+Progress: [##################  ] ~92% (93 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [##################  ] ~91% (92 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 92 (v2.0)
+- Total plans completed: 93 (v2.0)
 - Average duration: ~6 min
-- Total execution time: ~514 min
+- Total execution time: ~517 min
 
 **By Phase:**
 
@@ -43,11 +43,11 @@ Progress: [##################  ] ~91% (92 plans complete)
 | 17-github-extraction | 11/11 | 36 min | 3 min |
 | 18-slack-extraction | 12/12 | 35 min | 3 min |
 | 19-mcp-layer | 8/8 | 47 min | 5.9 min |
-| 20-testing-pyramid | 3/6 | 19 min | 6 min |
+| 20-testing-pyramid | 4/6 | 22 min | 5.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 20-03 (3 min), 20-02 (8 min), 20-01 (8 min), 19-08 (3 min), 19-07 (6 min)
-- Trend: Phase 20 continues - Testcontainers utilities complete
+- Last 5 plans: 20-04 (3 min), 20-03 (3 min), 20-02 (8 min), 20-01 (8 min), 19-08 (3 min)
+- Trend: Phase 20 continues - MSW API mocking complete
 
 *Updated after each plan completion*
 
@@ -316,6 +316,11 @@ Recent decisions affecting current work:
 - [20-03]: postgres:16-alpine as default test image
 - [20-03]: Static container pattern (setupPostgresContainer in beforeAll)
 - [20-03]: Transaction isolation via reserve() for per-test cleanup
+- [20-04]: MSW v2.x for Node.js request interception
+- [20-04]: Handler-based routing for API mocking
+- [20-04]: Re-export http and HttpResponse for test overrides
+- [20-04]: setupMSW helper accepts vitest lifecycle hooks
+- [20-04]: onUnhandledRequest defaults to bypass
 
 ### Pending Todos
 
@@ -342,9 +347,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-23
-Stopped at: Completed 20-03-PLAN.md
+Stopped at: Completed 20-04-PLAN.md
 Resume file: None
 Next action: Continue Phase 20 (next plan)
 
 ---
-*Updated: 2026-01-23 after 20-03 completion*
+*Updated: 2026-01-23 after 20-04 completion*
