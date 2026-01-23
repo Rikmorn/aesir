@@ -2,52 +2,50 @@
  * Tests for Dev Workflow Runner
  */
 
-import { DEFAULT_DEV_WORKFLOW_CONFIG } from "@aesir/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  type DevWorkflowDependencies,
-  runDevWorkflow,
-} from "./dev-workflow-runner.js";
+
+// Mock @aesir/common to prevent config validation
+vi.mock("@aesir/common", () => ({
+  DEFAULT_DEV_WORKFLOW_CONFIG: {
+    maxTestAttempts: 5,
+    testCommand: ["npm", "test"],
+    recursionLimit: 50,
+    timeoutMs: 300000,
+  },
+  createPinoLogger: vi.fn(() => ({
+    info: vi.fn(),
+    debug: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    child: vi.fn(function (this: unknown) {
+      return this;
+    }),
+  })),
+  createTraceStore: vi.fn(() => ({
+    append: vi.fn(),
+    getByTaskId: vi.fn().mockReturnValue([]),
+    getByWorkflowId: vi.fn().mockReturnValue([]),
+    clear: vi.fn(),
+    size: vi.fn().mockReturnValue(0),
+  })),
+}));
 
 // Mock the dev-workflow module
 vi.mock("./dev-workflow.js", () => ({
   createDevWorkflow: vi.fn(),
 }));
 
+import { DEFAULT_DEV_WORKFLOW_CONFIG } from "@aesir/common";
+import {
+  type DevWorkflowDependencies,
+  runDevWorkflow,
+} from "./dev-workflow-runner.js";
+
 // Mock Linear integration
 vi.mock("@aesir/integration-linear", () => ({
   updateIssueStatus: vi.fn(),
   emitError: vi.fn(),
 }));
-
-// Mock logging module
-vi.mock("../logging/index.js", () => {
-  const mockChildLogger = {
-    info: vi.fn(),
-    debug: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    child: vi.fn(),
-  };
-  mockChildLogger.child.mockReturnValue(mockChildLogger);
-
-  return {
-    createLogger: vi.fn(() => ({
-      info: vi.fn(),
-      debug: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      child: vi.fn().mockReturnValue(mockChildLogger),
-    })),
-    createTraceStore: vi.fn(() => ({
-      append: vi.fn(),
-      getByTaskId: vi.fn().mockReturnValue([]),
-      getByWorkflowId: vi.fn().mockReturnValue([]),
-      clear: vi.fn(),
-      size: vi.fn().mockReturnValue(0),
-    })),
-  };
-});
 
 // Mock tracing module
 vi.mock("./tracing/index.js", () => ({
@@ -63,6 +61,7 @@ vi.mock("./tracing/index.js", () => ({
   })),
 }));
 
+// Import dependencies after mocks
 import { emitError, updateIssueStatus } from "@aesir/integration-linear";
 import { createDevWorkflow } from "./dev-workflow.js";
 
@@ -161,11 +160,11 @@ describe("runDevWorkflow", () => {
     expect(mockUpdateIssueStatus).toHaveBeenCalledWith(
       mockLinearClient,
       "ABC-123",
-      "Todo",
+      "Ready",
     );
     expect(mockEmitError).toHaveBeenCalledWith(
       mockLinearClient,
-      "ABC-123",
+      "session-abc",
       "Dev workflow failed: Test error",
     );
   });
@@ -206,7 +205,7 @@ describe("runDevWorkflow", () => {
     await runDevWorkflow("ABC-123", "session-abc", mockDeps, customConfig);
 
     expect(mockWorkflow.invoke).toHaveBeenCalledWith(
-      { taskId: "ABC-123", status: "pending" },
+      { taskId: "ABC-123", sessionId: "session-abc", status: "pending" },
       {
         configurable: { thread_id: "ABC-123" },
         recursionLimit: 100,
