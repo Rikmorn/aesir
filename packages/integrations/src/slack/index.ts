@@ -1,92 +1,63 @@
 /**
- * Slack Integration Module
+ * Slack Integration Re-exports
  *
- * Provides WebClient factory, Bolt app lifecycle, and notification functions
- * for posting approval requests, status updates, and handling events.
+ * This module re-exports from @aesir/integration-slack for backward compatibility.
+ * New code should import directly from @aesir/integration-slack.
  *
- * @example WebClient Usage (for posting messages)
- * ```typescript
- * import {
- *   createSlackClient,
- *   sendApprovalRequest,
- *   sendStatusUpdate,
- *   openDmChannel,
- * } from './integrations/slack';
- *
- * // Create client with config
- * const client = createSlackClient({
- *   botToken: process.env.SLACK_BOT_TOKEN,
- *   defaultChannel: 'C1234567890',
- * });
- *
- * // Send approval request to channel
- * await sendApprovalRequest(client, {
- *   type: 'approval_needed',
- *   taskId: 'ABC-123',
- *   prUrl: 'https://github.com/org/repo/pull/42',
- *   title: 'feat: Add user authentication',
- *   summary: 'Implements JWT-based auth with refresh tokens',
- * }, 'C1234567890');
- *
- * // Send DM to user
- * const dmChannelId = await openDmChannel(client, 'U1234567890');
- * await sendApprovalRequest(client, notification, dmChannelId);
- * ```
- *
- * @example Bolt App Usage (for receiving events)
- * ```typescript
- * import {
- *   createBoltApp,
- *   startBoltApp,
- *   stopBoltApp,
- * } from './integrations/slack';
- *
- * // Create Bolt app with Socket Mode
- * const app = createBoltApp({
- *   botToken: process.env.SLACK_BOT_TOKEN!,
- *   appToken: process.env.SLACK_APP_TOKEN!,
- *   socketMode: true,
- * });
- *
- * // Add event handlers
- * app.event('app_mention', async ({ event, say }) => {
- *   await say(`Hello <@${event.user}>!`);
- * });
- *
- * // Start the app
- * await startBoltApp(app);
- *
- * // Graceful shutdown
- * process.on('SIGTERM', async () => {
- *   await stopBoltApp(app);
- *   process.exit(0);
- * });
- * ```
+ * @deprecated Import from @aesir/integration-slack instead
  */
 
-// NOTE: Product Agent event handlers moved to @aesir/agents/slack/assistant
-
-// Bolt app lifecycle
-export { createBoltApp, startBoltApp, stopBoltApp } from "./bolt-app.js";
-// Client factory
-export { createSlackClient, getSlackClient } from "./client.js";
-
-// Notification functions
+// === BOLT APP ===
 export {
-  formatApprovalMessage,
-  formatStatusMessage,
-  openDmChannel,
-  postNotification,
+  createBoltApp,
+  startBoltApp,
+  stopBoltApp,
+} from "@aesir/integration-slack";
+
+// === CLIENT ===
+export {
+  createSlackClient,
+  getSlackClient,
+  createSlackClientFromDatabase,
+} from "@aesir/integration-slack";
+
+// === MESSAGES ===
+export {
   sendApprovalRequest,
   sendStatusUpdate,
-} from "./notifications.js";
-// Types
+  sendMessage,
+  postNotification,
+  openDmChannel,
+  buildApprovalBlocks,
+  buildStatusBlocks,
+} from "@aesir/integration-slack";
+
+// Aliases for backward compatibility
+// Old names preserved where possible
+export { buildApprovalBlocks as formatApprovalMessage } from "@aesir/integration-slack";
+export { buildStatusBlocks as formatStatusMessage } from "@aesir/integration-slack";
+
+// === TYPES ===
 export type {
   ApprovalNotification,
-  BoltAppConfig,
-  Notification,
-  NotificationResult,
-  NotificationType,
-  SlackConfig,
   StatusNotification,
-} from "./types.js";
+  Notification,
+  NotificationType,
+  MessageResult,
+  // Client types
+  SlackClientConfig,
+  BoltAppOptions,
+  BoltAppDependencies,
+} from "@aesir/integration-slack";
+
+// Type aliases for backward compatibility
+// Old name: SlackConfig -> New: SlackClientConfig
+export type { SlackClientConfig as SlackConfig } from "@aesir/integration-slack";
+
+// Old name: BoltAppConfig was simpler, now BoltAppOptions with modes
+// Re-export new name with alias for transitioning code
+export type { BoltAppOptions as BoltAppConfig } from "@aesir/integration-slack";
+
+// Note: NotificationResult was { success, timestamp?, error? }
+// MessageResult is { ts, channel } - different semantic
+// Cannot provide direct alias, consumers need to migrate

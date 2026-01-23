@@ -29,8 +29,8 @@ async function bootstrap(): Promise<void> {
   const { PostgresSaver } = await import(
     "@langchain/langgraph-checkpoint-postgres"
   );
-  const { createBoltApp, startBoltApp, stopBoltApp, getLinearClient } =
-    await import("@aesir/integrations");
+  const { App } = await import("@slack/bolt");
+  const { getLinearClient } = await import("@aesir/integrations");
   const { registerHandlers } = await import(
     "../slack/assistant/thread-handlers.js"
   );
@@ -61,9 +61,11 @@ async function bootstrap(): Promise<void> {
   await checkpointer.setup();
 
   // Create Bolt app with Socket Mode
+  // Using App constructor directly for simple Socket Mode setup
+  // The @aesir/integration-slack createBoltApp is for production HTTP mode with DB-backed credentials
   logger.info({}, "Creating Bolt app with Socket Mode");
-  const app = createBoltApp({
-    botToken: process.env.SLACK_BOT_TOKEN!,
+  const app = new App({
+    token: process.env.SLACK_BOT_TOKEN!,
     appToken: process.env.SLACK_APP_TOKEN!,
     socketMode: true,
   });
@@ -106,7 +108,8 @@ async function bootstrap(): Promise<void> {
 
   // Handle graceful shutdown
   const shutdown = async (_signal: string): Promise<void> => {
-    await stopBoltApp(app);
+    await app.stop();
+    logger.info({}, "Bolt app stopped gracefully");
     process.exit(0);
   };
 
@@ -114,7 +117,8 @@ async function bootstrap(): Promise<void> {
   process.on("SIGTERM", () => shutdown("SIGTERM"));
 
   // Start the app
-  await startBoltApp(app);
+  await app.start();
+  logger.info({}, "Bolt app started and connected to Slack");
 }
 
 // Run bootstrap

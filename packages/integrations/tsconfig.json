@@ -9,6 +9,8 @@
   "references": [
     { "path": "../common" },
     { "path": "../platform" },
-    { "path": "./linear" }
+    { "path": "./linear" },
+    { "path": "./github" },
+    { "path": "./slack" }
   ]
 }

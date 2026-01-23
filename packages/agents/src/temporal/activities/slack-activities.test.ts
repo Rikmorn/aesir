@@ -34,8 +34,8 @@ describe("sendApprovalRequestActivity", () => {
 
   it("delegates to sendApprovalRequest with correct parameters", async () => {
     vi.mocked(sendApprovalRequest).mockResolvedValue({
-      success: true,
-      timestamp: "1234567890.123456",
+      ts: "1234567890.123456",
+      channel: "C12345678",
     });
 
     const notification: ApprovalNotification = {
@@ -55,10 +55,10 @@ describe("sendApprovalRequestActivity", () => {
     );
   });
 
-  it("returns notification result", async () => {
+  it("returns message result with ts and channel", async () => {
     vi.mocked(sendApprovalRequest).mockResolvedValue({
-      success: true,
-      timestamp: "1234567890.123456",
+      ts: "1234567890.123456",
+      channel: "C12345678",
     });
 
     const notification: ApprovalNotification = {
@@ -76,16 +76,15 @@ describe("sendApprovalRequestActivity", () => {
     );
 
     expect(result).toEqual({
-      success: true,
-      timestamp: "1234567890.123456",
+      ts: "1234567890.123456",
+      channel: "C12345678",
     });
   });
 
-  it("returns failure result on error", async () => {
-    vi.mocked(sendApprovalRequest).mockResolvedValue({
-      success: false,
-      error: "channel_not_found",
-    });
+  it("propagates errors from sendApprovalRequest", async () => {
+    vi.mocked(sendApprovalRequest).mockRejectedValue(
+      new Error("channel_not_found"),
+    );
 
     const notification: ApprovalNotification = {
       type: "approval_needed",
@@ -95,14 +94,9 @@ describe("sendApprovalRequestActivity", () => {
       summary: "Test summary",
     };
 
-    const result = await sendApprovalRequestActivity(
-      mockClient,
-      notification,
-      "invalid",
-    );
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("channel_not_found");
+    await expect(
+      sendApprovalRequestActivity(mockClient, notification, "invalid"),
+    ).rejects.toThrow("channel_not_found");
   });
 });
 
@@ -115,8 +109,8 @@ describe("sendStatusUpdateActivity", () => {
 
   it("delegates to sendStatusUpdate with correct parameters", async () => {
     vi.mocked(sendStatusUpdate).mockResolvedValue({
-      success: true,
-      timestamp: "1234567890.654321",
+      ts: "1234567890.654321",
+      channel: "C98765432",
     });
 
     const notification: StatusNotification = {
@@ -135,10 +129,10 @@ describe("sendStatusUpdateActivity", () => {
     );
   });
 
-  it("returns notification result", async () => {
+  it("returns message result with ts and channel", async () => {
     vi.mocked(sendStatusUpdate).mockResolvedValue({
-      success: true,
-      timestamp: "1234567890.654321",
+      ts: "1234567890.654321",
+      channel: "C98765432",
     });
 
     const notification: StatusNotification = {
@@ -155,13 +149,16 @@ describe("sendStatusUpdateActivity", () => {
     );
 
     expect(result).toEqual({
-      success: true,
-      timestamp: "1234567890.654321",
+      ts: "1234567890.654321",
+      channel: "C98765432",
     });
   });
 
   it("handles all status types", async () => {
-    vi.mocked(sendStatusUpdate).mockResolvedValue({ success: true });
+    vi.mocked(sendStatusUpdate).mockResolvedValue({
+      ts: "1234567890.000000",
+      channel: "C12345",
+    });
 
     const statuses: StatusNotification["status"][] = [
       "started",

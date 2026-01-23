@@ -94,7 +94,12 @@
       }
     },
     {
-      "includes": ["packages/integrations/src/index.ts"],
+      "includes": [
+        "packages/integrations/src/index.ts",
+        "packages/integrations/src/slack/index.ts",
+        "packages/integrations/src/linear/index.ts",
+        "packages/integrations/src/github/index.ts"
+      ],
       "assist": {
         "actions": {
           "source": {

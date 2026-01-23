@@ -8,7 +8,7 @@
 import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import {
   type ApprovalNotification,
-  type NotificationResult,
+  type MessageResult,
   type StatusNotification,
   sendApprovalRequest,
   sendStatusUpdate,
@@ -31,7 +31,7 @@ export async function sendApprovalRequestActivity(
   client: WebClient,
   notification: ApprovalNotification,
   channel: string,
-): Promise<NotificationResult> {
+): Promise<MessageResult> {
   logger.info(
     { taskId: notification.taskId, channel },
     `Sending approval request for task ${notification.taskId}`,
@@ -52,7 +52,7 @@ export async function sendStatusUpdateActivity(
   client: WebClient,
   notification: StatusNotification,
   channel: string,
-): Promise<NotificationResult> {
+): Promise<MessageResult> {
   logger.info(
     { taskId: notification.taskId, status: notification.status, channel },
     `Sending status update for task ${notification.taskId}`,
