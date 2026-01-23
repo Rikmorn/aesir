@@ -7,7 +7,8 @@
 
 import { createHttpLogger, createPinoLogger } from "@aesir/common";
 import express from "express";
-import { createRoutes } from "./api/routes.js";
+import { createMCPRouter, createRoutes } from "./api/routes.js";
+import { db } from "./db/client.js";
 import { config } from "./types/config.js";
 
 const logger = createPinoLogger({ component: "integrations:linear" });
@@ -23,7 +24,7 @@ async function main() {
   // HTTP logging middleware with pino
   app.use(createHttpLogger({ logger }));
 
-  // Mount routes
+  // Mount webhook and OAuth routes
   const routes = createRoutes({
     logger,
     // Optional: Add onAgentSession handler for webhook processing
@@ -32,6 +33,11 @@ async function main() {
     // },
   });
   app.use("/", routes);
+
+  // Mount MCP routes with JSON middleware
+  // MCP routes need parsed JSON body, unlike webhooks which need raw body
+  const mcpRouter = createMCPRouter({ db, logger, workspaceId: "ws_default" });
+  app.use("/", express.json(), mcpRouter);
 
   // Health check endpoint
   app.get("/health", (_req, res) => {
