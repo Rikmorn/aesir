@@ -321,6 +321,9 @@ Recent decisions affecting current work:
 - [20-04]: Re-export http and HttpResponse for test overrides
 - [20-04]: setupMSW helper accepts vitest lifecycle hooks
 - [20-04]: onUnhandledRequest defaults to bypass
+- [20-05]: Dedicated vitest configs for integration/sandbox tests (workspace --exclude doesn't override project configs)
+- [20-05]: test:fast uses workspace mode, test:integration/test:sandbox use standalone mode
+- [20-05]: Sandbox exclusion at package level not CLI (vitest workspace limitation)
 - [20-06]: Cleanup-based isolation over transaction isolation (simpler, avoids driver mismatch)
 - [20-06]: Unique workspace IDs per test for reliable cleanup
 - [20-06]: Type assertion for MockLogger (as unknown as PinoLogger)
