@@ -1,0 +1,128 @@
+---
+description: "Aesir codebase context for AI assistance"
+globs: ["**/*.ts", "**/*.tsx"]
+alwaysApply: true
+---
+
+# Aesir
+
+Agentic development platform that automates software workflows - from feature request to shipped code.
+
+## Architecture
+
+### 3-Layer Structure
+
+```
+Agents (dev-agent, product-agent)
+   ↓ uses
+Integrations (@aesir/integration-linear, @aesir/integration-github, @aesir/integration-slack)
+   ↓ uses
+Platform (config, logging, state, temporal)
+```
+
+**Dependency rules:**
+- Agents import from Integrations and Platform
+- Integrations import from Platform only
+- Platform imports nothing from Agents or Integrations
+
+## Local Development
+
+```bash
+docker compose up              # Start all services
+docker compose up -d           # Start in background
+docker compose watch           # Hot reload mode
+docker compose down            # Stop all services
+```
+
+### Service Ports
+
+| Service | Port | URL |
+|---------|------|-----|
+| PostgreSQL | 5432 | localhost:5432 |
+| Temporal gRPC | 7233 | localhost:7233 |
+| Temporal UI | 8080 | http://localhost:8080 |
+| Linear Integration | 3001 | http://localhost:3001 |
+| GitHub Integration | 3002 | http://localhost:3002 |
+| Slack Integration | 3003 | http://localhost:3003 |
+| Dev Agent | 3004 | http://localhost:3004 |
+
+## Testing
+
+```bash
+pnpm test                 # Run all tests
+pnpm test:fast           # Skip integration tests
+pnpm test:integration    # Integration tests only
+pnpm test:coverage       # With coverage report
+```
+
+## Key Patterns
+
+### Factory Functions with Dependency Injection
+
+```typescript
+export function createMyService(options: MyServiceOptions): MyService {
+  const { db, logger } = options;
+  return {
+    async doWork() { /* ... */ },
+    async health() { /* ... */ },
+    async close() { /* ... */ },
+  };
+}
+```
+
+### Result Types for Error Handling
+
+```typescript
+import { ok, err, ResultAsync } from "neverthrow";
+
+function fetchData(): ResultAsync<Data, ApiError> {
+  return ResultAsync.fromPromise(
+    api.fetch(),
+    (e) => new ApiError("Fetch failed", { cause: e })
+  );
+}
+```
+
+### Zod Validation at Boundaries
+
+```typescript
+const ConfigSchema = z.object({
+  port: z.number().default(3000),
+  apiKey: z.string().min(1),
+});
+
+const config = ConfigSchema.parse(rawInput);
+```
+
+## MCP Layer
+
+Each integration exposes MCP tools at `/mcp/*`:
+- Linear: http://localhost:3001/mcp/*
+- GitHub: http://localhost:3002/mcp/*
+- Slack: http://localhost:3003/mcp/*
+
+Headers:
+- `X-Agent-ID` - Required for tool invocation
+- `X-Correlation-ID` - Optional, for request tracing
+
+## Package Structure
+
+```
+packages/
+├── agents/              # @aesir/agents
+├── integrations/
+│   ├── linear/          # @aesir/integration-linear
+│   ├── github/          # @aesir/integration-github
+│   ├── slack/           # @aesir/integration-slack
+│   └── src/             # @aesir/integrations (legacy)
+├── platform/            # @aesir/platform
+├── observability/       # @aesir/observability
+└── common/              # @aesir/common
+```
+
+## Gotchas
+
+- Use pnpm (not npm) for package management
+- Use `--legacy-peer-deps` for npm if needed (LangChain conflicts)
+- Docker Compose watch rebuilds entire container on file changes
+- Each integration has its own database schema namespace (linear.*, github.*, slack.*)
