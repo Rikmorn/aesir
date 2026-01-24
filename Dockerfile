@@ -1,7 +1,7 @@
 # Aesir Agent Runtime
 #
 # Multi-stage build for running agents in production.
-# Uses pnpm monorepo structure - builds all required packages.
+# Uses pnpm deploy to create standalone package with resolved dependencies.
 
 FROM node:22-slim AS builder
 
@@ -47,6 +47,12 @@ RUN pnpm --filter @aesir/integration-slack build
 RUN pnpm --filter @aesir/integrations build
 RUN pnpm --filter @aesir/agents build
 
+# Deploy creates a standalone package with all dependencies resolved (no symlinks)
+RUN pnpm --filter @aesir/agents deploy --prod /deploy
+
+# Copy langgraph.json to deploy folder
+RUN cp langgraph.json /deploy/
+
 # Production image (slim uses glibc, required for Temporal SDK native bindings)
 FROM node:22-slim AS runtime
 
@@ -55,29 +61,8 @@ WORKDIR /app
 # Install tini for proper PID 1 signal handling
 RUN apt-get update && apt-get install -y --no-install-recommends tini && rm -rf /var/lib/apt/lists/*
 
-# Copy built artifacts and node_modules
-COPY --from=builder /app/packages/agents/dist ./packages/agents/dist
-COPY --from=builder /app/packages/agents/package.json ./packages/agents/
-COPY --from=builder /app/packages/common/dist ./packages/common/dist
-COPY --from=builder /app/packages/common/package.json ./packages/common/
-COPY --from=builder /app/packages/platform/dist ./packages/platform/dist
-COPY --from=builder /app/packages/platform/package.json ./packages/platform/
-COPY --from=builder /app/packages/observability/dist ./packages/observability/dist
-COPY --from=builder /app/packages/observability/package.json ./packages/observability/
-COPY --from=builder /app/packages/integrations/dist ./packages/integrations/dist
-COPY --from=builder /app/packages/integrations/package.json ./packages/integrations/
-COPY --from=builder /app/packages/integrations/linear/dist ./packages/integrations/linear/dist
-COPY --from=builder /app/packages/integrations/linear/package.json ./packages/integrations/linear/
-COPY --from=builder /app/packages/integrations/github/dist ./packages/integrations/github/dist
-COPY --from=builder /app/packages/integrations/github/package.json ./packages/integrations/github/
-COPY --from=builder /app/packages/integrations/slack/dist ./packages/integrations/slack/dist
-COPY --from=builder /app/packages/integrations/slack/package.json ./packages/integrations/slack/
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/langgraph.json ./
-
-# Copy workspace files for pnpm to resolve internal dependencies
-COPY --from=builder /app/pnpm-workspace.yaml ./
-COPY --from=builder /app/package.json ./
+# Copy deployed package (includes node_modules with resolved dependencies)
+COPY --from=builder /deploy ./
 
 # Don't run as root
 RUN groupadd -g 1001 aesir && \
@@ -88,4 +73,4 @@ USER aesir
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
 # Default command - start dev-agent (can be overridden for product-agent)
-CMD ["node", "packages/agents/dist/scripts/start-dev-agent.js"]
+CMD ["node", "dist/scripts/start-dev-agent.js"]

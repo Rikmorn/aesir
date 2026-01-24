@@ -319,7 +319,7 @@ services:
       - LANGSMITH_TRACING=${LANGSMITH_TRACING:-false}
       - LANGSMITH_API_KEY=${LANGSMITH_API_KEY:-}
       - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-aesir-agents}
-    command: ["node", "packages/agents/dist/scripts/start-product-agent.js"]
+    command: ["node", "dist/scripts/start-product-agent.js"]
     networks:
       - aesir-network
     restart: unless-stopped
