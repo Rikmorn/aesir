@@ -4,6 +4,10 @@
  * Exports agent definitions and utilities.
  */
 
+export * from "./config/index.js";
+// Config
+export * from "./config.js";
+
 // Dev Agent
 export {
   agent,
