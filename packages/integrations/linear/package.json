@@ -36,6 +36,7 @@
     "drizzle-orm": "^0.45.1",
     "express": "^4.21.0",
     "express-rate-limit": "^8.2.1",
+    "nanoid": "^5.1.6",
     "neverthrow": "^8.2.0",
     "pg": "^8.17.2",
     "zod": "3.25.67"
