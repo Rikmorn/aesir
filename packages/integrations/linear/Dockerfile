@@ -1,5 +1,5 @@
 # packages/integrations/linear/Dockerfile
-FROM node:20-slim AS builder
+FROM node:22-slim AS builder
 
 WORKDIR /app
 
@@ -22,9 +22,12 @@ RUN pnpm --filter @aesir/common build
 RUN pnpm --filter @aesir/integration-linear build
 
 # Production image
-FROM node:20-slim AS runtime
+FROM node:22-slim AS runtime
 
 WORKDIR /app
+
+# Install tini for proper PID 1 signal handling
+RUN apt-get update && apt-get install -y --no-install-recommends tini && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/packages/integrations/linear/dist ./dist
 COPY --from=builder /app/packages/integrations/linear/package.json ./
@@ -35,4 +38,5 @@ USER aesir
 
 EXPOSE 3001
 
+ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["node", "dist/main.js"]

@@ -29,6 +29,9 @@ FROM node:22-slim AS runtime
 
 WORKDIR /app
 
+# Install tini for proper PID 1 signal handling
+RUN apt-get update && apt-get install -y --no-install-recommends tini && rm -rf /var/lib/apt/lists/*
+
 COPY --from=builder /app/packages/integrations/slack/dist ./dist
 COPY --from=builder /app/packages/integrations/slack/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
@@ -44,4 +47,5 @@ EXPOSE 3003
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3003/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
 
+ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["node", "dist/main.js"]

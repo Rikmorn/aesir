@@ -26,6 +26,9 @@ FROM node:22-slim AS runtime
 
 WORKDIR /app
 
+# Install tini for proper PID 1 signal handling
+RUN apt-get update && apt-get install -y --no-install-recommends tini && rm -rf /var/lib/apt/lists/*
+
 COPY --from=builder /app/packages/integrations/github/dist ./dist
 COPY --from=builder /app/packages/integrations/github/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
@@ -35,4 +38,5 @@ USER aesir
 
 EXPOSE 3002
 
+ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["node", "dist/main.js"]
