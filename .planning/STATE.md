@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 
 ## Current Position
 
-Phase: 20 of 22 (Testing Pyramid) - Complete
-Plan: 8 of 8 in current phase (including gap closure)
-Status: Phase 20 complete, Phase 21 ready
-Last activity: 2026-01-23 - Completed gap closure plans 20-07, 20-08
+Phase: 22 of 22 (Local Dev Environment) - In Progress
+Plan: 1 of 4 in current phase
+Status: Plan 22-01 complete
+Last activity: 2026-01-24 - Completed 22-01-PLAN.md (Docker init process and health checks)
 
-Progress: [################### ] ~95% (97 plans complete)
+Progress: [####################] ~98% (98 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [################### ] ~95% (97 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 97 (v2.0)
+- Total plans completed: 98 (v2.0)
 - Average duration: ~5.4 min
-- Total execution time: ~531 min
+- Total execution time: ~535 min
 
 **By Phase:**
 
@@ -44,10 +44,11 @@ Progress: [################### ] ~95% (97 plans complete)
 | 18-slack-extraction | 12/12 | 35 min | 3 min |
 | 19-mcp-layer | 8/8 | 47 min | 5.9 min |
 | 20-testing-pyramid | 8/8 | 35 min | 4.4 min |
+| 22-local-dev-environment | 1/4 | 4 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 20-08 (3 min), 20-07 (4 min), 20-06 (6 min), 20-05 (parallel), 20-04 (3 min)
-- Trend: Phase 20 complete - testing infrastructure delivered, gap closure successful
+- Last 5 plans: 22-01 (4 min), 20-08 (3 min), 20-07 (4 min), 20-06 (6 min), 20-05 (parallel)
+- Trend: Phase 22 started - container infrastructure for local dev environment
 
 *Updated after each plan completion*
 
@@ -333,6 +334,10 @@ Recent decisions affecting current work:
 - [20-07]: Mock @aesir/common to prevent env validation in test files
 - [20-07]: Non-async vi.mock for config module (hoisting issues with async imports)
 - [20-07]: Logger integration tests verify completion, not console calls
+- [22-01]: Use tini as init process via apt-get in node:22-slim runtime stage
+- [22-01]: Upgrade Linear Dockerfile from node:20-slim to node:22-slim for consistency
+- [22-01]: Health checks validate database with SELECT 1 and return 503 on failure
+- [22-01]: Slack Socket Mode starts dedicated HTTP server for health checks on same port
 
 ### Pending Todos
 
@@ -359,10 +364,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-01-23
-Stopped at: Phase 20 complete (8/8 plans including gap closure)
+Last session: 2026-01-24
+Stopped at: Completed 22-01-PLAN.md (Docker init process and health checks)
 Resume file: None
-Next action: `/gsd:discuss-phase 22` or `/gsd:plan-phase 22`
+Next action: `/gsd:execute-phase 22` (plans 22-02, 22-03, 22-04)
 
 ---
-*Updated: 2026-01-23 after Phase 20 completion*
+*Updated: 2026-01-24 after Plan 22-01 completion*
