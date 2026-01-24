@@ -9,13 +9,12 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 
 ## Current Position
 
-Phase: 22 of 22 (Local Dev Environment) - BLOCKED
-Plan: 5 of 5 in current phase
-Status: Plans 22-01 through 22-04 complete, 22-05 in progress but BLOCKED
-Last activity: 2026-01-24 - Phase 22 execution blocked by @aesir/common env validation architecture issue
-Blocker: See Pending Todos #5 - Need to refactor @aesir/common to pure library pattern
+Phase: 22.1 of 22 (Common Library Refactor)
+Plan: 1 of 5 in current phase
+Status: Plan 22.1-01 complete - @aesir/common now pure library
+Last activity: 2026-01-24 - Completed 22.1-01-PLAN.md (removed env validation from common)
 
-Progress: [####################] ~99% (102 plans complete)
+Progress: [####################] ~99% (103 plans complete)
 
 ## Milestone History
 
@@ -26,9 +25,9 @@ Progress: [####################] ~99% (102 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 102 (v2.0)
-- Average duration: ~5.3 min
-- Total execution time: ~543 min
+- Total plans completed: 103 (v2.0)
+- Average duration: ~5.2 min
+- Total execution time: ~544 min
 
 **By Phase:**
 
@@ -46,10 +45,11 @@ Progress: [####################] ~99% (102 plans complete)
 | 19-mcp-layer | 8/8 | 47 min | 5.9 min |
 | 20-testing-pyramid | 8/8 | 35 min | 4.4 min |
 | 22-local-dev-environment | 5/5 | 12 min | 2.4 min |
+| 22.1-common-library-refactor | 1/5 | 1 min | 1 min |
 
 **Recent Trend:**
-- Last 5 plans: 22-03 (2 min), 22-04 (6 min), 22-01 (4 min), 20-08 (3 min), 20-07 (4 min)
-- Trend: Phase 22 in progress - 22-05 remaining
+- Last 5 plans: 22.1-01 (1 min), 22-03 (2 min), 22-04 (6 min), 22-01 (4 min), 20-08 (3 min)
+- Trend: Phase 22.1 in progress - 4 plans remaining
 
 *Updated after each plan completion*
 
@@ -347,6 +347,9 @@ Recent decisions affecting current work:
 - [22-03]: Rebuild action over sync since services run from compiled dist/
 - [22-03]: Watch common/src for integrations, common+platform/src for agents
 - [22-03]: Watch mode is opt-in via docker compose watch command
+- [22.1-01]: Delete config folder entirely from @aesir/common (pure library pattern)
+- [22.1-01]: Rename db/ to utils/ in @aesir/common (semantic clarity)
+- [22.1-01]: Logger already pure with optional config and process.env defaults
 
 ### Pending Todos
 
@@ -367,30 +370,29 @@ Recent decisions affecting current work:
    - phase-1.test.ts - may need to move to agents integration tests
    - old index.ts - likely obsolete, can be deleted after verification
 
-5. **Refactor @aesir/common to pure library pattern** (architecture - HIGH PRIORITY)
-   - Problem: @aesir/common validates env vars at import time, causing cascading validation failures
-   - Current: Integration packages and agents import @aesir/common for utilities (errors, logging, types)
-   - Current: This triggers env validation even when packages have their own config
-   - Solution: @aesir/common should NOT validate env vars - accept all dependencies as arguments
-   - Solution: Services (integrations, agents) own their env config and pass values to common utilities
-   - Impact: Blocks Docker-based local development (containers fail on startup)
-   - Root cause: Tight coupling between library code and application configuration
-   - Workaround: Lazy validation via Proxy attempted but insufficient - module-level db connections still trigger validation
+5. **Refactor @aesir/common to pure library pattern** (architecture - IN PROGRESS)
+   - Status: Plan 22.1-01 complete - config folder deleted from @aesir/common
+   - Completed: Common library no longer validates env at import time
+   - Remaining: Plans 22.1-02 through 22.1-05 to migrate config to consuming packages
+   - Progress: 1/5 plans complete in Phase 22.1
 
 ### Blockers/Concerns
 
-1. **@aesir/common env validation blocks Docker containers** (HIGH)
-   - Phase 22 (Local Dev Environment) cannot complete
-   - Requires architectural refactor (see Pending Todos #5)
-   - Workaround attempted (lazy validation) but insufficient
-   - Recommend new phase before closing v2.0 milestone
+None - Phase 22.1 in progress to resolve previous blocker.
+
+## Roadmap Evolution
+
+- Phase 22.1 inserted after Phase 22: Refactor @aesir/common to pure library pattern (URGENT)
+  - Reason: @aesir/common validates env vars at import time, blocking Docker container startup
+  - Inserted: 2026-01-24
+  - Status: Plan 22.1-01 complete (1/5)
 
 ## Session Continuity
 
 Last session: 2026-01-24
-Stopped at: Phase 22 execution BLOCKED - containers start but fail on env validation
+Stopped at: Completed 22.1-01-PLAN.md - @aesir/common is now a pure library
 Resume file: None
-Next action: Create new phase to refactor @aesir/common to pure library pattern (prerequisite for Docker dev env)
+Next action: Execute Plan 22.1-02 (Platform Config Extraction)
 
 ---
-*Updated: 2026-01-24 - Phase 22 blocked by architectural issue*
+*Updated: 2026-01-24 - Plan 22.1-01 complete*
