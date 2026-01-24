@@ -6,6 +6,7 @@
  */
 
 import { createPinoLogger } from "@aesir/common";
+import { sql } from "drizzle-orm";
 import express from "express";
 import { createMCPRouter, createRoutes } from "./api/routes.js";
 import { db } from "./db/client.js";
@@ -60,6 +61,39 @@ export async function startServer(): Promise<void> {
     owner: "default",
   });
   app.use("/", express.json(), mcpRouter);
+
+  // Health check endpoint with database validation
+  interface HealthResponse {
+    status: "ok" | "degraded";
+    service: string;
+    timestamp: number;
+    uptime: number;
+    database?: "healthy" | "unhealthy";
+    error?: string;
+  }
+
+  app.get("/health", async (_req, res) => {
+    const health: HealthResponse = {
+      status: "ok",
+      service: "github-integration",
+      timestamp: Date.now(),
+      uptime: process.uptime(),
+    };
+
+    try {
+      await db.execute(sql`SELECT 1`);
+      health.database = "healthy";
+    } catch (err) {
+      health.status = "degraded";
+      health.database = "unhealthy";
+      health.error =
+        err instanceof Error ? err.message : "Database connection failed";
+      logger.error({ err }, "Health check: database unhealthy");
+      return res.status(503).json(health);
+    }
+
+    return res.status(200).json(health);
+  });
 
   // Start server
   const server = app.listen(config.server.port, () => {

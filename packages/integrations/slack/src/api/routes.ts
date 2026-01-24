@@ -6,6 +6,8 @@
  */
 
 import { createHttpLogger, type PinoLogger } from "@aesir/common";
+import { sql } from "drizzle-orm";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Router } from "express";
 import type { SlackCredentialStore } from "../db/credential-store.js";
 import type { SlackEventDeliveryStore } from "../db/event-delivery-store.js";
@@ -14,6 +16,8 @@ import { createEventsRouter } from "./events.js";
 import { createOAuthRouter } from "./oauth.js";
 
 export interface SlackRouterDeps {
+  /** Database connection for health checks */
+  db: NodePgDatabase;
   /** Credential store for OAuth installations */
   credentialStore: SlackCredentialStore;
   /** Event delivery store for deduplication */
@@ -36,7 +40,7 @@ export interface SlackRouterDeps {
  * @returns Express router with all routes
  */
 export function createSlackRouter(deps: SlackRouterDeps): Router {
-  const { credentialStore, eventDeliveryStore, logger, onEvent } = deps;
+  const { db, credentialStore, eventDeliveryStore, logger, onEvent } = deps;
 
   const router = Router();
 
@@ -66,9 +70,37 @@ export function createSlackRouter(deps: SlackRouterDeps): Router {
     }),
   );
 
-  // Health check endpoint
-  router.get("/health", (_req, res) => {
-    res.json({ status: "ok", service: "slack-integration" });
+  // Health check endpoint with database validation
+  interface HealthResponse {
+    status: "ok" | "degraded";
+    service: string;
+    timestamp: number;
+    uptime: number;
+    database?: "healthy" | "unhealthy";
+    error?: string;
+  }
+
+  router.get("/health", async (_req, res) => {
+    const health: HealthResponse = {
+      status: "ok",
+      service: "slack-integration",
+      timestamp: Date.now(),
+      uptime: process.uptime(),
+    };
+
+    try {
+      await db.execute(sql`SELECT 1`);
+      health.database = "healthy";
+    } catch (err) {
+      health.status = "degraded";
+      health.database = "unhealthy";
+      health.error =
+        err instanceof Error ? err.message : "Database connection failed";
+      logger.error({ err }, "Health check: database unhealthy");
+      return res.status(503).json(health);
+    }
+
+    return res.status(200).json(health);
   });
 
   return router;

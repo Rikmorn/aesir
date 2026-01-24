@@ -292,29 +292,62 @@ async function bootstrap(): Promise<void> {
   // Graceful shutdown
   let isShuttingDown = false;
 
-  const shutdown = async (_signal: string): Promise<void> => {
-    if (isShuttingDown) return;
+  const shutdown = async (signal: string): Promise<void> => {
+    if (isShuttingDown) {
+      logger.warn({ signal }, "Shutdown already in progress, ignoring");
+      return;
+    }
     isShuttingDown = true;
 
-    // Close HTTP server
-    server.close();
+    logger.info({ signal }, "Graceful shutdown initiated");
 
-    // Shutdown Temporal worker
+    // 1. Stop accepting new HTTP connections
+    logger.info("Closing HTTP server...");
+    server.close(() => {
+      logger.info("HTTP server closed");
+    });
+
+    // 2. Shutdown Temporal worker (completes in-flight tasks)
+    logger.info("Shutting down Temporal worker...");
     worker.shutdown();
+    logger.info("Temporal worker shutdown initiated");
 
-    // Cleanup sandbox
+    // 3. Cleanup Docker sandbox
+    logger.info("Cleaning up Docker sandbox...");
     await sandbox.cleanup();
+    logger.info("Docker sandbox cleaned up");
 
-    // Close services
+    // 4. Close services
+    logger.info("Closing webhook idempotency service...");
     await webhookIdempotency.close();
-    await executionTracker.close();
-    await sql.end();
+    logger.info("Webhook idempotency service closed");
 
+    logger.info("Closing execution tracker...");
+    await executionTracker.close();
+    logger.info("Execution tracker closed");
+
+    // 5. Close database connections
+    logger.info("Closing database connections...");
+    await sql.end({ timeout: 5 });
+    logger.info("Database connections closed");
+
+    logger.info("Graceful shutdown complete");
     process.exit(0);
   };
 
   process.on("SIGINT", () => shutdown("SIGINT"));
   process.on("SIGTERM", () => shutdown("SIGTERM"));
+
+  // Force shutdown after 30 seconds if graceful shutdown hangs
+  const forceShutdownTimeout = setTimeout(() => {
+    if (isShuttingDown) {
+      logger.error(
+        "Forced shutdown after 30s timeout - graceful shutdown incomplete",
+      );
+      process.exit(1);
+    }
+  }, 30_000);
+  forceShutdownTimeout.unref(); // Don't keep process alive just for this timer
 }
 
 // Run bootstrap

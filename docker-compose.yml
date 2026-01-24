@@ -1,6 +1,6 @@
 # Aesir Development Infrastructure
 #
-# Complete containerized setup including agents and supporting services.
+# Complete containerized setup including agents, integrations, and supporting services.
 #
 # Usage:
 #   docker compose up -d                    # Start all services
@@ -9,9 +9,12 @@
 #   docker compose down                     # Stop all
 #
 # Access:
+#   - Linear Integration: http://localhost:3001
+#   - GitHub Integration: http://localhost:3002
+#   - Slack Integration: http://localhost:3003
+#   - Dev Agent webhooks: http://localhost:3004
 #   - Temporal UI: http://localhost:8080
 #   - Temporal gRPC: localhost:7233
-#   - Dev Agent webhooks: http://localhost:3001
 #   - Product Agent (Socket Mode): connects to Slack
 #   - Cloudflared (requires setup): exposes webhooks via Cloudflare Tunnel
 #
@@ -78,6 +81,119 @@ services:
     networks:
       - aesir-network
 
+  # Linear Integration - handles Linear webhooks and MCP tools
+  linear-integration:
+    build:
+      context: .
+      dockerfile: packages/integrations/linear/Dockerfile
+    container_name: aesir-linear-integration
+    depends_on:
+      postgresql:
+        condition: service_healthy
+        restart: true
+    environment:
+      # Database connection
+      - DATABASE_HOST=postgresql
+      - DATABASE_PORT=5432
+      - DATABASE_USER=temporal
+      - DATABASE_PASSWORD=temporal
+      - DATABASE_NAME=temporal
+      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
+      # Linear configuration
+      - LINEAR_WEBHOOK_SECRET=${LINEAR_WEBHOOK_SECRET}
+      - LINEAR_CLIENT_ID=${LINEAR_CLIENT_ID}
+      - LINEAR_CLIENT_SECRET=${LINEAR_CLIENT_SECRET}
+      # Server configuration
+      - PORT=3001
+      - NODE_ENV=${NODE_ENV:-production}
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3001/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - aesir-network
+    restart: unless-stopped
+
+  # GitHub Integration - handles GitHub webhooks and MCP tools
+  github-integration:
+    build:
+      context: .
+      dockerfile: packages/integrations/github/Dockerfile
+    container_name: aesir-github-integration
+    depends_on:
+      postgresql:
+        condition: service_healthy
+        restart: true
+    environment:
+      # Database connection
+      - DATABASE_HOST=postgresql
+      - DATABASE_PORT=5432
+      - DATABASE_USER=temporal
+      - DATABASE_PASSWORD=temporal
+      - DATABASE_NAME=temporal
+      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
+      # GitHub configuration
+      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      # Server configuration
+      - PORT=3002
+      - NODE_ENV=${NODE_ENV:-production}
+    ports:
+      - "3002:3002"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3002/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - aesir-network
+    restart: unless-stopped
+
+  # Slack Integration - handles Slack events and MCP tools
+  slack-integration:
+    build:
+      context: .
+      dockerfile: packages/integrations/slack/Dockerfile
+    container_name: aesir-slack-integration
+    depends_on:
+      postgresql:
+        condition: service_healthy
+        restart: true
+    environment:
+      # Database connection
+      - DATABASE_HOST=postgresql
+      - DATABASE_PORT=5432
+      - DATABASE_USER=temporal
+      - DATABASE_PASSWORD=temporal
+      - DATABASE_NAME=temporal
+      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
+      # Slack configuration
+      - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}
+      - SLACK_CLIENT_ID=${SLACK_CLIENT_ID}
+      - SLACK_CLIENT_SECRET=${SLACK_CLIENT_SECRET}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_MODE=http
+      # Server configuration
+      - PORT=3003
+      - NODE_ENV=${NODE_ENV:-production}
+    ports:
+      - "3003:3003"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3003/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - aesir-network
+    restart: unless-stopped
+
   # Dev Agent - handles Linear task automation
   dev-agent:
     build:
@@ -120,7 +236,7 @@ services:
       - LANGSMITH_API_KEY=${LANGSMITH_API_KEY:-}
       - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-aesir-agents}
     ports:
-      - "3001:3001" # Webhook endpoint
+      - "3004:3004" # Webhook endpoint (Linear uses 3001, GitHub 3002, Slack 3003)
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     command: ["node", "dist/scripts/start-dev-agent.js"]

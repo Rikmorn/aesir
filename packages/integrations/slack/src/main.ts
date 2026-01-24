@@ -11,6 +11,7 @@
 import type { Server } from "node:http";
 import { createPinoLogger } from "@aesir/common";
 import type { App } from "@slack/bolt";
+import { sql } from "drizzle-orm";
 import express, { type Express } from "express";
 import { createSlackRouter } from "./api/routes.js";
 import {
@@ -109,9 +110,52 @@ export async function startServer(): Promise<void> {
     // Start the Bolt app
     await startBoltApp(boltApp);
 
+    // Start a minimal HTTP server for health checks in Socket Mode
+    // Socket Mode uses WebSocket, but Docker/K8s need HTTP health endpoints
+    const healthApp = express();
+
+    // Health check endpoint with database validation
+    interface HealthResponse {
+      status: "ok" | "degraded";
+      service: string;
+      timestamp: number;
+      uptime: number;
+      database?: "healthy" | "unhealthy";
+      error?: string;
+    }
+
+    healthApp.get("/health", async (_req, res) => {
+      const health: HealthResponse = {
+        status: "ok",
+        service: "slack-integration",
+        timestamp: Date.now(),
+        uptime: process.uptime(),
+      };
+
+      try {
+        await db.execute(sql`SELECT 1`);
+        health.database = "healthy";
+      } catch (err) {
+        health.status = "degraded";
+        health.database = "unhealthy";
+        health.error =
+          err instanceof Error ? err.message : "Database connection failed";
+        logger.error({ err }, "Health check: database unhealthy");
+        return res.status(503).json(health);
+      }
+
+      return res.status(200).json(health);
+    });
+
+    const healthServer = healthApp.listen(port, () => {
+      logger.info({ port }, "Health check server started for Socket Mode");
+    });
+
     serviceState = {
       mode: "socket",
       boltApp,
+      httpServer: healthServer,
+      expressApp: healthApp,
     };
 
     logger.info("Slack bot started in Socket Mode");
@@ -128,6 +172,7 @@ export async function startServer(): Promise<void> {
 
     // Create and mount Slack router
     const router = createSlackRouter({
+      db,
       credentialStore,
       eventDeliveryStore,
       logger,
@@ -180,7 +225,8 @@ export async function startServer(): Promise<void> {
         logger.info("Bolt app stopped");
       }
 
-      if (serviceState.mode === "http" && serviceState.httpServer) {
+      // Close HTTP server (used in both modes - HTTP mode or health server in Socket mode)
+      if (serviceState.httpServer) {
         await new Promise<void>((resolve, reject) => {
           serviceState?.httpServer?.close((err) => {
             if (err) reject(err);
