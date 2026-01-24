@@ -24,6 +24,9 @@ FROM node:20-slim AS runtime
 
 WORKDIR /app
 
+# Install tini for proper PID 1 signal handling
+RUN apt-get update && apt-get install -y --no-install-recommends tini && rm -rf /var/lib/apt/lists/*
+
 # Install production dependencies only
 COPY package*.json ./
 RUN npm ci --omit=dev --legacy-peer-deps
@@ -36,6 +39,9 @@ COPY --from=builder /app/langgraph.json ./
 RUN groupadd -g 1001 aesir && \
     useradd -u 1001 -g aesir aesir
 USER aesir
+
+# tini handles SIGTERM/SIGINT forwarding to Node.js
+ENTRYPOINT ["/usr/bin/tini", "--"]
 
 # Default command (can be overridden)
 CMD ["node", "dist/scripts/start-dev-agent.js"]
