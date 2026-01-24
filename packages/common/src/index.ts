@@ -1,8 +1,5 @@
 // @aesir/common - shared contracts, config loading, utilities
 
-// Config
-export * from "./config/index.js";
-
 // Database utilities
 export * from "./db/index.js";
 
