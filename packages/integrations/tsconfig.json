@@ -5,7 +5,7 @@
     "rootDir": "./src"
   },
   "include": ["src/**/*"],
-  "exclude": ["src/_legacy/**/*"],
+  "exclude": ["src/_legacy/**/*", "src/**/*.test.ts", "src/**/scripts/**/*"],
   "references": [
     { "path": "../common" },
     { "path": "../platform" },

@@ -9,10 +9,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 
 ## Current Position
 
-Phase: 22 of 22 (Local Dev Environment) - In Progress
+Phase: 22 of 22 (Local Dev Environment) - BLOCKED
 Plan: 5 of 5 in current phase
-Status: Plan 22-03 complete (22-01, 22-02, 22-03, 22-04 complete)
-Last activity: 2026-01-24 - Completed 22-03-PLAN.md (Docker Compose watch configuration)
+Status: Plans 22-01 through 22-04 complete, 22-05 in progress but BLOCKED
+Last activity: 2026-01-24 - Phase 22 execution blocked by @aesir/common env validation architecture issue
+Blocker: See Pending Todos #5 - Need to refactor @aesir/common to pure library pattern
 
 Progress: [####################] ~99% (102 plans complete)
 
@@ -366,16 +367,30 @@ Recent decisions affecting current work:
    - phase-1.test.ts - may need to move to agents integration tests
    - old index.ts - likely obsolete, can be deleted after verification
 
+5. **Refactor @aesir/common to pure library pattern** (architecture - HIGH PRIORITY)
+   - Problem: @aesir/common validates env vars at import time, causing cascading validation failures
+   - Current: Integration packages and agents import @aesir/common for utilities (errors, logging, types)
+   - Current: This triggers env validation even when packages have their own config
+   - Solution: @aesir/common should NOT validate env vars - accept all dependencies as arguments
+   - Solution: Services (integrations, agents) own their env config and pass values to common utilities
+   - Impact: Blocks Docker-based local development (containers fail on startup)
+   - Root cause: Tight coupling between library code and application configuration
+   - Workaround: Lazy validation via Proxy attempted but insufficient - module-level db connections still trigger validation
+
 ### Blockers/Concerns
 
-None.
+1. **@aesir/common env validation blocks Docker containers** (HIGH)
+   - Phase 22 (Local Dev Environment) cannot complete
+   - Requires architectural refactor (see Pending Todos #5)
+   - Workaround attempted (lazy validation) but insufficient
+   - Recommend new phase before closing v2.0 milestone
 
 ## Session Continuity
 
 Last session: 2026-01-24
-Stopped at: Completed 22-03-PLAN.md (Docker Compose watch configuration)
+Stopped at: Phase 22 execution BLOCKED - containers start but fail on env validation
 Resume file: None
-Next action: Plan 22-05 or Phase 22 completion
+Next action: Create new phase to refactor @aesir/common to pure library pattern (prerequisite for Docker dev env)
 
 ---
-*Updated: 2026-01-24 after Plan 22-03 completion*
+*Updated: 2026-01-24 - Phase 22 blocked by architectural issue*

@@ -20,6 +20,12 @@
  *   npm run product-agent
  */
 
+// Early startup logging (before any imports that might fail)
+// biome-ignore lint/suspicious/noConsole: Required for early startup debugging
+console.log("[product-agent] Starting... (early boot)");
+// biome-ignore lint/suspicious/noConsole: Required for early startup debugging
+console.log("[product-agent] NODE_ENV:", process.env.NODE_ENV);
+
 // Environment must be loaded FIRST before any other imports
 import "@aesir/common";
 
@@ -154,6 +160,10 @@ async function bootstrap(): Promise<void> {
 }
 
 // Run bootstrap
-bootstrap().catch((_error) => {
+// biome-ignore lint/suspicious/noConsole: Required for startup error logging
+console.log("[product-agent] Calling bootstrap()...");
+bootstrap().catch((error) => {
+  // biome-ignore lint/suspicious/noConsole: Required for startup error logging
+  console.error("[product-agent] Bootstrap failed:", error);
   process.exit(1);
 });

@@ -26,6 +26,14 @@
  *   npm run dev-agent
  */
 
+// Early startup logging (before any imports that might fail)
+// biome-ignore lint/suspicious/noConsole: Required for early startup debugging
+console.log("[dev-agent] Starting... (early boot)");
+// biome-ignore lint/suspicious/noConsole: Required for early startup debugging
+console.log("[dev-agent] NODE_ENV:", process.env.NODE_ENV);
+// biome-ignore lint/suspicious/noConsole: Required for early startup debugging
+console.log("[dev-agent] TEMPORAL_ADDRESS:", process.env.TEMPORAL_ADDRESS);
+
 // Environment must be loaded FIRST before any other imports
 import "@aesir/common";
 
@@ -351,6 +359,10 @@ async function bootstrap(): Promise<void> {
 }
 
 // Run bootstrap
-bootstrap().catch((_error) => {
+// biome-ignore lint/suspicious/noConsole: Required for startup error logging
+console.log("[dev-agent] Calling bootstrap()...");
+bootstrap().catch((error) => {
+  // biome-ignore lint/suspicious/noConsole: Required for startup error logging
+  console.error("[dev-agent] Bootstrap failed:", error);
   process.exit(1);
 });
