@@ -20,13 +20,12 @@
  *   npm run linear-oauth
  */
 
-// Environment must be loaded FIRST before any other imports
-// Note: We import @aesir/common to use dotenv-flow but this script has additional
-// validation for OAuth-specific vars (LINEAR_CLIENT_ID, LINEAR_CLIENT_SECRET, OAUTH_CALLBACK_URL)
-// which are optional in the main schema
-import "@aesir/common/config/env.js";
-
 import * as http from "node:http";
+
+// Load environment variables
+import dotenvFlow from "dotenv-flow";
+
+dotenvFlow.config({ silent: true });
 
 const CLIENT_ID = process.env.LINEAR_CLIENT_ID;
 const CLIENT_SECRET = process.env.LINEAR_CLIENT_SECRET;
