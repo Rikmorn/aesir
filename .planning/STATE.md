@@ -341,6 +341,8 @@ Recent decisions affecting current work:
 - [22-04]: Force shutdown after 30s timeout with process.exit(1)
 - [22-04]: setTimeout.unref() to prevent timer from keeping process alive
 - [22-04]: Signal parameter logged for debugging which signal triggered shutdown
+- [22-02]: Task 1 pre-completed in 22-01 (integration services in docker-compose.yml)
+- [22-02]: Port convention: Linear=3001, GitHub=3002, Slack=3003, dev-agent=3004
 
 ### Pending Todos
 
