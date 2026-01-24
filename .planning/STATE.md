@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 22.1 of 22 (Common Library Refactor)
-Plan: 3 of 5 in current phase
-Status: Plan 22.1-03 complete - Agents package owns config and agent-config
-Last activity: 2026-01-24 - Completed 22.1-03-PLAN.md (agents config extraction)
+Plan: 4 of 5 in current phase
+Status: Plan 22.1-04 complete - Platform/observability verified, Docker Compose aligned with DB_* naming
+Last activity: 2026-01-24 - Completed 22.1-04-PLAN.md (platform/observability config fixes and docker alignment)
 
-Progress: [####################] ~99% (105 plans complete)
+Progress: [####################] ~99% (106 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [####################] ~99% (105 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 103 (v2.0)
+- Total plans completed: 104 (v2.0)
 - Average duration: ~5.2 min
-- Total execution time: ~544 min
+- Total execution time: ~546 min
 
 **By Phase:**
 
@@ -45,11 +45,11 @@ Progress: [####################] ~99% (105 plans complete)
 | 19-mcp-layer | 8/8 | 47 min | 5.9 min |
 | 20-testing-pyramid | 8/8 | 35 min | 4.4 min |
 | 22-local-dev-environment | 5/5 | 12 min | 2.4 min |
-| 22.1-common-library-refactor | 3/5 | 28 min | 9.3 min |
+| 22.1-common-library-refactor | 4/5 | 30 min | 7.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 22.1-03 (15 min), 22.1-02 (12 min), 22.1-01 (1 min), 22-03 (2 min), 22-04 (6 min)
-- Trend: Phase 22.1 in progress - 2 plans remaining
+- Last 5 plans: 22.1-04 (2 min), 22.1-03 (15 min), 22.1-02 (12 min), 22.1-01 (1 min), 22-03 (2 min)
+- Trend: Phase 22.1 in progress - 1 plan remaining
 
 *Updated after each plan completion*
 
@@ -357,6 +357,8 @@ Recent decisions affecting current work:
 - [22.1-03]: Agents package owns environment and agent configuration (not common)
 - [22.1-03]: AgentConfigSchema moved from common to agents/src/config/
 - [22.1-03]: Temporary shims in common for backward compat during migration
+- [22.1-04]: Docker Compose uses DB_* env vars consistently for all services
+- [22.1-04]: Platform/observability config imports fixed in Plan 22.1-02 (pre-completed)
 
 ### Pending Todos
 
@@ -378,30 +380,29 @@ Recent decisions affecting current work:
    - old index.ts - likely obsolete, can be deleted after verification
 
 5. **Refactor @aesir/common to pure library pattern** (architecture - IN PROGRESS)
-   - Status: Plan 22.1-03 complete - agents config extracted
-   - Completed: Common (22.1-01), Integrations (22.1-02), Agents (22.1-03)
-   - Remaining: Plans 22.1-04 (Observability) and 22.1-05 (remove shims)
-   - Progress: 3/5 plans complete in Phase 22.1
+   - Status: Plan 22.1-04 complete - platform/observability verified, Docker aligned
+   - Completed: Common (22.1-01), Integrations (22.1-02), Agents (22.1-03), Platform/Observability (22.1-04)
+   - Remaining: Plan 22.1-05 (remove temporary shims from common)
+   - Progress: 4/5 plans complete in Phase 22.1
 
 ### Blockers/Concerns
 
-- Plan 22.1-04 needs to properly refactor platform/observability (temporary fixes in 22.1-02)
+- Plan 22.1-05 must verify all packages build after removing shims from @aesir/common
 - Legacy @aesir/integrations package has pre-existing TypeScript errors
-- docker-compose.yml needs DB_* env var updates in Plan 22.1-04
 
 ## Roadmap Evolution
 
 - Phase 22.1 inserted after Phase 22: Refactor @aesir/common to pure library pattern (URGENT)
   - Reason: @aesir/common validates env vars at import time, blocking Docker container startup
   - Inserted: 2026-01-24
-  - Status: Plan 22.1-01 complete (1/5)
+  - Status: Plan 22.1-04 complete (4/5)
 
 ## Session Continuity
 
 Last session: 2026-01-24
-Stopped at: Completed 22.1-03-PLAN.md - Agents package owns config and agent-config
+Stopped at: Completed 22.1-04-PLAN.md - Platform/observability verified, Docker Compose aligned
 Resume file: None
-Next action: Execute Plan 22.1-04 (Observability Config Extraction)
+Next action: Execute Plan 22.1-05 (Remove temporary shims from @aesir/common)
 
 ---
-*Updated: 2026-01-24 - Plan 22.1-03 complete*
+*Updated: 2026-01-24 - Plan 22.1-04 complete*
