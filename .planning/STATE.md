@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 22.1 of 22 (Common Library Refactor)
-Plan: 1 of 5 in current phase
-Status: Plan 22.1-01 complete - @aesir/common now pure library
-Last activity: 2026-01-24 - Completed 22.1-01-PLAN.md (removed env validation from common)
+Plan: 2 of 5 in current phase
+Status: Plan 22.1-02 complete - Integrations have eager config validation
+Last activity: 2026-01-24 - Completed 22.1-02-PLAN.md (integration eager configs)
 
-Progress: [####################] ~99% (103 plans complete)
+Progress: [####################] ~99% (104 plans complete)
 
 ## Milestone History
 
@@ -45,11 +45,11 @@ Progress: [####################] ~99% (103 plans complete)
 | 19-mcp-layer | 8/8 | 47 min | 5.9 min |
 | 20-testing-pyramid | 8/8 | 35 min | 4.4 min |
 | 22-local-dev-environment | 5/5 | 12 min | 2.4 min |
-| 22.1-common-library-refactor | 1/5 | 1 min | 1 min |
+| 22.1-common-library-refactor | 2/5 | 13 min | 6.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 22.1-01 (1 min), 22-03 (2 min), 22-04 (6 min), 22-01 (4 min), 20-08 (3 min)
-- Trend: Phase 22.1 in progress - 4 plans remaining
+- Last 5 plans: 22.1-02 (12 min), 22.1-01 (1 min), 22-03 (2 min), 22-04 (6 min), 22-01 (4 min)
+- Trend: Phase 22.1 in progress - 3 plans remaining
 
 *Updated after each plan completion*
 
@@ -350,6 +350,10 @@ Recent decisions affecting current work:
 - [22.1-01]: Delete config folder entirely from @aesir/common (pure library pattern)
 - [22.1-01]: Rename db/ to utils/ in @aesir/common (semantic clarity)
 - [22.1-01]: Logger already pure with optional config and process.env defaults
+- [22.1-02]: Eager environment validation at module load for integration configs
+- [22.1-02]: DB_* naming convention for database env vars across all services
+- [22.1-02]: Fix platform/observability blocking imports in Plan 22.1-02 (Rule 3 deviation)
+- [22.1-02]: Fix MCP rate limiter TypeScript errors with double cast to unknown
 
 ### Pending Todos
 
@@ -378,7 +382,9 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
-None - Phase 22.1 in progress to resolve previous blocker.
+- Plan 22.1-04 needs to properly refactor platform/observability (temporary fixes in 22.1-02)
+- Legacy @aesir/integrations package has pre-existing TypeScript errors
+- docker-compose.yml needs DB_* env var updates in Plan 22.1-04
 
 ## Roadmap Evolution
 
@@ -390,9 +396,9 @@ None - Phase 22.1 in progress to resolve previous blocker.
 ## Session Continuity
 
 Last session: 2026-01-24
-Stopped at: Completed 22.1-01-PLAN.md - @aesir/common is now a pure library
+Stopped at: Completed 22.1-02-PLAN.md - Integrations have eager config validation
 Resume file: None
-Next action: Execute Plan 22.1-02 (Platform Config Extraction)
+Next action: Execute Plan 22.1-03 (Agents Config Extraction)
 
 ---
-*Updated: 2026-01-24 - Plan 22.1-01 complete*
+*Updated: 2026-01-24 - Plan 22.1-02 complete*
