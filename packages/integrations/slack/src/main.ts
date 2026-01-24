@@ -22,7 +22,7 @@ import {
 import { db, pool } from "./db/client.js";
 import { createSlackCredentialStore } from "./db/credential-store.js";
 import { createSlackEventDeliveryStore } from "./db/event-delivery-store.js";
-import { config } from "./types/config.js";
+import { config } from "./config.js";
 
 const logger = createPinoLogger({ component: "integrations:slack:server" });
 

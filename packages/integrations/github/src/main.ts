@@ -9,10 +9,10 @@ import { createPinoLogger } from "@aesir/common";
 import { sql } from "drizzle-orm";
 import express from "express";
 import { createMCPRouter, createRoutes } from "./api/routes.js";
+import { config } from "./config.js";
 import { db } from "./db/client.js";
 import { createGitHubCredentialStore } from "./db/credential-store.js";
 import { createWebhookDeliveryStore } from "./db/webhook-delivery-store.js";
-import { config } from "./types/config.js";
 
 const logger = createPinoLogger({ component: "integrations:github" });
 
