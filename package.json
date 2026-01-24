@@ -22,7 +22,6 @@
     "typecheck": "tsc --noEmit",
     "product-agent": "tsx src/scripts/start-product-agent.ts",
     "dev-agent": "tsx src/scripts/start-dev-agent.ts",
-    "linear-oauth": "tsx src/scripts/linear-oauth.ts",
     "docker:build": "docker compose build",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",

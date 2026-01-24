@@ -28,6 +28,10 @@
 #   - Slack Integration: http://localhost:3003
 #   - Dev Agent: http://localhost:3004
 #
+# OAuth (for re-authenticating credentials):
+#   - Linear: http://localhost:3001/oauth/authorize
+#   - GitHub: http://localhost:3002/oauth/github/authorize
+#
 # Environment:
 #   Copy .env.example to .env and fill in API keys.
 #   Docker Compose automatically loads .env file.
@@ -375,39 +379,6 @@ services:
       - aesir-network
     profiles:
       - tunnel
-
-  # OAuth Authorization - runs Linear OAuth flow in container
-  # Usage: docker compose run --rm oauth
-  # Requires: OAUTH_CALLBACK_URL pointing to a Cloudflare tunnel
-  oauth:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: aesir-oauth
-    depends_on:
-      postgresql:
-        condition: service_healthy
-    environment:
-      # Database (internal Docker network)
-      - DATABASE_URL=postgresql://temporal:temporal@postgresql:5432/temporal
-      - DB_HOST=postgresql
-      - DB_PORT=5432
-      - DB_USER=temporal
-      - DB_PASSWORD=temporal
-      - DB_NAME=temporal
-      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
-      # Linear OAuth credentials
-      - LINEAR_CLIENT_ID=${LINEAR_CLIENT_ID}
-      - LINEAR_CLIENT_SECRET=${LINEAR_CLIENT_SECRET}
-      - OAUTH_CALLBACK_URL=${OAUTH_CALLBACK_URL}
-    ports:
-      - "3000:3000"
-    command: ["node", "dist/scripts/linear-oauth.js"]
-    networks:
-      aesir-network:
-        aliases:
-          - oauth
-    # No profile - runs as long-running service for OAuth callbacks
 
 volumes:
   temporal-postgresql:
