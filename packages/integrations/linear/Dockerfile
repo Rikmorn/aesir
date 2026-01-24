@@ -6,6 +6,7 @@ WORKDIR /app
 # Copy workspace files
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY packages/common/package.json ./packages/common/
+COPY packages/test-utils/package.json ./packages/test-utils/
 COPY packages/integrations/linear/package.json ./packages/integrations/linear/
 
 # Install pnpm and dependencies
