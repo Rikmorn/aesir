@@ -16,7 +16,7 @@ import {
 } from "@aesir/common";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import type { Request, Response, Router } from "express";
+import type { Request, RequestHandler, Response, Router } from "express";
 import { Router as createRouter } from "express";
 import rateLimit from "express-rate-limit";
 import type { GitHubCredentialStore } from "../db/credential-store.js";
@@ -296,7 +296,8 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
   });
 
   // Apply rate limiter to all MCP routes
-  router.use("/mcp/*", mcpRateLimiter);
+  // Type assertion: express-rate-limit has type version conflicts with Express Router
+  router.use("/mcp/*", mcpRateLimiter as unknown as RequestHandler);
 
   // Prepare shared dependencies
   // Type assertion: NodePgDatabase and PostgresJsDatabase are compatible at runtime

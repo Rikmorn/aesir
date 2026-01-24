@@ -9,8 +9,8 @@ import { createHttpLogger, createPinoLogger } from "@aesir/common";
 import { sql } from "drizzle-orm";
 import express from "express";
 import { createMCPRouter, createRoutes } from "./api/routes.js";
+import { config } from "./config.js";
 import { db } from "./db/client.js";
-import { config } from "./types/config.js";
 
 const logger = createPinoLogger({ component: "integrations:linear" });
 

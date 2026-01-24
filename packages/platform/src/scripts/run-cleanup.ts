@@ -10,7 +10,7 @@
  *   npm run cleanup -- --dry-run
  */
 
-import { config, createPinoLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/common";
 import { Pool } from "pg";
 import { createCleanupService } from "../services/cleanup.js";
 
@@ -20,20 +20,20 @@ async function main(): Promise<void> {
 
   logger.info({ dryRun }, "Starting cleanup script");
 
-  // Create database connection using config
+  // Create database connection using environment variables
   const pool = new Pool({
-    host: config.database.host,
-    port: config.database.port,
-    user: config.database.user,
-    password: config.database.password,
-    database: config.database.name,
+    host: process.env.DB_HOST || "localhost",
+    port: Number.parseInt(process.env.DB_PORT || "5432", 10),
+    user: process.env.DB_USER || "temporal",
+    password: process.env.DB_PASSWORD || "temporal",
+    database: process.env.DB_NAME || "temporal",
   });
 
   try {
     const cleanup = createCleanupService({
       pool,
       logger,
-      retentionDays: config.retention.days,
+      retentionDays: Number.parseInt(process.env.RETENTION_DAYS || "14", 10),
       batchSize: 1000,
     });
 

@@ -5,7 +5,7 @@
  * Tables will be added in Phase 14.
  */
 
-import { config, createPinoLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/common";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "./schema.js";
@@ -20,11 +20,11 @@ let pool: Pool | null = null;
 function getPool(): Pool {
   if (!pool) {
     pool = new Pool({
-      host: config.database.host,
-      port: config.database.port,
-      user: config.database.user,
-      password: config.database.password,
-      database: config.database.name,
+      host: process.env.DB_HOST || "localhost",
+      port: Number.parseInt(process.env.DB_PORT || "5432", 10),
+      user: process.env.DB_USER || "temporal",
+      password: process.env.DB_PASSWORD || "temporal",
+      database: process.env.DB_NAME || "temporal",
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 5000,

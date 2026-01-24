@@ -15,7 +15,7 @@ import {
 } from "@aesir/common";
 import type { Block, KnownBlock } from "@slack/web-api";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import type { Request, Response, Router } from "express";
+import type { Request, RequestHandler, Response, Router } from "express";
 import { Router as createRouter } from "express";
 import rateLimit from "express-rate-limit";
 import { createSlackClientFromDatabase } from "../client/factory.js";
@@ -184,7 +184,7 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
   });
 
   // Apply rate limiter to all MCP routes
-  router.use("/mcp/*", mcpRateLimiter);
+  router.use(mcpRateLimiter as unknown as RequestHandler);
 
   /**
    * List available MCP tools

@@ -9,7 +9,6 @@
  * - Generate with: openssl rand -hex 32
  */
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
-import { config } from "@aesir/common";
 
 /**
  * Error thrown when encryption key is missing or invalid
@@ -22,11 +21,11 @@ export class EncryptionKeyError extends Error {
 }
 
 /**
- * Get and validate encryption key from config
+ * Get and validate encryption key from environment
  * @throws EncryptionKeyError if key is missing or invalid
  */
 function getEncryptionKey(): Buffer {
-  const keyHex = config.database.encryptionKey;
+  const keyHex = process.env.CREDENTIAL_ENCRYPTION_KEY;
 
   if (!keyHex) {
     throw new EncryptionKeyError(

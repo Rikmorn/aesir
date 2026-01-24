@@ -37,6 +37,7 @@
     "@octokit/rest": "^22.0.1",
     "@slack/bolt": "^4.6.0",
     "@slack/web-api": "^7.13.0",
+    "dotenv-flow": "^4.1.0",
     "drizzle-orm": "^0.45.1",
     "postgres": "^3.4.7",
     "zod": "3.25.67"
