@@ -7,8 +7,8 @@ import {
   type PRReviewEvent,
 } from "./github-pr-review.js";
 
-// Mock the Temporal client module
-vi.mock("../../temporal/client.js", () => ({
+// Mock the integrations module for Temporal signals
+vi.mock("@aesir/integrations", () => ({
   sendApprovalSignal: vi.fn().mockResolvedValue(undefined),
   sendChangesRequestedSignal: vi.fn().mockResolvedValue(undefined),
 }));

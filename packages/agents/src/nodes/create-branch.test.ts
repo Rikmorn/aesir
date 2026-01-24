@@ -6,8 +6,8 @@ import type { DevWorkflowStateType } from "@aesir/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type CreateBranchConfig, createBranchNode } from "./create-branch.js";
 
-// Mock the GitHub integration module
-vi.mock("../../integrations/github/index.js", () => ({
+// Mock the integrations module directly
+vi.mock("@aesir/integrations", () => ({
   createBranch: vi.fn(),
 }));
 

@@ -6,14 +6,10 @@ import type { DevWorkflowStateType } from "@aesir/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type CommitPRConfig, createCommitPRNode } from "./commit-pr.js";
 
-// Mock the GitHub integration module
-vi.mock("../../integrations/github/index.js", () => ({
+// Mock the integrations module directly
+vi.mock("@aesir/integrations", () => ({
   createCommit: vi.fn(),
   createPullRequest: vi.fn(),
-}));
-
-// Mock the Linear integration module
-vi.mock("../../integrations/linear/index.js", () => ({
   updateIssueStatus: vi.fn(),
   emitResponse: vi.fn(),
 }));
@@ -264,7 +260,7 @@ describe("createCommitPRNode", () => {
 
     expect(mockEmitResponse).toHaveBeenCalledWith(
       mockLinearClient,
-      "ABC-123",
+      "session-test",
       "Opened PR: https://github.com/test-owner/test-repo/pull/42",
     );
   });
