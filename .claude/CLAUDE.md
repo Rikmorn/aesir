@@ -151,51 +151,78 @@ Each integration:
 
 ## Common Commands
 
-### Development
+### Local Development (Docker Compose)
 
 ```bash
-npm run dev          # Start development server (tsx watch)
-npm run build        # TypeScript compilation
-npm run typecheck    # Type check without emit
+docker compose up              # Start all services (PostgreSQL, Temporal, agents, integrations)
+docker compose up -d           # Start in background
+docker compose logs -f         # Follow all logs
+docker compose watch           # Hot reload mode (rebuilds on file changes)
+docker compose down            # Stop all services
+```
+
+### Infrastructure Only
+
+```bash
+docker compose up -d postgresql temporal temporal-ui  # Start infra without agents
+```
+
+### Integration Services
+
+```bash
+docker compose up linear-integration    # Start Linear integration only
+docker compose up github-integration    # Start GitHub integration only
+docker compose up slack-integration     # Start Slack integration only
+```
+
+### Access URLs
+
+- PostgreSQL: localhost:5432
+- Temporal gRPC: localhost:7233
+- Temporal UI: http://localhost:8080
+- Linear Integration: http://localhost:3001
+- GitHub Integration: http://localhost:3002
+- Slack Integration: http://localhost:3003
+- Dev Agent: http://localhost:3004
+
+### Development (Local)
+
+```bash
+pnpm run dev          # Start development server (tsx watch)
+pnpm run build        # TypeScript compilation
+pnpm run typecheck    # Type check without emit
 ```
 
 ### Agents
 
 ```bash
-npm run dev-agent      # Start dev agent directly
-npm run product-agent  # Start product agent directly
+pnpm run dev-agent      # Start dev agent directly
+pnpm run product-agent  # Start product agent directly
 ```
 
 ### Testing
 
 ```bash
-npm test             # Run tests with vitest
-npm run test:watch   # Watch mode
-npm run test:coverage # With coverage report
+pnpm test                 # Run all tests
+pnpm test:fast           # Skip integration tests (no Docker required)
+pnpm test:integration    # Run integration tests only (requires testcontainers)
+pnpm test:coverage       # Run with coverage report
 ```
 
 ### Code Quality
 
 ```bash
-npm run lint         # Run Biome linting
-npm run lint:fix     # Auto-fix lint issues
-npm run format       # Format with Biome
+pnpm run lint         # Run Biome linting
+pnpm run lint:fix     # Auto-fix lint issues
+pnpm run format       # Format with Biome
 ```
 
-### Infrastructure
+### Infrastructure (Legacy)
 
 ```bash
-npm run infra:up     # Start PostgreSQL + Temporal via Docker
+npm run infra:up     # Start PostgreSQL + Temporal via Docker (prefer docker compose)
 npm run infra:down   # Stop infrastructure
 npm run infra:logs   # View infrastructure logs
-```
-
-### Docker
-
-```bash
-npm run docker:build      # Build all containers
-npm run docker:up         # Start all services
-npm run docker:dev-agent  # Run dev agent in container
 ```
 
 ## Code Patterns
@@ -557,9 +584,16 @@ describe("ComponentName", () => {
 - Use `--legacy-peer-deps` due to LangChain peer dependency conflicts
 - Example: `npm install <package> --legacy-peer-deps`
 
+### Docker Watch Mode
+
+- `docker compose watch` triggers rebuilds on source changes
+- Rebuilds entire container (TypeScript compilation happens in Dockerfile)
+- For faster iteration, run services locally with `tsx watch` instead
+- Watch mode is opt-in; default `docker compose up` is stable without file watching
+
 ## v2.0 Foundation Work
 
-Current milestone is v2.0 Foundation - full architectural restructure for maintainability.
+v2.0 Foundation is complete - full architectural restructure for maintainability.
 
 ### Completed Phases
 
@@ -571,7 +605,11 @@ Current milestone is v2.0 Foundation - full architectural restructure for mainta
 - **Phase 15**: Code Quality (Result types, error handling, boundaries)
 - **Phase 16**: Linear Extraction (independent package)
 - **Phase 17**: GitHub Extraction (independent package)
-- **Phase 18**: Slack Extraction (independent package) - **Current**
+- **Phase 18**: Slack Extraction (independent package)
+- **Phase 19**: MCP Layer (Model Context Protocol for agent-integration communication)
+- **Phase 20**: Testing Pyramid (testcontainers, MSW, test factories)
+- **Phase 21**: CI/CD Pipeline (deferred to v3.0)
+- **Phase 22**: Local Dev Environment (Docker Compose, health checks, watch mode)
 
 ### Integration Extraction Pattern
 
@@ -585,10 +623,6 @@ Phases 16-18 establish the pattern for extracting integrations into independent 
 
 **Completed extractions:** Linear (Phase 16), GitHub (Phase 17), Slack (Phase 18)
 
-### Upcoming Phases
-
-- Phase 17+: See `.planning/ROADMAP.md`
-
 ### Key Achievements
 
 - pnpm monorepo structure (complete)
@@ -598,3 +632,6 @@ Phases 16-18 establish the pattern for extracting integrations into independent 
 - Linear as independent package (complete)
 - GitHub as independent package (complete)
 - Slack as independent package (complete)
+- MCP tool layer for all integrations (complete)
+- Testing infrastructure with testcontainers (complete)
+- Docker Compose local development (complete)
