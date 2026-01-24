@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 22.1 of 22 (Common Library Refactor)
-Plan: 2 of 5 in current phase
-Status: Plan 22.1-02 complete - Integrations have eager config validation
-Last activity: 2026-01-24 - Completed 22.1-02-PLAN.md (integration eager configs)
+Plan: 3 of 5 in current phase
+Status: Plan 22.1-03 complete - Agents package owns config and agent-config
+Last activity: 2026-01-24 - Completed 22.1-03-PLAN.md (agents config extraction)
 
-Progress: [####################] ~99% (104 plans complete)
+Progress: [####################] ~99% (105 plans complete)
 
 ## Milestone History
 
@@ -45,11 +45,11 @@ Progress: [####################] ~99% (104 plans complete)
 | 19-mcp-layer | 8/8 | 47 min | 5.9 min |
 | 20-testing-pyramid | 8/8 | 35 min | 4.4 min |
 | 22-local-dev-environment | 5/5 | 12 min | 2.4 min |
-| 22.1-common-library-refactor | 2/5 | 13 min | 6.5 min |
+| 22.1-common-library-refactor | 3/5 | 28 min | 9.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 22.1-02 (12 min), 22.1-01 (1 min), 22-03 (2 min), 22-04 (6 min), 22-01 (4 min)
-- Trend: Phase 22.1 in progress - 3 plans remaining
+- Last 5 plans: 22.1-03 (15 min), 22.1-02 (12 min), 22.1-01 (1 min), 22-03 (2 min), 22-04 (6 min)
+- Trend: Phase 22.1 in progress - 2 plans remaining
 
 *Updated after each plan completion*
 
@@ -354,6 +354,9 @@ Recent decisions affecting current work:
 - [22.1-02]: DB_* naming convention for database env vars across all services
 - [22.1-02]: Fix platform/observability blocking imports in Plan 22.1-02 (Rule 3 deviation)
 - [22.1-02]: Fix MCP rate limiter TypeScript errors with double cast to unknown
+- [22.1-03]: Agents package owns environment and agent configuration (not common)
+- [22.1-03]: AgentConfigSchema moved from common to agents/src/config/
+- [22.1-03]: Temporary shims in common for backward compat during migration
 
 ### Pending Todos
 
@@ -375,10 +378,10 @@ Recent decisions affecting current work:
    - old index.ts - likely obsolete, can be deleted after verification
 
 5. **Refactor @aesir/common to pure library pattern** (architecture - IN PROGRESS)
-   - Status: Plan 22.1-01 complete - config folder deleted from @aesir/common
-   - Completed: Common library no longer validates env at import time
-   - Remaining: Plans 22.1-02 through 22.1-05 to migrate config to consuming packages
-   - Progress: 1/5 plans complete in Phase 22.1
+   - Status: Plan 22.1-03 complete - agents config extracted
+   - Completed: Common (22.1-01), Integrations (22.1-02), Agents (22.1-03)
+   - Remaining: Plans 22.1-04 (Observability) and 22.1-05 (remove shims)
+   - Progress: 3/5 plans complete in Phase 22.1
 
 ### Blockers/Concerns
 
@@ -396,9 +399,9 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-01-24
-Stopped at: Completed 22.1-02-PLAN.md - Integrations have eager config validation
+Stopped at: Completed 22.1-03-PLAN.md - Agents package owns config and agent-config
 Resume file: None
-Next action: Execute Plan 22.1-03 (Agents Config Extraction)
+Next action: Execute Plan 22.1-04 (Observability Config Extraction)
 
 ---
-*Updated: 2026-01-24 - Plan 22.1-02 complete*
+*Updated: 2026-01-24 - Plan 22.1-03 complete*
