@@ -103,11 +103,11 @@ services:
         restart: true
     environment:
       # Database connection
-      - DATABASE_HOST=postgresql
-      - DATABASE_PORT=5432
-      - DATABASE_USER=temporal
-      - DATABASE_PASSWORD=temporal
-      - DATABASE_NAME=temporal
+      - DB_HOST=postgresql
+      - DB_PORT=5432
+      - DB_USER=temporal
+      - DB_PASSWORD=temporal
+      - DB_NAME=temporal
       - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
       # Linear configuration
       - LINEAR_WEBHOOK_SECRET=${LINEAR_WEBHOOK_SECRET}
@@ -148,11 +148,11 @@ services:
         restart: true
     environment:
       # Database connection
-      - DATABASE_HOST=postgresql
-      - DATABASE_PORT=5432
-      - DATABASE_USER=temporal
-      - DATABASE_PASSWORD=temporal
-      - DATABASE_NAME=temporal
+      - DB_HOST=postgresql
+      - DB_PORT=5432
+      - DB_USER=temporal
+      - DB_PASSWORD=temporal
+      - DB_NAME=temporal
       - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
       # GitHub configuration
       - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
@@ -193,11 +193,11 @@ services:
         restart: true
     environment:
       # Database connection
-      - DATABASE_HOST=postgresql
-      - DATABASE_PORT=5432
-      - DATABASE_USER=temporal
-      - DATABASE_PASSWORD=temporal
-      - DATABASE_NAME=temporal
+      - DB_HOST=postgresql
+      - DB_PORT=5432
+      - DB_USER=temporal
+      - DB_PASSWORD=temporal
+      - DB_NAME=temporal
       - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
       # Slack configuration
       - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}
