@@ -117,6 +117,14 @@ services:
     networks:
       - aesir-network
     restart: unless-stopped
+    develop:
+      watch:
+        - action: rebuild
+          path: ./packages/integrations/linear/src
+        - action: rebuild
+          path: ./packages/integrations/linear/package.json
+        - action: rebuild
+          path: ./packages/common/src
 
   # GitHub Integration - handles GitHub webhooks and MCP tools
   github-integration:
@@ -154,6 +162,14 @@ services:
     networks:
       - aesir-network
     restart: unless-stopped
+    develop:
+      watch:
+        - action: rebuild
+          path: ./packages/integrations/github/src
+        - action: rebuild
+          path: ./packages/integrations/github/package.json
+        - action: rebuild
+          path: ./packages/common/src
 
   # Slack Integration - handles Slack events and MCP tools
   slack-integration:
@@ -193,6 +209,14 @@ services:
     networks:
       - aesir-network
     restart: unless-stopped
+    develop:
+      watch:
+        - action: rebuild
+          path: ./packages/integrations/slack/src
+        - action: rebuild
+          path: ./packages/integrations/slack/package.json
+        - action: rebuild
+          path: ./packages/common/src
 
   # Dev Agent - handles Linear task automation
   dev-agent:
@@ -243,6 +267,16 @@ services:
     networks:
       - aesir-network
     restart: unless-stopped
+    develop:
+      watch:
+        - action: rebuild
+          path: ./packages/agents/src
+        - action: rebuild
+          path: ./packages/agents/package.json
+        - action: rebuild
+          path: ./packages/common/src
+        - action: rebuild
+          path: ./packages/platform/src
 
   # Product Agent - handles Slack conversations
   product-agent:
@@ -279,6 +313,16 @@ services:
     networks:
       - aesir-network
     restart: unless-stopped
+    develop:
+      watch:
+        - action: rebuild
+          path: ./packages/agents/src
+        - action: rebuild
+          path: ./packages/agents/package.json
+        - action: rebuild
+          path: ./packages/common/src
+        - action: rebuild
+          path: ./packages/platform/src
 
   # Cloudflare Tunnel - exposes webhooks to external services (Linear, GitHub)
   # Requires CLOUDFLARE_TUNNEL_TOKEN from Zero Trust dashboard
