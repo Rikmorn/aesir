@@ -107,14 +107,46 @@ async function bootstrap(): Promise<void> {
   registerHandlers(app, handlerOptions);
 
   // Handle graceful shutdown
-  const shutdown = async (_signal: string): Promise<void> => {
+  let isShuttingDown = false;
+
+  const shutdown = async (signal: string): Promise<void> => {
+    if (isShuttingDown) {
+      logger.warn({ signal }, "Shutdown already in progress, ignoring");
+      return;
+    }
+    isShuttingDown = true;
+
+    logger.info({ signal }, "Graceful shutdown initiated");
+
+    // 1. Stop Bolt app (disconnects from Slack Socket Mode)
+    logger.info("Stopping Bolt app...");
     await app.stop();
-    logger.info({}, "Bolt app stopped gracefully");
+    logger.info("Bolt app stopped");
+
+    // 2. Close PostgresSaver checkpointer connection
+    // Note: PostgresSaver creates its own pg.Pool from the connection string.
+    // The pool auto-closes when the process exits, but explicit cleanup is cleaner.
+    // If checkpointer exposes a close/end method in future versions, use it here.
+    // For now, the pool will be cleaned up by Node.js on exit.
+    logger.info("Checkpointer pool will be cleaned up on process exit");
+
+    logger.info("Graceful shutdown complete");
     process.exit(0);
   };
 
   process.on("SIGINT", () => shutdown("SIGINT"));
   process.on("SIGTERM", () => shutdown("SIGTERM"));
+
+  // Force shutdown after 30 seconds if graceful shutdown hangs
+  const forceShutdownTimeout = setTimeout(() => {
+    if (isShuttingDown) {
+      logger.error(
+        "Forced shutdown after 30s timeout - graceful shutdown incomplete",
+      );
+      process.exit(1);
+    }
+  }, 30_000);
+  forceShutdownTimeout.unref(); // Don't keep process alive just for this timer
 
   // Start the app
   await app.start();
