@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 22 of 22 (Local Dev Environment) - In Progress
-Plan: 4 of 4 in current phase
-Status: Plan 22-04 complete
-Last activity: 2026-01-24 - Completed 22-04-PLAN.md (Enhanced agent shutdown logging)
+Plan: 5 of 5 in current phase
+Status: Plan 22-03 complete (22-01, 22-02, 22-03, 22-04 complete)
+Last activity: 2026-01-24 - Completed 22-03-PLAN.md (Docker Compose watch configuration)
 
-Progress: [####################] ~99% (101 plans complete)
+Progress: [####################] ~99% (102 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [####################] ~99% (101 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 101 (v2.0)
+- Total plans completed: 102 (v2.0)
 - Average duration: ~5.3 min
-- Total execution time: ~541 min
+- Total execution time: ~543 min
 
 **By Phase:**
 
@@ -44,11 +44,11 @@ Progress: [####################] ~99% (101 plans complete)
 | 18-slack-extraction | 12/12 | 35 min | 3 min |
 | 19-mcp-layer | 8/8 | 47 min | 5.9 min |
 | 20-testing-pyramid | 8/8 | 35 min | 4.4 min |
-| 22-local-dev-environment | 4/4 | 10 min | 2.5 min |
+| 22-local-dev-environment | 5/5 | 12 min | 2.4 min |
 
 **Recent Trend:**
-- Last 5 plans: 22-04 (6 min), 22-01 (4 min), 20-08 (3 min), 20-07 (4 min), 20-06 (6 min)
-- Trend: Phase 22 complete - local development environment infrastructure delivered
+- Last 5 plans: 22-03 (2 min), 22-04 (6 min), 22-01 (4 min), 20-08 (3 min), 20-07 (4 min)
+- Trend: Phase 22 in progress - 22-05 remaining
 
 *Updated after each plan completion*
 
@@ -343,6 +343,9 @@ Recent decisions affecting current work:
 - [22-04]: Signal parameter logged for debugging which signal triggered shutdown
 - [22-02]: Task 1 pre-completed in 22-01 (integration services in docker-compose.yml)
 - [22-02]: Port convention: Linear=3001, GitHub=3002, Slack=3003, dev-agent=3004
+- [22-03]: Rebuild action over sync since services run from compiled dist/
+- [22-03]: Watch common/src for integrations, common+platform/src for agents
+- [22-03]: Watch mode is opt-in via docker compose watch command
 
 ### Pending Todos
 
@@ -370,9 +373,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-24
-Stopped at: Completed 22-04-PLAN.md (Enhanced agent shutdown logging)
+Stopped at: Completed 22-03-PLAN.md (Docker Compose watch configuration)
 Resume file: None
-Next action: Phase 22 complete - v2.0 Foundation milestone complete
+Next action: Plan 22-05 or Phase 22 completion
 
 ---
-*Updated: 2026-01-24 after Plan 22-04 completion*
+*Updated: 2026-01-24 after Plan 22-03 completion*
