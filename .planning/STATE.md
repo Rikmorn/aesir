@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 
 ## Current Position
 
-Phase: 22.1 of 22 (Common Library Refactor)
-Plan: 4 of 5 in current phase
-Status: Plan 22.1-04 complete - Platform/observability verified, Docker Compose aligned with DB_* naming
-Last activity: 2026-01-24 - Completed 22.1-04-PLAN.md (platform/observability config fixes and docker alignment)
+Phase: 22 of 22 (Local Dev Environment - resuming)
+Plan: 5 of 5 in Phase 22 (22-05 remaining)
+Status: Phase 22.1 complete - @aesir/common refactored to pure library pattern
+Last activity: 2026-01-24 - Completed Phase 22.1 (Common Library Refactor)
 
-Progress: [####################] ~99% (106 plans complete)
+Progress: [####################] ~99% (111 plans complete)
 
 ## Milestone History
 
@@ -45,11 +45,11 @@ Progress: [####################] ~99% (106 plans complete)
 | 19-mcp-layer | 8/8 | 47 min | 5.9 min |
 | 20-testing-pyramid | 8/8 | 35 min | 4.4 min |
 | 22-local-dev-environment | 5/5 | 12 min | 2.4 min |
-| 22.1-common-library-refactor | 4/5 | 30 min | 7.5 min |
+| 22.1-common-library-refactor | 5/5 | 35 min | 7 min |
 
 **Recent Trend:**
-- Last 5 plans: 22.1-04 (2 min), 22.1-03 (15 min), 22.1-02 (12 min), 22.1-01 (1 min), 22-03 (2 min)
-- Trend: Phase 22.1 in progress - 1 plan remaining
+- Last 5 plans: 22.1-05 (5 min), 22.1-04 (2 min), 22.1-03 (15 min), 22.1-02 (12 min), 22.1-01 (1 min)
+- Trend: Phase 22.1 complete - returning to Phase 22
 
 *Updated after each plan completion*
 
@@ -359,6 +359,7 @@ Recent decisions affecting current work:
 - [22.1-03]: Temporary shims in common for backward compat during migration
 - [22.1-04]: Docker Compose uses DB_* env vars consistently for all services
 - [22.1-04]: Platform/observability config imports fixed in Plan 22.1-02 (pre-completed)
+- [22.1-05]: Docker container failures for missing credentials are expected fail-fast behavior (not bugs)
 
 ### Pending Todos
 
@@ -379,15 +380,14 @@ Recent decisions affecting current work:
    - phase-1.test.ts - may need to move to agents integration tests
    - old index.ts - likely obsolete, can be deleted after verification
 
-5. **Refactor @aesir/common to pure library pattern** (architecture - IN PROGRESS)
-   - Status: Plan 22.1-04 complete - platform/observability verified, Docker aligned
-   - Completed: Common (22.1-01), Integrations (22.1-02), Agents (22.1-03), Platform/Observability (22.1-04)
-   - Remaining: Plan 22.1-05 (remove temporary shims from common)
-   - Progress: 4/5 plans complete in Phase 22.1
+5. ~~**Refactor @aesir/common to pure library pattern** (architecture - COMPLETE)~~
+   - Status: Phase 22.1 complete (5/5 plans)
+   - @aesir/common is now a pure library with no env validation at import time
+   - All services own their own configuration with eager validation
+   - Docker containers start correctly when credentials are provided
 
 ### Blockers/Concerns
 
-- Plan 22.1-05 must verify all packages build after removing shims from @aesir/common
 - Legacy @aesir/integrations package has pre-existing TypeScript errors
 
 ## Roadmap Evolution
@@ -395,14 +395,15 @@ Recent decisions affecting current work:
 - Phase 22.1 inserted after Phase 22: Refactor @aesir/common to pure library pattern (URGENT)
   - Reason: @aesir/common validates env vars at import time, blocking Docker container startup
   - Inserted: 2026-01-24
-  - Status: Plan 22.1-04 complete (4/5)
+  - Status: Complete (5/5 plans)
+  - Completed: 2026-01-24
 
 ## Session Continuity
 
 Last session: 2026-01-24
-Stopped at: Completed 22.1-04-PLAN.md - Platform/observability verified, Docker Compose aligned
+Stopped at: Completed Phase 22.1 - Common Library Refactor
 Resume file: None
-Next action: Execute Plan 22.1-05 (Remove temporary shims from @aesir/common)
+Next action: Execute Plan 22-05 (AI context files, final verification checkpoint)
 
 ---
-*Updated: 2026-01-24 - Plan 22.1-04 complete*
+*Updated: 2026-01-24 - Phase 22.1 complete*

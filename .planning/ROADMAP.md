@@ -310,11 +310,11 @@ Plans:
 **Depends on:** Phase 22 (plans 22-01 through 22-04)
 **Requirements:** Unblocks LDEV-01 (Docker Compose local dev)
 **Success Criteria** (what must be TRUE):
-  1. Importing @aesir/common does NOT trigger environment variable validation
-  2. Logger, errors, types, and utilities accept dependencies as arguments (no global config)
-  3. Services (integrations, agents) own their env config and pass values to common utilities
-  4. Docker containers start successfully without cascading env validation failures
-**Plans:** 4 plans
+  1. Importing @aesir/common does NOT trigger environment variable validation ✅
+  2. Logger, errors, types, and utilities accept dependencies as arguments (no global config) ✅
+  3. Services (integrations, agents) own their env config and pass values to common utilities ✅
+  4. Docker containers start successfully without cascading env validation failures ✅
+**Plans:** 5 plans
 
 **Context:**
 - Problem discovered during Phase 22 execution: @aesir/common validates env vars at import time
@@ -323,17 +323,18 @@ Plans:
 - Solution: @aesir/common should be a pure library that accepts all dependencies as arguments
 
 Plans:
-- [ ] 22.1-01-PLAN.md — Delete config folder, rename db to utils, refactor logger factory
-- [ ] 22.1-02-PLAN.md — Migrate integration configs to eager validation pattern
-- [ ] 22.1-03-PLAN.md — Create agents config and move agent-config from common
-- [ ] 22.1-04-PLAN.md — Fix consumer imports, update tests, align Docker env vars
+- [x] 22.1-01-PLAN.md — Delete config folder, rename db to utils, refactor logger factory
+- [x] 22.1-02-PLAN.md — Migrate integration configs to eager validation pattern
+- [x] 22.1-03-PLAN.md — Create agents config and move agent-config from common
+- [x] 22.1-04-PLAN.md — Fix consumer imports, update tests, align Docker env vars
+- [x] 22.1-05-PLAN.md — Test verification and Docker checkpoint
 
 ## Progress
 
 **Execution Order:**
 Phases execute in numeric order: 10 -> 11 -> 12 -> ... -> 22
 Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
-Current: 22 (blocked) -> 22.1 -> 22-05 (completion)
+Current: 22.1 complete -> 22-05 (completion)
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -349,8 +350,8 @@ Current: 22 (blocked) -> 22.1 -> 22-05 (completion)
 | 19. MCP Layer | v2.0 | 8/8 | Complete | 2026-01-23 |
 | 20. Testing Pyramid | v2.0 | 8/8 | Complete | 2026-01-23 |
 | 21. CI/CD Pipeline | v3.0 | - | Deferred | - |
-| 22. Local Dev Environment | v2.0 | 4/5 | Blocked | - |
-| 22.1 Common Library Refactor | v2.0 | 0/4 | Planned | - |
+| 22. Local Dev Environment | v2.0 | 4/5 | In Progress | - |
+| 22.1 Common Library Refactor | v2.0 | 5/5 | Complete | 2026-01-24 |
 
 ---
 *Created: 2026-01-19*
