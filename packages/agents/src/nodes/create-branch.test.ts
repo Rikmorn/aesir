@@ -6,138 +6,160 @@ import type { DevWorkflowStateType } from "@aesir/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type CreateBranchConfig, createBranchNode } from "./create-branch.js";
 
-// Mock the integrations module directly
-vi.mock("@aesir/integrations", () => ({
-  createBranch: vi.fn(),
+// Create mock fetch using vi.hoisted
+const { mockFetch } = vi.hoisted(() => {
+	return {
+		mockFetch: vi.fn(),
+	};
+});
+
+// Mock fetch-retry-ts module
+vi.mock("fetch-retry-ts", () => ({
+	fetchBuilder: () => mockFetch,
 }));
 
-import { createBranch } from "@aesir/integrations";
-
-const mockCreateBranch = vi.mocked(createBranch);
+// Mock @aesir/common to prevent environment validation
+vi.mock("@aesir/common", async () => {
+	const actual = (await vi.importActual("@aesir/common")) as object;
+	return {
+		...actual,
+		generateCorrelationId: () => "test-corr-id",
+	};
+});
 
 describe("createBranchNode", () => {
-  // Mock Octokit
-  const mockOctokit = {} as Parameters<typeof createBranchNode>[0];
+	// Config for tests
+	const config: CreateBranchConfig = {
+		owner: "test-owner",
+		repo: "test-repo",
+		baseBranch: "main",
+	};
 
-  // Config for tests
-  const config: CreateBranchConfig = {
-    owner: "test-owner",
-    repo: "test-repo",
-    baseBranch: "main",
-  };
+	// Base state for tests
+	const baseState: DevWorkflowStateType = {
+		taskId: "ABC-123",
+		sessionId: "session-test",
+		taskDescription: "Test task description",
+		repositoryUrl: null,
+		branchName: null,
+		files: [],
+		testResult: null,
+		testAttempts: 0,
+		status: "coding",
+		error: null,
+		prNumber: null,
+	};
 
-  // Base state for tests
-  const baseState: DevWorkflowStateType = {
-    taskId: "ABC-123",
-    sessionId: "session-test",
-    taskDescription: "Test task description",
-    repositoryUrl: null,
-    branchName: null,
-    files: [],
-    testResult: null,
-    testAttempts: 0,
-    status: "coding",
-    error: null,
-    prNumber: null,
-  };
+	beforeEach(() => {
+		mockFetch.mockClear();
+	});
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+	it("should call create_branch MCP tool with correct params", async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => ({ data: {} }),
+		} as Response);
 
-  it("should create branch with correct name pattern", async () => {
-    mockCreateBranch.mockResolvedValue({
-      name: "dev-agent/ABC-123",
-      sha: "abc123",
-      protected: false,
-    });
+		const createBranchNodeFn = createBranchNode(config);
+		await createBranchNodeFn(baseState);
 
-    const createBranchNodeFn = createBranchNode(mockOctokit, config);
-    await createBranchNodeFn(baseState);
+		expect(mockFetch).toHaveBeenCalledWith(
+			expect.stringContaining("/mcp/tools/create_branch"),
+			expect.objectContaining({
+				method: "POST",
+				headers: expect.objectContaining({
+					"X-Agent-ID": "dev-agent",
+					"X-Correlation-ID": "test-corr-id",
+				}),
+				body: JSON.stringify({
+					owner: "test-owner",
+					repo: "test-repo",
+					branchName: "dev-agent/ABC-123",
+					baseBranch: "main",
+				}),
+			}),
+		);
+	});
 
-    expect(mockCreateBranch).toHaveBeenCalledWith(mockOctokit, {
-      owner: "test-owner",
-      repo: "test-repo",
-      branchName: "dev-agent/ABC-123",
-      baseBranch: "main",
-    });
-  });
+	it("should return branch name in state update", async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => ({ data: {} }),
+		} as Response);
 
-  it("should return branch name in state update", async () => {
-    mockCreateBranch.mockResolvedValue({
-      name: "dev-agent/ABC-123",
-      sha: "abc123",
-      protected: false,
-    });
+		const createBranchNodeFn = createBranchNode(config);
+		const result = await createBranchNodeFn(baseState);
 
-    const createBranchNodeFn = createBranchNode(mockOctokit, config);
-    const result = await createBranchNodeFn(baseState);
+		expect(result).toEqual({
+			branchName: "dev-agent/ABC-123",
+		});
+	});
 
-    expect(result).toEqual({
-      branchName: "dev-agent/ABC-123",
-    });
-  });
+	it("should use configured base branch", async () => {
+		const customConfig: CreateBranchConfig = {
+			owner: "test-owner",
+			repo: "test-repo",
+			baseBranch: "develop",
+		};
 
-  it("should use configured base branch", async () => {
-    const customConfig: CreateBranchConfig = {
-      owner: "test-owner",
-      repo: "test-repo",
-      baseBranch: "develop",
-    };
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => ({ data: {} }),
+		} as Response);
 
-    mockCreateBranch.mockResolvedValue({
-      name: "dev-agent/ABC-123",
-      sha: "abc123",
-      protected: false,
-    });
+		const createBranchNodeFn = createBranchNode(customConfig);
+		await createBranchNodeFn(baseState);
 
-    const createBranchNodeFn = createBranchNode(mockOctokit, customConfig);
-    await createBranchNodeFn(baseState);
+		expect(mockFetch).toHaveBeenCalledWith(
+			expect.any(String),
+			expect.objectContaining({
+				body: JSON.stringify({
+					owner: "test-owner",
+					repo: "test-repo",
+					branchName: "dev-agent/ABC-123",
+					baseBranch: "develop",
+				}),
+			}),
+		);
+	});
 
-    expect(mockCreateBranch).toHaveBeenCalledWith(mockOctokit, {
-      owner: "test-owner",
-      repo: "test-repo",
-      branchName: "dev-agent/ABC-123",
-      baseBranch: "develop",
-    });
-  });
+	it("should handle different task IDs", async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => ({ data: {} }),
+		} as Response);
 
-  it("should handle different task IDs", async () => {
-    mockCreateBranch.mockResolvedValue({
-      name: "dev-agent/TASK-999",
-      sha: "def456",
-      protected: false,
-    });
+		const stateWithDifferentTask = {
+			...baseState,
+			taskId: "TASK-999",
+		};
 
-    const stateWithDifferentTask = {
-      ...baseState,
-      taskId: "TASK-999",
-      sessionId: "session-test",
-    };
+		const createBranchNodeFn = createBranchNode(config);
+		const result = await createBranchNodeFn(stateWithDifferentTask);
 
-    const createBranchNodeFn = createBranchNode(mockOctokit, config);
-    const result = await createBranchNodeFn(stateWithDifferentTask);
+		expect(result).toEqual({
+			branchName: "dev-agent/TASK-999",
+		});
+	});
 
-    expect(result).toEqual({
-      branchName: "dev-agent/TASK-999",
-    });
-  });
+	it("should propagate MCP errors", async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: false,
+			status: 422,
+			json: async () => ({
+				error: "Branch already exists",
+				isError: true,
+			}),
+		} as unknown as Response);
 
-  it("should propagate createBranch errors", async () => {
-    mockCreateBranch.mockRejectedValue(new Error("Branch already exists"));
+		const createBranchNodeFn = createBranchNode(config);
+		await expect(createBranchNodeFn(baseState)).rejects.toThrow();
+	});
 
-    const createBranchNodeFn = createBranchNode(mockOctokit, config);
-    await expect(createBranchNodeFn(baseState)).rejects.toThrow(
-      "Branch already exists",
-    );
-  });
+	it("should propagate network errors", async () => {
+		mockFetch.mockRejectedValueOnce(new Error("Network error"));
 
-  it("should propagate network errors", async () => {
-    mockCreateBranch.mockRejectedValue(new Error("Network error"));
-
-    const createBranchNodeFn = createBranchNode(mockOctokit, config);
-    await expect(createBranchNodeFn(baseState)).rejects.toThrow(
-      "Network error",
-    );
-  });
+		const createBranchNodeFn = createBranchNode(config);
+		await expect(createBranchNodeFn(baseState)).rejects.toThrow("Network error");
+	});
 });

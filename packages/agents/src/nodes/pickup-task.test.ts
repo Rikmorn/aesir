@@ -6,147 +6,187 @@ import type { DevWorkflowStateType } from "@aesir/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createPickupTaskNode } from "./pickup-task.js";
 
-// Mock the Linear integration module
-vi.mock("@aesir/integration-linear", () => ({
-  readIssue: vi.fn(),
-  updateIssueStatus: vi.fn(),
-  emitThought: vi.fn(),
+// Create mock fetch using vi.hoisted
+const { mockFetch } = vi.hoisted(() => {
+	return {
+		mockFetch: vi.fn(),
+	};
+});
+
+// Mock fetch-retry-ts module
+vi.mock("fetch-retry-ts", () => ({
+	fetchBuilder: () => mockFetch,
 }));
 
-import {
-  emitThought,
-  readIssue,
-  updateIssueStatus,
-} from "@aesir/integration-linear";
-
-const mockReadIssue = vi.mocked(readIssue);
-const mockUpdateIssueStatus = vi.mocked(updateIssueStatus);
-const mockEmitThought = vi.mocked(emitThought);
+// Mock @aesir/common to prevent environment validation
+vi.mock("@aesir/common", async () => {
+	const actual = (await vi.importActual("@aesir/common")) as object;
+	return {
+		...actual,
+		generateCorrelationId: () => "test-corr-id",
+	};
+});
 
 describe("createPickupTaskNode", () => {
-  // Mock LinearClient
-  const mockLinearClient = {} as Parameters<typeof createPickupTaskNode>[0];
+	// Base state for tests
+	const baseState: DevWorkflowStateType = {
+		taskId: "ABC-123",
+		sessionId: "session-test",
+		taskDescription: "",
+		repositoryUrl: null,
+		branchName: null,
+		files: [],
+		testResult: null,
+		testAttempts: 0,
+		status: "pending",
+		error: null,
+		prNumber: null,
+	};
 
-  // Base state for tests
-  const baseState: DevWorkflowStateType = {
-    taskId: "ABC-123",
-    sessionId: "session-test",
-    taskDescription: "",
-    repositoryUrl: null,
-    branchName: null,
-    files: [],
-    testResult: null,
-    testAttempts: 0,
-    status: "pending",
-    error: null,
-    prNumber: null,
-  };
+	beforeEach(() => {
+		mockFetch.mockClear();
+	});
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+	it("should call get_issue MCP tool with correct params", async () => {
+		mockFetch
+			// First call: get_issue
+			.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({
+					data: { title: "Test issue title", description: "Test description" },
+				}),
+			} as Response)
+			// Second call: update_issue_status
+			.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ data: {} }),
+			} as Response);
 
-  it("should read issue from Linear", async () => {
-    mockReadIssue.mockResolvedValue({
-      title: "Test issue title",
-      description: "Test description",
-    } as Awaited<ReturnType<typeof readIssue>>);
-    mockUpdateIssueStatus.mockResolvedValue(undefined);
-    mockEmitThought.mockResolvedValue(undefined);
+		const pickupTask = createPickupTaskNode();
+		await pickupTask(baseState);
 
-    const pickupTask = createPickupTaskNode(mockLinearClient);
-    await pickupTask(baseState);
+		// Verify first call is to get_issue
+		expect(mockFetch).toHaveBeenNthCalledWith(
+			1,
+			expect.stringContaining("/mcp/tools/get_issue"),
+			expect.objectContaining({
+				method: "POST",
+				headers: expect.objectContaining({
+					"X-Agent-ID": "dev-agent",
+					"X-Correlation-ID": "test-corr-id",
+				}),
+				body: JSON.stringify({ issueId: "ABC-123" }),
+			}),
+		);
+	});
 
-    expect(mockReadIssue).toHaveBeenCalledWith(mockLinearClient, "ABC-123");
-  });
+	it("should call update_issue_status MCP tool with correct params", async () => {
+		mockFetch
+			.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({
+					data: { title: "Test issue title", description: "Test description" },
+				}),
+			} as Response)
+			.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ data: {} }),
+			} as Response);
 
-  it("should update status to In Progress", async () => {
-    mockReadIssue.mockResolvedValue({
-      title: "Test issue title",
-      description: "Test description",
-    } as Awaited<ReturnType<typeof readIssue>>);
-    mockUpdateIssueStatus.mockResolvedValue(undefined);
-    mockEmitThought.mockResolvedValue(undefined);
+		const pickupTask = createPickupTaskNode();
+		await pickupTask(baseState);
 
-    const pickupTask = createPickupTaskNode(mockLinearClient);
-    await pickupTask(baseState);
+		// Verify second call is to update_issue_status
+		expect(mockFetch).toHaveBeenNthCalledWith(
+			2,
+			expect.stringContaining("/mcp/tools/update_issue_status"),
+			expect.objectContaining({
+				method: "POST",
+				headers: expect.objectContaining({
+					"X-Agent-ID": "dev-agent",
+					"X-Correlation-ID": "test-corr-id",
+				}),
+				body: JSON.stringify({ issueId: "ABC-123", statusName: "In Progress" }),
+			}),
+		);
+	});
 
-    expect(mockUpdateIssueStatus).toHaveBeenCalledWith(
-      mockLinearClient,
-      "ABC-123",
-      "In Progress",
-    );
-  });
+	it("should return task description and coding status", async () => {
+		mockFetch
+			.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({
+					data: { title: "Test issue title", description: "Test description" },
+				}),
+			} as Response)
+			.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ data: {} }),
+			} as Response);
 
-  it("should emit thought activity", async () => {
-    mockReadIssue.mockResolvedValue({
-      title: "Test issue title",
-      description: "Test description",
-    } as Awaited<ReturnType<typeof readIssue>>);
-    mockUpdateIssueStatus.mockResolvedValue(undefined);
-    mockEmitThought.mockResolvedValue(undefined);
+		const pickupTask = createPickupTaskNode();
+		const result = await pickupTask(baseState);
 
-    const pickupTask = createPickupTaskNode(mockLinearClient);
-    await pickupTask(baseState);
+		expect(result).toEqual({
+			taskDescription: "Test issue title\n\nTest description",
+			status: "coding",
+		});
+	});
 
-    expect(mockEmitThought).toHaveBeenCalledWith(
-      mockLinearClient,
-      "session-test",
-      "Starting work on: Test issue title",
-    );
-  });
+	it("should handle issue with no description", async () => {
+		mockFetch
+			.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({
+					data: { title: "Title only issue" },
+				}),
+			} as Response)
+			.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ data: {} }),
+			} as Response);
 
-  it("should return task description and coding status", async () => {
-    mockReadIssue.mockResolvedValue({
-      title: "Test issue title",
-      description: "Test description",
-    } as Awaited<ReturnType<typeof readIssue>>);
-    mockUpdateIssueStatus.mockResolvedValue(undefined);
-    mockEmitThought.mockResolvedValue(undefined);
+		const pickupTask = createPickupTaskNode();
+		const result = await pickupTask(baseState);
 
-    const pickupTask = createPickupTaskNode(mockLinearClient);
-    const result = await pickupTask(baseState);
+		expect(result).toEqual({
+			taskDescription: "Title only issue\n\n",
+			status: "coding",
+		});
+	});
 
-    expect(result).toEqual({
-      taskDescription: "Test issue title\n\nTest description",
-      status: "coding",
-    });
-  });
+	it("should propagate MCP errors from get_issue", async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: false,
+			status: 404,
+			json: async () => ({
+				error: "Issue not found: ABC-123",
+				isError: true,
+			}),
+		} as unknown as Response);
 
-  it("should handle issue with no description", async () => {
-    mockReadIssue.mockResolvedValue({
-      title: "Title only issue",
-      description: undefined,
-    } as unknown as Awaited<ReturnType<typeof readIssue>>);
-    mockUpdateIssueStatus.mockResolvedValue(undefined);
-    mockEmitThought.mockResolvedValue(undefined);
+		const pickupTask = createPickupTaskNode();
+		await expect(pickupTask(baseState)).rejects.toThrow();
+	});
 
-    const pickupTask = createPickupTaskNode(mockLinearClient);
-    const result = await pickupTask(baseState);
+	it("should propagate MCP errors from update_issue_status", async () => {
+		mockFetch
+			.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({
+					data: { title: "Test issue", description: "Test description" },
+				}),
+			} as Response)
+			.mockResolvedValueOnce({
+				ok: false,
+				status: 500,
+				json: async () => ({
+					error: "Status update failed",
+					isError: true,
+				}),
+			} as unknown as Response);
 
-    expect(result).toEqual({
-      taskDescription: "Title only issue\n\n",
-      status: "coding",
-    });
-  });
-
-  it("should propagate readIssue errors", async () => {
-    mockReadIssue.mockRejectedValue(new Error("Issue not found: ABC-123"));
-
-    const pickupTask = createPickupTaskNode(mockLinearClient);
-    await expect(pickupTask(baseState)).rejects.toThrow(
-      "Issue not found: ABC-123",
-    );
-  });
-
-  it("should propagate updateIssueStatus errors", async () => {
-    mockReadIssue.mockResolvedValue({
-      title: "Test issue",
-      description: "Test description",
-    } as Awaited<ReturnType<typeof readIssue>>);
-    mockUpdateIssueStatus.mockRejectedValue(new Error("Status update failed"));
-
-    const pickupTask = createPickupTaskNode(mockLinearClient);
-    await expect(pickupTask(baseState)).rejects.toThrow("Status update failed");
-  });
+		const pickupTask = createPickupTaskNode();
+		await expect(pickupTask(baseState)).rejects.toThrow();
+	});
 });
