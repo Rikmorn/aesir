@@ -1,6 +1,7 @@
 # Aesir Development Infrastructure
 #
 # Complete containerized setup including agents, integrations, and infrastructure.
+# Nginx reverse proxy provides a single entry point for all services.
 #
 # Basic Usage:
 #   docker compose up -d                    # Start all services in background
@@ -18,8 +19,16 @@
 #
 # Tunnel (Cloudflare):
 #   docker compose --profile tunnel up      # Start with webhook tunnel
+#   Point tunnel to nginx:80 for unified routing
 #
-# Access:
+# Access (via nginx proxy on port 80):
+#   - http://localhost/linear/*   → Linear integration (webhooks, OAuth, MCP)
+#   - http://localhost/github/*   → GitHub integration (webhooks, OAuth, MCP)
+#   - http://localhost/slack/*    → Slack integration (events, OAuth, MCP)
+#   - http://localhost/agent/*    → Dev agent
+#   - http://localhost/health     → Nginx health check
+#
+# Direct Access (bypass nginx):
 #   - PostgreSQL: localhost:5432
 #   - Temporal gRPC: localhost:7233
 #   - Temporal UI: http://localhost:8080
@@ -28,10 +37,15 @@
 #   - Slack Integration: http://localhost:3003
 #   - Dev Agent: http://localhost:3004
 #
-# OAuth (for re-authenticating credentials):
-#   - Linear: http://localhost:3001/oauth/authorize
-#   - GitHub: http://localhost:3002/oauth/github/authorize
-#   - Slack:  http://localhost:3003/oauth/authorize
+# Webhook URLs (configure in each service):
+#   - Linear:  https://<tunnel>/linear/webhook
+#   - GitHub:  https://<tunnel>/github/webhooks/github
+#   - Slack:   https://<tunnel>/slack/events
+#
+# OAuth URLs:
+#   - Linear: http://localhost/linear/oauth/authorize
+#   - GitHub: http://localhost/github/oauth/github/authorize
+#   - Slack:  http://localhost/slack/oauth/authorize
 #
 # Environment:
 #   Copy .env.example to .env and fill in API keys.
@@ -95,6 +109,28 @@ services:
       - "8080:8080"
     networks:
       - aesir-network
+
+  # Nginx Reverse Proxy - unified entry point for all services
+  # Routes: /linear/*, /github/*, /slack/*, /agent/*
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: aesir-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - linear-integration
+      - github-integration
+      - slack-integration
+    networks:
+      - aesir-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
 
   # Linear Integration - handles Linear webhooks and MCP tools
   linear-integration:
@@ -344,7 +380,8 @@ services:
         - action: rebuild
           path: ./packages/platform/src
 
-  # Cloudflare Tunnel - exposes webhooks to external services (Linear, GitHub)
+  # Cloudflare Tunnel - exposes services to external webhooks (Linear, GitHub, Slack)
+  # Configure tunnel to point to nginx:80 for unified routing
   # Requires CLOUDFLARE_TUNNEL_TOKEN from Zero Trust dashboard
   cloudflared:
     image: cloudflare/cloudflared:2025.2.0
@@ -358,8 +395,8 @@ services:
     networks:
       - aesir-network
     depends_on:
-      dev-agent:
-        condition: service_started
+      nginx:
+        condition: service_healthy
     profiles:
       - tunnel
 
