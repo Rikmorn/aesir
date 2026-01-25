@@ -31,22 +31,15 @@ const agentEnvSchema = z.object({
   // Anthropic (required)
   ANTHROPIC_API_KEY: z.string().min(1, "ANTHROPIC_API_KEY is required"),
 
-  // Slack (required for agents)
-  SLACK_BOT_TOKEN: z.string().min(1, "SLACK_BOT_TOKEN is required"),
-  SLACK_APP_TOKEN: z.string().min(1, "SLACK_APP_TOKEN is required"),
+  // Workspace configuration (passed to MCP calls)
+  LINEAR_TEAM_ID: z.string().min(1, "LINEAR_TEAM_ID is required"),
+  GITHUB_REPO: z.string().min(1, "GITHUB_REPO is required"),
   SLACK_CHANNEL_ID: z.string().min(1, "SLACK_CHANNEL_ID is required"),
 
-  // Linear (required for agents)
-  LINEAR_ACCESS_TOKEN: z.string().min(1, "LINEAR_ACCESS_TOKEN is required"),
-  LINEAR_TEAM_ID: z.string().min(1, "LINEAR_TEAM_ID is required"),
-  LINEAR_CLIENT_ID: z.string().optional(),
-  LINEAR_CLIENT_SECRET: z.string().optional(),
-  LINEAR_WEBHOOK_SECRET: z.string().optional(),
-  OAUTH_CALLBACK_URL: z.string().optional(),
-
-  // GitHub (required for agents)
-  GITHUB_TOKEN: z.string().min(1, "GITHUB_TOKEN is required"),
-  GITHUB_REPO: z.string().min(1, "GITHUB_REPO is required"),
+  // MCP service URLs (Docker network defaults)
+  LINEAR_MCP_URL: z.string().url().optional(),
+  GITHUB_MCP_URL: z.string().url().optional(),
+  SLACK_MCP_URL: z.string().url().optional(),
 
   // Database (using DB_* to match existing, with DATABASE_* as alternatives)
   DB_HOST: z.string().default("localhost"),
@@ -98,23 +91,31 @@ export const config = {
   isTest: env.NODE_ENV === "test",
 
   anthropic: { apiKey: env.ANTHROPIC_API_KEY },
-  slack: {
-    botToken: env.SLACK_BOT_TOKEN,
-    appToken: env.SLACK_APP_TOKEN,
-    channelId: env.SLACK_CHANNEL_ID,
-  },
+
+  // Workspace configuration (passed to MCP calls)
   linear: {
-    accessToken: env.LINEAR_ACCESS_TOKEN,
     teamId: env.LINEAR_TEAM_ID,
-    clientId: env.LINEAR_CLIENT_ID,
-    clientSecret: env.LINEAR_CLIENT_SECRET,
-    webhookSecret: env.LINEAR_WEBHOOK_SECRET,
-    oauthCallbackUrl: env.OAUTH_CALLBACK_URL,
   },
   github: {
-    token: env.GITHUB_TOKEN,
     repo: env.GITHUB_REPO,
   },
+  slack: {
+    channelId: env.SLACK_CHANNEL_ID,
+  },
+
+  // MCP service URLs (Docker network defaults)
+  mcp: {
+    linear: {
+      url: env.LINEAR_MCP_URL || "http://linear-integration:3001",
+    },
+    github: {
+      url: env.GITHUB_MCP_URL || "http://github-integration:3002",
+    },
+    slack: {
+      url: env.SLACK_MCP_URL || "http://slack-integration:3003",
+    },
+  },
+
   database: {
     host: env.DB_HOST,
     port: env.DB_PORT,
