@@ -45,6 +45,28 @@ Each integration is extracted to its own package for independent deployment, ver
 - Temporal workflows stored in same PostgreSQL instance
 - OAuth tokens encrypted and stored in PostgreSQL (integrations.credentials table)
 
+### Agent MCP Communication
+
+Agents communicate with integrations via MCP HTTP protocol, not direct SDK clients.
+
+**MCP Client:**
+- Located: `packages/agents/src/mcp/`
+- Function: `callMcpTool(options)` - makes HTTP POST to /mcp/tools/:name
+- Headers: X-Agent-ID (required), X-Correlation-ID (for tracing)
+- Retry: Exponential backoff on 5xx/429, fail immediately on network errors
+
+**MCP Endpoints:**
+- Linear: http://linear-integration:3001/mcp/tools/:name
+- GitHub: http://github-integration:3002/mcp/tools/:name
+- Slack: http://slack-integration:3003/mcp/tools/:name
+
+**Agent Configuration:**
+- Agents do NOT require integration tokens (LINEAR_ACCESS_TOKEN, GITHUB_TOKEN, etc.)
+- Agents only need: ANTHROPIC_API_KEY, workspace IDs (LINEAR_TEAM_ID, GITHUB_REPO)
+- MCP URLs configurable via env (defaults to Docker network names)
+
+**Note:** Temporal activities still use direct SDK clients. MCP is for LangGraph agent layer only.
+
 ## Directory Structure
 
 ```
@@ -402,6 +424,51 @@ curl -X POST http://localhost:3001/mcp/tools/get_issue \
 **Rate Limiting:**
 MCP endpoints are rate-limited to 100 requests per minute per agent (by X-Agent-ID header).
 
+### Agent Usage of MCP
+
+Agents call integration tools via the MCP client wrapper, not direct SDK imports.
+
+```typescript
+import { callMcpTool } from "@aesir/agents";
+
+// Call Linear tool
+const issue = await callMcpTool<{ title: string; status: string }>({
+  integration: "linear",
+  tool: "get_issue",
+  params: { issueId: "ABC-123" },
+  agentId: "dev-agent",
+  correlationId: taskId,
+});
+
+// Call GitHub tool
+await callMcpTool({
+  integration: "github",
+  tool: "create_branch",
+  params: {
+    owner: "my-org",
+    repo: "my-repo",
+    branch: "feature/new-auth",
+    from: "main"
+  },
+  agentId: "dev-agent",
+  correlationId: taskId,
+});
+
+// Call Slack tool
+await callMcpTool({
+  integration: "slack",
+  tool: "send_message",
+  params: {
+    channel: "C1234567890",
+    text: "PR created",
+  },
+  agentId: "dev-agent",
+  correlationId: taskId,
+});
+```
+
+**Important:** Temporal activities still use direct SDK clients. MCP is only for LangGraph agent nodes.
+
 ### Zod Validation
 
 Use Zod schemas for all external data boundaries:
@@ -578,6 +645,14 @@ describe("ComponentName", () => {
 - `@aesir/integrations` maintains re-exports for backward compatibility
 - Platform utilities imported via `@aesir/platform`
 - Shared types imported via `@aesir/common`
+
+### Agent Integration Communication
+
+- **LangGraph agent nodes**: Use `callMcpTool` from `@aesir/agents` (HTTP-based MCP protocol)
+- **Temporal activities**: Use direct SDK clients (`@linear/sdk`, `@octokit/rest`, `@slack/web-api`)
+- **Webhooks and API handlers**: Use integration packages directly (`@aesir/integration-*`)
+- Agent package keeps SDK dependencies for Temporal activities only
+- Agent nodes do NOT import SDK clients directly
 
 ### npm Install
 
