@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 23 of 27 (Event Infrastructure)
-Plan: 3 of 5 complete
+Plan: 4 of 5 complete
 Status: In progress
-Last activity: 2026-01-25 — Completed 23-03-PLAN.md (GitHub Event Normalizer)
+Last activity: 2026-01-25 — Completed 23-04-PLAN.md (Slack Event Normalizer)
 
-Progress: [██████░░░░] 60%
+Progress: [████████░░] 80%
 
 ## Milestone History
 
@@ -68,6 +68,7 @@ Key decisions that carry forward:
 - Integration-embedded dispatcher pattern: each integration dispatches its own events
 - Fire-and-forget HTTP dispatch: does not block webhook response
 - GitHub event type includes review state (review_approved, review_changes_requested, etc.) for fine-grained routing
+- Slack dispatcher routes app_mention (sync mode) and message (async mode) to product-agent
 
 ### Pending Todos
 
@@ -90,9 +91,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-25
-Stopped at: Completed 23-03-PLAN.md (GitHub Event Normalizer)
+Stopped at: Completed 23-04-PLAN.md (Slack Event Normalizer)
 Resume file: None
-Next action: Execute 23-04-PLAN.md (Slack Event Normalizer)
+Next action: Execute 23-05-PLAN.md (Agent Event Endpoint)
 
 ---
-*Updated: 2026-01-25 — Plan 23-03 complete*
+*Updated: 2026-01-25 — Plan 23-04 complete*
