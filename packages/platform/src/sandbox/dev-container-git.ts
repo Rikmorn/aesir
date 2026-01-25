@@ -262,10 +262,17 @@ export function createDevContainerGit(
     ): Promise<GitOperationResult> {
       const branchName = `feature/${issueId}`;
 
-      logger.info({ taskId, branchName, baseBranch }, "Creating feature branch");
+      logger.info(
+        { taskId, branchName, baseBranch },
+        "Creating feature branch",
+      );
 
       // Fetch latest from origin first
-      const fetchResult = await execGit(taskId, ["fetch", "origin", baseBranch]);
+      const fetchResult = await execGit(taskId, [
+        "fetch",
+        "origin",
+        baseBranch,
+      ]);
       if (!fetchResult.success) {
         logger.warn(
           { taskId, error: fetchResult.error },
@@ -299,7 +306,11 @@ export function createDevContainerGit(
     },
 
     async getCurrentBranch(taskId: string): Promise<string | null> {
-      const result = await execGit(taskId, ["rev-parse", "--abbrev-ref", "HEAD"]);
+      const result = await execGit(taskId, [
+        "rev-parse",
+        "--abbrev-ref",
+        "HEAD",
+      ]);
       if (!result.success) return null;
       return result.stdout.trim();
     },
