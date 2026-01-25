@@ -2,6 +2,8 @@
 
 // Errors
 export * from "./errors/index.js";
+// Events (normalized event schema for dispatcher)
+export * from "./events/index.js";
 // Logging
 export * from "./logging/index.js";
 // MCP (Model Context Protocol)
