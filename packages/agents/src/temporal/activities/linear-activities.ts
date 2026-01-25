@@ -3,6 +3,10 @@
  *
  * Wraps Linear operations as Temporal activities.
  * Activities receive pre-configured LinearClient from the workflow.
+ *
+ * NOTE: Uses dynamic import for @aesir/integration-linear to avoid
+ * triggering config validation at module load time. This allows agents
+ * to start without Linear credentials (MCP migration).
  */
 
 import {
@@ -10,7 +14,6 @@ import {
   type IssueStatus,
   type PinoLogger,
 } from "@aesir/common";
-import { updateIssueStatus } from "@aesir/integration-linear";
 import type { LinearClient } from "@linear/sdk";
 
 const logger: PinoLogger = createPinoLogger({
@@ -37,6 +40,8 @@ export async function updateLinearStatusActivity(
     `Updating issue ${issueId} to ${statusName}`,
   );
 
+  // Dynamic import to avoid triggering Linear config validation at module load
+  const { updateIssueStatus } = await import("@aesir/integration-linear");
   await updateIssueStatus(client, issueId, statusName);
 
   logger.info(

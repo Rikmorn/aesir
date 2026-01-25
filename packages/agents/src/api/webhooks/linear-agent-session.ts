@@ -4,6 +4,10 @@
  * Handles AgentSession webhooks from Linear to trigger the Dev Agent workflow.
  * When a task is delegated to the Dev Agent, Linear sends an AgentSession webhook
  * which this handler uses to start the prApprovalWorkflow in Temporal.
+ *
+ * NOTE: Uses dynamic import for @aesir/integration-linear to avoid
+ * triggering config validation at module load time. This allows agents
+ * to start without Linear credentials (MCP migration).
  */
 
 import {
@@ -13,14 +17,10 @@ import {
   type PinoLogger,
   ValidationError,
 } from "@aesir/common";
-import {
-  validateWebhookTimestamp,
-  verifyWebhookSignature,
-} from "@aesir/integration-linear";
-import type { WebhookIdempotencyService } from "@aesir/integrations";
-import {
-  type ApprovalWorkflowInput,
-  startApprovalWorkflow,
+// Import types only (doesn't trigger runtime validation)
+import type {
+  ApprovalWorkflowInput,
+  WebhookIdempotencyService,
 } from "@aesir/integrations";
 import type { ExecutionTracker } from "@aesir/observability";
 
@@ -112,6 +112,9 @@ export async function handleAgentSessionWebhook(
       completionStatus: config.completionStatus,
     };
 
+    // Dynamic import to avoid triggering config validation at module load
+    const { startApprovalWorkflow } = await import("@aesir/integrations");
+
     // Start the approval workflow
     await startApprovalWorkflow(workflowId, workflowInput);
 
@@ -179,6 +182,9 @@ export async function linearWebhookHandler(
   const logger = createChildLogger(baseLogger, { correlationId });
 
   const signature = req.headers["linear-signature"];
+
+  // Dynamic import to avoid triggering Linear config validation at module load
+  const { verifyWebhookSignature } = await import("@aesir/integration-linear");
 
   // Verify signature
   if (
@@ -265,6 +271,10 @@ export async function linearWebhookHandler(
   }
 
   // Validate timestamp (prevent replay attacks)
+  // Dynamic import already done above for verifyWebhookSignature
+  const { validateWebhookTimestamp } = await import(
+    "@aesir/integration-linear"
+  );
   if (!validateWebhookTimestamp(payload.webhookTimestamp)) {
     logger.warn(
       { timestamp: payload.webhookTimestamp },

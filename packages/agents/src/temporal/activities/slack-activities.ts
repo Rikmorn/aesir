@@ -3,15 +3,18 @@
  *
  * Wraps Slack notification operations as Temporal activities.
  * Activities receive pre-configured WebClient from the workflow.
+ *
+ * NOTE: Uses dynamic import for @aesir/integrations to avoid
+ * triggering config validation at module load time. This allows agents
+ * to start without integration credentials (MCP migration).
  */
 
 import { createPinoLogger, type PinoLogger } from "@aesir/common";
-import {
-  type ApprovalNotification,
-  type MessageResult,
-  type StatusNotification,
-  sendApprovalRequest,
-  sendStatusUpdate,
+// Import types only (doesn't trigger runtime validation)
+import type {
+  ApprovalNotification,
+  MessageResult,
+  StatusNotification,
 } from "@aesir/integrations";
 import type { WebClient } from "@slack/web-api";
 
@@ -37,6 +40,8 @@ export async function sendApprovalRequestActivity(
     `Sending approval request for task ${notification.taskId}`,
   );
 
+  // Dynamic import to avoid triggering config validation at module load
+  const { sendApprovalRequest } = await import("@aesir/integrations");
   return sendApprovalRequest(client, notification, channel);
 }
 
@@ -58,5 +63,7 @@ export async function sendStatusUpdateActivity(
     `Sending status update for task ${notification.taskId}`,
   );
 
+  // Dynamic import to avoid triggering config validation at module load
+  const { sendStatusUpdate } = await import("@aesir/integrations");
   return sendStatusUpdate(client, notification, channel);
 }

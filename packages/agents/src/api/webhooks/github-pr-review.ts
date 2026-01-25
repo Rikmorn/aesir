@@ -3,6 +3,10 @@
  *
  * Handles pull_request_review events from GitHub webhooks.
  * Translates PR review actions into Temporal workflow signals.
+ *
+ * NOTE: Uses dynamic import for @aesir/integration-github and @aesir/integrations
+ * to avoid triggering config validation at module load time. This allows agents
+ * to start without integration credentials (MCP migration).
  */
 
 import {
@@ -12,15 +16,8 @@ import {
   type PinoLogger,
   ValidationError,
 } from "@aesir/common";
-import {
-  type PRReviewPayload,
-  parsePRReviewPayload,
-  verifySignature,
-} from "@aesir/integration-github";
-import {
-  sendApprovalSignal,
-  sendChangesRequestedSignal,
-} from "@aesir/integrations";
+// Import types only (doesn't trigger runtime validation)
+import type { PRReviewPayload } from "@aesir/integration-github";
 
 const baseLogger: PinoLogger = createPinoLogger({
   component: "agents:webhooks:github-pr-review",
@@ -168,6 +165,11 @@ export async function handlePRReviewEvent(
   const workflowId = getWorkflowId(taskId);
 
   try {
+    // Dynamic import to avoid triggering config validation at module load
+    const { sendApprovalSignal, sendChangesRequestedSignal } = await import(
+      "@aesir/integrations"
+    );
+
     if (reviewState === "approved") {
       await sendApprovalSignal(workflowId, {
         approved: true,
@@ -241,6 +243,11 @@ export async function prReviewWebhookHandler(
 
   const signature = req.headers["x-hub-signature-256"];
   const webhookSecret = process.env.GITHUB_WEBHOOK_SECRET;
+
+  // Dynamic import to avoid triggering config validation at module load
+  const { verifySignature, parsePRReviewPayload } = await import(
+    "@aesir/integration-github"
+  );
 
   // Verify signature if secret is configured
   if (webhookSecret && signature) {

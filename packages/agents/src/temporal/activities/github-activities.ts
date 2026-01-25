@@ -3,10 +3,13 @@
  *
  * Wraps GitHub operations as Temporal activities.
  * Activities receive pre-configured Octokit clients from the workflow.
+ *
+ * NOTE: Uses dynamic import for @aesir/integrations to avoid
+ * triggering config validation at module load time. This allows agents
+ * to start without integration credentials (MCP migration).
  */
 
 import { createPinoLogger, type PinoLogger } from "@aesir/common";
-import { mergePullRequest } from "@aesir/integrations";
 import type { Octokit } from "@octokit/rest";
 
 const logger: PinoLogger = createPinoLogger({
@@ -59,6 +62,8 @@ export async function mergePRActivity(
       ? { mergeMethod: input.mergeMethod }
       : undefined;
 
+  // Dynamic import to avoid triggering config validation at module load
+  const { mergePullRequest } = await import("@aesir/integrations");
   const result = await mergePullRequest(
     octokit,
     input.owner,
