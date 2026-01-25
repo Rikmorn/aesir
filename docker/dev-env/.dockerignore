@@ -1,0 +1,4 @@
+# Ignore everything by default
+*
+# Only include Dockerfile (nothing else needed)
+!Dockerfile
