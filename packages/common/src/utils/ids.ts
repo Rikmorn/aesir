@@ -39,6 +39,9 @@ export const createId = {
 
   /** Sync cursor ID (integrations.sync_cursors) */
   syncCursor: () => `sync_${nanoid()}`,
+
+  /** Event ID (event dispatch) */
+  event: () => `evt_${nanoid()}`,
 } as const;
 
 /** ID prefix types for branded types in Phase 15 */
