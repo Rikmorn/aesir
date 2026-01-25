@@ -42,6 +42,9 @@ export const createId = {
 
   /** Event ID (event dispatch) */
   event: () => `evt_${nanoid()}`,
+
+  /** Dev container ID (platform.dev_containers) */
+  devContainer: () => `dcont_${nanoid()}`,
 } as const;
 
 /** ID prefix types for branded types in Phase 15 */
