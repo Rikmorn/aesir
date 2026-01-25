@@ -4,17 +4,18 @@
 
 See: .planning/PROJECT.md (updated 2026-01-25)
 
-**Core value:** End-to-end automated development workflow
-**Current focus:** v2.1 Agents That Ship — defining requirements
+**Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
+
+**Current focus:** Phase 23 - Event Infrastructure
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-01-25 — Milestone v2.1 started
+Phase: 23 of 27 (Event Infrastructure)
+Plan: Ready to plan Phase 23
+Status: Not started
+Last activity: 2026-01-25 — Roadmap created for v2.1 milestone
 
-Progress: v2.1 [░░░░░░░░░░░░░░░░░░░░] 0%
+Progress: [░░░░░░░░░░] 0%
 
 ## Milestone History
 
@@ -59,6 +60,7 @@ Key decisions that carry forward:
 - 3-layer architecture (Platform -> Integrations -> Agents) is established pattern
 - MCP for agent-integration communication (HTTP-based, not direct SDK imports)
 - Pure library pattern for @aesir/common (no env validation at import time)
+- Infrastructure phases must include consumer migration (E2E verification requirements)
 - pnpm monorepo with TypeScript project references
 - Docker Compose for local development
 
@@ -83,9 +85,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-25
-Stopped at: v2.1 milestone definition
+Stopped at: Roadmap creation complete, ready to plan Phase 23
 Resume file: None
-Next action: Define requirements for v2.1
+Next action: `/gsd:plan-phase 23`
 
 ---
-*Updated: 2026-01-25 — v2.1 milestone started*
+*Updated: 2026-01-25 — v2.1 roadmap created*

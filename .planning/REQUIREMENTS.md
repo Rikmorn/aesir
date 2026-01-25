@@ -134,13 +134,89 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (To be filled by roadmapper) | | |
+| INFRA-01 | Phase 23 | Pending |
+| INFRA-02 | Phase 23 | Pending |
+| INFRA-03 | Phase 23 | Pending |
+| INFRA-04 | Phase 23 | Pending |
+| INFRA-05 | Phase 23 | Pending |
+| INFRA-06 | Phase 23 | Pending |
+| INFRA-07 | Phase 23 | Pending |
+| INFRA-08 | Phase 23 | Pending |
+| INFRA-09 | Phase 23 | Pending |
+| INFRA-10 | Phase 23 | Pending |
+| INFRA-11 | Phase 23 | Pending |
+| CONT-01 | Phase 24 | Pending |
+| CONT-02 | Phase 24 | Pending |
+| CONT-03 | Phase 24 | Pending |
+| CONT-04 | Phase 24 | Pending |
+| CONT-05 | Phase 24 | Pending |
+| CONT-06 | Phase 24 | Pending |
+| CONT-07 | Phase 24 | Pending |
+| CONT-08 | Phase 24 | Pending |
+| CONT-09 | Phase 24 | Pending |
+| CONT-10 | Phase 24 | Pending |
+| CONT-11 | Phase 24 | Pending |
+| PROD-01 | Phase 25 | Pending |
+| PROD-02 | Phase 25 | Pending |
+| PROD-03 | Phase 25 | Pending |
+| PROD-04 | Phase 25 | Pending |
+| PROD-05 | Phase 25 | Pending |
+| PROD-06 | Phase 25 | Pending |
+| PROD-07 | Phase 25 | Pending |
+| PROD-08 | Phase 25 | Pending |
+| PROD-09 | Phase 25 | Pending |
+| PROD-10 | Phase 25 | Pending |
+| PROD-11 | Phase 25 | Pending |
+| MCP-01 | Phase 25 | Pending |
+| DEV-01 | Phase 26 | Pending |
+| DEV-02 | Phase 26 | Pending |
+| DEV-03 | Phase 26 | Pending |
+| DEV-04 | Phase 26 | Pending |
+| DEV-05 | Phase 26 | Pending |
+| DEV-06 | Phase 26 | Pending |
+| DEV-07 | Phase 26 | Pending |
+| DEV-08 | Phase 26 | Pending |
+| DEV-09 | Phase 26 | Pending |
+| DEV-10 | Phase 26 | Pending |
+| DEV-11 | Phase 26 | Pending |
+| DEV-12 | Phase 26 | Pending |
+| DEV-13 | Phase 26 | Pending |
+| DEV-14 | Phase 26 | Pending |
+| DEV-15 | Phase 26 | Pending |
+| DEV-16 | Phase 26 | Pending |
+| DEV-17 | Phase 26 | Pending |
+| DEV-18 | Phase 26 | Pending |
+| DEV-19 | Phase 26 | Pending |
+| DEV-20 | Phase 26 | Pending |
+| DEV-21 | Phase 26 | Pending |
+| DEV-22 | Phase 26 | Pending |
+| DEV-23 | Phase 26 | Pending |
+| MCP-02 | Phase 26 | Pending |
+| HITL-01 | Phase 27 | Pending |
+| HITL-02 | Phase 27 | Pending |
+| HITL-03 | Phase 27 | Pending |
+| HITL-04 | Phase 27 | Pending |
+| HITL-05 | Phase 27 | Pending |
+| HITL-06 | Phase 27 | Pending |
+| HITL-07 | Phase 27 | Pending |
+| HITL-08 | Phase 27 | Pending |
+| HITL-09 | Phase 27 | Pending |
+| HITL-10 | Phase 27 | Pending |
+| HITL-11 | Phase 27 | Pending |
+| HITL-12 | Phase 27 | Pending |
 
 **Coverage:**
 - v2.1 requirements: 60 total
-- Mapped to phases: 0
-- Unmapped: 60 (awaiting roadmap)
+- Mapped to phases: 60 (100% coverage)
+- Unmapped: 0
+
+**Phase breakdown:**
+- Phase 23 (Event Infrastructure): 11 requirements
+- Phase 24 (Dev Container): 11 requirements
+- Phase 25 (Product Agent Workflow): 12 requirements (11 PROD + 1 MCP)
+- Phase 26 (Dev Agent Workflow): 24 requirements (23 DEV + 1 MCP)
+- Phase 27 (Human-in-the-Loop): 12 requirements
 
 ---
 *Requirements defined: 2026-01-25*
-*Last updated: 2026-01-25 after initial definition*
+*Last updated: 2026-01-25 after roadmap creation (100% coverage achieved)*
