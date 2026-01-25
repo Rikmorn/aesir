@@ -36,7 +36,6 @@ async function bootstrap(): Promise<void> {
     "@langchain/langgraph-checkpoint-postgres"
   );
   const { App } = await import("@slack/bolt");
-  const { getLinearClient } = await import("@aesir/integrations");
   const { registerHandlers } = await import(
     "../slack/assistant/thread-handlers.js"
   );
@@ -55,9 +54,8 @@ async function bootstrap(): Promise<void> {
     temperature: 0.7,
   });
 
-  // Initialize Linear client
-  logger.info({}, "Initializing Linear client");
-  const linearClient = getLinearClient(process.env.LINEAR_ACCESS_TOKEN!);
+  // Get Linear team ID for MCP operations
+  logger.info({}, "Configuring Linear team ID");
   const teamId = process.env.LINEAR_TEAM_ID!;
 
   // Initialize checkpointer for conversation persistence
@@ -102,7 +100,6 @@ async function bootstrap(): Promise<void> {
   // Build options conditionally for exactOptionalPropertyTypes compliance
   const handlerOptions: Parameters<typeof registerHandlers>[1] = {
     llm,
-    linearClient,
     teamId,
     checkpointer,
   };

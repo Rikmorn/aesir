@@ -14,7 +14,6 @@
 import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import type { ChatAnthropic } from "@langchain/anthropic";
 import type { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
-import type { LinearClient } from "@linear/sdk";
 import type { App } from "@slack/bolt";
 import type { AppMentionEvent, GenericMessageEvent } from "@slack/types";
 import type { WebClient } from "@slack/web-api";
@@ -33,8 +32,6 @@ const logger: PinoLogger = createPinoLogger({
 export interface ThreadHandlerOptions {
   /** LLM instance for the Product Agent */
   llm: ChatAnthropic;
-  /** LinearClient for creating issues */
-  linearClient: LinearClient;
   /** Team ID for issue creation */
   teamId: string;
   /** Checkpointer for conversation persistence */
@@ -162,7 +159,7 @@ async function processMessage(
   messageText: string,
   options: ThreadHandlerOptions,
 ) {
-  const { llm, linearClient, teamId, checkpointer } = options;
+  const { llm, teamId, checkpointer } = options;
 
   // Get conversation history if in a thread
   const conversationHistory = await getConversationHistory(
@@ -185,7 +182,6 @@ async function processMessage(
   // Run the Product Agent
   return runProductAgent(input, {
     llm,
-    linearClient,
     teamId,
     checkpointer,
   });
@@ -408,7 +404,6 @@ const IGNORED_SUBTYPES = new Set([
  *
  * registerHandlers(app, {
  *   llm: new ChatAnthropic({ model: 'claude-sonnet-4-20250514' }),
- *   linearClient: getLinearClient(token),
  *   teamId: 'team-123',
  *   checkpointer: PostgresSaver.fromConnString(process.env.DATABASE_URL),
  *   botUserId: 'U1234567890', // Fetched from auth.test on startup
