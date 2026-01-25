@@ -30,7 +30,7 @@ The v2.0 Foundation milestone restructures Aesir from a working prototype to a m
 - [ ] ~~**Phase 21: CI/CD Pipeline**~~ - *Deferred to v3.0* - GitHub Actions, quality gates, branch protection
 - [ ] **Phase 22: Local Dev Environment** - Docker hot reload, health checks, graceful shutdown
 - [x] **Phase 22.1: Common Library Refactor** (INSERTED) - Refactor @aesir/common to pure library pattern
-- [ ] **Phase 22.2: Agent MCP Migration** (INSERTED) - Agent MCP migration
+- [ ] **Phase 22.2: Agent MCP Migration** (INSERTED) - Migrate agents from direct SDK clients to MCP HTTP calls
 
 ## Phase Details
 
@@ -331,15 +331,28 @@ Plans:
 - [x] 22.1-05-PLAN.md — Test verification and Docker checkpoint
 
 ### Phase 22.2: Agent MCP Migration (INSERTED)
-**Goal:** [Urgent work - to be planned]
+**Goal:** Migrate agents from direct SDK client usage (LinearClient, Octokit) to MCP HTTP calls, completing the circuit from Phase 19
 **Depends on:** Phase 22.1
-**Requirements:** TBD
+**Requirements:** ARCH-03, ARCH-05
 **Success Criteria** (what must be TRUE):
-  1. TBD - to be defined during planning
-**Plans:** 0 plans
+  1. Agents call integration tools via MCP HTTP endpoints, not direct SDK clients
+  2. Agent configuration has NO integration tokens (LINEAR_ACCESS_TOKEN, GITHUB_TOKEN, SLACK_*)
+  3. Docker containers start successfully without integration credentials
+  4. Temporal activities continue using direct clients (not migrated to MCP)
+**Plans:** 6 plans
+
+**Context:**
+- Phase 19 created MCP servers but didn't wire agents to use them — this closes that circuit
+- Agent should boot successfully even without integration tokens (proves migration complete)
+- Temporal activities are infrastructure, not LLM-driven — they keep direct clients
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 22.2 to break down)
+- [ ] 22.2-01-PLAN.md — Create MCP client wrapper (types, errors, callMcpTool function)
+- [ ] 22.2-02-PLAN.md — Migrate dev-agent LangGraph nodes to MCP
+- [ ] 22.2-03-PLAN.md — Migrate product-agent nodes to MCP
+- [ ] 22.2-04-PLAN.md — Update agent config and docker-compose.yml
+- [ ] 22.2-05-PLAN.md — Update tests to mock MCP calls
+- [ ] 22.2-06-PLAN.md — Cleanup dependencies and verify Docker startup
 
 ## Progress
 
@@ -364,9 +377,9 @@ Current: 22.1 complete -> 22.2 (next) -> 22-05 (completion)
 | 21. CI/CD Pipeline | v3.0 | - | Deferred | - |
 | 22. Local Dev Environment | v2.0 | 4/5 | In Progress | - |
 | 22.1 Common Library Refactor | v2.0 | 5/5 | Complete | 2026-01-24 |
-| 22.2 Agent MCP Migration | v2.0 | 0/0 | Not Started | - |
+| 22.2 Agent MCP Migration | v2.0 | 0/6 | Not Started | - |
 
 ---
 *Created: 2026-01-19*
-*Updated: 2026-01-24 (Phase 22.1 planned — 4 plans in 3 waves)*
+*Updated: 2026-01-25 (Phase 22.2 planned — 6 plans in 5 waves)*
 *Milestone: v2.0 Foundation*
