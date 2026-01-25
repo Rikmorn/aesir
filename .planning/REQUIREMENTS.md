@@ -9,17 +9,17 @@ Requirements for v2.1 milestone. Each maps to roadmap phases. E2E verification r
 
 ### Infrastructure
 
-- [ ] **INFRA-01**: nginx gateway routes `/linear/*` to linear-integration:3001
-- [ ] **INFRA-02**: nginx gateway routes `/github/*` to github-integration:3002
-- [ ] **INFRA-03**: nginx gateway routes `/slack/*` to slack-integration:3003
-- [ ] **INFRA-04**: nginx gateway routes `/agent/*` to dev-agent:3004
-- [ ] **INFRA-05**: Cloudflare tunnel routes external traffic to nginx:80
-- [ ] **INFRA-06**: Event dispatcher with config-based routing rules
-- [ ] **INFRA-07**: Normalized event schema (id, type, source, timestamp, correlationId, payload)
-- [ ] **INFRA-08**: Linear integration normalizes webhooks and dispatches to dispatcher
-- [ ] **INFRA-09**: GitHub integration normalizes webhooks and dispatches to dispatcher
-- [ ] **INFRA-10**: Slack integration normalizes events and dispatches to dispatcher
-- [ ] **INFRA-11**: E2E verified - Linear webhook → integration → dispatcher → dev-agent /events
+- [x] **INFRA-01**: nginx gateway routes `/linear/*` to linear-integration:3001
+- [x] **INFRA-02**: nginx gateway routes `/github/*` to github-integration:3002
+- [x] **INFRA-03**: nginx gateway routes `/slack/*` to slack-integration:3003
+- [x] **INFRA-04**: nginx gateway routes `/agent/*` to dev-agent:3004
+- [x] **INFRA-05**: Cloudflare tunnel routes external traffic to nginx:80
+- [x] **INFRA-06**: Event dispatcher with config-based routing rules
+- [x] **INFRA-07**: Normalized event schema (id, type, source, timestamp, correlationId, payload)
+- [x] **INFRA-08**: Linear integration normalizes webhooks and dispatches to dispatcher
+- [x] **INFRA-09**: GitHub integration normalizes webhooks and dispatches to dispatcher
+- [x] **INFRA-10**: Slack integration normalizes events and dispatches to dispatcher
+- [x] **INFRA-11**: E2E verified - Linear webhook → integration → dispatcher → dev-agent /events
 
 ### Dev Container
 
@@ -134,17 +134,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | Phase 23 | Pending |
-| INFRA-02 | Phase 23 | Pending |
-| INFRA-03 | Phase 23 | Pending |
-| INFRA-04 | Phase 23 | Pending |
-| INFRA-05 | Phase 23 | Pending |
-| INFRA-06 | Phase 23 | Pending |
-| INFRA-07 | Phase 23 | Pending |
-| INFRA-08 | Phase 23 | Pending |
-| INFRA-09 | Phase 23 | Pending |
-| INFRA-10 | Phase 23 | Pending |
-| INFRA-11 | Phase 23 | Pending |
+| INFRA-01 | Phase 23 | Complete |
+| INFRA-02 | Phase 23 | Complete |
+| INFRA-03 | Phase 23 | Complete |
+| INFRA-04 | Phase 23 | Complete |
+| INFRA-05 | Phase 23 | Complete |
+| INFRA-06 | Phase 23 | Complete |
+| INFRA-07 | Phase 23 | Complete |
+| INFRA-08 | Phase 23 | Complete |
+| INFRA-09 | Phase 23 | Complete |
+| INFRA-10 | Phase 23 | Complete |
+| INFRA-11 | Phase 23 | Complete |
 | CONT-01 | Phase 24 | Pending |
 | CONT-02 | Phase 24 | Pending |
 | CONT-03 | Phase 24 | Pending |
@@ -219,4 +219,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-01-25*
-*Last updated: 2026-01-25 after roadmap creation (100% coverage achieved)*
+*Last updated: 2026-01-25 — Phase 23 complete (11/60 requirements done)*

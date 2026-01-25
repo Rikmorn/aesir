@@ -95,7 +95,7 @@ None blocking next milestone.
 Last session: 2026-01-25
 Stopped at: Completed 23-05-PLAN.md (Agent Event Endpoint) - Phase 23 complete
 Resume file: None
-Next action: Begin Phase 24 (Agent Communication Layer) or Phase 26 (Dev Agent Workflow)
+Next action: `/gsd:discuss-phase 24` or `/gsd:plan-phase 24`
 
 ---
 *Updated: 2026-01-25 - Phase 23 complete*

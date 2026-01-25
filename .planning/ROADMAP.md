@@ -42,7 +42,7 @@ Completed foundation work:
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 23: Event Infrastructure** - Webhook routing and event dispatch
+- [x] **Phase 23: Event Infrastructure** - Webhook routing and event dispatch ✓
 - [ ] **Phase 24: Dev Container** - Persistent container execution environment
 - [ ] **Phase 25: Product Agent Workflow** - Slack conversation to Linear issue
 - [ ] **Phase 26: Dev Agent Workflow** - Linear issue to GitHub PR
@@ -69,11 +69,11 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 5 plans
 
 Plans:
-- [ ] 23-01-PLAN.md — Common event schema, ID generator, nginx hardening
-- [ ] 23-02-PLAN.md — Linear dispatcher and event normalization
-- [ ] 23-03-PLAN.md — GitHub dispatcher and event normalization
-- [ ] 23-04-PLAN.md — Slack dispatcher and event normalization
-- [ ] 23-05-PLAN.md — Dev-agent /events endpoint and E2E verification
+- [x] 23-01-PLAN.md — Common event schema, ID generator, nginx hardening
+- [x] 23-02-PLAN.md — Linear dispatcher and event normalization
+- [x] 23-03-PLAN.md — GitHub dispatcher and event normalization
+- [x] 23-04-PLAN.md — Slack dispatcher and event normalization
+- [x] 23-05-PLAN.md — Dev-agent /events endpoint and E2E verification
 
 ### Phase 24: Dev Container
 
@@ -188,7 +188,7 @@ Phases execute in numeric order: 23 → 23.1 → 23.2 → 24 → 24.1 → 25 →
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 23. Event Infrastructure | v2.1 | 0/5 | Planned | - |
+| 23. Event Infrastructure | v2.1 | 5/5 | ✓ Complete | 2026-01-25 |
 | 24. Dev Container | v2.1 | 0/TBD | Not started | - |
 | 25. Product Agent Workflow | v2.1 | 0/TBD | Not started | - |
 | 26. Dev Agent Workflow | v2.1 | 0/TBD | Not started | - |
@@ -196,4 +196,4 @@ Phases execute in numeric order: 23 → 23.1 → 23.2 → 24 → 24.1 → 25 →
 
 ---
 *Roadmap created: 2026-01-25*
-*Last updated: 2026-01-25*
+*Last updated: 2026-01-25 — Phase 23 complete*
