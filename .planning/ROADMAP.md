@@ -94,10 +94,15 @@ Plans:
   8. Container cleanup works on task completion and 24h timeout
   9. E2E verified: spawn container → exec "echo test" → get output → cleanup succeeds
 
-**Plans**: TBD
+**Plans:** 6 plans
 
 Plans:
-- [ ] 24-01: [Plan description TBD during planning]
+- [ ] 24-01-PLAN.md — Dev environment Dockerfile (Node.js, pnpm, git, rg, fd, gh)
+- [ ] 24-02-PLAN.md — Database schema for container state tracking
+- [ ] 24-03-PLAN.md — DevContainerManager core (spawn, execute, resume)
+- [ ] 24-04-PLAN.md — Git operations in container (clone, branch)
+- [ ] 24-05-PLAN.md — Container cleanup service (task completion, 24h timeout)
+- [ ] 24-06-PLAN.md — E2E integration test verification
 
 ### Phase 25: Product Agent Workflow
 
