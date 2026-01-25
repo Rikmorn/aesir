@@ -17,7 +17,6 @@
 import type { ChatAnthropic } from "@langchain/anthropic";
 import { StateGraph } from "@langchain/langgraph";
 import type { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
-import type { LinearClient } from "@linear/sdk";
 import {
   analyzeRequirementsNode,
   createTasksNode,
@@ -63,8 +62,6 @@ export function routeAfterAnalysis(
 export interface ProductAgentGraphOptions {
   /** LLM instance for all nodes (default: Claude Sonnet) */
   llm?: ChatAnthropic;
-  /** LinearClient for creating issues (required) */
-  linearClient: LinearClient;
   /** Team ID to create issues in (required) */
   teamId: string;
   /** Checkpointer for conversation persistence (optional) */
@@ -89,11 +86,11 @@ export interface ProductAgentGraphOptions {
  * Note: clarify goes to END so the question is returned to the user.
  * Next user message re-invokes graph with checkpointer preserving state.
  *
- * @param options - Graph options with dependencies
+ * @param options - Graph options with team ID and optional LLM/checkpointer
  * @returns Compiled StateGraph workflow
  */
 export function createProductAgentGraph(options: ProductAgentGraphOptions) {
-  const { llm, linearClient, teamId, checkpointer } = options;
+  const { llm, teamId, checkpointer } = options;
 
   // Build node options - handle exactOptionalPropertyTypes
   const analyzeOptions: Parameters<typeof analyzeRequirementsNode>[0] = {};
@@ -107,7 +104,6 @@ export function createProductAgentGraph(options: ProductAgentGraphOptions) {
   }
 
   const createOptions: Parameters<typeof createTasksNode>[0] = {
-    linearClient,
     teamId,
   };
   if (llm !== undefined) {

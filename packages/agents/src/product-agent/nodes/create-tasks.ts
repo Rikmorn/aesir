@@ -11,15 +11,14 @@
  * - Sets state.phase to 'complete' when done
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import {
-  createIssue,
-  type LabelInfo,
-  listLabels,
-} from "@aesir/integration-linear";
+  createPinoLogger,
+  generateCorrelationId,
+  type PinoLogger,
+} from "@aesir/common";
 import { ChatAnthropic } from "@langchain/anthropic";
-import type { LinearClient } from "@linear/sdk";
 import { z } from "zod";
+import { callMcpTool } from "../../mcp/index.js";
 import { CREATE_TASKS_PROMPT } from "../prompts.js";
 import type {
   CreatedTask,
@@ -31,6 +30,8 @@ import type {
 const logger: PinoLogger = createPinoLogger({
   component: "agents:product-agent:create-tasks",
 });
+
+const AGENT_ID = "product-agent";
 
 /**
  * Schema for a single generated task
@@ -66,14 +67,14 @@ export type TaskList = z.infer<typeof TaskListSchema>;
  * Options for the create tasks node
  */
 export interface CreateTasksNodeOptions {
-  /** LinearClient for creating issues (required) */
-  linearClient: LinearClient;
   /** Team ID to create issues in (required) */
   teamId: string;
   /** LLM instance for task generation (default: Claude Sonnet) */
   llm?: ChatAnthropic;
   /** Model name if creating default LLM */
   model?: string;
+  /** Correlation ID for tracking (optional, auto-generated if not provided) */
+  correlationId?: string;
 }
 
 /**
@@ -97,22 +98,29 @@ function mapPriorityToLinear(
  * Returns IDs for labels that exist, ignores unknown labels.
  */
 async function resolveLabelIds(
-  linearClient: LinearClient,
   teamId: string,
   labelNames: string[],
+  correlationId: string,
 ): Promise<string[]> {
   if (labelNames.length === 0) {
     return [];
   }
 
   try {
-    const labels = await listLabels(linearClient, teamId);
+    const labels = await callMcpTool<Array<{ id: string; name: string }>>({
+      integration: "linear",
+      tool: "list_labels",
+      params: { teamId },
+      agentId: AGENT_ID,
+      correlationId,
+    });
+
     const labelMap = new Map<string, string>();
 
     // Build case-insensitive lookup map
-    labels.forEach((label: LabelInfo) => {
+    for (const label of labels) {
       labelMap.set(label.name.toLowerCase(), label.id);
-    });
+    }
 
     // Resolve names to IDs
     const resolvedIds: string[] = [];
@@ -134,14 +142,18 @@ async function resolveLabelIds(
 /**
  * Create the create tasks node with injected dependencies.
  *
- * @param options - Node options with LinearClient and team ID
+ * @param options - Node options with team ID
  * @returns Node function for LangGraph
  */
 export function createTasksNode(options: CreateTasksNodeOptions) {
-  const { linearClient, teamId } = options;
+  const { teamId } = options;
 
   return async (state: ProductAgentState): Promise<ProductAgentStateUpdate> => {
     const nodeLogger = logger.child({ node: "create-tasks" });
+
+    // Generate correlation ID if not provided
+    const correlationId =
+      options.correlationId || generateCorrelationId("agent");
 
     nodeLogger.debug(
       {
@@ -149,6 +161,7 @@ export function createTasksNode(options: CreateTasksNodeOptions) {
         hasWhat: state.requirements.what !== null,
         hasWhy: state.requirements.why !== null,
         teamId,
+        correlationId,
       },
       "Generating and creating tasks from requirements",
     );
@@ -189,9 +202,9 @@ export function createTasksNode(options: CreateTasksNodeOptions) {
         try {
           // Resolve label names to IDs
           const labelIds = await resolveLabelIds(
-            linearClient,
             teamId,
             task.labels,
+            correlationId,
           );
 
           // Build issue params - handle exactOptionalPropertyTypes
@@ -213,8 +226,18 @@ export function createTasksNode(options: CreateTasksNodeOptions) {
             issueParams.labelIds = labelIds;
           }
 
-          // Create the issue
-          const result = await createIssue(linearClient, issueParams);
+          // Create the issue via MCP
+          const result = await callMcpTool<{
+            id: string;
+            identifier: string;
+            title: string;
+          }>({
+            integration: "linear",
+            tool: "create_issue",
+            params: issueParams,
+            agentId: AGENT_ID,
+            correlationId,
+          });
 
           createdTasks.push({
             id: result.id,
@@ -223,12 +246,16 @@ export function createTasksNode(options: CreateTasksNodeOptions) {
           });
 
           nodeLogger.info(
-            { issueId: result.id, identifier: result.identifier },
+            {
+              issueId: result.id,
+              identifier: result.identifier,
+              correlationId,
+            },
             `Created task ${result.identifier}: ${result.title}`,
           );
         } catch (error) {
           nodeLogger.error(
-            { err: error, taskTitle: task.title },
+            { err: error, taskTitle: task.title, correlationId },
             `Failed to create task: ${task.title}`,
           );
           // Continue with other tasks

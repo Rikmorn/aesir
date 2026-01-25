@@ -14,7 +14,6 @@ import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import type { ChatAnthropic } from "@langchain/anthropic";
 import { AIMessage, HumanMessage } from "@langchain/core/messages";
 import type { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
-import type { LinearClient } from "@linear/sdk";
 import { createProductAgentGraph } from "./graph.js";
 import type { CreatedTask, ProductAgentPhase } from "./state.js";
 
@@ -56,8 +55,6 @@ export interface RunProductAgentOutput {
 export interface RunProductAgentOptions {
   /** LLM instance for the graph nodes */
   llm: ChatAnthropic;
-  /** LinearClient for creating issues */
-  linearClient: LinearClient;
   /** Team ID for issue creation */
   teamId: string;
   /** Checkpointer for conversation persistence */
@@ -83,7 +80,6 @@ export interface RunProductAgentOptions {
  *   },
  *   {
  *     llm: new ChatAnthropic({ model: 'claude-sonnet-4-20250514' }),
- *     linearClient,
  *     teamId: "team-123",
  *     checkpointer,
  *   }
@@ -115,7 +111,6 @@ export async function runProductAgent(
     // Create the graph with injected dependencies
     const graph = createProductAgentGraph({
       llm: options.llm,
-      linearClient: options.linearClient,
       teamId: options.teamId,
       checkpointer: options.checkpointer,
     });

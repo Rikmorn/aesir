@@ -4,7 +4,6 @@
  * Tests for the StateGraph workflow definition and routing logic.
  */
 
-import type { LinearClient } from "@linear/sdk";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type AfterAnalysisRoute,
@@ -62,27 +61,6 @@ function createBaseState(
     createdTasks: [],
     ...overrides,
   };
-}
-
-/**
- * Create a mock LinearClient for testing
- */
-function createMockLinearClient(): LinearClient {
-  return {
-    createIssue: vi.fn().mockResolvedValue({
-      success: true,
-      issue: Promise.resolve({
-        id: "issue-1",
-        identifier: "ABC-123",
-        title: "Test Task",
-        url: "https://linear.app/test/ABC-123",
-      }),
-    }),
-    teams: vi.fn().mockResolvedValue({ nodes: [] }),
-    team: vi.fn().mockResolvedValue({
-      labels: vi.fn().mockResolvedValue({ nodes: [] }),
-    }),
-  } as unknown as LinearClient;
 }
 
 describe("routeAfterAnalysis", () => {
@@ -180,10 +158,7 @@ describe("createProductAgentGraph", () => {
   });
 
   it("creates a compiled graph", () => {
-    const mockLinearClient = createMockLinearClient();
-
     const graph = createProductAgentGraph({
-      linearClient: mockLinearClient,
       teamId: "team-123",
     });
 
@@ -193,18 +168,14 @@ describe("createProductAgentGraph", () => {
   });
 
   it("graph compiles without errors with valid dependencies", () => {
-    const mockLinearClient = createMockLinearClient();
-
     expect(() => {
       createProductAgentGraph({
-        linearClient: mockLinearClient,
         teamId: "team-123",
       });
     }).not.toThrow();
   });
 
   it("accepts optional checkpointer", () => {
-    const mockLinearClient = createMockLinearClient();
     // Mock checkpointer as a concrete object (not undefined)
     const mockCheckpointer = {
       get: vi.fn(),
@@ -216,7 +187,6 @@ describe("createProductAgentGraph", () => {
 
     expect(() => {
       createProductAgentGraph({
-        linearClient: mockLinearClient,
         teamId: "team-123",
         checkpointer: mockCheckpointer,
       });
