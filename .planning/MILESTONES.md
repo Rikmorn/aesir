@@ -1,5 +1,32 @@
 # Project Milestones: Aesir
 
+## v2.0 Foundation (Shipped: 2026-01-25)
+
+**Delivered:** Full architectural restructure from "prove it works" to "maintainable and scalable" with 3-layer architecture, independent integrations, and MCP-based agent communication
+
+**Phases completed:** 10-22 (14 phases, 104 plans total)
+
+**Key accomplishments:**
+- pnpm monorepo with 3-layer architecture (Platform → Integrations → Agents) and clear package boundaries
+- Three independent integration packages (Linear, GitHub, Slack) with own databases, Dockerfiles, and lifecycles
+- MCP layer with 19 tools across integrations enabling standardized HTTP-based agent communication
+- Production-ready observability: pino logging with correlation IDs across all service boundaries
+- One-command local development via Docker Compose with health checks, graceful shutdown, and watch mode
+- Pure library architecture: @aesir/common refactored to have no env validation at import time
+
+**Stats:**
+- 659 TypeScript files
+- 67,044 lines of TypeScript
+- 14 phases, 104 plans, ~601 tasks
+- 448 commits, 756 files changed (+100,526 net lines)
+- 7 days (2026-01-19 → 2026-01-25)
+
+**Git range:** `feat(10-01)` → `docs(22-05)`
+
+**What's next:** Agent intelligence - smart requirements capture, intelligent questioning, quality ticket creation, great PRs, and iterating on what works
+
+---
+
 ## v1 MVP (Shipped: 2026-01-19)
 
 **Delivered:** End-to-end automated development platform where agents handle task → code → PR workflows with human-in-the-loop approval
