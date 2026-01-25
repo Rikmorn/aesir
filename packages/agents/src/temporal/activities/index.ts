@@ -103,8 +103,6 @@ export function makeActivities(deps: ActivityDependencies) {
       // Parse GITHUB_REPO in owner/repo format
       const [owner, repo] = (process.env.GITHUB_REPO ?? "/").split("/");
       return executeDevWorkflow(taskId, sessionId, {
-        linearClient: deps.linearClient,
-        octokit: deps.octokit,
         sandbox: deps.sandbox,
         githubConfig: {
           owner: owner || "",

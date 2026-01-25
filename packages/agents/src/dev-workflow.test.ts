@@ -111,8 +111,6 @@ function createMockSandbox(testResult: TestResult): Sandbox {
  */
 function createMockDependencies(sandbox: Sandbox): DevWorkflowDependencies {
   return {
-    linearClient: {} as DevWorkflowDependencies["linearClient"],
-    octokit: {} as DevWorkflowDependencies["octokit"],
     sandbox,
     githubConfig: {
       owner: "test-owner",

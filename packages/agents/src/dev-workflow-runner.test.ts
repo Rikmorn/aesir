@@ -41,10 +41,9 @@ import {
   runDevWorkflow,
 } from "./dev-workflow-runner.js";
 
-// Mock Linear integration
-vi.mock("@aesir/integration-linear", () => ({
-  updateIssueStatus: vi.fn(),
-  emitError: vi.fn(),
+// Mock MCP client
+vi.mock("./mcp/index.js", () => ({
+  callMcpTool: vi.fn(),
 }));
 
 // Mock tracing module
@@ -61,18 +60,15 @@ vi.mock("./tracing/index.js", () => ({
   })),
 }));
 
-// Import dependencies after mocks
-import { emitError, updateIssueStatus } from "@aesir/integration-linear";
 import { createDevWorkflow } from "./dev-workflow.js";
+// Import dependencies after mocks
+import { callMcpTool } from "./mcp/index.js";
 
 const mockCreateDevWorkflow = vi.mocked(createDevWorkflow);
-const mockUpdateIssueStatus = vi.mocked(updateIssueStatus);
-const mockEmitError = vi.mocked(emitError);
+const mockCallMcpTool = vi.mocked(callMcpTool);
 
 describe("runDevWorkflow", () => {
   // Mock dependencies
-  const mockLinearClient = {} as DevWorkflowDependencies["linearClient"];
-  const mockOctokit = {} as DevWorkflowDependencies["octokit"];
   const mockSandbox = {
     cleanup: vi.fn(),
     writeFile: vi.fn(),
@@ -82,8 +78,6 @@ describe("runDevWorkflow", () => {
   } as unknown as DevWorkflowDependencies["sandbox"];
 
   const mockDeps: DevWorkflowDependencies = {
-    linearClient: mockLinearClient,
-    octokit: mockOctokit,
     sandbox: mockSandbox,
     githubConfig: {
       owner: "test-owner",
@@ -137,8 +131,7 @@ describe("runDevWorkflow", () => {
     mockCreateDevWorkflow.mockReturnValue(
       mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>,
     );
-    mockUpdateIssueStatus.mockResolvedValue(undefined);
-    mockEmitError.mockResolvedValue(undefined);
+    mockCallMcpTool.mockResolvedValue(undefined);
 
     await runDevWorkflow("ABC-123", "session-abc", mockDeps);
 
@@ -152,21 +145,17 @@ describe("runDevWorkflow", () => {
     mockCreateDevWorkflow.mockReturnValue(
       mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>,
     );
-    mockUpdateIssueStatus.mockResolvedValue(undefined);
-    mockEmitError.mockResolvedValue(undefined);
+    mockCallMcpTool.mockResolvedValue(undefined);
 
     await runDevWorkflow("ABC-123", "session-abc", mockDeps);
 
-    expect(mockUpdateIssueStatus).toHaveBeenCalledWith(
-      mockLinearClient,
-      "ABC-123",
-      "Ready",
-    );
-    expect(mockEmitError).toHaveBeenCalledWith(
-      mockLinearClient,
-      "session-abc",
-      "Dev workflow failed: Test error",
-    );
+    expect(mockCallMcpTool).toHaveBeenCalledWith({
+      integration: "linear",
+      tool: "update_issue_status",
+      params: { issueId: "ABC-123", status: "Ready" },
+      agentId: "dev-agent",
+      correlationId: "dev-workflow-ABC-123",
+    });
   });
 
   it("should return error result on failure", async () => {
@@ -176,8 +165,7 @@ describe("runDevWorkflow", () => {
     mockCreateDevWorkflow.mockReturnValue(
       mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>,
     );
-    mockUpdateIssueStatus.mockResolvedValue(undefined);
-    mockEmitError.mockResolvedValue(undefined);
+    mockCallMcpTool.mockResolvedValue(undefined);
 
     const result = await runDevWorkflow("ABC-123", "session-abc", mockDeps);
 
@@ -238,7 +226,7 @@ describe("runDevWorkflow", () => {
     mockCreateDevWorkflow.mockReturnValue(
       mockWorkflow as unknown as ReturnType<typeof createDevWorkflow>,
     );
-    mockUpdateIssueStatus.mockRejectedValue(new Error("Linear API error"));
+    mockCallMcpTool.mockRejectedValue(new Error("Linear API error"));
 
     // Should not throw, just log the warning
     const result = await runDevWorkflow("ABC-123", "session-abc", mockDeps);

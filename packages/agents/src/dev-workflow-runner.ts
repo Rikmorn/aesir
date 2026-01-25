@@ -20,11 +20,11 @@ import {
   type PinoLogger,
   type TraceEntry,
 } from "@aesir/common";
-import { emitError, updateIssueStatus } from "@aesir/integration-linear";
 import {
   createDevWorkflow,
   type DevWorkflowDependencies,
 } from "./dev-workflow.js";
+import { callMcpTool } from "./mcp/index.js";
 import { createLangGraphTracer } from "./tracing/index.js";
 
 const logger: PinoLogger = createPinoLogger({
@@ -123,11 +123,21 @@ export async function runDevWorkflow(
 
     // Update Linear status to indicate failure
     try {
-      await updateIssueStatus(deps.linearClient, taskId, "Ready");
-      await emitError(
-        deps.linearClient,
-        sessionId, // Use sessionId for agent activities, not taskId
-        `Dev workflow failed: ${errorMessage}`,
+      // Update issue status via MCP
+      await callMcpTool({
+        integration: "linear",
+        tool: "update_issue_status",
+        params: { issueId: taskId, status: "Ready" },
+        agentId: "dev-agent",
+        correlationId: `dev-workflow-${taskId}`,
+      });
+
+      // Emit error via MCP (emitError is an integration function, not an MCP tool)
+      // For now, skip emitError as it's not exposed as an MCP tool
+      // This can be added later if needed
+      logger.warn(
+        { taskId, errorMessage },
+        "Dev workflow failed, issue status updated to Ready",
       );
     } catch (linearError) {
       // Log but don't throw - we want to return the original error

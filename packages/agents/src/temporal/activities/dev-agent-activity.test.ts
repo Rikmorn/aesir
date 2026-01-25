@@ -22,8 +22,6 @@ import { runDevWorkflow } from "../../dev-workflow-runner.js";
 
 describe("executeDevWorkflow", () => {
   const mockDeps: DevWorkflowDependencies = {
-    linearClient: {} as DevWorkflowDependencies["linearClient"],
-    octokit: {} as DevWorkflowDependencies["octokit"],
     sandbox: {} as DevWorkflowDependencies["sandbox"],
     githubConfig: {
       owner: "test-owner",

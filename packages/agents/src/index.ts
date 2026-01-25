@@ -40,6 +40,8 @@ export {
   incrementLoopCount,
   type LoopGuardState,
 } from "./guards.js";
+// MCP exports
+export * from "./mcp/index.js";
 // Product Agent
 export * from "./product-agent/index.js";
 export {
