@@ -304,6 +304,9 @@ services:
       - TEMPORAL_NAMESPACE=default
       # LLM (only API key needed by agents)
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      # Webhook secrets (for legacy webhook endpoints and event validation)
+      - LINEAR_WEBHOOK_SECRET=${LINEAR_WEBHOOK_SECRET}
+      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
       # Workspace configuration (passed to MCP calls)
       - LINEAR_TEAM_ID=${LINEAR_TEAM_ID}
       - GITHUB_REPO=${GITHUB_REPO}
