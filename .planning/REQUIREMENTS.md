@@ -23,17 +23,17 @@ Requirements for v2.1 milestone. Each maps to roadmap phases. E2E verification r
 
 ### Dev Container
 
-- [ ] **CONT-01**: Container image with Node.js, pnpm, git, ripgrep, fd, GitHub CLI
-- [ ] **CONT-02**: Spawn container with unique name per task (dev-container-{taskId})
-- [ ] **CONT-03**: Clone repository into /workspace/repo in container
-- [ ] **CONT-04**: Create feature branch (feature/{issueId}) in container
-- [ ] **CONT-05**: Execute arbitrary shell commands via Docker exec
-- [ ] **CONT-06**: Capture stdout/stderr from shell commands
-- [ ] **CONT-07**: Container persists across workflow phases (not destroyed between steps)
-- [ ] **CONT-08**: Resume existing container for feedback loop (PR review → more changes)
-- [ ] **CONT-09**: Cleanup container on task completion
-- [ ] **CONT-10**: Cleanup container on 24h inactivity timeout
-- [ ] **CONT-11**: E2E verified - spawn container, exec command, get output, cleanup
+- [x] **CONT-01**: Container image with Node.js, pnpm, git, ripgrep, fd, GitHub CLI
+- [x] **CONT-02**: Spawn container with unique name per task (dev-container-{taskId})
+- [x] **CONT-03**: Clone repository into /workspace/repo in container
+- [x] **CONT-04**: Create feature branch (feature/{issueId}) in container
+- [x] **CONT-05**: Execute arbitrary shell commands via Docker exec
+- [x] **CONT-06**: Capture stdout/stderr from shell commands
+- [x] **CONT-07**: Container persists across workflow phases (not destroyed between steps)
+- [x] **CONT-08**: Resume existing container for feedback loop (PR review → more changes)
+- [x] **CONT-09**: Cleanup container on task completion
+- [x] **CONT-10**: Cleanup container on 24h inactivity timeout
+- [x] **CONT-11**: E2E verified - spawn container, exec command, get output, cleanup
 
 ### Product Agent
 
@@ -145,17 +145,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFRA-09 | Phase 23 | Complete |
 | INFRA-10 | Phase 23 | Complete |
 | INFRA-11 | Phase 23 | Complete |
-| CONT-01 | Phase 24 | Pending |
-| CONT-02 | Phase 24 | Pending |
-| CONT-03 | Phase 24 | Pending |
-| CONT-04 | Phase 24 | Pending |
-| CONT-05 | Phase 24 | Pending |
-| CONT-06 | Phase 24 | Pending |
-| CONT-07 | Phase 24 | Pending |
-| CONT-08 | Phase 24 | Pending |
-| CONT-09 | Phase 24 | Pending |
-| CONT-10 | Phase 24 | Pending |
-| CONT-11 | Phase 24 | Pending |
+| CONT-01 | Phase 24 | Complete |
+| CONT-02 | Phase 24 | Complete |
+| CONT-03 | Phase 24 | Complete |
+| CONT-04 | Phase 24 | Complete |
+| CONT-05 | Phase 24 | Complete |
+| CONT-06 | Phase 24 | Complete |
+| CONT-07 | Phase 24 | Complete |
+| CONT-08 | Phase 24 | Complete |
+| CONT-09 | Phase 24 | Complete |
+| CONT-10 | Phase 24 | Complete |
+| CONT-11 | Phase 24 | Complete |
 | PROD-01 | Phase 25 | Pending |
 | PROD-02 | Phase 25 | Pending |
 | PROD-03 | Phase 25 | Pending |
@@ -219,4 +219,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-01-25*
-*Last updated: 2026-01-25 — Phase 23 complete (11/60 requirements done)*
+*Last updated: 2026-01-25 — Phase 24 complete (22/60 requirements done)*

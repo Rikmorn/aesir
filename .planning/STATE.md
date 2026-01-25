@@ -107,9 +107,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-25
-Stopped at: Completed 24-06-PLAN.md (E2E Integration Test)
+Stopped at: Phase 24 verified and complete
 Resume file: None
-Next action: Phase 24 complete. Ready for Phase 25 (Dev Agent Integration)
+Next action: `/gsd:discuss-phase 25` or `/gsd:plan-phase 25`
 
 ---
 *Updated: 2026-01-25 - Phase 24 complete*
