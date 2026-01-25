@@ -11,6 +11,11 @@
 import type { PinoLogger } from "@aesir/common";
 import type { Request, Response } from "express";
 import { Router } from "express";
+import {
+  createDispatcher,
+  DISPATCH_ROUTES,
+  normalizeAgentSessionEvent,
+} from "../dispatcher/index.js";
 import { config } from "../types/config.js";
 import {
   isAgentSessionEvent,
@@ -38,6 +43,12 @@ export interface WebhookRouterDeps {
  */
 export function createWebhookRouter(deps: WebhookRouterDeps): Router {
   const { logger, onAgentSession } = deps;
+
+  // Create dispatcher for event routing
+  const dispatcher = createDispatcher({
+    logger: logger.child({ component: "dispatcher" }),
+    routes: DISPATCH_ROUTES,
+  });
 
   const router = Router();
 
@@ -130,9 +141,20 @@ export function createWebhookRouter(deps: WebhookRouterDeps): Router {
         await onAgentSession(payload as AgentSessionPayload);
       }
 
+      // Normalize and dispatch event (fire-and-forget)
+      const normalizedEvent = normalizeAgentSessionEvent(
+        payload as AgentSessionPayload,
+        deliveryId,
+      );
+      dispatcher.dispatch(normalizedEvent);
+
       childLogger.info(
-        { action: payload.action, sessionId: payload.agentSession.id },
-        "Webhook processed successfully",
+        {
+          action: payload.action,
+          sessionId: payload.agentSession.id,
+          eventId: normalizedEvent.id,
+        },
+        "Webhook processed and event dispatched",
       );
 
       res.status(200).json({ received: true });
