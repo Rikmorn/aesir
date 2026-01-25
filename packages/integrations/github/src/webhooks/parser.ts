@@ -14,6 +14,7 @@ export const PullRequestSchema = z.object({
   number: z.number(),
   title: z.string(),
   body: z.string().nullable(),
+  html_url: z.string().url(),
 });
 
 /**
@@ -26,6 +27,7 @@ export const ReviewSchema = z.object({
   }),
   body: z.string().nullable(),
   state: z.enum(["approved", "changes_requested", "commented", "dismissed"]),
+  submitted_at: z.string(),
 });
 
 /**
@@ -33,6 +35,7 @@ export const ReviewSchema = z.object({
  */
 export const RepositorySchema = z.object({
   name: z.string(),
+  full_name: z.string(),
   owner: z.object({
     login: z.string(),
   }),

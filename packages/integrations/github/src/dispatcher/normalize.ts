@@ -1,0 +1,77 @@
+/**
+ * GitHub Event Normalization
+ *
+ * Converts GitHub webhook payloads to NormalizedEvent format.
+ */
+
+import { createId, type NormalizedEvent } from "@aesir/common";
+import type { PRReviewPayload } from "../webhooks/parser.js";
+
+/**
+ * Normalize PR review webhook payload to NormalizedEvent
+ *
+ * Event type includes the review state for fine-grained routing:
+ * - github.pull_request.review_approved
+ * - github.pull_request.review_changes_requested
+ * - github.pull_request.review_commented
+ * - github.pull_request.review_dismissed
+ *
+ * @param payload - Validated PR review webhook payload
+ * @param deliveryId - X-GitHub-Delivery header value (used as correlationId)
+ * @returns Normalized event ready for dispatch
+ */
+export function normalizePRReviewEvent(
+  payload: PRReviewPayload,
+  deliveryId: string,
+): NormalizedEvent {
+  return {
+    id: createId.event(),
+    type: `github.pull_request.review_${payload.review.state}`,
+    source: "github",
+    timestamp: new Date(payload.review.submitted_at).toISOString(),
+    correlationId: deliveryId,
+    payload: {
+      action: payload.action,
+      prNumber: payload.pull_request.number,
+      prTitle: payload.pull_request.title,
+      prUrl: payload.pull_request.html_url,
+      reviewId: payload.review.id,
+      reviewState: payload.review.state,
+      reviewBody: payload.review.body,
+      reviewerLogin: payload.review.user.login,
+      repository: {
+        owner: payload.repository.owner.login,
+        name: payload.repository.name,
+        fullName: payload.repository.full_name,
+      },
+    },
+  };
+}
+
+/**
+ * Normalize PR merged event (from pull_request webhook with action=closed and merged=true)
+ *
+ * Note: This is for future use - current webhook handler only processes PR reviews.
+ * Add when PR merged handling is needed.
+ */
+export function normalizePRMergedEvent(
+  prNumber: number,
+  prTitle: string,
+  prUrl: string,
+  repository: { owner: string; name: string; fullName: string },
+  deliveryId: string,
+): NormalizedEvent {
+  return {
+    id: createId.event(),
+    type: "github.pull_request.merged",
+    source: "github",
+    timestamp: new Date().toISOString(),
+    correlationId: deliveryId,
+    payload: {
+      prNumber,
+      prTitle,
+      prUrl,
+      repository,
+    },
+  };
+}
