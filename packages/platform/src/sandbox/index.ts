@@ -10,6 +10,20 @@ export {
   type DevContainerManager,
   type DevContainerManagerOptions,
 } from "./dev-container.js";
+// Dev container cleanup
+export {
+  type CleanupResult,
+  createDevContainerCleanup,
+  type DevContainerCleanup,
+  type DevContainerCleanupOptions,
+} from "./dev-container-cleanup.js";
+// Dev container git operations
+export {
+  createDevContainerGit,
+  type DevContainerGit,
+  type DevContainerGitOptions,
+  type GitOperationResult,
+} from "./dev-container-git.js";
 export {
   createDevContainerStore,
   type DevContainerStore,
