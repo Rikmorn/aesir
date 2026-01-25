@@ -163,5 +163,13 @@ End-to-end automated development workflow where agents handle routine developmen
 | dotenv-flow for env management | Consistent .env hierarchy, no more .env.local vs .env confusion | — Pending |
 | 3-layer architecture | Platform → Integrations → Agents with clear boundaries | — Pending |
 
+## Principles
+
+Lessons learned during development that guide future phases.
+
+| Principle | Context |
+|-----------|---------|
+| Infrastructure phases must include consumer migration | Phase 19 created MCP servers but didn't wire agents to use them. When building infrastructure (APIs, services, servers), phase scope should include at least one consumer migration to validate the pattern works end-to-end. Success criteria should test observable behavior, not just capability. |
+
 ---
-*Last updated: 2026-01-19 after v2.0 milestone initialization*
+*Last updated: 2026-01-25 after Phase 22.2 context gathering*

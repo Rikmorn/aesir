@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-01-19)
 
 **Core value:** Maintainable, scalable foundation for end-to-end automated development workflows
-**Current focus:** Phase 22 - Local Dev Environment (next) — Phase 21 deferred to v3.0
+**Current focus:** Phase 22.2 - Agent MCP Migration (inserted) — Phase 21 deferred to v3.0
 
 ## Current Position
 
-Phase: 22 of 22 (Local Dev Environment - resuming)
-Plan: 5 of 5 in Phase 22 (22-05 remaining)
-Status: Phase 22.1 complete - @aesir/common refactored to pure library pattern
-Last activity: 2026-01-24 - Completed Phase 22.1 (Common Library Refactor)
+Phase: 22.2 of 22 (Agent MCP Migration - inserted)
+Plan: 0 of 0 in Phase 22.2 (to be planned)
+Status: Phase 22.2 inserted after 22.1 - urgent work
+Last activity: 2026-01-25 - Inserted Phase 22.2 (Agent MCP Migration)
 
 Progress: [####################] ~99% (111 plans complete)
 
@@ -398,12 +398,17 @@ Recent decisions affecting current work:
   - Status: Complete (5/5 plans)
   - Completed: 2026-01-24
 
+- Phase 22.2 inserted after Phase 22.1: Agent MCP migration (URGENT)
+  - Reason: TBD - to be defined during planning
+  - Inserted: 2026-01-25
+  - Status: Not started
+
 ## Session Continuity
 
-Last session: 2026-01-24
-Stopped at: Completed Phase 22.1 - Common Library Refactor
+Last session: 2026-01-25
+Stopped at: Inserted Phase 22.2 - Agent MCP Migration
 Resume file: None
-Next action: Execute Plan 22-05 (AI context files, final verification checkpoint)
+Next action: Plan Phase 22.2 (run /gsd:plan-phase 22.2)
 
 ---
 *Updated: 2026-01-24 - Phase 22.1 complete*

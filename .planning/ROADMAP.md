@@ -29,7 +29,8 @@ The v2.0 Foundation milestone restructures Aesir from a working prototype to a m
 - [x] **Phase 20: Testing Pyramid** - Coverage, testcontainers, fixtures, isolation
 - [ ] ~~**Phase 21: CI/CD Pipeline**~~ - *Deferred to v3.0* - GitHub Actions, quality gates, branch protection
 - [ ] **Phase 22: Local Dev Environment** - Docker hot reload, health checks, graceful shutdown
-- [ ] **Phase 22.1: Common Library Refactor** (INSERTED) - Refactor @aesir/common to pure library pattern
+- [x] **Phase 22.1: Common Library Refactor** (INSERTED) - Refactor @aesir/common to pure library pattern
+- [ ] **Phase 22.2: Agent MCP Migration** (INSERTED) - Agent MCP migration
 
 ## Phase Details
 
@@ -329,12 +330,23 @@ Plans:
 - [x] 22.1-04-PLAN.md — Fix consumer imports, update tests, align Docker env vars
 - [x] 22.1-05-PLAN.md — Test verification and Docker checkpoint
 
+### Phase 22.2: Agent MCP Migration (INSERTED)
+**Goal:** [Urgent work - to be planned]
+**Depends on:** Phase 22.1
+**Requirements:** TBD
+**Success Criteria** (what must be TRUE):
+  1. TBD - to be defined during planning
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 22.2 to break down)
+
 ## Progress
 
 **Execution Order:**
 Phases execute in numeric order: 10 -> 11 -> 12 -> ... -> 22
 Decimal phases (if inserted) execute between integers: 10 -> 10.1 -> 11
-Current: 22.1 complete -> 22-05 (completion)
+Current: 22.1 complete -> 22.2 (next) -> 22-05 (completion)
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -352,6 +364,7 @@ Current: 22.1 complete -> 22-05 (completion)
 | 21. CI/CD Pipeline | v3.0 | - | Deferred | - |
 | 22. Local Dev Environment | v2.0 | 4/5 | In Progress | - |
 | 22.1 Common Library Refactor | v2.0 | 5/5 | Complete | 2026-01-24 |
+| 22.2 Agent MCP Migration | v2.0 | 0/0 | Not Started | - |
 
 ---
 *Created: 2026-01-19*
