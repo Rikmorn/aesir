@@ -2,15 +2,17 @@
  * Create Branch Node
  *
  * LangGraph node that creates a feature branch for the task.
- * Uses factory pattern for dependency injection of Octokit and config.
+ * Uses factory pattern for dependency injection of config.
  *
  * Branch naming follows the pattern: dev-agent/{taskId}
  * This ensures unique, identifiable branches per task.
  */
 
 import type { DevWorkflowStateType } from "@aesir/common";
-import { createBranch } from "@aesir/integrations";
-import type { Octokit } from "@octokit/rest";
+import { generateCorrelationId } from "@aesir/common";
+import { callMcpTool } from "../mcp/index.js";
+
+const AGENT_ID = "dev-agent";
 
 /**
  * GitHub repository configuration for branch operations
@@ -25,13 +27,12 @@ export interface CreateBranchConfig {
 }
 
 /**
- * Factory function to create the branch node with injected dependencies.
+ * Factory function to create the branch node with injected config.
  *
- * @param octokit - Authenticated Octokit instance
  * @param config - GitHub repository configuration
  * @returns LangGraph node function
  */
-export function createBranchNode(octokit: Octokit, config: CreateBranchConfig) {
+export function createBranchNode(config: CreateBranchConfig) {
   /**
    * Create branch node - creates a feature branch for the task.
    *
@@ -41,15 +42,23 @@ export function createBranchNode(octokit: Octokit, config: CreateBranchConfig) {
   return async function createBranchNodeFn(
     state: DevWorkflowStateType,
   ): Promise<Partial<DevWorkflowStateType>> {
+    const correlationId = generateCorrelationId("agent");
+
     // Generate branch name from task ID
     const branchName = `dev-agent/${state.taskId}`;
 
-    // Create the branch in GitHub
-    await createBranch(octokit, {
-      owner: config.owner,
-      repo: config.repo,
-      branchName,
-      baseBranch: config.baseBranch,
+    // Create the branch in GitHub via MCP
+    await callMcpTool({
+      integration: "github",
+      tool: "create_branch",
+      params: {
+        owner: config.owner,
+        repo: config.repo,
+        branchName,
+        baseBranch: config.baseBranch,
+      },
+      agentId: AGENT_ID,
+      correlationId,
     });
 
     // Return state update with branch name

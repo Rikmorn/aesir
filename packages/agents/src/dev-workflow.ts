@@ -22,8 +22,6 @@ import {
   type Sandbox,
 } from "@aesir/common";
 import { END, StateGraph } from "@langchain/langgraph";
-import type { LinearClient } from "@linear/sdk";
-import type { Octokit } from "@octokit/rest";
 import { createCommitPRNode } from "./nodes/commit-pr.js";
 import { createBranchNode } from "./nodes/create-branch.js";
 import { fixCodeNode } from "./nodes/fix-code.js";
@@ -82,10 +80,6 @@ export interface GitHubConfig {
  * Dependencies required by the dev workflow
  */
 export interface DevWorkflowDependencies {
-  /** Authenticated Linear client for task management */
-  linearClient: LinearClient;
-  /** Authenticated Octokit for GitHub operations */
-  octokit: Octokit;
   /** Sandbox instance for code execution */
   sandbox: Sandbox;
   /** GitHub repository configuration */
@@ -124,14 +118,14 @@ export function createDevWorkflow(options: DevWorkflowOptions) {
   const { deps, config = DEFAULT_DEV_WORKFLOW_CONFIG } = options;
 
   // Create nodes with injected dependencies
-  const pickupTaskNode = createPickupTaskNode(deps.linearClient);
-  const createBranchNodeFn = createBranchNode(deps.octokit, {
+  const pickupTaskNode = createPickupTaskNode();
+  const createBranchNodeFn = createBranchNode({
     owner: deps.githubConfig.owner,
     repo: deps.githubConfig.repo,
     baseBranch: deps.githubConfig.baseBranch,
   });
   const runTestsNode = createRunTestsNode(deps.sandbox);
-  const commitPRNode = createCommitPRNode(deps.octokit, deps.linearClient, {
+  const commitPRNode = createCommitPRNode({
     owner: deps.githubConfig.owner,
     repo: deps.githubConfig.repo,
     baseBranch: deps.githubConfig.baseBranch,

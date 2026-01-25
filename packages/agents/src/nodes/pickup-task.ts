@@ -9,20 +9,17 @@
  */
 
 import type { DevWorkflowStateType } from "@aesir/common";
-import {
-  emitThought,
-  readIssue,
-  updateIssueStatus,
-} from "@aesir/integration-linear";
-import type { LinearClient } from "@linear/sdk";
+import { generateCorrelationId } from "@aesir/common";
+import { callMcpTool } from "../mcp/index.js";
+
+const AGENT_ID = "dev-agent";
 
 /**
- * Factory function to create the pickup task node with injected LinearClient.
+ * Factory function to create the pickup task node.
  *
- * @param linearClient - Authenticated LinearClient instance
  * @returns LangGraph node function
  */
-export function createPickupTaskNode(linearClient: LinearClient) {
+export function createPickupTaskNode() {
   /**
    * Pickup task node - reads task from Linear and updates status.
    *
@@ -32,19 +29,30 @@ export function createPickupTaskNode(linearClient: LinearClient) {
   return async function pickupTaskNode(
     state: DevWorkflowStateType,
   ): Promise<Partial<DevWorkflowStateType>> {
-    // Read task details from Linear
-    const issue = await readIssue(linearClient, state.taskId);
+    const correlationId = generateCorrelationId("agent");
 
-    // Update status to "In Progress"
-    await updateIssueStatus(linearClient, state.taskId, "In Progress");
+    // Read task details from Linear via MCP
+    const issue = await callMcpTool<{ title: string; description?: string }>({
+      integration: "linear",
+      tool: "get_issue",
+      params: { issueId: state.taskId },
+      agentId: AGENT_ID,
+      correlationId,
+    });
 
-    // Emit thought activity to show progress in Linear UI
-    // Use sessionId (AgentSession ID) not taskId (Issue ID)
-    await emitThought(
-      linearClient,
-      state.sessionId,
-      `Starting work on: ${issue.title}`,
-    );
+    // Update status to "In Progress" via MCP
+    await callMcpTool({
+      integration: "linear",
+      tool: "update_issue_status",
+      params: { issueId: state.taskId, statusName: "In Progress" },
+      agentId: AGENT_ID,
+      correlationId,
+    });
+
+    // TODO: emitThought requires MCP tool - add 'emit_thought' to Linear MCP
+    // This is a UX feature that posts activity comments to Linear issues.
+    // Original call: emitThought(linearClient, state.sessionId, `Starting work on: ${issue.title}`)
+    // Context: Use sessionId (AgentSession ID) not taskId (Issue ID) when tool is added
 
     // Return state update
     return {
