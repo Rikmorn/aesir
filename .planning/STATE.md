@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 24 of 27 (Dev Container)
-Plan: 1 of 6 complete
+Plan: 2 of 6 complete
 Status: In progress
-Last activity: 2026-01-25 - Completed 24-01-PLAN.md (Container Image)
+Last activity: 2026-01-25 - Completed 24-02-PLAN.md (Database Schema)
 
-Progress: [█░░░░░░░░░] 17%
+Progress: [██░░░░░░░░] 33%
 
 ## Milestone History
 
@@ -50,7 +50,7 @@ Progress: [█░░░░░░░░░] 17%
 | 22.1-common-library-refactor | 5/5 | 35 min | 7 min |
 | 22.2-agent-mcp-migration | 6/6 | 23 min | 3.8 min |
 | 23-event-infrastructure | 5/5 | ~25 min | ~5 min |
-| 24-dev-container | 1/6 | 2 min | 2 min |
+| 24-dev-container | 2/6 | 4 min | 2 min |
 
 ## Accumulated Context
 
@@ -74,6 +74,8 @@ Key decisions that carry forward:
 - Event callbacks optional for v2.1: dev-agent just logs and acknowledges, actual processing in Phase 26
 - Dev container uses sleep infinity and Docker API exec for command execution
 - Dev container image: node:20-slim with pnpm, git, rg, fd, jq, gh
+- Platform schema subdirectory pattern: new tables in packages/platform/src/db/schema/*.ts
+- Dev container IDs use dcont_ prefix (createId.devContainer())
 
 ### Pending Todos
 
@@ -96,9 +98,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-25
-Stopped at: Completed 24-01-PLAN.md (Container Image)
+Stopped at: Completed 24-02-PLAN.md (Database Schema)
 Resume file: None
-Next action: Execute 24-02-PLAN.md (Container Manager Service)
+Next action: Execute 24-03-PLAN.md (Container Lifecycle Service)
 
 ---
-*Updated: 2026-01-25 - Plan 24-01 complete*
+*Updated: 2026-01-25 - Plan 24-02 complete*
