@@ -6,52 +6,51 @@
  */
 
 import type { IssueStatus } from "@aesir/common";
-import type { LinearClient } from "@linear/sdk";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { updateLinearStatusActivity } from "./linear-activities.js";
 
-// Mock the integrations module
-vi.mock("@aesir/integration-linear", () => ({
-  updateIssueStatus: vi.fn(),
+// Mock the MCP client
+vi.mock("../../mcp/index.js", () => ({
+  callMcpTool: vi.fn(),
 }));
 
 // Import the mocked function
-import { updateIssueStatus } from "@aesir/integration-linear";
+import { callMcpTool } from "../../mcp/index.js";
 
 describe("updateLinearStatusActivity", () => {
-  const mockClient = {} as LinearClient;
-
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("calls updateIssueStatus with correct parameters", async () => {
-    vi.mocked(updateIssueStatus).mockResolvedValue();
+  it("calls MCP with correct parameters", async () => {
+    vi.mocked(callMcpTool).mockResolvedValue(undefined);
 
-    await updateLinearStatusActivity(mockClient, "TASK-123", "Done");
+    await updateLinearStatusActivity("TASK-123", "Done");
 
-    expect(updateIssueStatus).toHaveBeenCalledWith(
-      mockClient,
-      "TASK-123",
-      "Done",
-    );
+    expect(callMcpTool).toHaveBeenCalledWith({
+      integration: "linear",
+      tool: "update_issue_status",
+      params: { issueId: "TASK-123", status: "Done" },
+      agentId: "temporal-worker",
+      correlationId: "linear-activity-TASK-123",
+    });
   });
 
   it("passes configurable status (not hardcoded Done)", async () => {
-    vi.mocked(updateIssueStatus).mockResolvedValue();
+    vi.mocked(callMcpTool).mockResolvedValue(undefined);
 
     // Test with In Progress - verifies status is not hardcoded
-    await updateLinearStatusActivity(mockClient, "TASK-456", "In Progress");
+    await updateLinearStatusActivity("TASK-456", "In Progress");
 
-    expect(updateIssueStatus).toHaveBeenCalledWith(
-      mockClient,
-      "TASK-456",
-      "In Progress",
+    expect(callMcpTool).toHaveBeenCalledWith(
+      expect.objectContaining({
+        params: { issueId: "TASK-456", status: "In Progress" },
+      }),
     );
   });
 
   it("supports all standard issue statuses", async () => {
-    vi.mocked(updateIssueStatus).mockResolvedValue();
+    vi.mocked(callMcpTool).mockResolvedValue(undefined);
 
     const statuses: IssueStatus[] = [
       "Ready",
@@ -63,22 +62,22 @@ describe("updateLinearStatusActivity", () => {
     for (const status of statuses) {
       vi.clearAllMocks();
 
-      await updateLinearStatusActivity(mockClient, `TASK-${status}`, status);
+      await updateLinearStatusActivity(`TASK-${status}`, status);
 
-      expect(updateIssueStatus).toHaveBeenCalledWith(
-        mockClient,
-        `TASK-${status}`,
-        status,
+      expect(callMcpTool).toHaveBeenCalledWith(
+        expect.objectContaining({
+          params: { issueId: `TASK-${status}`, status },
+        }),
       );
     }
   });
 
-  it("propagates errors from updateIssueStatus", async () => {
+  it("propagates errors from MCP", async () => {
     const error = new Error("Issue not found: TASK-999");
-    vi.mocked(updateIssueStatus).mockRejectedValue(error);
+    vi.mocked(callMcpTool).mockRejectedValue(error);
 
     await expect(
-      updateLinearStatusActivity(mockClient, "TASK-999", "Done"),
+      updateLinearStatusActivity("TASK-999", "Done"),
     ).rejects.toThrow("Issue not found: TASK-999");
   });
 
@@ -86,11 +85,11 @@ describe("updateLinearStatusActivity", () => {
     const error = new Error(
       'State "Invalid" not found for team. Available states: Todo, In Progress, Done, Canceled',
     );
-    vi.mocked(updateIssueStatus).mockRejectedValue(error);
+    vi.mocked(callMcpTool).mockRejectedValue(error);
 
     await expect(
       // @ts-expect-error - Testing with invalid status
-      updateLinearStatusActivity(mockClient, "TASK-123", "Invalid"),
+      updateLinearStatusActivity("TASK-123", "Invalid"),
     ).rejects.toThrow('State "Invalid" not found');
   });
 });

@@ -2,19 +2,13 @@
  * Temporal Activities Index
  *
  * Re-exports all activities for worker registration.
- * Activities wrap existing integration code to make them
- * callable from Temporal workflows with retry and timeout support.
- *
- * The makeActivities factory binds client dependencies at worker startup,
- * allowing workflows to call activities without serializing clients.
+ * Activities use MCP to communicate with integration services,
+ * so they don't require SDK clients to be injected.
  */
 
 import type { Sandbox } from "@aesir/common";
-import type { LinearClient } from "@linear/sdk";
-import type { Octokit } from "@octokit/rest";
-import type { WebClient } from "@slack/web-api";
 
-// Import raw activities for binding
+// Import raw activities
 import { executeDevWorkflow } from "./dev-agent-activity.js";
 import {
   type MergePRInput,
@@ -23,24 +17,27 @@ import {
 } from "./github-activities.js";
 import { updateLinearStatusActivity } from "./linear-activities.js";
 import {
+  type ApprovalNotification,
+  type MessageResult,
   sendApprovalRequestActivity,
   sendStatusUpdateActivity,
+  type StatusNotification,
 } from "./slack-activities.js";
 
 // Re-export types for external use
-export type { MergePRInput, MergePROutput };
+export type {
+  ApprovalNotification,
+  MergePRInput,
+  MergePROutput,
+  MessageResult,
+  StatusNotification,
+};
 
 /**
  * Dependencies required by Temporal activities.
- * These are bound at worker startup time via makeActivities.
+ * Only sandbox is needed - integration calls go through MCP.
  */
 export interface ActivityDependencies {
-  /** Slack WebClient for notifications */
-  slackClient: WebClient;
-  /** GitHub Octokit client for PR operations */
-  octokit: Octokit;
-  /** Linear client for issue management */
-  linearClient: LinearClient;
   /** Sandbox for code execution (dev workflow) */
   sandbox: Sandbox;
 }
@@ -48,8 +45,8 @@ export interface ActivityDependencies {
 /**
  * Create bound activities with injected dependencies.
  *
- * This factory creates activity functions that have their client dependencies
- * already bound, so workflows can call them without passing client instances.
+ * Most activities use MCP and don't need client injection.
+ * Only the dev workflow needs the sandbox for code execution.
  *
  * Usage in worker:
  * ```typescript
@@ -59,43 +56,33 @@ export interface ActivityDependencies {
  * });
  * ```
  *
- * @param deps - Client dependencies to bind to activities
+ * @param deps - Dependencies to bind to activities
  * @returns Object with bound activity functions
  */
 export function makeActivities(deps: ActivityDependencies) {
   return {
     /**
-     * Send approval request notification - bound with Slack client
+     * Send approval request notification - uses MCP
      */
-    sendApprovalRequestActivity: (
-      notification: Parameters<typeof sendApprovalRequestActivity>[1],
-      channel: Parameters<typeof sendApprovalRequestActivity>[2],
-    ) => sendApprovalRequestActivity(deps.slackClient, notification, channel),
+    sendApprovalRequestActivity,
 
     /**
-     * Send status update notification - bound with Slack client
+     * Send status update notification - uses MCP
      */
-    sendStatusUpdateActivity: (
-      notification: Parameters<typeof sendStatusUpdateActivity>[1],
-      channel: Parameters<typeof sendStatusUpdateActivity>[2],
-    ) => sendStatusUpdateActivity(deps.slackClient, notification, channel),
+    sendStatusUpdateActivity,
 
     /**
-     * Merge pull request - bound with Octokit
+     * Merge pull request - uses MCP
      */
-    mergePRActivity: (input: Parameters<typeof mergePRActivity>[1]) =>
-      mergePRActivity(deps.octokit, input),
+    mergePRActivity,
 
     /**
-     * Update Linear issue status - bound with Linear client
+     * Update Linear issue status - uses MCP
      */
-    updateLinearStatusActivity: (
-      issueId: Parameters<typeof updateLinearStatusActivity>[1],
-      statusName: Parameters<typeof updateLinearStatusActivity>[2],
-    ) => updateLinearStatusActivity(deps.linearClient, issueId, statusName),
+    updateLinearStatusActivity,
 
     /**
-     * Execute dev workflow - bound with all required dependencies
+     * Execute dev workflow - needs sandbox
      * @param taskId - Linear Issue ID
      * @param sessionId - Linear AgentSession ID for emitting activities
      */

@@ -73,10 +73,10 @@ export const slackEnvSchema = z
 export type SlackEnv = z.infer<typeof slackEnvSchema>;
 
 // Lazy-loaded validated environment
-let _env: SlackEnv | null = null;
+let Env: SlackEnv | null = null;
 
 function getEnv(): SlackEnv {
-  if (_env) return _env;
+  if (Env) return Env;
 
   loadDotenv();
 
@@ -97,8 +97,8 @@ function getEnv(): SlackEnv {
     process.exit(1);
   }
 
-  _env = parsed.data;
-  return _env;
+  Env = parsed.data;
+  return Env;
 }
 
 /**

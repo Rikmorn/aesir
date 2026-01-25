@@ -30,7 +30,7 @@ The v2.0 Foundation milestone restructures Aesir from a working prototype to a m
 - [ ] ~~**Phase 21: CI/CD Pipeline**~~ - *Deferred to v3.0* - GitHub Actions, quality gates, branch protection
 - [ ] **Phase 22: Local Dev Environment** - Docker hot reload, health checks, graceful shutdown
 - [x] **Phase 22.1: Common Library Refactor** (INSERTED) - Refactor @aesir/common to pure library pattern
-- [ ] **Phase 22.2: Agent MCP Migration** (INSERTED) - Migrate agents from direct SDK clients to MCP HTTP calls
+- [x] **Phase 22.2: Agent MCP Migration** (INSERTED) - Migrate agents from direct SDK clients to MCP HTTP calls
 
 ## Phase Details
 
@@ -347,12 +347,12 @@ Plans:
 - Temporal activities are infrastructure, not LLM-driven — they keep direct clients
 
 Plans:
-- [ ] 22.2-01-PLAN.md — Create MCP client wrapper (types, errors, callMcpTool function)
-- [ ] 22.2-02-PLAN.md — Migrate dev-agent LangGraph nodes to MCP
-- [ ] 22.2-03-PLAN.md — Migrate product-agent nodes to MCP
-- [ ] 22.2-04-PLAN.md — Update agent config and docker-compose.yml
-- [ ] 22.2-05-PLAN.md — Update tests to mock MCP calls
-- [ ] 22.2-06-PLAN.md — Cleanup dependencies and verify Docker startup
+- [x] 22.2-01-PLAN.md — Create MCP client wrapper (types, errors, callMcpTool function)
+- [x] 22.2-02-PLAN.md — Migrate dev-agent LangGraph nodes to MCP
+- [x] 22.2-03-PLAN.md — Migrate product-agent nodes to MCP
+- [x] 22.2-04-PLAN.md — Update agent config and docker-compose.yml
+- [x] 22.2-05-PLAN.md — Update tests to mock MCP calls
+- [x] 22.2-06-PLAN.md — Cleanup dependencies and verify Docker startup
 
 ## Progress
 

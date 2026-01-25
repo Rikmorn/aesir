@@ -35,18 +35,15 @@ importers:
       '@aesir/common':
         specifier: workspace:*
         version: link:../common
-      '@aesir/integration-github':
-        specifier: workspace:*
-        version: link:../integrations/github
-      '@aesir/integration-linear':
-        specifier: workspace:*
-        version: link:../integrations/linear
       '@aesir/integrations':
         specifier: workspace:*
         version: link:../integrations
       '@aesir/observability':
         specifier: workspace:*
         version: link:../observability
+      '@aesir/platform':
+        specifier: workspace:*
+        version: link:../platform
       '@langchain/anthropic':
         specifier: ^0.3.0
         version: 0.3.34(@langchain/core@0.3.80)(zod@3.25.67)
@@ -59,12 +56,6 @@ importers:
       '@langchain/langgraph-checkpoint-postgres':
         specifier: ^0.1.0
         version: 0.1.2(@langchain/core@0.3.80)(@langchain/langgraph-checkpoint@0.0.18(@langchain/core@0.3.80))
-      '@linear/sdk':
-        specifier: ^70.0.0
-        version: 70.0.0(graphql@16.12.0)
-      '@octokit/rest':
-        specifier: ^22.0.1
-        version: 22.0.1
       '@slack/bolt':
         specifier: ^4.6.0
         version: 4.6.0(@types/express@5.0.6)
@@ -80,6 +71,9 @@ importers:
       fetch-retry-ts:
         specifier: ^1.3.1
         version: 1.3.1
+      neverthrow:
+        specifier: ^8.2.0
+        version: 8.2.0
       postgres:
         specifier: ^3.4.7
         version: 3.4.8

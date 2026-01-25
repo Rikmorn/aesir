@@ -49,10 +49,10 @@ export const linearEnvSchema = z.object({
 export type LinearEnv = z.infer<typeof linearEnvSchema>;
 
 // Lazy-loaded validated environment
-let _env: LinearEnv | null = null;
+let Env: LinearEnv | null = null;
 
 function getEnv(): LinearEnv {
-  if (_env) return _env;
+  if (Env) return Env;
 
   loadDotenv();
 
@@ -73,8 +73,8 @@ function getEnv(): LinearEnv {
     process.exit(1);
   }
 
-  _env = parsed.data;
-  return _env;
+  Env = parsed.data;
+  return Env;
 }
 
 /**

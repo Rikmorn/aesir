@@ -3,12 +3,9 @@
  *
  * Handles pull_request_review events from GitHub webhooks.
  * Translates PR review actions into Temporal workflow signals.
- *
- * NOTE: Uses dynamic import for @aesir/integration-github and @aesir/integrations
- * to avoid triggering config validation at module load time. This allows agents
- * to start without integration credentials (MCP migration).
  */
 
+import { createHmac, timingSafeEqual } from "node:crypto";
 import {
   createChildLogger,
   createPinoLogger,
@@ -16,8 +13,11 @@ import {
   type PinoLogger,
   ValidationError,
 } from "@aesir/common";
-// Import types only (doesn't trigger runtime validation)
-import type { PRReviewPayload } from "@aesir/integration-github";
+import {
+  sendApprovalSignal,
+  sendChangesRequestedSignal,
+} from "@aesir/platform";
+import { parsePRReviewPayload, type PRReviewPayload } from "./schemas/index.js";
 
 const baseLogger: PinoLogger = createPinoLogger({
   component: "agents:webhooks:github-pr-review",
@@ -165,11 +165,6 @@ export async function handlePRReviewEvent(
   const workflowId = getWorkflowId(taskId);
 
   try {
-    // Dynamic import to avoid triggering config validation at module load
-    const { sendApprovalSignal, sendChangesRequestedSignal } = await import(
-      "@aesir/integrations"
-    );
-
     if (reviewState === "approved") {
       await sendApprovalSignal(workflowId, {
         approved: true,
@@ -226,6 +221,34 @@ export interface WebhookResponse {
 }
 
 /**
+ * Verify GitHub webhook signature using HMAC-SHA256
+ *
+ * @param payload - Raw request body
+ * @param signature - X-Hub-Signature-256 header value
+ * @param secret - Webhook secret
+ * @returns true if signature is valid
+ */
+function verifyGitHubSignature(
+  payload: string,
+  signature: string,
+  secret: string,
+): boolean {
+  const expectedSignature = `sha256=${createHmac("sha256", secret)
+    .update(payload)
+    .digest("hex")}`;
+
+  // Timing-safe comparison to prevent timing attacks
+  try {
+    return timingSafeEqual(
+      Buffer.from(signature),
+      Buffer.from(expectedSignature),
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Express-style request handler for GitHub PR review webhook
  *
  * This is the HTTP endpoint handler. Wire this up to your router.
@@ -244,18 +267,9 @@ export async function prReviewWebhookHandler(
   const signature = req.headers["x-hub-signature-256"];
   const webhookSecret = process.env.GITHUB_WEBHOOK_SECRET;
 
-  // Dynamic import to avoid triggering config validation at module load
-  const { verifySignature, parsePRReviewPayload } = await import(
-    "@aesir/integration-github"
-  );
-
   // Verify signature if secret is configured
   if (webhookSecret && signature) {
-    const isValid = await verifySignature(
-      req.rawBody,
-      signature,
-      webhookSecret,
-    );
+    const isValid = verifyGitHubSignature(req.rawBody, signature, webhookSecret);
     if (!isValid) {
       logger.warn({}, "Invalid webhook signature");
       res.status(401).json({ error: "Invalid signature" });
@@ -265,7 +279,7 @@ export async function prReviewWebhookHandler(
 
   logger.info({}, "Processing GitHub PR review webhook");
 
-  // Validate payload with Zod schema
+  // Validate payload with Zod schema (local implementation)
   const parseResult = parsePRReviewPayload(req.rawBody);
 
   if (!parseResult.success) {

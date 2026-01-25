@@ -7,19 +7,20 @@
  * 2. HTTP server for Linear webhooks
  *
  * Required environment variables:
- * - LINEAR_ACCESS_TOKEN: Linear API key or OAuth access token
  * - LINEAR_WEBHOOK_SECRET: Linear webhook signing secret
- * - GITHUB_TOKEN: GitHub Personal Access Token
+ * - GITHUB_WEBHOOK_SECRET: GitHub webhook signing secret
  * - GITHUB_REPO: Repository in owner/repo format
- * - SLACK_BOT_TOKEN: Slack bot token for notifications
  * - SLACK_CHANNEL_ID: Channel for notifications
  * - ANTHROPIC_API_KEY: Anthropic API key for Claude
  * - DATABASE_URL: PostgreSQL connection string
+ * - LINEAR_MCP_URL: Linear integration MCP endpoint
+ * - GITHUB_MCP_URL: GitHub integration MCP endpoint
+ * - SLACK_MCP_URL: Slack integration MCP endpoint
  *
  * Optional:
  * - TEMPORAL_ADDRESS: Temporal server (default: localhost:7233)
  * - TEMPORAL_NAMESPACE: Temporal namespace (default: default)
- * - PORT: HTTP server port (default: 3001)
+ * - PORT: HTTP server port (default: 3004)
  *
  * Usage:
  *   npx tsx src/scripts/start-dev-agent.ts
@@ -27,11 +28,8 @@
  */
 
 // Early startup logging (before any imports that might fail)
-// biome-ignore lint/suspicious/noConsole: Required for early startup debugging
 console.log("[dev-agent] Starting... (early boot)");
-// biome-ignore lint/suspicious/noConsole: Required for early startup debugging
 console.log("[dev-agent] NODE_ENV:", process.env.NODE_ENV);
-// biome-ignore lint/suspicious/noConsole: Required for early startup debugging
 console.log("[dev-agent] TEMPORAL_ADDRESS:", process.env.TEMPORAL_ADDRESS);
 
 // Environment must be loaded FIRST before any other imports
@@ -42,37 +40,26 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
-import type {
-  LinearWebhookConfig,
-  WebhookServices,
+import { createPinoLogger } from "@aesir/common";
+import { createWebhookIdempotencyService } from "@aesir/integrations/services/webhook-idempotency";
+import { createExecutionTracker } from "@aesir/observability";
+import { createTemporalWorker, DockerSandbox } from "@aesir/platform";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import { prReviewWebhookHandler } from "../api/webhooks/github-pr-review.js";
+import {
+  type LinearWebhookConfig,
+  linearWebhookHandler,
+  type WebhookServices,
 } from "../api/webhooks/linear-agent-session.js";
-import type { ActivityDependencies } from "../temporal/activities/index.js";
+import {
+  type ActivityDependencies,
+  makeActivities,
+} from "../temporal/activities/index.js";
+
+const logger = createPinoLogger({ component: "agents:scripts:dev-agent" });
 
 async function bootstrap(): Promise<void> {
-  const {
-    createTemporalWorker,
-    DockerSandbox,
-    getLinearClient,
-    createLinearClientFromDatabase,
-    CredentialNotFoundError,
-    createWebhookIdempotencyService,
-  } = await import("@aesir/integrations");
-  const { createExecutionTracker } = await import("@aesir/observability");
-  const { drizzle } = await import("drizzle-orm/postgres-js");
-  const postgres = (await import("postgres")).default;
-  const { makeActivities } = await import("../temporal/activities/index.js");
-  const { linearWebhookHandler } = await import(
-    "../api/webhooks/linear-agent-session.js"
-  );
-  const { prReviewWebhookHandler } = await import(
-    "../api/webhooks/github-pr-review.js"
-  );
-  const { Octokit } = await import("@octokit/rest");
-  const { WebClient } = await import("@slack/web-api");
-  const { createPinoLogger } = await import("@aesir/common");
-
-  const logger = createPinoLogger({ component: "agents:scripts:dev-agent" });
-
   // Create database connection for services
   const connectionString = `postgresql://${process.env.DATABASE_USER ?? "temporal"}:${process.env.DATABASE_PASSWORD ?? "temporal"}@${process.env.DATABASE_HOST ?? "localhost"}:${process.env.DATABASE_PORT ?? "5432"}/${process.env.DATABASE_NAME ?? "temporal"}`;
   const sql = postgres(connectionString);
@@ -97,43 +84,23 @@ async function bootstrap(): Promise<void> {
     workspaceId: "ws_default",
   };
 
-  // Note: Required environment variables are validated by ../config/env.js at import time
-
   /**
    * Validate GITHUB_REPO format (script-specific validation)
    */
   function validateGitHubRepo(): { owner: string; repo: string } {
-    const githubRepo = process.env.GITHUB_REPO!;
-    if (!githubRepo.includes("/") || githubRepo.split("/").length !== 2) {
+    const githubRepo = process.env.GITHUB_REPO;
+    if (
+      !githubRepo ||
+      !githubRepo.includes("/") ||
+      githubRepo.split("/").length !== 2
+    ) {
+      logger.error({}, "GITHUB_REPO must be set in owner/repo format");
       process.exit(1);
     }
     const [owner, repo] = githubRepo.split("/") as [string, string];
     return { owner, repo };
   }
   const { owner, repo } = validateGitHubRepo();
-
-  // Initialize dependencies
-  logger.info({}, "Initializing dependencies");
-
-  // Prefer database credentials (shows app identity in Linear)
-  // Fall back to LINEAR_ACCESS_TOKEN env var (shows user identity)
-  let linearClient: Awaited<ReturnType<typeof createLinearClientFromDatabase>>;
-  try {
-    linearClient = await createLinearClientFromDatabase();
-    logger.info({}, "Using Linear credentials from database (app identity)");
-  } catch (err) {
-    if (err instanceof CredentialNotFoundError) {
-      logger.warn(
-        {},
-        "Linear credentials not found in database, falling back to LINEAR_ACCESS_TOKEN (user identity). Run 'npm run linear-oauth' for app identity.",
-      );
-      linearClient = getLinearClient(process.env.LINEAR_ACCESS_TOKEN!);
-    } else {
-      throw err;
-    }
-  }
-  const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
-  const slackClient = new WebClient(process.env.SLACK_BOT_TOKEN);
 
   // Create sandbox for worker activities
   // Note: In production, you'd want sandbox-per-task, but for MVP
@@ -143,18 +110,23 @@ async function bootstrap(): Promise<void> {
     image: "node:20-alpine",
   });
 
+  // Activities only need sandbox - all integration calls go through MCP
   const dependencies: ActivityDependencies = {
-    linearClient,
-    octokit,
-    slackClient,
     sandbox,
   };
+
+  // Validate required env vars
+  const slackChannelId = process.env.SLACK_CHANNEL_ID;
+  if (!slackChannelId) {
+    logger.error({}, "SLACK_CHANNEL_ID is required");
+    process.exit(1);
+  }
 
   // Webhook config for Linear events
   const webhookConfig: LinearWebhookConfig = {
     owner,
     repo,
-    slackChannel: process.env.SLACK_CHANNEL_ID!,
+    slackChannel: slackChannelId,
     completionStatus: "Done",
   };
 
@@ -191,8 +163,12 @@ async function bootstrap(): Promise<void> {
   });
 
   // Start HTTP server for webhooks
-  const port = parseInt(process.env.PORT ?? "3001", 10);
-  const webhookSecret = process.env.LINEAR_WEBHOOK_SECRET!;
+  const port = parseInt(process.env.PORT ?? "3004", 10);
+  const webhookSecret = process.env.LINEAR_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    logger.error({}, "LINEAR_WEBHOOK_SECRET is required");
+    process.exit(1);
+  }
 
   const server = createServer(
     async (req: IncomingMessage, res: ServerResponse) => {
@@ -295,7 +271,9 @@ async function bootstrap(): Promise<void> {
     },
   );
 
-  server.listen(port, () => {});
+  server.listen(port, () => {
+    logger.info({ port }, `Dev agent HTTP server listening on port ${port}`);
+  });
 
   // Graceful shutdown
   let isShuttingDown = false;
@@ -359,10 +337,8 @@ async function bootstrap(): Promise<void> {
 }
 
 // Run bootstrap
-// biome-ignore lint/suspicious/noConsole: Required for startup error logging
 console.log("[dev-agent] Calling bootstrap()...");
 bootstrap().catch((error) => {
-  // biome-ignore lint/suspicious/noConsole: Required for startup error logging
   console.error("[dev-agent] Bootstrap failed:", error);
   process.exit(1);
 });

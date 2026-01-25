@@ -19,10 +19,10 @@ Platform (config, logging, state, temporal)
 ```
 
 **Dependency rules:**
-- Agents import from Integrations and Platform
+- Agents communicate with Integrations via HTTP/MCP (no direct imports)
 - Integrations import from Platform only
 - Platform imports nothing from Agents or Integrations
-- Never import in the reverse direction
+- Agents import from Platform and Common only
 
 **Integration Extraction:**
 Each integration is extracted to its own package for independent deployment, versioning, and lifecycle management. The extraction pattern enables:
@@ -65,7 +65,7 @@ Agents communicate with integrations via MCP HTTP protocol, not direct SDK clien
 - Agents only need: ANTHROPIC_API_KEY, workspace IDs (LINEAR_TEAM_ID, GITHUB_REPO)
 - MCP URLs configurable via env (defaults to Docker network names)
 
-**Note:** Temporal activities still use direct SDK clients. MCP is for LangGraph agent layer only.
+**Note:** Both LangGraph nodes and Temporal activities use MCP for integration communication.
 
 ## Directory Structure
 
@@ -467,7 +467,7 @@ await callMcpTool({
 });
 ```
 
-**Important:** Temporal activities still use direct SDK clients. MCP is only for LangGraph agent nodes.
+**Important:** Both LangGraph nodes and Temporal activities use MCP for all integration communication.
 
 ### Zod Validation
 
@@ -649,10 +649,10 @@ describe("ComponentName", () => {
 ### Agent Integration Communication
 
 - **LangGraph agent nodes**: Use `callMcpTool` from `@aesir/agents` (HTTP-based MCP protocol)
-- **Temporal activities**: Use direct SDK clients (`@linear/sdk`, `@octokit/rest`, `@slack/web-api`)
+- **Temporal activities**: Use `callMcpTool` from `@aesir/agents` (HTTP-based MCP protocol)
 - **Webhooks and API handlers**: Use integration packages directly (`@aesir/integration-*`)
-- Agent package keeps SDK dependencies for Temporal activities only
-- Agent nodes do NOT import SDK clients directly
+- Agent package has NO SDK dependencies (`@linear/sdk`, `@octokit/rest` are NOT imported)
+- Agents communicate with integrations via HTTP only - never direct imports
 
 ### npm Install
 

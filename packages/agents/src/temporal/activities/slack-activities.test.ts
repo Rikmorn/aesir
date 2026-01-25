@@ -2,38 +2,33 @@
  * Slack Activities Tests
  *
  * Tests for Slack Temporal activities.
- * Mocks sendApprovalRequest and sendStatusUpdate.
+ * Mocks MCP calls to verify activity behavior.
  */
 
-import type {
-  ApprovalNotification,
-  StatusNotification,
-} from "@aesir/integrations";
-import type { WebClient } from "@slack/web-api";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  type ApprovalNotification,
   sendApprovalRequestActivity,
   sendStatusUpdateActivity,
+  type StatusNotification,
 } from "./slack-activities.js";
 
-// Mock the integrations module
-vi.mock("@aesir/integrations", () => ({
-  sendApprovalRequest: vi.fn(),
-  sendStatusUpdate: vi.fn(),
+// Mock the MCP client
+vi.mock("../../mcp/index.js", () => ({
+  callMcpTool: vi.fn(),
 }));
 
-// Import the mocked functions
-import { sendApprovalRequest, sendStatusUpdate } from "@aesir/integrations";
+// Import the mocked function
+import { callMcpTool } from "../../mcp/index.js";
 
 describe("sendApprovalRequestActivity", () => {
-  const mockClient = {} as WebClient;
-
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("delegates to sendApprovalRequest with correct parameters", async () => {
-    vi.mocked(sendApprovalRequest).mockResolvedValue({
+  it("calls MCP with correct parameters", async () => {
+    vi.mocked(callMcpTool).mockResolvedValue({
+      success: true,
       ts: "1234567890.123456",
       channel: "C12345678",
     });
@@ -46,17 +41,26 @@ describe("sendApprovalRequestActivity", () => {
       summary: "This PR implements a new feature",
     };
 
-    await sendApprovalRequestActivity(mockClient, notification, "C12345678");
+    await sendApprovalRequestActivity(notification, "C12345678");
 
-    expect(sendApprovalRequest).toHaveBeenCalledWith(
-      mockClient,
-      notification,
-      "C12345678",
-    );
+    expect(callMcpTool).toHaveBeenCalledWith({
+      integration: "slack",
+      tool: "send_approval_request",
+      params: {
+        channel: "C12345678",
+        taskId: "TASK-123",
+        prUrl: "https://github.com/owner/repo/pull/42",
+        title: "Add new feature",
+        summary: "This PR implements a new feature",
+      },
+      agentId: "temporal-worker",
+      correlationId: "slack-approval-TASK-123",
+    });
   });
 
-  it("returns message result with ts and channel", async () => {
-    vi.mocked(sendApprovalRequest).mockResolvedValue({
+  it("returns message result", async () => {
+    vi.mocked(callMcpTool).mockResolvedValue({
+      success: true,
       ts: "1234567890.123456",
       channel: "C12345678",
     });
@@ -69,22 +73,17 @@ describe("sendApprovalRequestActivity", () => {
       summary: "This PR implements a new feature",
     };
 
-    const result = await sendApprovalRequestActivity(
-      mockClient,
-      notification,
-      "C12345678",
-    );
+    const result = await sendApprovalRequestActivity(notification, "C12345678");
 
     expect(result).toEqual({
+      success: true,
       ts: "1234567890.123456",
       channel: "C12345678",
     });
   });
 
-  it("propagates errors from sendApprovalRequest", async () => {
-    vi.mocked(sendApprovalRequest).mockRejectedValue(
-      new Error("channel_not_found"),
-    );
+  it("propagates errors from MCP", async () => {
+    vi.mocked(callMcpTool).mockRejectedValue(new Error("channel_not_found"));
 
     const notification: ApprovalNotification = {
       type: "approval_needed",
@@ -95,91 +94,91 @@ describe("sendApprovalRequestActivity", () => {
     };
 
     await expect(
-      sendApprovalRequestActivity(mockClient, notification, "invalid"),
+      sendApprovalRequestActivity(notification, "invalid"),
     ).rejects.toThrow("channel_not_found");
   });
 });
 
 describe("sendStatusUpdateActivity", () => {
-  const mockClient = {} as WebClient;
-
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("delegates to sendStatusUpdate with correct parameters", async () => {
-    vi.mocked(sendStatusUpdate).mockResolvedValue({
+  it("calls MCP with correct parameters", async () => {
+    vi.mocked(callMcpTool).mockResolvedValue({
+      success: true,
       ts: "1234567890.654321",
       channel: "C98765432",
     });
 
     const notification: StatusNotification = {
-      type: "status_update",
       taskId: "TASK-456",
       status: "completed",
-      details: "PR merged successfully",
+      message: "PR merged successfully",
     };
 
-    await sendStatusUpdateActivity(mockClient, notification, "C98765432");
+    await sendStatusUpdateActivity(notification, "C98765432");
 
-    expect(sendStatusUpdate).toHaveBeenCalledWith(
-      mockClient,
-      notification,
-      "C98765432",
-    );
+    expect(callMcpTool).toHaveBeenCalledWith({
+      integration: "slack",
+      tool: "send_message",
+      params: {
+        channel: "C98765432",
+        text: "*Task TASK-456*: completed\nPR merged successfully",
+      },
+      agentId: "temporal-worker",
+      correlationId: "slack-status-TASK-456",
+    });
   });
 
-  it("returns message result with ts and channel", async () => {
-    vi.mocked(sendStatusUpdate).mockResolvedValue({
+  it("returns message result", async () => {
+    vi.mocked(callMcpTool).mockResolvedValue({
+      success: true,
       ts: "1234567890.654321",
       channel: "C98765432",
     });
 
     const notification: StatusNotification = {
-      type: "status_update",
       taskId: "TASK-456",
       status: "started",
-      details: null,
+      message: "Starting work",
     };
 
-    const result = await sendStatusUpdateActivity(
-      mockClient,
-      notification,
-      "C98765432",
-    );
+    const result = await sendStatusUpdateActivity(notification, "C98765432");
 
     expect(result).toEqual({
+      success: true,
       ts: "1234567890.654321",
       channel: "C98765432",
     });
   });
 
-  it("handles all status types", async () => {
-    vi.mocked(sendStatusUpdate).mockResolvedValue({
+  it("handles different status types", async () => {
+    vi.mocked(callMcpTool).mockResolvedValue({
+      success: true,
       ts: "1234567890.000000",
       channel: "C12345",
     });
 
-    const statuses: StatusNotification["status"][] = [
-      "started",
-      "completed",
-      "failed",
-    ];
+    const statuses = ["started", "completed", "failed"];
 
     for (const status of statuses) {
+      vi.clearAllMocks();
+
       const notification: StatusNotification = {
-        type: "status_update",
         taskId: "TASK-789",
         status,
-        details: null,
+        message: `Status is ${status}`,
       };
 
-      await sendStatusUpdateActivity(mockClient, notification, "C12345");
+      await sendStatusUpdateActivity(notification, "C12345");
 
-      expect(sendStatusUpdate).toHaveBeenCalledWith(
-        mockClient,
-        notification,
-        "C12345",
+      expect(callMcpTool).toHaveBeenCalledWith(
+        expect.objectContaining({
+          params: expect.objectContaining({
+            text: expect.stringContaining(status),
+          }),
+        }),
       );
     }
   });

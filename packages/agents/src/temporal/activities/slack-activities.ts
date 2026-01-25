@@ -1,37 +1,54 @@
 /**
  * Slack Temporal Activities
  *
- * Wraps Slack notification operations as Temporal activities.
- * Activities receive pre-configured WebClient from the workflow.
- *
- * NOTE: Uses dynamic import for @aesir/integrations to avoid
- * triggering config validation at module load time. This allows agents
- * to start without integration credentials (MCP migration).
+ * Wraps Slack notification operations as Temporal activities using MCP calls.
+ * Activities communicate with the Slack integration service via HTTP.
  */
 
 import { createPinoLogger, type PinoLogger } from "@aesir/common";
-// Import types only (doesn't trigger runtime validation)
-import type {
-  ApprovalNotification,
-  MessageResult,
-  StatusNotification,
-} from "@aesir/integrations";
-import type { WebClient } from "@slack/web-api";
+import { callMcpTool } from "../../mcp/index.js";
 
 const logger: PinoLogger = createPinoLogger({
   component: "agents:temporal:slack-activities",
 });
 
 /**
+ * Approval notification payload
+ */
+export interface ApprovalNotification {
+  type: "approval_needed";
+  taskId: string;
+  prUrl: string;
+  title: string;
+  summary: string;
+}
+
+/**
+ * Status notification payload
+ */
+export interface StatusNotification {
+  taskId: string;
+  status: string;
+  message: string;
+}
+
+/**
+ * Result of sending a message
+ */
+export interface MessageResult {
+  success: boolean;
+  ts?: string;
+  channel?: string;
+}
+
+/**
  * Send approval request notification as a Temporal activity.
  *
- * @param client - Pre-configured WebClient instance
  * @param notification - Approval notification payload
  * @param channel - Channel ID to post to
  * @returns Notification result with success status
  */
 export async function sendApprovalRequestActivity(
-  client: WebClient,
   notification: ApprovalNotification,
   channel: string,
 ): Promise<MessageResult> {
@@ -40,21 +57,32 @@ export async function sendApprovalRequestActivity(
     `Sending approval request for task ${notification.taskId}`,
   );
 
-  // Dynamic import to avoid triggering config validation at module load
-  const { sendApprovalRequest } = await import("@aesir/integrations");
-  return sendApprovalRequest(client, notification, channel);
+  // Call Slack integration service via MCP
+  const result = await callMcpTool<MessageResult>({
+    integration: "slack",
+    tool: "send_approval_request",
+    params: {
+      channel,
+      taskId: notification.taskId,
+      prUrl: notification.prUrl,
+      title: notification.title,
+      summary: notification.summary,
+    },
+    agentId: "temporal-worker",
+    correlationId: `slack-approval-${notification.taskId}`,
+  });
+
+  return result;
 }
 
 /**
  * Send status update notification as a Temporal activity.
  *
- * @param client - Pre-configured WebClient instance
  * @param notification - Status notification payload
  * @param channel - Channel ID to post to
  * @returns Notification result with success status
  */
 export async function sendStatusUpdateActivity(
-  client: WebClient,
   notification: StatusNotification,
   channel: string,
 ): Promise<MessageResult> {
@@ -63,7 +91,17 @@ export async function sendStatusUpdateActivity(
     `Sending status update for task ${notification.taskId}`,
   );
 
-  // Dynamic import to avoid triggering config validation at module load
-  const { sendStatusUpdate } = await import("@aesir/integrations");
-  return sendStatusUpdate(client, notification, channel);
+  // Call Slack integration service via MCP
+  const result = await callMcpTool<MessageResult>({
+    integration: "slack",
+    tool: "send_message",
+    params: {
+      channel,
+      text: `*Task ${notification.taskId}*: ${notification.status}\n${notification.message}`,
+    },
+    agentId: "temporal-worker",
+    correlationId: `slack-status-${notification.taskId}`,
+  });
+
+  return result;
 }

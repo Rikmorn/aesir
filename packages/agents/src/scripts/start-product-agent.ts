@@ -8,10 +8,12 @@
  * Required environment variables:
  * - SLACK_BOT_TOKEN: Bot User OAuth Token (xoxb-...)
  * - SLACK_APP_TOKEN: App-Level Token with connections:write (xapp-...)
- * - LINEAR_ACCESS_TOKEN: Linear API key or OAuth access token
  * - LINEAR_TEAM_ID: Linear team ID for task creation
+ * - LINEAR_MCP_URL: Linear integration MCP endpoint
  * - ANTHROPIC_API_KEY: Anthropic API key for Claude
  * - DATABASE_URL: PostgreSQL connection string (e.g., postgresql://temporal:temporal@localhost:5432/temporal)
+ *
+ * Note: Linear operations go through MCP (LINEAR_MCP_URL), not direct SDK.
  *
  * Usage:
  *   npx tsx src/scripts/start-product-agent.ts
@@ -21,31 +23,45 @@
  */
 
 // Early startup logging (before any imports that might fail)
-// biome-ignore lint/suspicious/noConsole: Required for early startup debugging
 console.log("[product-agent] Starting... (early boot)");
-// biome-ignore lint/suspicious/noConsole: Required for early startup debugging
 console.log("[product-agent] NODE_ENV:", process.env.NODE_ENV);
 
 // Environment must be loaded FIRST before any other imports
 import "@aesir/common";
 
-// Now dynamically import modules that depend on env vars
+import { createPinoLogger } from "@aesir/common";
+import { ChatAnthropic } from "@langchain/anthropic";
+import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
+import { App } from "@slack/bolt";
+import { registerHandlers } from "../slack/assistant/thread-handlers.js";
+
+const logger = createPinoLogger({
+  component: "agents:scripts:product-agent",
+});
+
 async function bootstrap(): Promise<void> {
-  const { ChatAnthropic } = await import("@langchain/anthropic");
-  const { PostgresSaver } = await import(
-    "@langchain/langgraph-checkpoint-postgres"
-  );
-  const { App } = await import("@slack/bolt");
-  const { registerHandlers } = await import(
-    "../slack/assistant/thread-handlers.js"
-  );
-  const { createPinoLogger } = await import("@aesir/common");
+  // Validate required env vars
+  const teamId = process.env.LINEAR_TEAM_ID;
+  const databaseUrl = process.env.DATABASE_URL;
+  const slackBotToken = process.env.SLACK_BOT_TOKEN;
+  const slackAppToken = process.env.SLACK_APP_TOKEN;
 
-  const logger = createPinoLogger({
-    component: "agents:scripts:product-agent",
-  });
-
-  // Note: Required environment variables are validated by ../config/env.js at import time
+  if (!teamId) {
+    logger.error({}, "LINEAR_TEAM_ID is required");
+    process.exit(1);
+  }
+  if (!databaseUrl) {
+    logger.error({}, "DATABASE_URL is required");
+    process.exit(1);
+  }
+  if (!slackBotToken) {
+    logger.error({}, "SLACK_BOT_TOKEN is required");
+    process.exit(1);
+  }
+  if (!slackAppToken) {
+    logger.error({}, "SLACK_APP_TOKEN is required");
+    process.exit(1);
+  }
 
   // Initialize LLM
   logger.info({}, "Initializing ChatAnthropic");
@@ -54,23 +70,20 @@ async function bootstrap(): Promise<void> {
     temperature: 0.7,
   });
 
-  // Get Linear team ID for MCP operations
   logger.info({}, "Configuring Linear team ID");
-  const teamId = process.env.LINEAR_TEAM_ID!;
 
   // Initialize checkpointer for conversation persistence
   // Uses PostgreSQL for persistence across restarts
   logger.info({}, "Initializing PostgreSQL checkpointer");
-  const checkpointer = PostgresSaver.fromConnString(process.env.DATABASE_URL!);
+  const checkpointer = PostgresSaver.fromConnString(databaseUrl);
   await checkpointer.setup();
 
   // Create Bolt app with Socket Mode
   // Using App constructor directly for simple Socket Mode setup
-  // The @aesir/integration-slack createBoltApp is for production HTTP mode with DB-backed credentials
   logger.info({}, "Creating Bolt app with Socket Mode");
   const app = new App({
-    token: process.env.SLACK_BOT_TOKEN!,
-    appToken: process.env.SLACK_APP_TOKEN!,
+    token: slackBotToken,
+    appToken: slackAppToken,
     socketMode: true,
   });
 
@@ -157,10 +170,8 @@ async function bootstrap(): Promise<void> {
 }
 
 // Run bootstrap
-// biome-ignore lint/suspicious/noConsole: Required for startup error logging
 console.log("[product-agent] Calling bootstrap()...");
 bootstrap().catch((error) => {
-  // biome-ignore lint/suspicious/noConsole: Required for startup error logging
   console.error("[product-agent] Bootstrap failed:", error);
   process.exit(1);
 });

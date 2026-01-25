@@ -7,14 +7,14 @@ import {
   type PRReviewEvent,
 } from "./github-pr-review.js";
 
-// Mock the integrations module for Temporal signals
-vi.mock("@aesir/integrations", () => ({
+// Mock the platform module for Temporal signals
+vi.mock("@aesir/platform", () => ({
   sendApprovalSignal: vi.fn().mockResolvedValue(undefined),
   sendChangesRequestedSignal: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Import after mocking
-import * as temporalClient from "@aesir/integrations";
+import * as temporalClient from "@aesir/platform";
 
 describe("extractTaskId", () => {
   it('extracts task ID from "Task: ABC-123" format', () => {

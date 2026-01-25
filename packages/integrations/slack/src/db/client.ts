@@ -16,7 +16,7 @@ const { Pool } = pg;
 
 // Lazy-loaded pool and db instances
 let _pool: pg.Pool | null = null;
-let _db: NodePgDatabase | null = null;
+let Db: NodePgDatabase | null = null;
 
 function getPool(): pg.Pool {
   if (_pool) return _pool;
@@ -36,9 +36,9 @@ function getPool(): pg.Pool {
 }
 
 function getDb(): NodePgDatabase {
-  if (_db) return _db;
-  _db = drizzle(getPool());
-  return _db;
+  if (Db) return Db;
+  Db = drizzle(getPool());
+  return Db;
 }
 
 /**

@@ -49,10 +49,10 @@ export const githubEnvSchema = z.object({
 export type GitHubEnv = z.infer<typeof githubEnvSchema>;
 
 // Lazy-loaded validated environment
-let _env: GitHubEnv | null = null;
+let Env: GitHubEnv | null = null;
 
 function getEnv(): GitHubEnv {
-  if (_env) return _env;
+  if (Env) return Env;
 
   loadDotenv();
 
@@ -73,8 +73,8 @@ function getEnv(): GitHubEnv {
     process.exit(1);
   }
 
-  _env = parsed.data;
-  return _env;
+  Env = parsed.data;
+  return Env;
 }
 
 /**

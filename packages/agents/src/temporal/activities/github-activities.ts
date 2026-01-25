@@ -1,16 +1,12 @@
 /**
  * GitHub Temporal Activities
  *
- * Wraps GitHub operations as Temporal activities.
- * Activities receive pre-configured Octokit clients from the workflow.
- *
- * NOTE: Uses dynamic import for @aesir/integrations to avoid
- * triggering config validation at module load time. This allows agents
- * to start without integration credentials (MCP migration).
+ * Wraps GitHub operations as Temporal activities using MCP calls.
+ * Activities communicate with the GitHub integration service via HTTP.
  */
 
 import { createPinoLogger, type PinoLogger } from "@aesir/common";
-import type { Octokit } from "@octokit/rest";
+import { callMcpTool } from "../../mcp/index.js";
 
 const logger: PinoLogger = createPinoLogger({
   component: "agents:temporal:github-activities",
@@ -43,12 +39,10 @@ export interface MergePROutput {
 /**
  * Merge a pull request as a Temporal activity.
  *
- * @param octokit - Pre-configured Octokit instance
  * @param input - Merge parameters
  * @returns Merge result with SHA and success status
  */
 export async function mergePRActivity(
-  octokit: Octokit,
   input: MergePRInput,
 ): Promise<MergePROutput> {
   logger.info(
@@ -56,21 +50,19 @@ export async function mergePRActivity(
     `Merging PR #${input.pullNumber}`,
   );
 
-  // Build options only with defined values (exactOptionalPropertyTypes)
-  const options: { mergeMethod?: "merge" | "squash" | "rebase" } | undefined =
-    input.mergeMethod !== undefined
-      ? { mergeMethod: input.mergeMethod }
-      : undefined;
-
-  // Dynamic import to avoid triggering config validation at module load
-  const { mergePullRequest } = await import("@aesir/integrations");
-  const result = await mergePullRequest(
-    octokit,
-    input.owner,
-    input.repo,
-    input.pullNumber,
-    options,
-  );
+  // Call GitHub integration service via MCP
+  const result = await callMcpTool<MergePROutput>({
+    integration: "github",
+    tool: "merge_pull_request",
+    params: {
+      owner: input.owner,
+      repo: input.repo,
+      pullNumber: input.pullNumber,
+      mergeMethod: input.mergeMethod ?? "squash",
+    },
+    agentId: "temporal-worker",
+    correlationId: `github-merge-${input.owner}/${input.repo}#${input.pullNumber}`,
+  });
 
   logger.info(
     { sha: result.sha, pullNumber: input.pullNumber },

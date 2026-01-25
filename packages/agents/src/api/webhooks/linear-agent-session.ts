@@ -4,12 +4,9 @@
  * Handles AgentSession webhooks from Linear to trigger the Dev Agent workflow.
  * When a task is delegated to the Dev Agent, Linear sends an AgentSession webhook
  * which this handler uses to start the prApprovalWorkflow in Temporal.
- *
- * NOTE: Uses dynamic import for @aesir/integration-linear to avoid
- * triggering config validation at module load time. This allows agents
- * to start without Linear credentials (MCP migration).
  */
 
+import { createHmac, timingSafeEqual } from "node:crypto";
 import {
   createChildLogger,
   createPinoLogger,
@@ -17,12 +14,74 @@ import {
   type PinoLogger,
   ValidationError,
 } from "@aesir/common";
-// Import types only (doesn't trigger runtime validation)
-import type {
-  ApprovalWorkflowInput,
-  WebhookIdempotencyService,
-} from "@aesir/integrations";
 import type { ExecutionTracker } from "@aesir/observability";
+import {
+  type ApprovalWorkflowInput,
+  startApprovalWorkflow,
+} from "@aesir/platform";
+import type { ResultAsync } from "neverthrow";
+
+/**
+ * Webhook idempotency service interface (defined locally to avoid importing from @aesir/integrations)
+ */
+export interface WebhookIdempotencyService {
+  checkAndRecord(
+    provider: "linear" | "github" | "slack",
+    deliveryId: string,
+    eventType: string,
+  ): ResultAsync<
+    { isDuplicate: boolean; deliveryRecordId?: string | undefined },
+    Error
+  >;
+  health(): Promise<{ healthy: boolean; latencyMs: number }>;
+  close(): Promise<void>;
+}
+
+/**
+ * Verify a Linear webhook signature using HMAC-SHA256
+ *
+ * @param signature - The signature from the 'linear-signature' header (hex encoded)
+ * @param rawBody - The raw request body as a string (NOT parsed JSON)
+ * @param secret - The webhook signing secret from Linear settings
+ * @returns true if signature is valid, false otherwise
+ */
+function verifyLinearSignature(
+  signature: string,
+  rawBody: string,
+  secret: string,
+): boolean {
+  try {
+    // Convert hex signature from header to Buffer
+    const headerSignature = Buffer.from(signature, "hex");
+
+    // Compute HMAC-SHA256 of the raw body
+    const computedSignature = createHmac("sha256", secret)
+      .update(rawBody)
+      .digest();
+
+    // Use timing-safe comparison to prevent timing attacks
+    return timingSafeEqual(computedSignature, headerSignature);
+  } catch {
+    // Return false for any errors (invalid hex, buffer length mismatch, etc.)
+    return false;
+  }
+}
+
+/**
+ * Validate that a webhook timestamp is recent (prevents replay attacks)
+ *
+ * @param timestamp - The webhookTimestamp from the payload (milliseconds since epoch)
+ * @param toleranceMs - Maximum age of webhook in milliseconds (default: 60 seconds)
+ * @returns true if timestamp is within tolerance, false otherwise
+ */
+function validateWebhookTimestamp(
+  timestamp: number,
+  toleranceMs: number = 60_000,
+): boolean {
+  const now = Date.now();
+  const age = Math.abs(now - timestamp);
+  return age <= toleranceMs;
+}
 
 import {
   type AgentSessionPayload,
@@ -112,9 +171,6 @@ export async function handleAgentSessionWebhook(
       completionStatus: config.completionStatus,
     };
 
-    // Dynamic import to avoid triggering config validation at module load
-    const { startApprovalWorkflow } = await import("@aesir/integrations");
-
     // Start the approval workflow
     await startApprovalWorkflow(workflowId, workflowInput);
 
@@ -183,13 +239,10 @@ export async function linearWebhookHandler(
 
   const signature = req.headers["linear-signature"];
 
-  // Dynamic import to avoid triggering Linear config validation at module load
-  const { verifyWebhookSignature } = await import("@aesir/integration-linear");
-
-  // Verify signature
+  // Verify signature using local implementation
   if (
     !signature ||
-    !verifyWebhookSignature(signature, req.rawBody, webhookSecret)
+    !verifyLinearSignature(signature, req.rawBody, webhookSecret)
   ) {
     logger.warn({}, "Invalid or missing webhook signature");
     res.status(401).json({ error: "Invalid signature" });
@@ -271,10 +324,6 @@ export async function linearWebhookHandler(
   }
 
   // Validate timestamp (prevent replay attacks)
-  // Dynamic import already done above for verifyWebhookSignature
-  const { validateWebhookTimestamp } = await import(
-    "@aesir/integration-linear"
-  );
   if (!validateWebhookTimestamp(payload.webhookTimestamp)) {
     logger.warn(
       { timestamp: payload.webhookTimestamp },
