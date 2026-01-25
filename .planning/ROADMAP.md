@@ -66,10 +66,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. Event dispatcher routes normalized events to correct agent /events endpoint based on config rules
   6. E2E verified: Linear webhook → linear-integration → dispatcher → dev-agent /events returns 200
 
-**Plans**: TBD
+**Plans:** 5 plans
 
 Plans:
-- [ ] 23-01: [Plan description TBD during planning]
+- [ ] 23-01-PLAN.md — Common event schema, ID generator, nginx hardening
+- [ ] 23-02-PLAN.md — Linear dispatcher and event normalization
+- [ ] 23-03-PLAN.md — GitHub dispatcher and event normalization
+- [ ] 23-04-PLAN.md — Slack dispatcher and event normalization
+- [ ] 23-05-PLAN.md — Dev-agent /events endpoint and E2E verification
 
 ### Phase 24: Dev Container
 
@@ -161,7 +165,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Dev-agent posts implementation plan as Linear comment before executing
   2. Dev-agent posts plan summary to Slack with Approve/Reject buttons
-  3. Human can approve via Linear comment ("approved" or 👍 emoji)
+  3. Human can approve via Linear comment ("approved" or thumbs-up emoji)
   4. Human can approve via Slack button click
   5. Either approval method signals Temporal workflow to continue execution
   6. Rejection with feedback triggers plan revision (agent re-plans)
@@ -184,7 +188,7 @@ Phases execute in numeric order: 23 → 23.1 → 23.2 → 24 → 24.1 → 25 →
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 23. Event Infrastructure | v2.1 | 0/TBD | Not started | - |
+| 23. Event Infrastructure | v2.1 | 0/5 | Planned | - |
 | 24. Dev Container | v2.1 | 0/TBD | Not started | - |
 | 25. Product Agent Workflow | v2.1 | 0/TBD | Not started | - |
 | 26. Dev Agent Workflow | v2.1 | 0/TBD | Not started | - |
