@@ -64,7 +64,10 @@ End-to-end automated development workflow where agents handle routine developmen
 
 ### Active
 
-*See next milestone planning*
+**v2.1 Agents That Ship:**
+- [ ] Product-agent: Slack conversation → well-defined Linear issue
+- [ ] Dev-agent: Linear issue → mergeable PR (container-based execution)
+- [ ] Human-in-the-loop: Approvals and feedback loops
 
 ### Out of Scope
 
@@ -121,5 +124,19 @@ Lessons learned during development that guide future phases.
 | Infrastructure phases must include consumer migration | Phase 19 created MCP servers but didn't wire agents to use them. When building infrastructure, include at least one consumer migration to validate end-to-end. |
 | Pure library pattern for shared packages | @aesir/common should never validate env vars at import time. Services own their config and pass dependencies to libraries. |
 
+## Current Milestone: v2.1 Agents That Ship
+
+**Goal:** End-to-end working agents where feature requests become shipped code without manual intervention.
+
+**Target features:**
+- Product-agent receives Slack messages, asks clarifying questions, creates well-structured Linear issues
+- Dev-agent receives Linear issues, works in dev container, produces mergeable PRs
+- Human-in-the-loop approvals from both Linear and Slack
+- Feedback loops for PR reviews and plan revisions
+
+**Success bar:** Output quality matches "competent junior developer" - not perfect, but reasonable and reviewable.
+
+**v2.1 Rule:** No phase is complete until its output is verified working in the full flow.
+
 ---
-*Last updated: 2026-01-25 after v2.0 milestone completion*
+*Last updated: 2026-01-25 after v2.1 milestone start*

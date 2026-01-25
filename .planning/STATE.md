@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-25)
 
 **Core value:** End-to-end automated development workflow
-**Current focus:** v2.0 complete — planning next milestone
+**Current focus:** v2.1 Agents That Ship — defining requirements
 
 ## Current Position
 
-Phase: v2.0 complete
-Plan: N/A
-Status: Milestone shipped
-Last activity: 2026-01-25 — v2.0 Foundation milestone complete
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-01-25 — Milestone v2.1 started
 
-Progress: v2.0 [####################] 100% (104 plans complete)
+Progress: v2.1 [░░░░░░░░░░░░░░░░░░░░] 0%
 
 ## Milestone History
 
@@ -83,9 +83,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-25
-Stopped at: v2.0 milestone complete
+Stopped at: v2.1 milestone definition
 Resume file: None
-Next action: `/gsd:new-milestone` to start v3.0
+Next action: Define requirements for v2.1
 
 ---
-*Updated: 2026-01-25 — v2.0 milestone complete*
+*Updated: 2026-01-25 — v2.1 milestone started*
