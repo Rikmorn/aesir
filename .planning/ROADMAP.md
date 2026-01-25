@@ -28,7 +28,7 @@ The v2.0 Foundation milestone restructures Aesir from a working prototype to a m
 - [x] **Phase 19: MCP Layer** - MCP servers in each integration for agent tool calls
 - [x] **Phase 20: Testing Pyramid** - Coverage, testcontainers, fixtures, isolation
 - [ ] ~~**Phase 21: CI/CD Pipeline**~~ - *Deferred to v3.0* - GitHub Actions, quality gates, branch protection
-- [ ] **Phase 22: Local Dev Environment** - Docker hot reload, health checks, graceful shutdown
+- [x] **Phase 22: Local Dev Environment** - Docker hot reload, health checks, graceful shutdown
 - [x] **Phase 22.1: Common Library Refactor** (INSERTED) - Refactor @aesir/common to pure library pattern
 - [x] **Phase 22.2: Agent MCP Migration** (INSERTED) - Migrate agents from direct SDK clients to MCP HTTP calls
 
@@ -304,7 +304,7 @@ Plans:
 - [x] 22-02-PLAN.md — Add integration services to docker-compose.yml
 - [x] 22-03-PLAN.md — Add Docker Compose watch configuration
 - [x] 22-04-PLAN.md — Enhance agent shutdown with logging
-- [ ] 22-05-PLAN.md — Update AI context files, final verification checkpoint
+- [x] 22-05-PLAN.md — Update AI context files, final verification checkpoint
 
 ### Phase 22.1: Common Library Refactor (INSERTED)
 **Goal:** Refactor @aesir/common to pure library pattern — no env validation at import time

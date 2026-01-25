@@ -21,9 +21,10 @@ Platform (config, logging, state, temporal)
 ```
 
 **Dependency rules:**
-- Agents import from Integrations and Platform
+- Agents communicate with Integrations via HTTP/MCP (no direct imports)
 - Integrations import from Platform only
 - Platform imports nothing from Agents or Integrations
+- Agents import from Platform and Common only
 
 ## Local Development
 
@@ -104,6 +105,18 @@ Each integration exposes MCP tools at `/mcp/*`:
 Headers:
 - `X-Agent-ID` - Required for tool invocation
 - `X-Correlation-ID` - Optional, for request tracing
+
+**Agent Usage:**
+```typescript
+import { callMcpTool } from "@aesir/agents";
+
+const issue = await callMcpTool({
+  integration: "linear",
+  tool: "get_issue",
+  params: { issueId: "ABC-123" },
+  agentId: "dev-agent",
+});
+```
 
 ## Package Structure
 
