@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 23 of 27 (Event Infrastructure)
-Plan: 2 of 5 complete
+Plan: 3 of 5 complete
 Status: In progress
-Last activity: 2026-01-25 — Completed 23-02-PLAN.md (Linear Event Normalizer)
+Last activity: 2026-01-25 — Completed 23-03-PLAN.md (GitHub Event Normalizer)
 
-Progress: [████░░░░░░] 40%
+Progress: [██████░░░░] 60%
 
 ## Milestone History
 
@@ -67,6 +67,7 @@ Key decisions that carry forward:
 - Event IDs use evt_ prefix matching existing ID patterns (cred_, exec_, ws_)
 - Integration-embedded dispatcher pattern: each integration dispatches its own events
 - Fire-and-forget HTTP dispatch: does not block webhook response
+- GitHub event type includes review state (review_approved, review_changes_requested, etc.) for fine-grained routing
 
 ### Pending Todos
 
@@ -89,9 +90,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-25
-Stopped at: Completed 23-02-PLAN.md (Linear Event Normalizer)
+Stopped at: Completed 23-03-PLAN.md (GitHub Event Normalizer)
 Resume file: None
-Next action: Execute 23-03-PLAN.md (GitHub Event Normalizer)
+Next action: Execute 23-04-PLAN.md (Slack Event Normalizer)
 
 ---
-*Updated: 2026-01-25 — Plan 23-02 complete*
+*Updated: 2026-01-25 — Plan 23-03 complete*
