@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 23 of 27 (Event Infrastructure)
-Plan: Ready to plan Phase 23
-Status: Not started
-Last activity: 2026-01-25 — Roadmap created for v2.1 milestone
+Plan: 1 of 5 complete
+Status: In progress
+Last activity: 2026-01-25 — Completed 23-01-PLAN.md (Foundation Event Infrastructure)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 20%
 
 ## Milestone History
 
@@ -63,6 +63,8 @@ Key decisions that carry forward:
 - Infrastructure phases must include consumer migration (E2E verification requirements)
 - pnpm monorepo with TypeScript project references
 - Docker Compose for local development
+- Event type uses dotted notation (source.resource.action) for consistent parsing
+- Event IDs use evt_ prefix matching existing ID patterns (cred_, exec_, ws_)
 
 ### Pending Todos
 
@@ -85,9 +87,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-25
-Stopped at: Roadmap creation complete, ready to plan Phase 23
+Stopped at: Completed 23-01-PLAN.md (Foundation Event Infrastructure)
 Resume file: None
-Next action: `/gsd:plan-phase 23`
+Next action: Execute 23-02-PLAN.md (Linear Event Normalizer)
 
 ---
-*Updated: 2026-01-25 — v2.1 roadmap created*
+*Updated: 2026-01-25 — Plan 23-01 complete*
