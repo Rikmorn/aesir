@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 22.2 of 22 (Agent MCP Migration - inserted)
-Plan: 4 of 6 in Phase 22.2
+Plan: 5 of 6 in Phase 22.2
 Status: In progress
-Last activity: 2026-01-25 - Completed 22.2-04-PLAN.md (Agent Config Migration)
+Last activity: 2026-01-25 - Completed 22.2-05-PLAN.md (Test Migration)
 
-Progress: [####################] ~99% (115 plans complete)
+Progress: [####################] ~99% (116 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [####################] ~99% (115 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 115 (v2.0)
+- Total plans completed: 116 (v2.0)
 - Average duration: ~5.2 min
-- Total execution time: ~595 min
+- Total execution time: ~601 min
 
 **By Phase:**
 
@@ -46,11 +46,11 @@ Progress: [####################] ~99% (115 plans complete)
 | 20-testing-pyramid | 8/8 | 35 min | 4.4 min |
 | 22-local-dev-environment | 5/5 | 12 min | 2.4 min |
 | 22.1-common-library-refactor | 5/5 | 35 min | 7 min |
-| 22.2-agent-mcp-migration | 4/6 | 17 min | 4.2 min |
+| 22.2-agent-mcp-migration | 5/6 | 23 min | 4.6 min |
 
 **Recent Trend:**
-- Last 5 plans: 22.2-04 (2 min), 22.2-03 (8 min), 22.2-02 (4 min), 22.2-01 (3 min), 22.1-05 (5 min)
-- Trend: Phase 22.2 in progress - agent config cleaned of integration tokens
+- Last 5 plans: 22.2-05 (6 min), 22.2-04 (2 min), 22.2-03 (8 min), 22.2-02 (4 min), 22.2-01 (3 min)
+- Trend: Phase 22.2 in progress - test migration to MCP mocks complete
 
 *Updated after each plan completion*
 
@@ -374,6 +374,9 @@ Recent decisions affecting current work:
 - [22.2-04]: Agent config no longer requires integration tokens (MCP URLs only)
 - [22.2-04]: Docker Compose agents depend on integration health checks for startup ordering
 - [22.2-04]: Workspace config vars (LINEAR_TEAM_ID, GITHUB_REPO, SLACK_CHANNEL_ID) separate from authentication
+- [22.2-05]: vi.hoisted pattern required for fetch mocking (solves hoisting issues)
+- [22.2-05]: Tests verify HTTP calls not SDK methods (MCP transport layer)
+- [22.2-05]: Sequential MCP calls use mockResolvedValueOnce chaining
 
 ### Pending Todos
 
@@ -422,9 +425,9 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-01-25
-Stopped at: Completed 22.2-04-PLAN.md (Agent Config Migration)
+Stopped at: Completed 22.2-05-PLAN.md (Test Migration to MCP Mocks)
 Resume file: None
-Next action: Execute 22.2-05-PLAN.md (Dev Agent - Pickup Task MCP Migration)
+Next action: Execute 22.2-06-PLAN.md (final plan in phase)
 
 ---
-*Updated: 2026-01-25 - Plan 22.2-04 complete*
+*Updated: 2026-01-25 - Plan 22.2-05 complete*
