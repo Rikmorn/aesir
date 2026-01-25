@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 Phase: 22.2 of 22 (Agent MCP Migration - inserted)
-Plan: 0 of 0 in Phase 22.2 (to be planned)
-Status: Phase 22.2 inserted after 22.1 - urgent work
-Last activity: 2026-01-25 - Inserted Phase 22.2 (Agent MCP Migration)
+Plan: 1 of 6 in Phase 22.2
+Status: In progress
+Last activity: 2026-01-25 - Completed 22.2-01-PLAN.md (MCP Client Wrapper)
 
-Progress: [####################] ~99% (111 plans complete)
+Progress: [####################] ~99% (112 plans complete)
 
 ## Milestone History
 
@@ -25,9 +25,9 @@ Progress: [####################] ~99% (111 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 104 (v2.0)
-- Average duration: ~5.2 min
-- Total execution time: ~546 min
+- Total plans completed: 112 (v2.0)
+- Average duration: ~5.1 min
+- Total execution time: ~581 min
 
 **By Phase:**
 
@@ -46,10 +46,11 @@ Progress: [####################] ~99% (111 plans complete)
 | 20-testing-pyramid | 8/8 | 35 min | 4.4 min |
 | 22-local-dev-environment | 5/5 | 12 min | 2.4 min |
 | 22.1-common-library-refactor | 5/5 | 35 min | 7 min |
+| 22.2-agent-mcp-migration | 1/6 | 3 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 22.1-05 (5 min), 22.1-04 (2 min), 22.1-03 (15 min), 22.1-02 (12 min), 22.1-01 (1 min)
-- Trend: Phase 22.1 complete - returning to Phase 22
+- Last 5 plans: 22.2-01 (3 min), 22.1-05 (5 min), 22.1-04 (2 min), 22.1-03 (15 min), 22.1-02 (12 min)
+- Trend: Phase 22.2 started - agent MCP migration
 
 *Updated after each plan completion*
 
@@ -360,6 +361,10 @@ Recent decisions affecting current work:
 - [22.1-04]: Docker Compose uses DB_* env vars consistently for all services
 - [22.1-04]: Platform/observability config imports fixed in Plan 22.1-02 (pre-completed)
 - [22.1-05]: Docker container failures for missing credentials are expected fail-fast behavior (not bugs)
+- [22.2-01]: fetch-retry-ts uses fetchBuilder named export (not default export)
+- [22.2-01]: Agent-side MCP types separate from @aesir/common server-side types (different purposes)
+- [22.2-01]: MCP URLs read from process.env directly (works before/after config refactor)
+- [22.2-01]: callMcpTool uses exponential backoff (1s/2s/4s) with 3 retries on 429/5xx
 
 ### Pending Todos
 
@@ -399,16 +404,16 @@ Recent decisions affecting current work:
   - Completed: 2026-01-24
 
 - Phase 22.2 inserted after Phase 22.1: Agent MCP migration (URGENT)
-  - Reason: TBD - to be defined during planning
+  - Reason: Agents currently import direct SDK clients, bypassing MCP servers created in Phase 19
   - Inserted: 2026-01-25
-  - Status: Not started
+  - Status: In progress (1/6 plans complete)
 
 ## Session Continuity
 
 Last session: 2026-01-25
-Stopped at: Inserted Phase 22.2 - Agent MCP Migration
+Stopped at: Completed 22.2-01-PLAN.md (MCP Client Wrapper)
 Resume file: None
-Next action: Plan Phase 22.2 (run /gsd:plan-phase 22.2)
+Next action: Execute 22.2-02-PLAN.md or continue with remaining plans
 
 ---
-*Updated: 2026-01-24 - Phase 22.1 complete*
+*Updated: 2026-01-25 - Plan 22.2-01 complete*
