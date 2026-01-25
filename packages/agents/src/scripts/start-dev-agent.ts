@@ -46,6 +46,7 @@ import { createExecutionTracker } from "@aesir/observability";
 import { createTemporalWorker, DockerSandbox } from "@aesir/platform";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import { createEventsHandler } from "../api/events/index.js";
 import { prReviewWebhookHandler } from "../api/webhooks/github-pr-review.js";
 import {
   type LinearWebhookConfig,
@@ -83,6 +84,25 @@ async function bootstrap(): Promise<void> {
     executionTracker,
     workspaceId: "ws_default",
   };
+
+  // Create events handler for normalized events from integrations
+  const eventsHandler = createEventsHandler({
+    logger: logger.child({ component: "events" }),
+    // Event callbacks will be added in Phase 26 (Dev Agent Workflow)
+    // For now, just log and acknowledge
+    onLinearEvent: async (event) => {
+      logger.info(
+        { eventType: event.type, eventId: event.id },
+        "Linear event received (handler not yet implemented)",
+      );
+    },
+    onGitHubEvent: async (event) => {
+      logger.info(
+        { eventType: event.type, eventId: event.id },
+        "GitHub event received (handler not yet implemented)",
+      );
+    },
+  });
 
   /**
    * Validate GITHUB_REPO format (script-specific validation)
@@ -222,6 +242,34 @@ async function bootstrap(): Promise<void> {
           res.setHeader(name, value);
         },
       };
+
+      // Normalized events endpoint (from integration dispatchers)
+      if (req.url === "/events") {
+        try {
+          const eventsReq = {
+            headers: req.headers as Record<string, string | undefined>,
+            rawBody,
+          };
+          const eventsRes = {
+            status: (code: number) => ({
+              json: (body: unknown) => {
+                res.writeHead(code, { "Content-Type": "application/json" });
+                res.end(JSON.stringify(body));
+              },
+            }),
+          };
+          await eventsHandler(eventsReq, eventsRes);
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          logger.error(
+            { err },
+            `Unhandled error in events handler: ${errorMessage}`,
+          );
+          res.writeHead(500, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Internal server error" }));
+        }
+        return;
+      }
 
       // Route to appropriate handler
       if (req.url === "/webhooks/linear") {
