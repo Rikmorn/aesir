@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 23 of 27 (Event Infrastructure)
-Plan: 1 of 5 complete
+Plan: 2 of 5 complete
 Status: In progress
-Last activity: 2026-01-25 — Completed 23-01-PLAN.md (Foundation Event Infrastructure)
+Last activity: 2026-01-25 — Completed 23-02-PLAN.md (Linear Event Normalizer)
 
-Progress: [██░░░░░░░░] 20%
+Progress: [████░░░░░░] 40%
 
 ## Milestone History
 
@@ -65,6 +65,8 @@ Key decisions that carry forward:
 - Docker Compose for local development
 - Event type uses dotted notation (source.resource.action) for consistent parsing
 - Event IDs use evt_ prefix matching existing ID patterns (cred_, exec_, ws_)
+- Integration-embedded dispatcher pattern: each integration dispatches its own events
+- Fire-and-forget HTTP dispatch: does not block webhook response
 
 ### Pending Todos
 
@@ -87,9 +89,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-25
-Stopped at: Completed 23-01-PLAN.md (Foundation Event Infrastructure)
+Stopped at: Completed 23-02-PLAN.md (Linear Event Normalizer)
 Resume file: None
-Next action: Execute 23-02-PLAN.md (Linear Event Normalizer)
+Next action: Execute 23-03-PLAN.md (GitHub Event Normalizer)
 
 ---
-*Updated: 2026-01-25 — Plan 23-01 complete*
+*Updated: 2026-01-25 — Plan 23-02 complete*

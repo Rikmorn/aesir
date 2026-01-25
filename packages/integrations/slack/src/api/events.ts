@@ -11,6 +11,11 @@ import type { PinoLogger } from "@aesir/common";
 import type { Request, Response } from "express";
 import { Router } from "express";
 import type { SlackEventDeliveryStore } from "../db/event-delivery-store.js";
+import {
+  createDispatcher,
+  DISPATCH_ROUTES,
+  normalizeSlackEvent,
+} from "../dispatcher/index.js";
 import { createEventHandler } from "../events/handler.js";
 import type { SlackEventPayload } from "../events/types.js";
 
@@ -43,6 +48,12 @@ export function createEventsRouter(deps: EventsRouterDeps): Router {
   const eventHandler = createEventHandler({
     deliveryStore: eventDeliveryStore,
     logger,
+  });
+
+  // Create dispatcher for event routing to agents
+  const dispatcher = createDispatcher({
+    logger: logger.child({ component: "dispatcher" }),
+    routes: DISPATCH_ROUTES,
   });
 
   router.post("/events", async (req: Request, res: Response) => {
@@ -110,6 +121,16 @@ export function createEventsRouter(deps: EventsRouterDeps): Router {
           childLogger.debug("Event filtered or duplicate - acknowledging");
           res.status(200).json({ received: true, filtered: true });
           return;
+        }
+
+        // Normalize and dispatch event (fire-and-forget)
+        const normalizedEvent = normalizeSlackEvent(result.value);
+        if (normalizedEvent) {
+          dispatcher.dispatch(normalizedEvent);
+          childLogger.info(
+            { eventType: normalizedEvent.type, eventId: normalizedEvent.id },
+            "Slack event normalized and dispatched",
+          );
         }
 
         // Call optional event callback (fire and forget to avoid 3-second timeout)
