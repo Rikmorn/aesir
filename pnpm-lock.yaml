@@ -77,6 +77,9 @@ importers:
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@types/pg@8.16.0)(pg@8.17.2)(postgres@3.4.8)
+      fetch-retry-ts:
+        specifier: ^1.3.1
+        version: 1.3.1
       postgres:
         specifier: ^3.4.7
         version: 3.4.8
@@ -2684,6 +2687,9 @@ packages:
     peerDependenciesMeta:
       picomatch:
         optional: true
+
+  fetch-retry-ts@1.3.1:
+    resolution: {integrity: sha512-0QW6UP1nnnBkN6WWo4s0FmvsmdF8PfB1bY4qrAwp5JC4dn/Ad93SMRvdMQLCm9LxjaLx+OnkUEV8pUcsi5lz6g==}
 
   fill-range@7.1.1:
     resolution: {integrity: sha512-YsGpe3WHLK8ZYi4tWDg2Jy3ebRz2rXowDxnld4bkQB00cc/1Zw9AWnC0i9ztDJitivtQvaI9KaLyKrc+hBW0yg==}
@@ -6155,6 +6161,8 @@ snapshots:
   fdir@6.5.0(picomatch@4.0.3):
     optionalDependencies:
       picomatch: 4.0.3
+
+  fetch-retry-ts@1.3.1: {}
 
   fill-range@7.1.1:
     dependencies:
