@@ -269,7 +269,8 @@ services:
         - action: rebuild
           path: ./packages/common/src
 
-  # Dev Agent - handles Linear task automation
+  # Dev Agent - handles Linear task automation via MCP
+  # Communicates with integration services via HTTP (no direct SDK access)
   dev-agent:
     build:
       context: .
@@ -283,6 +284,12 @@ services:
         condition: service_started # Temporal binds to network IP, not localhost
       postgresql:
         condition: service_healthy
+      linear-integration:
+        condition: service_healthy
+      github-integration:
+        condition: service_healthy
+      slack-integration:
+        condition: service_healthy
     environment:
       # Database (internal Docker network)
       - DATABASE_URL=postgresql://temporal:temporal@postgresql:5432/temporal
@@ -295,19 +302,17 @@ services:
       # Temporal (internal Docker network)
       - TEMPORAL_ADDRESS=temporal:7233
       - TEMPORAL_NAMESPACE=default
-      # API Keys (from .env file)
+      # LLM (only API key needed by agents)
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - LINEAR_ACCESS_TOKEN=${LINEAR_ACCESS_TOKEN}
-      - LINEAR_CLIENT_ID=${LINEAR_CLIENT_ID}
-      - LINEAR_CLIENT_SECRET=${LINEAR_CLIENT_SECRET}
-      - LINEAR_WEBHOOK_SECRET=${LINEAR_WEBHOOK_SECRET}
-      - GITHUB_TOKEN=${GITHUB_TOKEN}
-      - GITHUB_REPO=${GITHUB_REPO}
-      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
-      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
-      - SLACK_CHANNEL_ID=${SLACK_CHANNEL_ID}
+      # Workspace configuration (passed to MCP calls)
       - LINEAR_TEAM_ID=${LINEAR_TEAM_ID}
-      # Optional
+      - GITHUB_REPO=${GITHUB_REPO}
+      - SLACK_CHANNEL_ID=${SLACK_CHANNEL_ID}
+      # MCP service URLs (Docker network names)
+      - LINEAR_MCP_URL=http://linear-integration:3001
+      - GITHUB_MCP_URL=http://github-integration:3002
+      - SLACK_MCP_URL=http://slack-integration:3003
+      # Observability (optional)
       - NODE_ENV=${NODE_ENV:-production}
       - LANGSMITH_TRACING=${LANGSMITH_TRACING:-false}
       - LANGSMITH_API_KEY=${LANGSMITH_API_KEY:-}
@@ -331,7 +336,8 @@ services:
         - action: rebuild
           path: ./packages/platform/src
 
-  # Product Agent - handles Slack conversations
+  # Product Agent - handles Slack conversations via MCP
+  # Communicates with integration services via HTTP (no direct SDK access)
   product-agent:
     build:
       context: .
@@ -339,6 +345,12 @@ services:
     container_name: aesir-product-agent
     depends_on:
       postgresql:
+        condition: service_healthy
+      linear-integration:
+        condition: service_healthy
+      github-integration:
+        condition: service_healthy
+      slack-integration:
         condition: service_healthy
     environment:
       # Database (internal Docker network)
@@ -349,18 +361,17 @@ services:
       - DB_PASSWORD=temporal
       - DB_NAME=temporal
       - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
-      # API Keys (from .env file)
+      # LLM (only API key needed by agents)
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - LINEAR_ACCESS_TOKEN=${LINEAR_ACCESS_TOKEN}
-      - LINEAR_CLIENT_ID=${LINEAR_CLIENT_ID}
-      - LINEAR_CLIENT_SECRET=${LINEAR_CLIENT_SECRET}
+      # Workspace configuration (passed to MCP calls)
       - LINEAR_TEAM_ID=${LINEAR_TEAM_ID}
-      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
-      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
-      - SLACK_CHANNEL_ID=${SLACK_CHANNEL_ID}
-      - GITHUB_TOKEN=${GITHUB_TOKEN}
       - GITHUB_REPO=${GITHUB_REPO}
-      # Optional
+      - SLACK_CHANNEL_ID=${SLACK_CHANNEL_ID}
+      # MCP service URLs (Docker network names)
+      - LINEAR_MCP_URL=http://linear-integration:3001
+      - GITHUB_MCP_URL=http://github-integration:3002
+      - SLACK_MCP_URL=http://slack-integration:3003
+      # Observability (optional)
       - NODE_ENV=${NODE_ENV:-production}
       - LANGSMITH_TRACING=${LANGSMITH_TRACING:-false}
       - LANGSMITH_API_KEY=${LANGSMITH_API_KEY:-}
