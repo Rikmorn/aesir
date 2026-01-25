@@ -13,6 +13,11 @@ import type { PinoLogger } from "@aesir/common";
 import type { Request, Response } from "express";
 import { Router } from "express";
 import type { WebhookDeliveryStore } from "../db/webhook-delivery-store.js";
+import {
+  createDispatcher,
+  DISPATCH_ROUTES,
+  normalizePRReviewEvent,
+} from "../dispatcher/index.js";
 import { config } from "../types/config.js";
 import type { PRReviewPayload } from "../webhooks/parser.js";
 import { parsePRReviewPayload } from "../webhooks/parser.js";
@@ -37,6 +42,12 @@ export function createWebhookRouter(deps: WebhookRouterDeps): Router {
   const { logger, deliveryStore, onPRReview } = deps;
 
   const router = Router();
+
+  // Create dispatcher for event routing
+  const dispatcher = createDispatcher({
+    logger: logger.child({ component: "dispatcher" }),
+    routes: DISPATCH_ROUTES,
+  });
 
   router.post("/", async (req: Request, res: Response) => {
     const childLogger = logger.child({
@@ -131,13 +142,18 @@ export function createWebhookRouter(deps: WebhookRouterDeps): Router {
           await onPRReview(payload, deliveryId);
         }
 
+        // Normalize and dispatch event (fire-and-forget)
+        const normalizedEvent = normalizePRReviewEvent(payload, deliveryId);
+        dispatcher.dispatch(normalizedEvent);
+
         childLogger.info(
           {
             action: payload.action,
             prNumber: payload.pull_request.number,
             reviewState: payload.review.state,
+            eventId: normalizedEvent.id,
           },
-          "PR review webhook processed successfully",
+          "PR review webhook processed and event dispatched",
         );
       } else {
         // Other event types - acknowledge but don't process
