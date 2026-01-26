@@ -1,12 +1,19 @@
 /**
  * Dev Agent Nodes
  *
- * LangGraph nodes for dev-agent workflow.
- * Entry nodes handle issue validation and container setup.
- * Subsequent plans will add research, planning, execution nodes.
+ * LangGraph nodes for the dev-agent workflow.
+ * Each node handles a specific phase of the development lifecycle.
  */
 
+// Planning phase
+export { createPlanNode, type PlanNodeDeps } from "./plan.js";
+// Entry - receive issue from webhook
 export { receiveIssueNode } from "./receive-issue.js";
+
+// Research phase
+export { createResearchNode, type ResearchNodeDeps } from "./research.js";
+
+// Setup phase
 export {
   createSetupContainerNode,
   type SetupContainerNodeDeps,
