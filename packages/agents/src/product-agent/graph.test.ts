@@ -59,6 +59,10 @@ function createBaseState(
       userId: "U123",
     },
     createdTasks: [],
+    classification: null,
+    classificationConfidence: null,
+    issueDraft: null,
+    awaitingConfirmation: false,
     ...overrides,
   };
 }
@@ -139,6 +143,7 @@ describe("routeAfterAnalysis", () => {
         "confirming",
         "creating",
         "complete",
+        "declined",
       ];
 
       for (const phase of phases) {

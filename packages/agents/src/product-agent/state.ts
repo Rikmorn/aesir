@@ -19,6 +19,33 @@ import { Annotation } from "@langchain/langgraph";
 import { z } from "zod";
 
 /**
+ * Issue priority levels for Linear
+ */
+export const IssuePrioritySchema = z.enum(["urgent", "high", "medium", "low"]);
+
+export type IssuePriority = z.infer<typeof IssuePrioritySchema>;
+
+/**
+ * Schema for issue draft (preview before creation)
+ */
+export const IssueDraftSchema = z.object({
+  /** Clear, actionable title */
+  title: z.string(),
+  /** Detailed description with context */
+  description: z.string(),
+  /** Specific, testable acceptance criteria */
+  acceptanceCriteria: z.array(z.string()),
+  /** Priority level */
+  priority: IssuePrioritySchema,
+  /** Suggested labels (feature, bug, frontend, etc.) */
+  labels: z.array(z.string()),
+  /** Link back to Slack conversation (optional) */
+  slackThreadUrl: z.string().nullable(),
+});
+
+export type IssueDraft = z.infer<typeof IssueDraftSchema>;
+
+/**
  * Schema for gathered requirements
  */
 export const RequirementsSchema = z.object({
@@ -48,6 +75,28 @@ export const DEFAULT_REQUIREMENTS: Requirements = {
 };
 
 /**
+ * Classification types for incoming messages
+ */
+export const ClassificationTypeSchema = z.enum([
+  "feature_request", // User wants new functionality built
+  "bug_report", // Something is broken or not working
+  "question", // User asking for help/information (not requesting work)
+  "off_topic", // Not product/development related
+  "unclear", // Message is ambiguous, need clarification
+]);
+
+export type ClassificationType = z.infer<typeof ClassificationTypeSchema>;
+
+/**
+ * Classification confidence levels
+ */
+export const ClassificationConfidenceSchema = z.enum(["high", "medium", "low"]);
+
+export type ClassificationConfidence = z.infer<
+  typeof ClassificationConfidenceSchema
+>;
+
+/**
  * Conversation phases
  */
 export const ProductAgentPhaseSchema = z.enum([
@@ -56,6 +105,7 @@ export const ProductAgentPhaseSchema = z.enum([
   "confirming", // Confirming with user before creating
   "creating", // Creating Linear issue
   "complete", // Issue created
+  "declined", // Non-actionable message (question/off-topic)
 ]);
 
 export type ProductAgentPhase = z.infer<typeof ProductAgentPhaseSchema>;
@@ -102,6 +152,10 @@ export const ProductAgentStateSchema = z.object({
   slackContext: SlackContextSchema.nullable(),
   /** Created Linear issues */
   createdTasks: z.array(CreatedTaskSchema),
+  /** Issue draft for confirmation (null until confirming phase) */
+  issueDraft: IssueDraftSchema.nullable(),
+  /** Whether we're waiting for user confirmation */
+  awaitingConfirmation: z.boolean(),
 });
 
 /**
@@ -178,6 +232,42 @@ export const ProductAgentStateAnnotation = Annotation.Root({
   createdTasks: Annotation<CreatedTask[]>({
     reducer: (current, incoming) => current.concat(incoming),
     default: () => [],
+  }),
+
+  /**
+   * Message classification type
+   * Set by classify node, determines routing
+   */
+  classification: Annotation<ClassificationType | null>({
+    reducer: (_current, incoming) => incoming,
+    default: () => null,
+  }),
+
+  /**
+   * Classification confidence level
+   * Low confidence triggers clarification
+   */
+  classificationConfidence: Annotation<ClassificationConfidence | null>({
+    reducer: (_current, incoming) => incoming,
+    default: () => null,
+  }),
+
+  /**
+   * Issue draft for user confirmation
+   * Generated in confirming phase before creating in Linear
+   */
+  issueDraft: Annotation<IssueDraft | null>({
+    reducer: (_current, incoming) => incoming,
+    default: () => null,
+  }),
+
+  /**
+   * Whether we're waiting for user confirmation
+   * True when draft is ready and awaiting "confirm" or feedback
+   */
+  awaitingConfirmation: Annotation<boolean>({
+    reducer: (_current, incoming) => incoming,
+    default: () => false,
   }),
 });
 
