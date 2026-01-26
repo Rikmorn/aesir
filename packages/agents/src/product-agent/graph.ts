@@ -9,6 +9,7 @@
  * START -> classify -> (route) -> analyze -> (route) -> confirm -> (route) -> createTasks -> notify -> END
  *                  |-> clarify -> END (unclear)        |-> clarify -> END      |-> clarify -> END
  *                  |-> END (declined)
+ *                  |-> createTasks (user confirmed) -> notify -> END
  *
  * Key design decisions:
  * - Factory pattern for dependency injection (LLM, LinearClient)
@@ -36,7 +37,7 @@ import {
 /**
  * Route destinations after classification
  */
-export type AfterClassifyRoute = "analyze" | "clarify" | "end";
+export type AfterClassifyRoute = "analyze" | "clarify" | "end" | "createTasks";
 
 /**
  * Route destinations after analysis
@@ -52,6 +53,7 @@ export type AfterConfirmRoute = "createTasks" | "clarify";
  * Route function for conditional edges after classification.
  *
  * Determines next step based on phase:
+ * - If phase is 'creating' -> createTasks (user confirmed, skip straight to creation)
  * - If phase is 'declined' -> end (exit with decline message)
  * - If phase is 'clarifying' -> clarify (unclear, ask for clarification)
  * - Else -> analyze (proceed with gathering)
@@ -62,6 +64,10 @@ export type AfterConfirmRoute = "createTasks" | "clarify";
 export function routeAfterClassify(
   state: ProductAgentState,
 ): AfterClassifyRoute {
+  // User confirmed issue creation - skip directly to createTasks
+  if (state.phase === "creating") {
+    return "createTasks";
+  }
   if (state.phase === "declined") {
     return "end";
   }
@@ -223,6 +229,7 @@ export function createProductAgentGraph(options: ProductAgentGraphOptions) {
       analyze: "analyze",
       clarify: "clarify",
       end: "__end__",
+      createTasks: "createTasks", // Direct route for confirmed issues
     })
 
     // Conditional routing after analysis

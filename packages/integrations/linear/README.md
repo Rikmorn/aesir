@@ -84,6 +84,21 @@ The service uses its own PostgreSQL schema (`linear.*`) for data isolation:
 
 - `linear.credentials` - Encrypted OAuth tokens
 - `linear.webhook_deliveries` - Webhook idempotency tracking
+- `linear.mcp_tool_permissions` - Agent MCP tool access control
+
+## Database Setup
+
+After starting PostgreSQL, run migrations and seed permissions:
+
+```bash
+# Run migrations (creates tables)
+pnpm --filter @aesir/integration-linear db:migrate
+
+# Seed MCP tool permissions for agents
+pnpm --filter @aesir/integration-linear seed:permissions
+```
+
+If migrations fail due to existing tables (error 42P07), you may need to run only the missing migrations manually. Check `src/db/migrations/` for SQL files.
 
 ## Development
 

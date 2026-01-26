@@ -47,6 +47,7 @@ vi.mock("./nodes/index.js", () => ({
   generateClarificationNode: vi.fn(() => vi.fn().mockResolvedValue({})),
   confirmNode: vi.fn(() => vi.fn().mockResolvedValue({})),
   createTasksNode: vi.fn(() => vi.fn().mockResolvedValue({})),
+  notifyNode: vi.fn(() => vi.fn().mockResolvedValue({})),
 }));
 
 /**
@@ -115,14 +116,14 @@ describe("routeAfterClassify", () => {
       expect(result).toBe("analyze");
     });
 
-    it("returns 'analyze' for other phases by default", () => {
+    it("returns 'createTasks' when phase is 'creating' (user confirmed)", () => {
       const state = createBaseState({
         phase: "creating",
       });
 
       const result = routeAfterClassify(state);
 
-      expect(result).toBe("analyze");
+      expect(result).toBe("createTasks");
     });
   });
 
@@ -134,10 +135,12 @@ describe("routeAfterClassify", () => {
       routes.add(routeAfterClassify(createBaseState({ phase: "declined" })));
       routes.add(routeAfterClassify(createBaseState({ phase: "clarifying" })));
       routes.add(routeAfterClassify(createBaseState({ phase: "gathering" })));
+      routes.add(routeAfterClassify(createBaseState({ phase: "creating" })));
 
       expect(routes.has("end")).toBe(true);
       expect(routes.has("clarify")).toBe(true);
       expect(routes.has("analyze")).toBe(true);
+      expect(routes.has("createTasks")).toBe(true);
     });
   });
 });
@@ -330,7 +333,12 @@ describe("createProductAgentGraph", () => {
 describe("graph routing integration", () => {
   describe("routeAfterClassify", () => {
     it("is compatible with StateGraph conditional edges", () => {
-      const validRoutes: AfterClassifyRoute[] = ["analyze", "clarify", "end"];
+      const validRoutes: AfterClassifyRoute[] = [
+        "analyze",
+        "clarify",
+        "end",
+        "createTasks",
+      ];
 
       // Test all possible routes are valid
       const declinedState = createBaseState({ phase: "declined" });
@@ -341,6 +349,9 @@ describe("graph routing integration", () => {
 
       const gatheringState = createBaseState({ phase: "gathering" });
       expect(validRoutes).toContain(routeAfterClassify(gatheringState));
+
+      const creatingState = createBaseState({ phase: "creating" });
+      expect(validRoutes).toContain(routeAfterClassify(creatingState));
     });
   });
 
@@ -389,11 +400,13 @@ describe("graph edge verification", () => {
       "clarify",
       "confirm",
       "createTasks",
+      "notify",
     ];
     const expectedClassifyRoutes: AfterClassifyRoute[] = [
       "analyze",
       "clarify",
       "end",
+      "createTasks",
     ];
     const expectedAnalysisRoutes: AfterAnalysisRoute[] = ["clarify", "confirm"];
     const expectedConfirmRoutes: AfterConfirmRoute[] = [
@@ -406,15 +419,17 @@ describe("graph edge verification", () => {
     // classify -> analyze (via routeAfterClassify)
     // classify -> clarify (via routeAfterClassify, unclear)
     // classify -> __end__ (via routeAfterClassify, declined)
+    // classify -> createTasks (via routeAfterClassify, user confirmed)
     // analyze -> clarify (via routeAfterAnalysis)
     // analyze -> confirm (via routeAfterAnalysis)
     // clarify -> __end__
     // confirm -> createTasks (via routeAfterConfirm)
     // confirm -> clarify (via routeAfterConfirm)
-    // createTasks -> __end__
+    // createTasks -> notify
+    // notify -> __end__
 
-    expect(expectedNodes).toHaveLength(5);
-    expect(expectedClassifyRoutes).toHaveLength(3);
+    expect(expectedNodes).toHaveLength(6);
+    expect(expectedClassifyRoutes).toHaveLength(4);
     expect(expectedAnalysisRoutes).toHaveLength(2);
     expect(expectedConfirmRoutes).toHaveLength(2);
   });
@@ -425,10 +440,12 @@ describe("graph edge verification", () => {
     routes.add(routeAfterClassify(createBaseState({ phase: "declined" })));
     routes.add(routeAfterClassify(createBaseState({ phase: "clarifying" })));
     routes.add(routeAfterClassify(createBaseState({ phase: "gathering" })));
+    routes.add(routeAfterClassify(createBaseState({ phase: "creating" })));
 
     expect(routes.has("end")).toBe(true);
     expect(routes.has("clarify")).toBe(true);
     expect(routes.has("analyze")).toBe(true);
+    expect(routes.has("createTasks")).toBe(true);
   });
 
   it("routing covers all expected outcomes for analysis", () => {

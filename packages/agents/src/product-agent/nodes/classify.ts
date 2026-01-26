@@ -76,6 +76,42 @@ const DECLINE_RESPONSES: Record<string, string> = {
 };
 
 /**
+ * Strip Slack mention patterns from text (e.g., <@U12345678>)
+ */
+function stripSlackMentions(text: string): string {
+  return text.replace(/<@[A-Z0-9]+>/g, "").trim();
+}
+
+/**
+ * Check if message text indicates user wants to confirm
+ */
+function isConfirmationMessage(text: string): boolean {
+  const confirmPhrases = [
+    "confirm",
+    "yes",
+    "approved",
+    "approve",
+    "looks good",
+    "lgtm",
+    "go ahead",
+    "create it",
+    "create the issue",
+    "ship it",
+    "do it",
+  ];
+
+  // Strip Slack mentions before checking (e.g., "<@U12345678> confirm" → "confirm")
+  const lowerText = stripSlackMentions(text).toLowerCase().trim();
+  return confirmPhrases.some(
+    (phrase) =>
+      lowerText === phrase ||
+      lowerText.startsWith(`${phrase} `) ||
+      lowerText.startsWith(`${phrase},`) ||
+      lowerText.startsWith(`${phrase}!`),
+  );
+}
+
+/**
  * Create the classify node with injected dependencies.
  *
  * @param options - Node options with optional LLM override
@@ -86,9 +122,37 @@ export function classifyNode(options: ClassifyNodeOptions = {}) {
     const nodeLogger = logger.child({ node: "classify" });
 
     nodeLogger.debug(
-      { messageCount: state.messages.length },
+      {
+        messageCount: state.messages.length,
+        awaitingConfirmation: state.awaitingConfirmation,
+      },
       "Classifying incoming message",
     );
+
+    // If awaiting confirmation, check for confirmation response
+    if (state.awaitingConfirmation && state.issueDraft) {
+      const lastMessage = state.messages[state.messages.length - 1];
+      const messageText =
+        typeof lastMessage?.content === "string" ? lastMessage.content : "";
+
+      if (isConfirmationMessage(messageText)) {
+        nodeLogger.info(
+          { messageText: messageText.slice(0, 50) },
+          "User confirmed issue creation",
+        );
+        return {
+          phase: "creating" as ProductAgentPhase,
+          awaitingConfirmation: false,
+        };
+      }
+
+      // Not a confirmation - user might have feedback
+      // Reset awaitingConfirmation and let normal flow handle it
+      nodeLogger.info(
+        { messageText: messageText.slice(0, 50) },
+        "User provided feedback instead of confirmation",
+      );
+    }
 
     try {
       // Use provided LLM or create default
