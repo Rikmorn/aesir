@@ -8,9 +8,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type ApprovalNotification,
+  type StatusNotification,
   sendApprovalRequestActivity,
   sendStatusUpdateActivity,
-  type StatusNotification,
 } from "./slack-activities.js";
 
 // Mock the MCP client

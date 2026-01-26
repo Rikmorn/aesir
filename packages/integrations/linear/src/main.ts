@@ -17,15 +17,16 @@ const logger = createPinoLogger({ component: "integrations:linear" });
 async function main() {
   const app = express();
 
-  // Apply raw body middleware for webhook signature verification
-  // CRITICAL: This preserves the raw body for HMAC verification
-  // Using express.json() would parse the body and break signatures
-  app.use(express.raw({ type: "application/json" }));
-
   // HTTP logging middleware with pino
   app.use(createHttpLogger({ logger }));
 
-  // Mount webhook and OAuth routes
+  // Mount MCP routes with JSON body parser
+  // MCP routes need parsed JSON for tool invocations
+  const mcpRouter = createMCPRouter({ db, logger, workspaceId: "ws_default" });
+  app.use("/mcp", express.json(), mcpRouter);
+
+  // Mount webhook and OAuth routes with raw body for signature verification
+  // CRITICAL: Raw body middleware preserves the body for HMAC verification
   const routes = createRoutes({
     logger,
     // Optional: Add onAgentSession handler for webhook processing
@@ -33,12 +34,7 @@ async function main() {
     //   logger.info({ sessionId: payload.agentSession.id }, "Agent session event");
     // },
   });
-  app.use("/", routes);
-
-  // Mount MCP routes with JSON middleware
-  // MCP routes need parsed JSON body, unlike webhooks which need raw body
-  const mcpRouter = createMCPRouter({ db, logger, workspaceId: "ws_default" });
-  app.use("/", express.json(), mcpRouter);
+  app.use("/", express.raw({ type: "application/json" }), routes);
 
   // Health check endpoint with database validation
   interface HealthResponse {

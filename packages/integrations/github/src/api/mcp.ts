@@ -319,9 +319,9 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
 
   /**
    * List available MCP tools
-   * GET /mcp/tools
+   * GET /tools
    */
-  router.get("/mcp/tools", async (req: Request, res: Response) => {
+  router.get("/tools", async (req: Request, res: Response) => {
     const correlationId =
       (req.headers["x-correlation-id"] as string) ||
       generateCorrelationId("api");
@@ -337,7 +337,7 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
 
   /**
    * Invoke an MCP tool
-   * POST /mcp/tools/:name
+   * POST /tools/:name
    *
    * Headers:
    * - X-Correlation-ID: Optional correlation ID for tracing
@@ -346,7 +346,7 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
    * Body: Tool arguments as JSON
    */
   router.post(
-    "/mcp/tools/:name",
+    "/tools/:name",
     async (req: Request, res: Response): Promise<void> => {
       const { name } = req.params;
       const correlationId =

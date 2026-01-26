@@ -2,8 +2,8 @@
  * MCP HTTP Routes for Linear Integration
  *
  * Exposes MCP tool endpoints via HTTP:
- * - GET /mcp/tools - List available tools
- * - POST /mcp/tools/:name - Invoke a specific tool
+ * - GET /tools - List available tools
+ * - POST /tools/:name - Invoke a specific tool
  *
  * Correlation ID and Agent ID are extracted from headers.
  */
@@ -36,7 +36,7 @@ export interface CreateMCPRouterOptions {
   workspaceId?: string;
 }
 
-// Tool metadata for /mcp/tools listing
+// Tool metadata for /tools listing
 const TOOL_DEFINITIONS = [
   {
     name: "get_issue",
@@ -207,9 +207,9 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
 
   /**
    * List available MCP tools
-   * GET /mcp/tools
+   * GET /tools
    */
-  router.get("/mcp/tools", async (req: Request, res: Response) => {
+  router.get("/tools", async (req: Request, res: Response) => {
     const correlationId =
       (req.headers["x-correlation-id"] as string) ||
       generateCorrelationId("api");
@@ -225,7 +225,7 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
 
   /**
    * Invoke an MCP tool
-   * POST /mcp/tools/:name
+   * POST /tools/:name
    *
    * Headers:
    * - X-Correlation-ID: Optional correlation ID for tracing
@@ -234,7 +234,7 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
    * Body: Tool arguments as JSON
    */
   router.post(
-    "/mcp/tools/:name",
+    "/tools/:name",
     async (req: Request, res: Response): Promise<void> => {
       const { name } = req.params;
       const correlationId =

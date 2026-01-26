@@ -7,7 +7,7 @@
 
 import { createPinoLogger } from "@aesir/common";
 import type { LinearClient } from "@linear/sdk";
-import { createLinearClient } from "../client/factory.js";
+import { createLinearClient, getLinearClient } from "../client/factory.js";
 import type { LinearOAuthConfig } from "../client/types.js";
 import { db } from "../db/client.js";
 import { createLinearCredentialStore } from "../db/credential-store.js";
@@ -55,7 +55,14 @@ export async function createLinearClientFromDatabase(
     throw new CredentialNotFoundError(workspaceId);
   }
 
-  // Create callback to persist token refresh
+  // Check if this is an API key (lin_api_*) vs OAuth token
+  // API keys don't need Bearer prefix and don't support refresh
+  if (config.accessToken.startsWith("lin_api_")) {
+    logger.info({ workspaceId }, "Using API key authentication");
+    return getLinearClient(config.accessToken);
+  }
+
+  // Create callback to persist token refresh for OAuth tokens
   const onTokenRefresh = async (
     newConfig: LinearOAuthConfig,
   ): Promise<void> => {
@@ -91,7 +98,7 @@ export async function createLinearClientFromDatabase(
     logger.info({ workspaceId }, "Refreshed tokens persisted successfully");
   };
 
-  // Create client with refresh persistence
+  // Create client with refresh persistence for OAuth tokens
   const client = await createLinearClient(config, onTokenRefresh);
   logger.info({ workspaceId }, "LinearClient created from database");
 

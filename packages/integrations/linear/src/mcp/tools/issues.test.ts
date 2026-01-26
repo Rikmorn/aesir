@@ -203,7 +203,9 @@ describe("handleCreateComment", () => {
       );
 
       expect(result.isError).toBeFalsy();
-      expect(getResultText(result)).toContain("Created comment on issue ABC-123");
+      expect(getResultText(result)).toContain(
+        "Created comment on issue ABC-123",
+      );
 
       const data = result.structuredContent as CreateCommentOutput;
       expect(data.id).toBe("comment-123");
@@ -270,7 +272,9 @@ describe("handleCreateComment", () => {
     });
 
     it("returns error when Linear client throws", async () => {
-      mockLinearClient.createComment.mockRejectedValue(new Error("API timeout"));
+      mockLinearClient.createComment.mockRejectedValue(
+        new Error("API timeout"),
+      );
 
       const result = await handleCreateComment(
         context,

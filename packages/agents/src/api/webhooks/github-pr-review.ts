@@ -17,7 +17,7 @@ import {
   sendApprovalSignal,
   sendChangesRequestedSignal,
 } from "@aesir/platform";
-import { parsePRReviewPayload, type PRReviewPayload } from "./schemas/index.js";
+import { type PRReviewPayload, parsePRReviewPayload } from "./schemas/index.js";
 
 const baseLogger: PinoLogger = createPinoLogger({
   component: "agents:webhooks:github-pr-review",
@@ -269,7 +269,11 @@ export async function prReviewWebhookHandler(
 
   // Verify signature if secret is configured
   if (webhookSecret && signature) {
-    const isValid = verifyGitHubSignature(req.rawBody, signature, webhookSecret);
+    const isValid = verifyGitHubSignature(
+      req.rawBody,
+      signature,
+      webhookSecret,
+    );
     if (!isValid) {
       logger.warn({}, "Invalid webhook signature");
       res.status(401).json({ error: "Invalid signature" });
