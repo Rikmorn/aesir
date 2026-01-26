@@ -49,7 +49,10 @@ export function createPRNode(deps: CreatePRNodeDeps) {
       };
     }
 
-    nodeLogger.info({ identifier: issue.identifier, branchName }, "Creating PR");
+    nodeLogger.info(
+      { identifier: issue.identifier, branchName },
+      "Creating PR",
+    );
 
     const correlationId = `pr-${taskId}`;
 
@@ -95,7 +98,10 @@ export function createPRNode(deps: CreatePRNodeDeps) {
         });
       } catch (statusErr) {
         // Non-critical - status name may not exist in workflow
-        nodeLogger.warn({ err: statusErr }, "Failed to update Linear status to In Review");
+        nodeLogger.warn(
+          { err: statusErr },
+          "Failed to update Linear status to In Review",
+        );
       }
 
       // Step 3: Add PR link as Linear comment (non-critical)
