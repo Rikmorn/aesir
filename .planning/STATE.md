@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 26 of 27 (Dev Agent Workflow)
-Plan: 11 of 13 complete
+Plan: 12 of 13 complete
 Status: In progress
-Last activity: 2026-01-26 - Completed 26-11-PLAN.md (HTTP Service & Worker)
+Last activity: 2026-01-26 - Completed 26-12-PLAN.md (Docker Compose & Routing)
 
-Progress: [██████░░░░] 97%
+Progress: [██████░░░░] 98%
 
 ## Milestone History
 
@@ -52,7 +52,7 @@ Progress: [██████░░░░] 97%
 | 23-event-infrastructure | 5/5 | ~25 min | ~5 min |
 | 24-dev-container | 6/6 | 18 min | 3 min |
 | 25-product-agent-workflow | 9/9 | ~72 min | ~8.0 min |
-| 26-dev-agent-workflow | 11/13 | 34 min | 3.1 min |
+| 26-dev-agent-workflow | 12/13 | 37 min | 3.1 min |
 
 ## Accumulated Context
 
@@ -138,6 +138,9 @@ Key decisions that carry forward:
 - 24h timeout stops container, 72h timeout ends workflow
 - initDevAgentActivities() called at worker startup for DI
 - proxyActivities with 30min timeout, 3 retries for graph activities
+- Separate dev-agent and dev-agent-worker containers for scalability
+- Worker depends on HTTP service health before starting
+- Dispatch all issue events, filter in handler (agent-ready label)
 
 ### Pending Todos
 
@@ -160,9 +163,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 26-11-PLAN.md (HTTP Service & Worker)
+Stopped at: Completed 26-12-PLAN.md (Docker Compose & Routing)
 Resume file: None
-Next action: Continue Phase 26 plan 26-12 (E2E Test)
+Next action: Continue Phase 26 plan 26-13 (E2E Test)
 
 ---
-*Updated: 2026-01-26 - Phase 26 plan 11 complete*
+*Updated: 2026-01-26 - Phase 26 plan 12 complete*
