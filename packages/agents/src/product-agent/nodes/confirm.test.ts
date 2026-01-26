@@ -7,10 +7,7 @@
 import type { ChatAnthropic } from "@langchain/anthropic";
 import { AIMessage, HumanMessage } from "@langchain/core/messages";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  type ProductAgentPhase,
-  type ProductAgentState,
-} from "../state.js";
+import type { ProductAgentPhase, ProductAgentState } from "../state.js";
 import {
   confirmNode,
   type IssueDraftOutput,
