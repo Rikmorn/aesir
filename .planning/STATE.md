@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 25 of 27 (Product Agent Workflow)
-Plan: 7 of 9 complete
+Plan: 8 of 9 complete
 Status: In progress
-Last activity: 2026-01-26 - Completed 25-07-PLAN.md (Issue Enhancement and create_comment Tool)
+Last activity: 2026-01-26 - Completed 25-08-PLAN.md (Notification Node)
 
-Progress: [██████░░░░] 94%
+Progress: [██████░░░░] 95%
 
 ## Milestone History
 
@@ -51,7 +51,7 @@ Progress: [██████░░░░] 94%
 | 22.2-agent-mcp-migration | 6/6 | 23 min | 3.8 min |
 | 23-event-infrastructure | 5/5 | ~25 min | ~5 min |
 | 24-dev-container | 6/6 | 18 min | 3 min |
-| 25-product-agent-workflow | 7/9 | 60 min | 8.6 min |
+| 25-product-agent-workflow | 8/9 | 64 min | 8.0 min |
 
 ## Accumulated Context
 
@@ -106,6 +106,9 @@ Key decisions that carry forward:
 - Slack thread URL uses app_redirect format for cross-workspace compatibility
 - agent-ready label auto-added to all created issues for dev-agent routing
 - Missing labels logged as warning, not blocking issue creation
+- Notify node gracefully handles MCP errors without failing workflow
+- Linear URL format: https://linear.app/issue/{identifier}
+- Slack bold formatting uses asterisks (*text*) for native rendering
 
 ### Pending Todos
 
@@ -128,9 +131,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 25-07-PLAN.md (Issue Enhancement and create_comment Tool)
+Stopped at: Completed 25-08-PLAN.md (Notification Node)
 Resume file: None
-Next action: Continue Phase 25 plans (25-08 through 25-09)
+Next action: Continue Phase 25 plan 25-09
 
 ---
-*Updated: 2026-01-26 - Phase 25 plan 07 complete*
+*Updated: 2026-01-26 - Phase 25 plan 08 complete*
