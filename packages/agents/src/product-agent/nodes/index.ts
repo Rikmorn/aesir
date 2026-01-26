@@ -38,3 +38,5 @@ export {
   type GenerateClarificationNodeOptions,
   generateClarificationNode,
 } from "./generate-clarification.js";
+// Notify node
+export { notifyNode } from "./notify.js";
