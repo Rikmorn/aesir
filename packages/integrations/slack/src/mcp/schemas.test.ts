@@ -12,6 +12,7 @@ import {
   ReplyToThreadInputSchema,
   SendApprovalRequestInputSchema,
   SendMessageInputSchema,
+  UpdateMessageInputSchema,
 } from "./schemas.js";
 
 describe("Slack MCP Tool Schemas", () => {
@@ -211,6 +212,73 @@ describe("Slack MCP Tool Schemas", () => {
         text: "Reply text",
       });
       expect(result.success).toBe(false);
+    });
+  });
+
+  describe("UpdateMessageInputSchema", () => {
+    it("should accept valid input with text only", () => {
+      const result = UpdateMessageInputSchema.safeParse({
+        channel: "C1234567890",
+        ts: "1234567890.123456",
+        text: "Updated message text",
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("should accept valid input with blocks only", () => {
+      const result = UpdateMessageInputSchema.safeParse({
+        channel: "C1234567890",
+        ts: "1234567890.123456",
+        blocks: [
+          {
+            type: "section",
+            text: { type: "mrkdwn", text: "Updated *message*" },
+          },
+        ],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("should accept valid input with both text and blocks", () => {
+      const result = UpdateMessageInputSchema.safeParse({
+        channel: "C1234567890",
+        ts: "1234567890.123456",
+        text: "Fallback text",
+        blocks: [
+          {
+            type: "section",
+            text: { type: "mrkdwn", text: "Updated *message*" },
+          },
+        ],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("should reject missing ts", () => {
+      const result = UpdateMessageInputSchema.safeParse({
+        channel: "C1234567890",
+        text: "Updated text",
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("should reject missing channel", () => {
+      const result = UpdateMessageInputSchema.safeParse({
+        ts: "1234567890.123456",
+        text: "Updated text",
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("should accept neither text nor blocks at schema level", () => {
+      // Note: The schema allows neither, but the handler validates
+      // that at least one is provided. Schema validation is permissive,
+      // business logic validation is stricter.
+      const result = UpdateMessageInputSchema.safeParse({
+        channel: "C1234567890",
+        ts: "1234567890.123456",
+      });
+      expect(result.success).toBe(true);
     });
   });
 
