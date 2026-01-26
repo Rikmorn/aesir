@@ -6,7 +6,7 @@
  * and task creation nodes.
  *
  * Graph structure:
- * START -> classify -> (route) -> analyze -> (route) -> confirm -> (route) -> createTasks -> END
+ * START -> classify -> (route) -> analyze -> (route) -> confirm -> (route) -> createTasks -> notify -> END
  *                  |-> clarify -> END (unclear)        |-> clarify -> END      |-> clarify -> END
  *                  |-> END (declined)
  *
@@ -26,6 +26,7 @@ import {
   confirmNode,
   createTasksNode,
   generateClarificationNode,
+  notifyNode,
 } from "./nodes/index.js";
 import {
   type ProductAgentState,
@@ -153,7 +154,10 @@ export interface ProductAgentGraphOptions {
  *            createTasks    clarify
  *                  |           |
  *                  v           v
- *                 END         END
+ *               notify        END
+ *                  |
+ *                  v
+ *                 END
  * ```
  *
  * Note: clarify goes to END so the question is returned to the user.
@@ -199,6 +203,7 @@ export function createProductAgentGraph(options: ProductAgentGraphOptions) {
   const clarifyNodeInstance = generateClarificationNode(clarifyOptions);
   const confirmNodeInstance = confirmNode(confirmOptions);
   const createNode = createTasksNode(createOptions);
+  const notifyNodeInstance = notifyNode();
 
   // Create the StateGraph
   const graph = new StateGraph(ProductAgentStateAnnotation)
@@ -208,6 +213,7 @@ export function createProductAgentGraph(options: ProductAgentGraphOptions) {
     .addNode("clarify", clarifyNodeInstance)
     .addNode("confirm", confirmNodeInstance)
     .addNode("createTasks", createNode)
+    .addNode("notify", notifyNodeInstance)
 
     // Entry point: start with classification
     .addEdge("__start__", "classify")
@@ -235,8 +241,11 @@ export function createProductAgentGraph(options: ProductAgentGraphOptions) {
       clarify: "clarify",
     })
 
-    // After task creation, workflow is complete
-    .addEdge("createTasks", "__end__");
+    // After task creation, send notification
+    .addEdge("createTasks", "notify")
+
+    // After notification, workflow is complete
+    .addEdge("notify", "__end__");
 
   // Compile with optional checkpointer - handle exactOptionalPropertyTypes
   if (checkpointer !== undefined) {
