@@ -5,6 +5,8 @@
  * Each node handles a specific phase of the development lifecycle.
  */
 
+// Execution phase
+export { createExecuteNode, type ExecuteNodeDeps } from "./execute.js";
 // Planning phase
 export { createPlanNode, type PlanNodeDeps } from "./plan.js";
 // Entry - receive issue from webhook
@@ -21,3 +23,6 @@ export {
   createSetupContainerNode,
   type SetupContainerNodeDeps,
 } from "./setup-container.js";
+
+// Verification phase
+export { createVerifyNode, type VerifyNodeDeps } from "./verify.js";
