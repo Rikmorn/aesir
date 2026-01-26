@@ -11,6 +11,20 @@ export {
   type RequirementAnalysis,
   RequirementAnalysisSchema,
 } from "./analyze-requirements.js";
+// Classify node (intent classification)
+export {
+  type ClassificationOutput,
+  ClassificationOutputSchema,
+  type ClassifyNodeOptions,
+  classifyNode,
+} from "./classify.js";
+// Confirm node (issue draft for confirmation)
+export {
+  type ConfirmNodeOptions,
+  confirmNode,
+  type IssueDraftOutput,
+  IssueDraftOutputSchema,
+} from "./confirm.js";
 // Create tasks node
 export {
   type CreateTasksNodeOptions,
