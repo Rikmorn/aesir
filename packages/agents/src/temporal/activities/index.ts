@@ -7,7 +7,19 @@
  */
 
 import type { Sandbox } from "@aesir/common";
-
+import {
+  continueAfterApprovalActivity,
+  type DevAgentActivitiesDeps,
+  type HandlePRFeedbackInput,
+  handlePRFeedbackActivity,
+  initDevAgentActivities,
+  type RunDevAgentGraphInput,
+  type RunDevAgentGraphOutput,
+  runDevAgentGraphActivity,
+  type SendReminderInput,
+  sendReminderActivity,
+  stopContainerActivity,
+} from "./dev-agent-activities.js";
 // Import raw activities
 import { executeDevWorkflow } from "./dev-agent-activity.js";
 import {
@@ -33,11 +45,16 @@ import {
 // Re-export types for external use
 export type {
   ApprovalNotification,
+  DevAgentActivitiesDeps,
+  HandlePRFeedbackInput,
   MergePRInput,
   MergePROutput,
   MessageResult,
+  RunDevAgentGraphInput,
+  RunDevAgentGraphOutput,
   RunProductAgentActivityInput,
   RunProductAgentActivityOutput,
+  SendReminderInput,
   StatusNotification,
 };
 
@@ -127,11 +144,17 @@ export type BoundActivities = ReturnType<typeof makeActivities>;
 
 // Also export raw activities for backward compatibility and direct testing
 export {
+  continueAfterApprovalActivity,
   executeDevWorkflow,
+  handlePRFeedbackActivity,
+  initDevAgentActivities,
   mergePRActivity,
+  runDevAgentGraphActivity,
   runProductAgentActivity,
   sendApprovalRequestActivity,
+  sendReminderActivity,
   sendSlackReplyActivity,
   sendStatusUpdateActivity,
+  stopContainerActivity,
   updateLinearStatusActivity,
 };
