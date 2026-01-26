@@ -151,8 +151,8 @@ describe("routeAfterAnalysis", () => {
       }
 
       // Should have both possible routes covered
-      expect(routes.has("clarify")).toBe(true);
-      expect(routes.has("createTasks")).toBe(true);
+      expect(routes.has("clarify" as AfterAnalysisRoute)).toBe(true);
+      expect(routes.has("confirm" as AfterAnalysisRoute)).toBe(true);
     });
   });
 });
@@ -202,7 +202,7 @@ describe("createProductAgentGraph", () => {
 describe("graph routing integration", () => {
   it("routeAfterAnalysis is compatible with StateGraph conditional edges", () => {
     // The routing function must return one of the valid destinations
-    const validRoutes: AfterAnalysisRoute[] = ["clarify", "createTasks"];
+    const validRoutes = ["clarify", "confirm"] as const;
 
     // Test all possible routes are valid
     const gatheringState = createBaseState({ phase: "gathering" });
@@ -223,7 +223,7 @@ describe("graph edge verification", () => {
   it("defines expected node names", () => {
     // This test documents the expected graph structure
     const expectedNodes = ["analyze", "clarify", "createTasks"];
-    const expectedRoutes: AfterAnalysisRoute[] = ["clarify", "createTasks"];
+    const expectedRoutes = ["clarify", "createTasks"] as const;
 
     // The graph should support these transitions:
     // __start__ -> analyze
@@ -243,7 +243,7 @@ describe("graph edge verification", () => {
     routes.add(routeAfterAnalysis(createBaseState({ phase: "clarifying" })));
     routes.add(routeAfterAnalysis(createBaseState({ phase: "creating" })));
 
-    expect(routes.has("clarify")).toBe(true);
-    expect(routes.has("createTasks")).toBe(true);
+    expect(routes.has("clarify" as AfterAnalysisRoute)).toBe(true);
+    expect(routes.has("createTasks" as AfterAnalysisRoute)).toBe(true);
   });
 });

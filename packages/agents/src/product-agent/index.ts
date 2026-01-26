@@ -30,6 +30,13 @@
  * ```
  */
 
+// PostgreSQL checkpointer for conversation persistence
+export {
+  closeProductAgentCheckpointer,
+  createProductAgentCheckpointer,
+  getProductAgentCheckpointer,
+  resetCheckpointerForTesting,
+} from "./checkpointer.js";
 // Graph factory and routing
 export {
   type AfterAnalysisRoute,
@@ -38,7 +45,6 @@ export {
   type ProductAgentGraphOptions,
   routeAfterAnalysis,
 } from "./graph.js";
-
 // Conversation nodes
 export {
   type AnalyzeRequirementsNodeOptions,
@@ -53,7 +59,6 @@ export {
   type TaskList,
   TaskListSchema,
 } from "./nodes/index.js";
-
 // Prompts
 export {
   ANALYZE_REQUIREMENTS_PROMPT,
