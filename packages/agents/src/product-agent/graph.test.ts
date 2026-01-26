@@ -222,8 +222,8 @@ describe("graph routing integration", () => {
 describe("graph edge verification", () => {
   it("defines expected node names", () => {
     // This test documents the expected graph structure
-    const expectedNodes = ["analyze", "clarify", "createTasks"];
-    const expectedRoutes = ["clarify", "createTasks"] as const;
+    const expectedNodes = ["analyze", "clarify", "confirm", "createTasks"];
+    const expectedRoutes = ["clarify", "confirm"] as const;
 
     // The graph should support these transitions:
     // __start__ -> analyze
@@ -232,7 +232,7 @@ describe("graph edge verification", () => {
     // clarify -> analyze (loop)
     // createTasks -> __end__
 
-    expect(expectedNodes).toHaveLength(3);
+    expect(expectedNodes).toHaveLength(4);
     expect(expectedRoutes).toHaveLength(2);
   });
 
@@ -242,8 +242,9 @@ describe("graph edge verification", () => {
     // Collect all possible routes
     routes.add(routeAfterAnalysis(createBaseState({ phase: "clarifying" })));
     routes.add(routeAfterAnalysis(createBaseState({ phase: "creating" })));
+    routes.add(routeAfterAnalysis(createBaseState({ phase: "confirming" })));
 
     expect(routes.has("clarify" as AfterAnalysisRoute)).toBe(true);
-    expect(routes.has("createTasks" as AfterAnalysisRoute)).toBe(true);
+    expect(routes.has("confirm" as AfterAnalysisRoute)).toBe(true);
   });
 });
