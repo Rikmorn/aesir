@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 25 of 27 (Product Agent Workflow)
-Plan: 2 of 9 complete
+Plan: 3 of 9 complete
 Status: In progress
-Last activity: 2026-01-26 - Completed 25-02-PLAN.md (Confirmation Node)
+Last activity: 2026-01-26 - Completed 25-03-PLAN.md (Graph Integration)
 
-Progress: [██████░░░░] 91%
+Progress: [██████░░░░] 92%
 
 ## Milestone History
 
@@ -51,7 +51,7 @@ Progress: [██████░░░░] 91%
 | 22.2-agent-mcp-migration | 6/6 | 23 min | 3.8 min |
 | 23-event-infrastructure | 5/5 | ~25 min | ~5 min |
 | 24-dev-container | 6/6 | 18 min | 3 min |
-| 25-product-agent-workflow | 2/9 | 17 min | 8.5 min |
+| 25-product-agent-workflow | 3/9 | 22 min | 7.3 min |
 
 ## Accumulated Context
 
@@ -92,6 +92,8 @@ Key decisions that carry forward:
 - IssueDraft includes slackThreadUrl for linking back to conversation
 - Preview message uses Slack markdown with *bold* formatting for labels
 - Error handling in confirm node falls back to gathering phase, not failure
+- Graph classification at entry filters non-actionable messages before analysis
+- Confirmation step always precedes task creation (no bypass path)
 
 ### Pending Todos
 
@@ -114,9 +116,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 25-02-PLAN.md (Confirmation Node)
+Stopped at: Completed 25-03-PLAN.md (Graph Integration)
 Resume file: None
-Next action: Continue Phase 25 plans (25-03 through 25-09)
+Next action: Continue Phase 25 plans (25-04 through 25-09)
 
 ---
-*Updated: 2026-01-26 - Phase 25 plan 02 complete*
+*Updated: 2026-01-26 - Phase 25 plan 03 complete*

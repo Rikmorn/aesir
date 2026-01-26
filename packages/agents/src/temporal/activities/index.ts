@@ -17,11 +17,16 @@ import {
 } from "./github-activities.js";
 import { updateLinearStatusActivity } from "./linear-activities.js";
 import {
+  type RunProductAgentActivityInput,
+  type RunProductAgentActivityOutput,
+  runProductAgentActivity,
+} from "./product-agent-activity.js";
+import {
   type ApprovalNotification,
   type MessageResult,
+  type StatusNotification,
   sendApprovalRequestActivity,
   sendStatusUpdateActivity,
-  type StatusNotification,
 } from "./slack-activities.js";
 
 // Re-export types for external use
@@ -30,6 +35,8 @@ export type {
   MergePRInput,
   MergePROutput,
   MessageResult,
+  RunProductAgentActivityInput,
+  RunProductAgentActivityOutput,
   StatusNotification,
 };
 
@@ -82,6 +89,11 @@ export function makeActivities(deps: ActivityDependencies) {
     updateLinearStatusActivity,
 
     /**
+     * Run product agent - uses MCP and checkpointer
+     */
+    runProductAgentActivity,
+
+    /**
      * Execute dev workflow - needs sandbox
      * @param taskId - Linear Issue ID
      * @param sessionId - Linear AgentSession ID for emitting activities
@@ -111,6 +123,7 @@ export type BoundActivities = ReturnType<typeof makeActivities>;
 export {
   executeDevWorkflow,
   mergePRActivity,
+  runProductAgentActivity,
   sendApprovalRequestActivity,
   sendStatusUpdateActivity,
   updateLinearStatusActivity,
