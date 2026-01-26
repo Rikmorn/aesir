@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 25 of 27 (Product Agent Workflow)
-Plan: 5 of 9 complete
+Plan: 6 of 9 complete
 Status: In progress
-Last activity: 2026-01-26 - Completed 25-05-PLAN.md (Temporal Activities)
+Last activity: 2026-01-26 - Completed 25-06-PLAN.md (HTTP Service and Temporal Worker)
 
-Progress: [██████░░░░] 92%
+Progress: [██████░░░░] 93%
 
 ## Milestone History
 
@@ -51,7 +51,7 @@ Progress: [██████░░░░] 92%
 | 22.2-agent-mcp-migration | 6/6 | 23 min | 3.8 min |
 | 23-event-infrastructure | 5/5 | ~25 min | ~5 min |
 | 24-dev-container | 6/6 | 18 min | 3 min |
-| 25-product-agent-workflow | 5/9 | 40 min | 8 min |
+| 25-product-agent-workflow | 6/9 | 49 min | 8.2 min |
 
 ## Accumulated Context
 
@@ -100,6 +100,9 @@ Key decisions that carry forward:
 - Singleton checkpointer pattern avoids multiple DB connections
 - Thread timestamp as thread_id for conversation continuity across iterations
 - exactOptionalPropertyTypes: use `| undefined` for optional return properties
+- Product-agent uses shared Dockerfile with command override (follows dev-agent pattern)
+- Temporal worker creates its own NativeConnection (separate from client connection)
+- Checkpointer initialized at worker startup before activity registration
 
 ### Pending Todos
 
@@ -122,9 +125,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 25-05-PLAN.md (Temporal Activities)
+Stopped at: Completed 25-06-PLAN.md (HTTP Service and Temporal Worker)
 Resume file: None
-Next action: Continue Phase 25 plans (25-06 through 25-09)
+Next action: Continue Phase 25 plans (25-07 through 25-09)
 
 ---
-*Updated: 2026-01-26 - Phase 25 plan 05 complete*
+*Updated: 2026-01-26 - Phase 25 plan 06 complete*
