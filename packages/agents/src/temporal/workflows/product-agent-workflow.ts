@@ -190,12 +190,11 @@ export async function productAgentConversationWorkflow(
 
     let agentResult: Awaited<ReturnType<typeof runProductAgentActivity>>;
     try {
-      // Get LINEAR_TEAM_ID from environment (set by worker)
-      // Note: In Temporal workflows, we pass config through input
+      // Use linearTeamId from workflow input (passed at workflow start)
       agentResult = await runProductAgentActivity({
         threadTs,
         message: currentMessage,
-        teamId: process.env.LINEAR_TEAM_ID ?? "",
+        teamId: input.linearTeamId,
       });
     } catch (error) {
       wf.log.error("Product agent activity failed", { error, threadTs });

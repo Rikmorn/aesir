@@ -1,4 +1,4 @@
-CREATE SCHEMA "github";
+CREATE SCHEMA IF NOT EXISTS "github";
 --> statement-breakpoint
 CREATE TABLE "github"."credentials" (
 	"id" text PRIMARY KEY NOT NULL,

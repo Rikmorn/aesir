@@ -53,6 +53,7 @@ describe("Product Agent Workflow Types", () => {
         initialMessage: "I need a feature that...",
         userId: "U12345678",
         slackTeamId: "T12345678",
+        linearTeamId: "team_12345",
       };
 
       expect(validInput.threadTs).toBeDefined();
@@ -60,6 +61,7 @@ describe("Product Agent Workflow Types", () => {
       expect(validInput.initialMessage).toBeDefined();
       expect(validInput.userId).toBeDefined();
       expect(validInput.slackTeamId).toBeDefined();
+      expect(validInput.linearTeamId).toBeDefined();
     });
   });
 

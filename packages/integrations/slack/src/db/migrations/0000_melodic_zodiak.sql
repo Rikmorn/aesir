@@ -1,4 +1,4 @@
-CREATE SCHEMA "slack";
+CREATE SCHEMA IF NOT EXISTS "slack";
 --> statement-breakpoint
 CREATE TABLE "slack"."event_deliveries" (
 	"id" text PRIMARY KEY NOT NULL,

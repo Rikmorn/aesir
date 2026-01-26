@@ -1,4 +1,4 @@
-CREATE SCHEMA "linear";
+CREATE SCHEMA IF NOT EXISTS "linear";
 --> statement-breakpoint
 CREATE TABLE "linear"."credentials" (
 	"id" text PRIMARY KEY NOT NULL,

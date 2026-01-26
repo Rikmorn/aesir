@@ -41,10 +41,10 @@ interface SlackMessagePayload {
   text: string;
   /** Message timestamp (unique message ID) */
   ts: string;
-  /** Thread timestamp (present if message is in a thread) */
-  thread_ts?: string;
+  /** Thread timestamp (present if message is in a thread) - camelCase from dispatcher */
+  threadTs?: string;
   /** Slack team ID */
-  team?: string;
+  teamId?: string;
 }
 
 /**
@@ -59,10 +59,10 @@ interface SlackAppMentionPayload {
   text: string;
   /** Message timestamp (unique message ID) */
   ts: string;
-  /** Thread timestamp (if mention is in a thread) */
-  thread_ts?: string;
+  /** Thread timestamp (if mention is in a thread) - camelCase from dispatcher */
+  threadTs?: string;
   /** Slack team ID */
-  team?: string;
+  teamId?: string;
 }
 
 /**
@@ -73,6 +73,8 @@ export interface ProductAgentEventsHandlerDeps {
   workflowClient: TemporalClient;
   /** Allowed channel IDs (comma-separated in env) */
   allowedChannels: string[];
+  /** Linear team ID for issue creation */
+  linearTeamId: string;
 }
 
 /**
@@ -99,7 +101,7 @@ export interface EventsResponse {
 export function createProductAgentEventsHandler(
   deps: ProductAgentEventsHandlerDeps,
 ) {
-  const { workflowClient, allowedChannels } = deps;
+  const { workflowClient, allowedChannels, linearTeamId } = deps;
 
   return async (req: EventsRequest, res: EventsResponse): Promise<void> => {
     const correlationId = req.headers["x-correlation-id"];
@@ -163,6 +165,7 @@ export function createProductAgentEventsHandler(
       await handleSlackEvent(event, {
         workflowClient,
         allowedChannels,
+        linearTeamId,
         logger: handlerLogger,
       });
 
@@ -187,10 +190,16 @@ async function handleSlackEvent(
   ctx: {
     workflowClient: TemporalClient;
     allowedChannels: string[];
+    linearTeamId: string;
     logger: PinoLogger;
   },
 ): Promise<void> {
-  const { workflowClient, allowedChannels, logger: eventLogger } = ctx;
+  const {
+    workflowClient,
+    allowedChannels,
+    linearTeamId,
+    logger: eventLogger,
+  } = ctx;
 
   // Extract payload based on event type
   const eventType = event.type;
@@ -202,7 +211,7 @@ async function handleSlackEvent(
     return;
   }
 
-  const { channel, user, text, ts, thread_ts, team } = payload;
+  const { channel, user, text, ts, threadTs, teamId } = payload;
 
   if (!channel || !user || !text || !ts) {
     eventLogger.warn(
@@ -222,8 +231,8 @@ async function handleSlackEvent(
   }
 
   // Determine if this is a new conversation or thread reply
-  const isThreadReply = Boolean(thread_ts);
-  const workflowThreadTs = thread_ts || ts; // Use thread_ts for replies, ts for new messages
+  const isThreadReply = Boolean(threadTs);
+  const workflowThreadTs = threadTs || ts; // Use threadTs for replies, ts for new messages
 
   // Create workflow ID based on thread timestamp
   const workflowId = `product-agent-${workflowThreadTs}`;
@@ -240,7 +249,8 @@ async function handleSlackEvent(
       channelId: channel,
       initialMessage: text,
       userId: user,
-      slackTeamId: team || "unknown",
+      slackTeamId: teamId || "unknown",
+      linearTeamId,
     };
 
     try {

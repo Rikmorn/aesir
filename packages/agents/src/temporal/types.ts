@@ -19,6 +19,8 @@ export interface ProductAgentWorkflowInput {
   userId: string;
   /** Slack team ID for MCP calls */
   slackTeamId: string;
+  /** Linear team ID for issue creation */
+  linearTeamId: string;
 }
 
 /**

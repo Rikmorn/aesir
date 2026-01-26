@@ -245,7 +245,10 @@ services:
       - SLACK_CLIENT_ID=${SLACK_CLIENT_ID}
       - SLACK_CLIENT_SECRET=${SLACK_CLIENT_SECRET}
       - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
-      - SLACK_MODE=http
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+      - SLACK_MODE=${SLACK_MODE:-socket}
+      # Event dispatch (Docker network)
+      - PRODUCT_AGENT_URL=http://product-agent:3005/events
       # Server configuration
       - PORT=3003
       - NODE_ENV=${NODE_ENV:-production}

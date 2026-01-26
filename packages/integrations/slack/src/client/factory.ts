@@ -76,12 +76,31 @@ export async function createSlackClientFromDatabase(
   const result = await credentialStore.fetchInstallation({ teamId });
 
   if (result.isErr()) {
+    // Fallback to environment variable for single-workspace development
+    const envToken = process.env.SLACK_BOT_TOKEN;
+    if (envToken) {
+      log.warn(
+        { teamId },
+        "Database lookup failed, falling back to SLACK_BOT_TOKEN env var",
+      );
+      return new WebClient(envToken);
+    }
     throw result.error;
   }
 
   const installation = result.value;
 
   if (!installation) {
+    // Fallback to environment variable for single-workspace development
+    const envToken = process.env.SLACK_BOT_TOKEN;
+    if (envToken) {
+      log.warn(
+        { teamId },
+        "No installation found, falling back to SLACK_BOT_TOKEN env var",
+      );
+      return new WebClient(envToken);
+    }
+
     log.error({ teamId }, "Slack installation not found");
     throw new SlackError(
       "INT_SLACK_TOKEN",

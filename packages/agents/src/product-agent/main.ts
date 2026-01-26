@@ -112,6 +112,7 @@ async function bootstrap(): Promise<void> {
   const eventsHandlerDeps: ProductAgentEventsHandlerDeps = {
     workflowClient,
     allowedChannels,
+    linearTeamId,
   };
   const eventsHandler = createProductAgentEventsHandler(eventsHandlerDeps);
 

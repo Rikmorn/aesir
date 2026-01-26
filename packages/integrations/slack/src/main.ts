@@ -23,6 +23,12 @@ import { config } from "./config.js";
 import { db, pool } from "./db/client.js";
 import { createSlackCredentialStore } from "./db/credential-store.js";
 import { createSlackEventDeliveryStore } from "./db/event-delivery-store.js";
+import {
+  createDispatcher,
+  DISPATCH_ROUTES,
+  normalizeSlackEvent,
+} from "./dispatcher/index.js";
+import { normalizeEvent } from "./events/parser.js";
 
 const logger = createPinoLogger({ component: "integrations:slack:server" });
 
@@ -55,6 +61,12 @@ export async function startServer(): Promise<void> {
   // Create database-backed services
   const credentialStore = createSlackCredentialStore({ db, logger });
   const eventDeliveryStore = createSlackEventDeliveryStore({ db, logger });
+
+  // Create dispatcher for event routing to agents (used in both modes)
+  const dispatcher = createDispatcher({
+    logger: logger.child({ component: "dispatcher" }),
+    routes: DISPATCH_ROUTES,
+  });
 
   if (mode === "socket") {
     // === SOCKET MODE ===
@@ -96,23 +108,101 @@ export async function startServer(): Promise<void> {
         { channel: event.channel, user: event.user },
         "Received app mention",
       );
-      // Add custom handler logic here
+
+      // Guard: app_mention always has user and teamId
+      if (!event.user || !context.teamId) {
+        log.warn("app_mention missing user or teamId, skipping dispatch");
+        return;
+      }
+
+      // Normalize Slack event to internal format
+      const slackPayload = normalizeEvent({
+        type: "app_mention",
+        user: event.user,
+        channel: event.channel,
+        text: event.text,
+        ts: event.ts,
+        thread_ts: event.thread_ts,
+        event_id: context.eventId ?? `evt_${Date.now()}`,
+        event_time: Math.floor(Date.now() / 1000),
+        team_id: context.teamId,
+      });
+
+      // Normalize to dispatch format and dispatch to agents
+      const normalizedEvent = normalizeSlackEvent(slackPayload);
+      if (normalizedEvent) {
+        dispatcher.dispatch(normalizedEvent);
+        log.info(
+          { eventType: normalizedEvent.type, eventId: normalizedEvent.id },
+          "App mention dispatched to agents",
+        );
+      }
     });
 
-    // Messages
+    // Messages (thread replies)
     boltApp.event("message", async ({ event, context }) => {
       // biome-ignore lint/suspicious/noExplicitAny: Bolt context extension
       const log = (context as any).logger ?? logger;
-      log.debug({ channel: event.channel }, "Received message event");
-      // Add custom handler logic here
+      // biome-ignore lint/suspicious/noExplicitAny: Bolt event type union
+      const msgEvent = event as any;
+
+      // Skip bot messages to prevent loops
+      if (msgEvent.bot_id || msgEvent.subtype === "bot_message") {
+        log.debug({ channel: msgEvent.channel }, "Ignoring bot message");
+        return;
+      }
+
+      log.debug({ channel: msgEvent.channel }, "Received message event");
+
+      // Guard: messages need teamId for routing
+      if (!context.teamId) {
+        log.warn("message missing teamId, skipping dispatch");
+        return;
+      }
+
+      // Normalize Slack event to internal format
+      const slackPayload = normalizeEvent({
+        type: "message",
+        user: msgEvent.user,
+        channel: msgEvent.channel,
+        text: msgEvent.text ?? "",
+        ts: msgEvent.ts,
+        thread_ts: msgEvent.thread_ts,
+        event_id: context.eventId ?? `evt_${Date.now()}`,
+        event_time: Math.floor(Date.now() / 1000),
+        team_id: context.teamId,
+      });
+
+      // Normalize to dispatch format and dispatch to agents
+      const normalizedEvent = normalizeSlackEvent(slackPayload);
+      if (normalizedEvent) {
+        dispatcher.dispatch(normalizedEvent);
+        log.debug(
+          { eventType: normalizedEvent.type, eventId: normalizedEvent.id },
+          "Message dispatched to agents",
+        );
+      }
     });
 
     // Start the Bolt app
     await startBoltApp(boltApp);
 
-    // Start a minimal HTTP server for health checks in Socket Mode
-    // Socket Mode uses WebSocket, but Docker/K8s need HTTP health endpoints
+    // Start HTTP server for health checks and MCP in Socket Mode
+    // Socket Mode uses WebSocket for Slack events, but we still need HTTP for:
+    // - Docker/K8s health checks
+    // - MCP tool calls from agents
     const healthApp = express();
+    healthApp.use(express.json());
+
+    // Mount MCP routes (agents call these to send Slack messages)
+    const { createMCPRouter } = await import("./api/routes.js");
+    const mcpRouter = createMCPRouter({
+      db,
+      credentialStore,
+      logger,
+      teamId: "default",
+    });
+    healthApp.use("/", mcpRouter);
 
     // Health check endpoint with database validation
     interface HealthResponse {
