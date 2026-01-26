@@ -7,6 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  CreateCommentInputSchema,
   CreateIssueInputSchema,
   GetIssueInputSchema,
   ListLabelsInputSchema,
@@ -147,6 +148,62 @@ describe("Linear MCP Tool Schemas", () => {
 
     it("should reject missing teamId", () => {
       const result = ListLabelsInputSchema.safeParse({});
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe("CreateCommentInputSchema", () => {
+    it("should accept valid input", () => {
+      const result = CreateCommentInputSchema.safeParse({
+        issueId: "ABC-123",
+        body: "This is a comment",
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("should accept UUID format for issueId", () => {
+      const result = CreateCommentInputSchema.safeParse({
+        issueId: "550e8400-e29b-41d4-a716-446655440000",
+        body: "Comment with UUID",
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("should accept markdown body", () => {
+      const result = CreateCommentInputSchema.safeParse({
+        issueId: "ABC-123",
+        body: "**Bold** and _italic_ with `code`",
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("should reject missing issueId", () => {
+      const result = CreateCommentInputSchema.safeParse({
+        body: "Comment without issue",
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("should reject missing body", () => {
+      const result = CreateCommentInputSchema.safeParse({
+        issueId: "ABC-123",
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("should reject empty issueId", () => {
+      const result = CreateCommentInputSchema.safeParse({
+        issueId: "",
+        body: "Valid body",
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("should reject empty body", () => {
+      const result = CreateCommentInputSchema.safeParse({
+        issueId: "ABC-123",
+        body: "",
+      });
       expect(result.success).toBe(false);
     });
   });
