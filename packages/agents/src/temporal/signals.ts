@@ -30,3 +30,43 @@ export const userReplySignal = wf.defineSignal<[string]>("userReply");
  * ```
  */
 export const cancelConversationSignal = wf.defineSignal("cancelConversation");
+
+// === Dev Agent Signals ===
+
+/**
+ * Signal for plan approval (can come from Linear comment or Slack button)
+ *
+ * Usage from client:
+ * ```typescript
+ * const handle = client.workflow.getHandle(workflowId);
+ * await handle.signal(planApprovalSignal, { approved: true });
+ * // or with feedback: await handle.signal(planApprovalSignal, { approved: false, feedback: "Missing tests" });
+ * ```
+ */
+export const planApprovalSignal =
+  wf.defineSignal<[{ approved: boolean; feedback?: string }]>("planApproval");
+
+/**
+ * Signal for PR review feedback (from GitHub review or Slack)
+ *
+ * Usage from client:
+ * ```typescript
+ * const handle = client.workflow.getHandle(workflowId);
+ * await handle.signal(prFeedbackSignal, 'Please add more tests for edge cases');
+ * ```
+ */
+export const prFeedbackSignal = wf.defineSignal<[string]>("prFeedback");
+
+/**
+ * Signal for human resolution of escalation
+ *
+ * Usage from client:
+ * ```typescript
+ * const handle = client.workflow.getHandle(workflowId);
+ * await handle.signal(escalationResolvedSignal, { action: "retry", guidance: "Try using mocks" });
+ * ```
+ */
+export const escalationResolvedSignal =
+  wf.defineSignal<[{ action: "retry" | "abort"; guidance?: string }]>(
+    "escalationResolved",
+  );

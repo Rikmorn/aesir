@@ -51,3 +51,64 @@ export type ProductAgentWorkflowPhase =
   | "declined" // Non-actionable message (question/off-topic)
   | "cancelled" // User cancelled the conversation
   | "timeout"; // Conversation timed out after 72h
+
+// === Dev Agent Workflow Types ===
+
+/**
+ * Input for starting a dev-agent workflow
+ */
+export interface DevAgentWorkflowInput {
+  /** Task ID (Linear issue ID) */
+  taskId: string;
+  /** Linear issue identifier (e.g., ABC-123) */
+  issueIdentifier: string;
+  /** Linear issue data */
+  issue: {
+    id: string;
+    identifier: string;
+    title: string;
+    description: string | null;
+    priority: number | null;
+    labels: string[];
+  };
+  /** Slack channel for notifications */
+  slackChannel: string;
+}
+
+/**
+ * Workflow-level phase tracking for dev-agent
+ *
+ * Maps to LangGraph DevAgentPhase but tracked at Temporal level
+ * for durability and signal-based flow control.
+ */
+export type DevAgentWorkflowPhase =
+  | "pending" // Workflow started, not yet processed
+  | "setup" // Setting up dev container
+  | "researching" // Analyzing codebase
+  | "planning" // Creating execution plan
+  | "awaiting_approval" // Waiting for human approval signal
+  | "executing" // Running implementation steps
+  | "verifying" // Running tests
+  | "creating_pr" // Creating pull request
+  | "complete" // PR created successfully
+  | "awaiting_feedback" // Waiting for PR review feedback signal
+  | "addressing_feedback" // Processing PR review comments
+  | "escalated" // Needs human intervention
+  | "failed" // Unrecoverable error
+  | "timeout"; // Workflow timed out
+
+/**
+ * Result of a dev-agent workflow
+ */
+export interface DevAgentWorkflowResult {
+  /** Whether the workflow completed successfully (PR created) */
+  success: boolean;
+  /** Terminal phase of the workflow */
+  phase: DevAgentWorkflowPhase;
+  /** GitHub PR number if created */
+  prNumber?: number | undefined;
+  /** GitHub PR URL if created */
+  prUrl?: string | undefined;
+  /** Error message if failed/escalated */
+  errorMessage?: string | undefined;
+}
