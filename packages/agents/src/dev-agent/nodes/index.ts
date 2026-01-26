@@ -7,6 +7,11 @@
 
 // Execution phase
 export { createExecuteNode, type ExecuteNodeDeps } from "./execute.js";
+// Feedback handling phase
+export {
+  createHandleFeedbackNode,
+  type HandleFeedbackNodeDeps,
+} from "./handle-feedback.js";
 // Planning phase
 export { createPlanNode, type PlanNodeDeps } from "./plan.js";
 // Entry - receive issue from webhook
@@ -23,6 +28,5 @@ export {
   createSetupContainerNode,
   type SetupContainerNodeDeps,
 } from "./setup-container.js";
-
 // Verification phase
 export { createVerifyNode, type VerifyNodeDeps } from "./verify.js";
