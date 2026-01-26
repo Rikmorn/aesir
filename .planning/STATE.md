@@ -11,9 +11,9 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 26 of 27 (Dev Agent Workflow)
-Plan: 2 of 13 complete
+Plan: 4 of 13 complete
 Status: In progress
-Last activity: 2026-01-26 - Completed 26-02-PLAN.md (state schema and prompts)
+Last activity: 2026-01-26 - Completed 26-04-PLAN.md (research and planning nodes)
 
 Progress: [██████░░░░] 96%
 
@@ -52,7 +52,7 @@ Progress: [██████░░░░] 96%
 | 23-event-infrastructure | 5/5 | ~25 min | ~5 min |
 | 24-dev-container | 6/6 | 18 min | 3 min |
 | 25-product-agent-workflow | 9/9 | ~72 min | ~8.0 min |
-| 26-dev-agent-workflow | 2/13 | 6 min | 3 min |
+| 26-dev-agent-workflow | 4/13 | 9 min | 2.3 min |
 
 ## Accumulated Context
 
@@ -114,6 +114,10 @@ Key decisions that carry forward:
 - ExecutionPlan includes confidence level (high/medium/low) for approval quality gate
 - ResearchContext captures unknowns explicitly (honest about gaps)
 - Prompts include environment issue detection patterns for escalation
+- Research uses ripgrep (rg) for fast file search with type filtering
+- Limit relevant files to 15 to keep LLM context manageable
+- Node factory pattern: createXNode(deps) returns async function for DI
+- LLM structured output via withStructuredOutput for type-safe artifacts
 
 ### Pending Todos
 
@@ -136,9 +140,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 26-02-PLAN.md (state schema and prompts)
+Stopped at: Completed 26-04-PLAN.md (research and planning nodes)
 Resume file: None
-Next action: Continue Phase 26 plan 26-03 (graph definition)
+Next action: Continue Phase 26 plan 26-05
 
 ---
-*Updated: 2026-01-26 - Phase 26 plan 02 complete*
+*Updated: 2026-01-26 - Phase 26 plan 04 complete*
