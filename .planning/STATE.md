@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 26 of 27 (Dev Agent Workflow)
-Plan: 6 of 13 complete
+Plan: 8 of 13 complete
 Status: In progress
-Last activity: 2026-01-26 - Completed 26-06-PLAN.md (execute and verify nodes)
+Last activity: 2026-01-26 - Completed 26-08-PLAN.md (handle-feedback node)
 
-Progress: [██████░░░░] 96%
+Progress: [██████░░░░] 97%
 
 ## Milestone History
 
@@ -52,7 +52,7 @@ Progress: [██████░░░░] 96%
 | 23-event-infrastructure | 5/5 | ~25 min | ~5 min |
 | 24-dev-container | 6/6 | 18 min | 3 min |
 | 25-product-agent-workflow | 9/9 | ~72 min | ~8.0 min |
-| 26-dev-agent-workflow | 6/13 | 16 min | 2.7 min |
+| 26-dev-agent-workflow | 8/13 | 20 min | 2.5 min |
 
 ## Accumulated Context
 
@@ -128,6 +128,9 @@ Key decisions that carry forward:
 - Unfixable patterns escalate immediately (ECONNREFUSED, ENOENT, etc.)
 - Verification failures always escalate (need human help)
 - Extended timeout for full test suite (3x normal)
+- Container expiry escalates to human rather than auto-re-spawn (simpler first iteration)
+- Feedback heredoc delimiter: AESIR_FEEDBACK_EOF_{timestamp} for safety
+- Container resume: check findByTaskId before any container operations
 
 ### Pending Todos
 
@@ -150,9 +153,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 26-06-PLAN.md (execute and verify nodes)
+Stopped at: Completed 26-08-PLAN.md (handle-feedback node)
 Resume file: None
-Next action: Continue Phase 26 plan 26-07
+Next action: Continue Phase 26 plan 26-09
 
 ---
-*Updated: 2026-01-26 - Phase 26 plan 06 complete*
+*Updated: 2026-01-26 - Phase 26 plan 08 complete*
