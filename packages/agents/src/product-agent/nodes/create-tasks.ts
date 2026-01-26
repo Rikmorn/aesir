@@ -25,6 +25,7 @@ import type {
   ProductAgentPhase,
   ProductAgentState,
   ProductAgentStateUpdate,
+  SlackContext,
 } from "../state.js";
 
 const logger: PinoLogger = createPinoLogger({
@@ -95,7 +96,7 @@ function mapPriorityToLinear(
 
 /**
  * Resolve label names to Linear label IDs.
- * Returns IDs for labels that exist, ignores unknown labels.
+ * Returns IDs for labels that exist, logs warnings for missing labels.
  */
 async function resolveLabelIds(
   teamId: string,
@@ -122,13 +123,24 @@ async function resolveLabelIds(
       labelMap.set(label.name.toLowerCase(), label.id);
     }
 
-    // Resolve names to IDs
+    // Resolve names to IDs, track missing labels
     const resolvedIds: string[] = [];
+    const missingLabels: string[] = [];
     for (const name of labelNames) {
       const id = labelMap.get(name.toLowerCase());
       if (id) {
         resolvedIds.push(id);
+      } else {
+        missingLabels.push(name);
       }
+    }
+
+    // Log warnings for missing labels
+    if (missingLabels.length > 0) {
+      logger.warn(
+        { missingLabels, teamId, correlationId },
+        `Labels not found in Linear: ${missingLabels.join(", ")}`,
+      );
     }
 
     return resolvedIds;
@@ -137,6 +149,17 @@ async function resolveLabelIds(
     logger.warn({}, "Failed to resolve labels, continuing without them");
     return [];
   }
+}
+
+/**
+ * Build Slack thread URL from context.
+ * Returns a markdown-friendly reference to the Slack thread.
+ */
+function buildSlackThreadUrl(slackContext: SlackContext): string {
+  // Format: slack://channel?id={channelId}&message={threadTs}
+  // We use the Slack deep link format for channel/thread
+  const threadTsFormatted = slackContext.threadTs?.replace(".", "") || "";
+  return `https://slack.com/app_redirect?channel=${slackContext.channelId}&message_ts=${threadTsFormatted}`;
 }
 
 /**
@@ -200,10 +223,17 @@ export function createTasksNode(options: CreateTasksNodeOptions) {
 
       for (const task of taskList.tasks) {
         try {
+          // Always add agent-ready label for dev-agent routing
+          const allLabels = [...task.labels, "agent-ready"];
+          nodeLogger.debug(
+            { taskTitle: task.title, labels: allLabels },
+            "Adding agent-ready label to task",
+          );
+
           // Resolve label names to IDs
           const labelIds = await resolveLabelIds(
             teamId,
-            task.labels,
+            allLabels,
             correlationId,
           );
 
@@ -217,7 +247,11 @@ export function createTasksNode(options: CreateTasksNodeOptions) {
           } = {
             teamId,
             title: task.title,
-            description: buildTaskDescription(task, taskList.projectContext),
+            description: buildTaskDescription(
+              task,
+              taskList.projectContext,
+              state.slackContext,
+            ),
             priority: mapPriorityToLinear(task.priority),
           };
 
@@ -338,10 +372,12 @@ function buildRequirementsContext(state: ProductAgentState): string {
 
 /**
  * Build the full task description for Linear.
+ * Includes project context and optionally a Slack thread link.
  */
 function buildTaskDescription(
   task: GeneratedTask,
   projectContext: string,
+  slackContext: SlackContext | null,
 ): string {
   const parts: string[] = [];
 
@@ -351,6 +387,17 @@ function buildTaskDescription(
   parts.push("");
   parts.push("**Project Context:**");
   parts.push(projectContext);
+
+  // Add Slack conversation link if available
+  if (slackContext?.channelId && slackContext.threadTs) {
+    const slackUrl = buildSlackThreadUrl(slackContext);
+    parts.push("");
+    parts.push("---");
+    parts.push("");
+    parts.push(
+      `**Context:** This issue was created from a [Slack conversation](${slackUrl})`,
+    );
+  }
 
   return parts.join("\n");
 }
