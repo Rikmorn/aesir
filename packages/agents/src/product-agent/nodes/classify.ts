@@ -19,10 +19,10 @@ import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
 import { CLASSIFY_MESSAGE_PROMPT } from "../prompts.js";
 import {
-  ClassificationConfidenceSchema,
-  ClassificationTypeSchema,
   type ClassificationConfidence,
+  ClassificationConfidenceSchema,
   type ClassificationType,
+  ClassificationTypeSchema,
   type ProductAgentPhase,
   type ProductAgentState,
   type ProductAgentStateUpdate,
@@ -43,7 +43,9 @@ export const ClassificationOutputSchema = z.object({
   /** Confidence in the classification */
   confidence: ClassificationConfidenceSchema,
   /** Reasoning for the classification (for debugging) */
-  reasoning: z.string().describe("Brief explanation of why this classification"),
+  reasoning: z
+    .string()
+    .describe("Brief explanation of why this classification"),
   /** Response to send if declining (for question/off_topic/unclear) */
   response: z
     .string()
@@ -170,7 +172,10 @@ function determineNextPhase(
   // Non-actionable types -> declined
   if (type === "question" || type === "off_topic") {
     const declineResponse = response ?? DECLINE_RESPONSES[type];
-    nodeLogger.debug({ response: declineResponse }, "Non-actionable message, declining");
+    nodeLogger.debug(
+      { response: declineResponse },
+      "Non-actionable message, declining",
+    );
     return {
       classification: type as ClassificationType,
       classificationConfidence: confidence as ClassificationConfidence,
@@ -181,8 +186,12 @@ function determineNextPhase(
   // Unclear -> clarifying
   if (type === "unclear") {
     const clarifyResponse =
-      response ?? "Could you tell me more about what you're looking for? I can help with feature requests and bug reports.";
-    nodeLogger.debug({ response: clarifyResponse }, "Unclear message, requesting clarification");
+      response ??
+      "Could you tell me more about what you're looking for? I can help with feature requests and bug reports.";
+    nodeLogger.debug(
+      { response: clarifyResponse },
+      "Unclear message, requesting clarification",
+    );
     return {
       classification: type as ClassificationType,
       classificationConfidence: confidence as ClassificationConfidence,
@@ -191,7 +200,10 @@ function determineNextPhase(
   }
 
   // Fallback (shouldn't reach here due to Zod validation)
-  nodeLogger.warn({ type }, "Unknown classification type, defaulting to gathering");
+  nodeLogger.warn(
+    { type },
+    "Unknown classification type, defaulting to gathering",
+  );
   return {
     classification: null,
     classificationConfidence: null,
