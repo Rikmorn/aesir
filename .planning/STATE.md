@@ -6,16 +6,16 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-**Current focus:** Phase 24 - Dev Container (COMPLETE)
+**Current focus:** Phase 25 - Product Agent Workflow (IN PROGRESS)
 
 ## Current Position
 
-Phase: 24 of 27 (Dev Container)
-Plan: 6 of 6 complete
-Status: Phase complete
-Last activity: 2026-01-25 - Completed 24-06-PLAN.md (E2E Integration Test)
+Phase: 25 of 27 (Product Agent Workflow)
+Plan: 2 of 9 complete
+Status: In progress
+Last activity: 2026-01-26 - Completed 25-02-PLAN.md (Confirmation Node)
 
-Progress: [██████░░░░] 89%
+Progress: [██████░░░░] 91%
 
 ## Milestone History
 
@@ -51,6 +51,7 @@ Progress: [██████░░░░] 89%
 | 22.2-agent-mcp-migration | 6/6 | 23 min | 3.8 min |
 | 23-event-infrastructure | 5/5 | ~25 min | ~5 min |
 | 24-dev-container | 6/6 | 18 min | 3 min |
+| 25-product-agent-workflow | 2/9 | 12 min | 6 min |
 
 ## Accumulated Context
 
@@ -85,6 +86,9 @@ Key decisions that carry forward:
 - Container cleanup: 24h inactivity timeout, 10s graceful shutdown, 1h cleanup interval
 - Cleanup always deletes DB record even if container removal fails
 - Docker socket detection: check ~/.docker/run/docker.sock (macOS) and /var/run/docker.sock (Linux)
+- Classification uses flat Zod schema for LLM structured output reliability
+- Low confidence on any classification type routes to clarifying phase
+- LLM errors in classification fall back to gathering phase (conservative approach)
 
 ### Pending Todos
 
@@ -106,10 +110,10 @@ None blocking next milestone.
 
 ## Session Continuity
 
-Last session: 2026-01-25
-Stopped at: Phase 24 verified and complete
+Last session: 2026-01-26
+Stopped at: Completed 25-01-PLAN.md (Intent Classification Node)
 Resume file: None
-Next action: `/gsd:discuss-phase 25` or `/gsd:plan-phase 25`
+Next action: Continue Phase 25 plans (25-03 through 25-09)
 
 ---
-*Updated: 2026-01-25 - Phase 24 complete*
+*Updated: 2026-01-26 - Phase 25 plan 01 complete*
