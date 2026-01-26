@@ -162,10 +162,22 @@ Plans:
   13. Dev-agent notifies Slack when encountering errors (asks for help)
   14. E2E verified: Linear issue → dev container → research → plan → code → tests pass → PR created
 
-**Plans**: TBD
+**Plans:** 13 plans
 
 Plans:
-- [ ] 26-01: [Plan description TBD during planning]
+- [ ] 26-01-PLAN.md — Add slack.update_message MCP tool (MCP-02)
+- [ ] 26-02-PLAN.md — Dev-agent state schema and LLM prompts
+- [ ] 26-03-PLAN.md — Entry nodes: receive-issue and setup-container
+- [ ] 26-04-PLAN.md — Research and planning nodes
+- [ ] 26-05-PLAN.md — Dual-channel approval request node
+- [ ] 26-06-PLAN.md — Execution and verification nodes
+- [ ] 26-07-PLAN.md — PR creation, notification, and escalation nodes
+- [ ] 26-08-PLAN.md — Feedback handling node
+- [ ] 26-09-PLAN.md — LangGraph workflow definition
+- [ ] 26-10-PLAN.md — Temporal workflow wrapper with signals
+- [ ] 26-11-PLAN.md — HTTP service and event handler
+- [ ] 26-12-PLAN.md — Docker Compose and dispatcher routing
+- [ ] 26-13-PLAN.md — E2E verification with human checkpoint
 
 ### Phase 27: Human-in-the-Loop
 
@@ -204,9 +216,9 @@ Phases execute in numeric order: 23 → 23.1 → 23.2 → 24 → 24.1 → 25 →
 | 23. Event Infrastructure | v2.1 | 5/5 | ✓ Complete | 2026-01-25 |
 | 24. Dev Container | v2.1 | 6/6 | ✓ Complete | 2026-01-25 |
 | 25. Product Agent Workflow | v2.1 | 0/9 | In Progress | - |
-| 26. Dev Agent Workflow | v2.1 | 0/TBD | Not started | - |
+| 26. Dev Agent Workflow | v2.1 | 0/13 | Not started | - |
 | 27. Human-in-the-Loop | v2.1 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-01-25*
-*Last updated: 2026-01-26 — Phase 25 planned (9 plans)*
+*Last updated: 2026-01-26 — Phase 26 planned (13 plans)*
