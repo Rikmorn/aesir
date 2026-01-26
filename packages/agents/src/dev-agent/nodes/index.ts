@@ -9,10 +9,13 @@
 export { createPlanNode, type PlanNodeDeps } from "./plan.js";
 // Entry - receive issue from webhook
 export { receiveIssueNode } from "./receive-issue.js";
-
+// Approval phase
+export {
+  createRequestApprovalNode,
+  type RequestApprovalNodeDeps,
+} from "./request-approval.js";
 // Research phase
 export { createResearchNode, type ResearchNodeDeps } from "./research.js";
-
 // Setup phase
 export {
   createSetupContainerNode,
