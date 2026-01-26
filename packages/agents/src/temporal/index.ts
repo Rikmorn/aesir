@@ -14,3 +14,6 @@ export * from "./signals.js";
 
 // Types for workflow input/output
 export * from "./types.js";
+
+// Workflows
+export * from "./workflows/index.js";
