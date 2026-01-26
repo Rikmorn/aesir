@@ -340,18 +340,18 @@ services:
           path: ./packages/platform/src
 
   # Product Agent - handles Slack conversations via MCP
-  # Communicates with integration services via HTTP (no direct SDK access)
+  # Receives events from Slack dispatcher and uses Temporal for workflow orchestration
   product-agent:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: aesir-product-agent
     depends_on:
+      temporal:
+        condition: service_started
       postgresql:
         condition: service_healthy
       linear-integration:
-        condition: service_healthy
-      github-integration:
         condition: service_healthy
       slack-integration:
         condition: service_healthy
@@ -364,12 +364,18 @@ services:
       - DB_PASSWORD=temporal
       - DB_NAME=temporal
       - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
+      # Temporal (internal Docker network)
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_NAMESPACE=default
       # LLM (only API key needed by agents)
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       # Workspace configuration (passed to MCP calls)
       - LINEAR_TEAM_ID=${LINEAR_TEAM_ID}
       - GITHUB_REPO=${GITHUB_REPO}
       - SLACK_CHANNEL_ID=${SLACK_CHANNEL_ID}
+      # Product-agent specific config
+      - PORT=3005
+      - PRODUCT_AGENT_ALLOWED_CHANNELS=${PRODUCT_AGENT_ALLOWED_CHANNELS:-}
       # MCP service URLs (Docker network names)
       - LINEAR_MCP_URL=http://linear-integration:3001
       - GITHUB_MCP_URL=http://github-integration:3002
@@ -379,7 +385,15 @@ services:
       - LANGSMITH_TRACING=${LANGSMITH_TRACING:-false}
       - LANGSMITH_API_KEY=${LANGSMITH_API_KEY:-}
       - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-aesir-agents}
-    command: ["node", "dist/scripts/start-product-agent.js"]
+    ports:
+      - "3005:3005"
+    command: ["node", "dist/product-agent/main.js"]
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3005/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     networks:
       - aesir-network
     restart: unless-stopped
