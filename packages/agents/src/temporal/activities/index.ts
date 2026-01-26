@@ -26,6 +26,7 @@ import {
   type MessageResult,
   type StatusNotification,
   sendApprovalRequestActivity,
+  sendSlackReplyActivity,
   sendStatusUpdateActivity,
 } from "./slack-activities.js";
 
@@ -94,6 +95,11 @@ export function makeActivities(deps: ActivityDependencies) {
     runProductAgentActivity,
 
     /**
+     * Send reply to Slack thread - uses MCP
+     */
+    sendSlackReplyActivity,
+
+    /**
      * Execute dev workflow - needs sandbox
      * @param taskId - Linear Issue ID
      * @param sessionId - Linear AgentSession ID for emitting activities
@@ -125,6 +131,7 @@ export {
   mergePRActivity,
   runProductAgentActivity,
   sendApprovalRequestActivity,
+  sendSlackReplyActivity,
   sendStatusUpdateActivity,
   updateLinearStatusActivity,
 };

@@ -105,3 +105,45 @@ export async function sendStatusUpdateActivity(
 
   return result;
 }
+
+/**
+ * Send reply to a Slack thread as a Temporal activity.
+ *
+ * Used by product-agent workflow to reply to conversation threads.
+ * Uses MCP reply_to_thread tool for thread-aware messaging.
+ *
+ * @param channelId - Slack channel ID
+ * @param threadTs - Thread timestamp to reply to
+ * @param text - Message text to send
+ * @returns Message result with success status and message timestamp
+ */
+export async function sendSlackReplyActivity(
+  channelId: string,
+  threadTs: string,
+  text: string,
+): Promise<MessageResult> {
+  logger.info(
+    { channelId, threadTs, textLength: text.length },
+    "Sending Slack thread reply",
+  );
+
+  // Call Slack integration service via MCP
+  const result = await callMcpTool<MessageResult>({
+    integration: "slack",
+    tool: "reply_to_thread",
+    params: {
+      channel: channelId,
+      threadTs,
+      text,
+    },
+    agentId: "product-agent",
+    correlationId: `slack-reply-${threadTs}`,
+  });
+
+  logger.info(
+    { channelId, threadTs, success: result.success, ts: result.ts },
+    "Slack thread reply sent",
+  );
+
+  return result;
+}
