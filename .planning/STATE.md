@@ -118,6 +118,8 @@ Key decisions that carry forward:
 - Limit relevant files to 15 to keep LLM context manageable
 - Node factory pattern: createXNode(deps) returns async function for DI
 - LLM structured output via withStructuredOutput for type-safe artifacts
+- receive-issue validates agent-ready label before proceeding to setup
+- setup-container returns containerId even on failure for cleanup tracking
 
 ### Pending Todos
 
