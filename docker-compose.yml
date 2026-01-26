@@ -273,7 +273,7 @@ services:
           path: ./packages/common/src
 
   # Dev Agent - handles Linear task automation via MCP
-  # Communicates with integration services via HTTP (no direct SDK access)
+  # HTTP service for receiving events from Linear dispatcher
   dev-agent:
     build:
       context: .
@@ -307,13 +307,95 @@ services:
       - TEMPORAL_NAMESPACE=default
       # LLM (only API key needed by agents)
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      # Webhook secrets (for legacy webhook endpoints and event validation)
-      - LINEAR_WEBHOOK_SECRET=${LINEAR_WEBHOOK_SECRET}
-      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
+      # GitHub configuration (for DevContainerManager git operations)
+      - GITHUB_REPO_URL=${GITHUB_REPO_URL}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_OWNER=${GITHUB_OWNER}
+      - GITHUB_REPO=${GITHUB_REPO}
+      - GITHUB_BASE_BRANCH=${GITHUB_BASE_BRANCH:-main}
       # Workspace configuration (passed to MCP calls)
       - LINEAR_TEAM_ID=${LINEAR_TEAM_ID}
-      - GITHUB_REPO=${GITHUB_REPO}
       - SLACK_CHANNEL_ID=${SLACK_CHANNEL_ID}
+      - DEV_AGENT_SLACK_CHANNEL=${DEV_AGENT_SLACK_CHANNEL}
+      # MCP service URLs (Docker network names)
+      - LINEAR_MCP_URL=http://linear-integration:3001
+      - GITHUB_MCP_URL=http://github-integration:3002
+      - SLACK_MCP_URL=http://slack-integration:3003
+      # Server configuration
+      - DEV_AGENT_PORT=3004
+      - PORT=3004
+      # Observability (optional)
+      - NODE_ENV=${NODE_ENV:-production}
+      - LANGSMITH_TRACING=${LANGSMITH_TRACING:-false}
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY:-}
+      - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-aesir-agents}
+    ports:
+      - "3004:3004" # HTTP endpoint for receiving events
+    volumes:
+      # Mount Docker socket for DevContainerManager
+      - /var/run/docker.sock:/var/run/docker.sock
+      # macOS alternative path (both paths work, Docker uses first available)
+      - ${HOME}/.docker/run/docker.sock:/var/run/docker.sock:ro
+    command: ["node", "dist/dev-agent/main.js"]
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3004/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - aesir-network
+    restart: unless-stopped
+    develop:
+      watch:
+        - action: rebuild
+          path: ./packages/agents/src
+        - action: rebuild
+          path: ./packages/agents/package.json
+        - action: rebuild
+          path: ./packages/common/src
+        - action: rebuild
+          path: ./packages/platform/src
+
+  # Dev Agent Worker - Temporal worker for executing workflows
+  # Separate service allows independent scaling of HTTP endpoint vs workflow processing
+  dev-agent-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aesir-dev-agent-worker
+    user: root # Need Docker socket access for DevContainerManager
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+      dev-agent:
+        condition: service_healthy # Wait for HTTP service to be ready
+    environment:
+      # Database (internal Docker network)
+      - DATABASE_URL=postgresql://temporal:temporal@postgresql:5432/temporal
+      - DB_HOST=postgresql
+      - DB_PORT=5432
+      - DB_USER=temporal
+      - DB_PASSWORD=temporal
+      - DB_NAME=temporal
+      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
+      # Temporal (internal Docker network)
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_NAMESPACE=default
+      # LLM (only API key needed by agents)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      # GitHub configuration (for DevContainerManager git operations)
+      - GITHUB_REPO_URL=${GITHUB_REPO_URL}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_OWNER=${GITHUB_OWNER}
+      - GITHUB_REPO=${GITHUB_REPO}
+      - GITHUB_BASE_BRANCH=${GITHUB_BASE_BRANCH:-main}
+      # Workspace configuration (passed to MCP calls)
+      - LINEAR_TEAM_ID=${LINEAR_TEAM_ID}
+      - SLACK_CHANNEL_ID=${SLACK_CHANNEL_ID}
+      - DEV_AGENT_SLACK_CHANNEL=${DEV_AGENT_SLACK_CHANNEL}
       # MCP service URLs (Docker network names)
       - LINEAR_MCP_URL=http://linear-integration:3001
       - GITHUB_MCP_URL=http://github-integration:3002
@@ -323,11 +405,12 @@ services:
       - LANGSMITH_TRACING=${LANGSMITH_TRACING:-false}
       - LANGSMITH_API_KEY=${LANGSMITH_API_KEY:-}
       - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-aesir-agents}
-    ports:
-      - "3004:3004" # Webhook endpoint (Linear uses 3001, GitHub 3002, Slack 3003)
     volumes:
+      # Mount Docker socket for DevContainerManager
       - /var/run/docker.sock:/var/run/docker.sock
-    command: ["node", "dist/scripts/start-dev-agent.js"]
+      # macOS alternative path
+      - ${HOME}/.docker/run/docker.sock:/var/run/docker.sock:ro
+    command: ["node", "dist/dev-agent/worker.js"]
     networks:
       - aesir-network
     restart: unless-stopped
