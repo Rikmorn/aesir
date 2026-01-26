@@ -11,9 +11,9 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 26 of 27 (Dev Agent Workflow)
-Plan: 8 of 13 complete
+Plan: 9 of 13 complete
 Status: In progress
-Last activity: 2026-01-26 - Completed 26-08-PLAN.md (handle-feedback node)
+Last activity: 2026-01-26 - Completed 26-09-PLAN.md (LangGraph StateGraph)
 
 Progress: [██████░░░░] 97%
 
@@ -52,7 +52,7 @@ Progress: [██████░░░░] 97%
 | 23-event-infrastructure | 5/5 | ~25 min | ~5 min |
 | 24-dev-container | 6/6 | 18 min | 3 min |
 | 25-product-agent-workflow | 9/9 | ~72 min | ~8.0 min |
-| 26-dev-agent-workflow | 8/13 | 20 min | 2.5 min |
+| 26-dev-agent-workflow | 9/13 | 22 min | 2.4 min |
 
 ## Accumulated Context
 
@@ -131,6 +131,9 @@ Key decisions that carry forward:
 - Container expiry escalates to human rather than auto-re-spawn (simpler first iteration)
 - Feedback heredoc delimiter: AESIR_FEEDBACK_EOF_{timestamp} for safety
 - Container resume: check findByTaskId before any container operations
+- routeByPhase uses exhaustive switch for type-safe phase handling
+- Graph ends at approval/feedback points for Temporal signal handling
+- Escalation path accessible from any node via phase-based routing
 
 ### Pending Todos
 
@@ -153,9 +156,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 26-07-PLAN.md and 26-08-PLAN.md (PR creation and handle-feedback nodes)
+Stopped at: Completed 26-09-PLAN.md (LangGraph StateGraph)
 Resume file: None
-Next action: Continue Phase 26 plan 26-09
+Next action: Continue Phase 26 plan 26-10 (Temporal wrapping)
 
 ---
-*Updated: 2026-01-26 - Phase 26 plans 07-08 complete*
+*Updated: 2026-01-26 - Phase 26 plan 09 complete*
