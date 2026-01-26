@@ -51,7 +51,7 @@ Progress: [██████░░░░] 91%
 | 22.2-agent-mcp-migration | 6/6 | 23 min | 3.8 min |
 | 23-event-infrastructure | 5/5 | ~25 min | ~5 min |
 | 24-dev-container | 6/6 | 18 min | 3 min |
-| 25-product-agent-workflow | 2/9 | 12 min | 6 min |
+| 25-product-agent-workflow | 2/9 | 17 min | 8.5 min |
 
 ## Accumulated Context
 
@@ -89,6 +89,9 @@ Key decisions that carry forward:
 - Classification uses flat Zod schema for LLM structured output reliability
 - Low confidence on any classification type routes to clarifying phase
 - LLM errors in classification fall back to gathering phase (conservative approach)
+- IssueDraft includes slackThreadUrl for linking back to conversation
+- Preview message uses Slack markdown with *bold* formatting for labels
+- Error handling in confirm node falls back to gathering phase, not failure
 
 ### Pending Todos
 
@@ -111,9 +114,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 25-01-PLAN.md (Intent Classification Node)
+Stopped at: Completed 25-02-PLAN.md (Confirmation Node)
 Resume file: None
 Next action: Continue Phase 25 plans (25-03 through 25-09)
 
 ---
-*Updated: 2026-01-26 - Phase 25 plan 01 complete*
+*Updated: 2026-01-26 - Phase 25 plan 02 complete*
