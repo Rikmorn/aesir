@@ -5,6 +5,10 @@
  * Each node handles a specific phase of the development lifecycle.
  */
 
+// PR creation phase
+export { type CreatePRNodeDeps, createPRNode } from "./create-pr.js";
+// Escalation phase
+export { createEscalateNode } from "./escalate.js";
 // Execution phase
 export { createExecuteNode, type ExecuteNodeDeps } from "./execute.js";
 // Feedback handling phase
@@ -12,6 +16,8 @@ export {
   createHandleFeedbackNode,
   type HandleFeedbackNodeDeps,
 } from "./handle-feedback.js";
+// Notification phase
+export { createNotifyNode } from "./notify.js";
 // Planning phase
 export { createPlanNode, type PlanNodeDeps } from "./plan.js";
 // Entry - receive issue from webhook
