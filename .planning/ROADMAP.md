@@ -125,10 +125,18 @@ Plans:
   10. Conversation history persists across multiple Slack interactions
   11. E2E verified: Slack message → clarifying question → user reply → Linear issue with correct content
 
-**Plans**: TBD
+**Plans:** 9 plans
 
 Plans:
-- [ ] 25-01: [Plan description TBD during planning]
+- [ ] 25-01-PLAN.md — Intent classification node for actionability filter
+- [ ] 25-02-PLAN.md — Confirmation node for issue draft preview
+- [ ] 25-03-PLAN.md — Update graph with classify and confirm flow
+- [ ] 25-04-PLAN.md — Temporal workflow with signals and timeouts
+- [ ] 25-05-PLAN.md — Product-agent and Slack activities
+- [ ] 25-06-PLAN.md — HTTP service on port 3005 with Docker
+- [ ] 25-07-PLAN.md — Issue creation with Slack link and agent-ready label
+- [ ] 25-08-PLAN.md — Notification node for issue link
+- [ ] 25-09-PLAN.md — E2E verification with human checkpoint
 
 ### Phase 26: Dev Agent Workflow
 
@@ -195,10 +203,10 @@ Phases execute in numeric order: 23 → 23.1 → 23.2 → 24 → 24.1 → 25 →
 |-------|-----------|----------------|--------|-----------|
 | 23. Event Infrastructure | v2.1 | 5/5 | ✓ Complete | 2026-01-25 |
 | 24. Dev Container | v2.1 | 6/6 | ✓ Complete | 2026-01-25 |
-| 25. Product Agent Workflow | v2.1 | 0/TBD | Not started | - |
+| 25. Product Agent Workflow | v2.1 | 0/9 | In Progress | - |
 | 26. Dev Agent Workflow | v2.1 | 0/TBD | Not started | - |
 | 27. Human-in-the-Loop | v2.1 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-01-25*
-*Last updated: 2026-01-25 — Phase 24 complete*
+*Last updated: 2026-01-26 — Phase 25 planned (9 plans)*
