@@ -27,6 +27,8 @@ import {
   ReplyToThreadInputSchema,
   SendApprovalRequestInputSchema,
   SendMessageInputSchema,
+  UpdateMessageInputSchema,
+  UpdateMessageOutputSchema,
 } from "../mcp/schemas.js";
 import { sendApprovalRequest, sendMessage } from "../messages/sender.js";
 import type { ApprovalNotification } from "../messages/types.js";
@@ -116,6 +118,33 @@ const TOOL_DEFINITIONS = [
         },
       },
       required: ["channel", "threadTs", "text"],
+    },
+  },
+  {
+    name: "update_message",
+    description:
+      "Update an existing Slack message. Can change text and/or blocks. At least one of text or blocks must be provided.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        channel: {
+          type: "string",
+          description: "Channel ID where the message exists",
+        },
+        ts: {
+          type: "string",
+          description: "Message timestamp to update (unique message ID)",
+        },
+        text: {
+          type: "string",
+          description: "New text content (required if blocks not provided)",
+        },
+        blocks: {
+          type: "array",
+          description: "New Block Kit blocks (required if text not provided)",
+        },
+      },
+      required: ["channel", "ts"],
     },
   },
   {
@@ -508,6 +537,63 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
                 ts: replyResult.ts,
                 channel: replyResult.channel,
               },
+            };
+            break;
+          }
+
+          case "update_message": {
+            const validation = UpdateMessageInputSchema.safeParse(args);
+            if (!validation.success) {
+              requestLogger.warn(
+                { error: validation.error.message },
+                "Invalid update_message input",
+              );
+              res.status(400).json({
+                error: `Invalid input: ${validation.error.message}`,
+                isError: true,
+                meta: { correlation_id: correlationId },
+              });
+              return;
+            }
+
+            const input = validation.data;
+
+            // Slack requires at least one of text or blocks
+            if (!input.text && !input.blocks) {
+              requestLogger.warn("update_message requires text or blocks");
+              res.status(400).json({
+                error:
+                  "Invalid input: at least one of text or blocks must be provided",
+                isError: true,
+                meta: { correlation_id: correlationId },
+              });
+              return;
+            }
+
+            // Build update options - ChatUpdateArguments requires text or blocks
+            // We validated above that at least one is present
+            const updateResult = await client.chat.update({
+              channel: input.channel,
+              ts: input.ts,
+              text: input.text ?? "",
+              ...(input.blocks !== undefined && {
+                blocks: input.blocks as (Block | KnownBlock)[],
+              }),
+            });
+
+            const updateOutput = UpdateMessageOutputSchema.parse({
+              ts: updateResult.ts,
+              channel: updateResult.channel,
+            });
+
+            responseData = {
+              content: [
+                {
+                  type: "text" as const,
+                  text: `Message updated in ${updateOutput.channel}`,
+                },
+              ],
+              data: updateOutput,
             };
             break;
           }

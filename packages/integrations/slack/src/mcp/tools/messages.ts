@@ -31,6 +31,8 @@ import {
   ReplyToThreadInputSchema,
   SendApprovalRequestInputSchema,
   SendMessageInputSchema,
+  UpdateMessageInputSchema,
+  UpdateMessageOutputSchema,
 } from "../schemas.js";
 
 export interface RegisterMessageToolsDeps {
@@ -78,6 +80,12 @@ export function registerMessageTools(deps: RegisterMessageToolsDeps): void {
           description:
             "Reply to a specific thread. Creates a threaded reply in the conversation.",
           inputSchema: zodToJsonSchema(ReplyToThreadInputSchema),
+        },
+        {
+          name: "update_message",
+          description:
+            "Update an existing Slack message. Can change text and/or blocks. At least one of text or blocks must be provided.",
+          inputSchema: zodToJsonSchema(UpdateMessageInputSchema),
         },
       ],
     };
@@ -290,6 +298,48 @@ export function registerMessageTools(deps: RegisterMessageToolsDeps): void {
           return createToolResult(
             context,
             `Reply sent to thread ${input.threadTs}`,
+            output,
+          );
+        }
+
+        case "update_message": {
+          const validation = UpdateMessageInputSchema.safeParse(args);
+          if (!validation.success) {
+            return createErrorResult(
+              context,
+              `Invalid input: ${validation.error.message}`,
+            );
+          }
+
+          const input = validation.data;
+
+          // Slack requires at least one of text or blocks
+          if (!input.text && !input.blocks) {
+            return createErrorResult(
+              context,
+              "Invalid input: at least one of text or blocks must be provided",
+            );
+          }
+
+          // Build update options - ChatUpdateArguments requires text or blocks
+          // We validated above that at least one is present
+          const result = await client.chat.update({
+            channel: input.channel,
+            ts: input.ts,
+            text: input.text ?? "",
+            ...(input.blocks !== undefined && {
+              blocks: input.blocks as (Block | KnownBlock)[],
+            }),
+          });
+
+          const output = UpdateMessageOutputSchema.parse({
+            ts: result.ts,
+            channel: result.channel,
+          });
+
+          return createToolResult(
+            context,
+            `Message updated in ${output.channel}`,
             output,
           );
         }
