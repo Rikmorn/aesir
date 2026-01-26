@@ -11,9 +11,9 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 26 of 27 (Dev Agent Workflow)
-Plan: 9 of 13 complete
+Plan: 10 of 13 complete
 Status: In progress
-Last activity: 2026-01-26 - Completed 26-09-PLAN.md (LangGraph StateGraph)
+Last activity: 2026-01-26 - Completed 26-10-PLAN.md (Temporal Workflow Wrapper)
 
 Progress: [██████░░░░] 97%
 
@@ -52,7 +52,7 @@ Progress: [██████░░░░] 97%
 | 23-event-infrastructure | 5/5 | ~25 min | ~5 min |
 | 24-dev-container | 6/6 | 18 min | 3 min |
 | 25-product-agent-workflow | 9/9 | ~72 min | ~8.0 min |
-| 26-dev-agent-workflow | 9/13 | 22 min | 2.4 min |
+| 26-dev-agent-workflow | 10/13 | 30 min | 3.0 min |
 
 ## Accumulated Context
 
@@ -134,6 +134,10 @@ Key decisions that carry forward:
 - routeByPhase uses exhaustive switch for type-safe phase handling
 - Graph ends at approval/feedback points for Temporal signal handling
 - Escalation path accessible from any node via phase-based routing
+- Temporal signals: planApproval, prFeedback, escalationResolved
+- 24h timeout stops container, 72h timeout ends workflow
+- initDevAgentActivities() called at worker startup for DI
+- proxyActivities with 30min timeout, 3 retries for graph activities
 
 ### Pending Todos
 
@@ -156,9 +160,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 26-09-PLAN.md (LangGraph StateGraph)
+Stopped at: Completed 26-10-PLAN.md (Temporal Workflow Wrapper)
 Resume file: None
-Next action: Continue Phase 26 plan 26-10 (Temporal wrapping)
+Next action: Continue Phase 26 plan 26-11 (Temporal Worker)
 
 ---
-*Updated: 2026-01-26 - Phase 26 plan 09 complete*
+*Updated: 2026-01-26 - Phase 26 plan 10 complete*
