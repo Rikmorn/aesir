@@ -81,6 +81,26 @@ export const ReplyToThreadInputSchema = z.object({
   blocks: z.array(z.any()).optional().describe("Optional Block Kit blocks"),
 });
 
+export const UpdateMessageInputSchema = z.object({
+  channel: z
+    .string()
+    .describe("Channel ID where the message exists (e.g., C1234567890)"),
+  ts: z.string().describe("Message timestamp to update (unique message ID)"),
+  text: z
+    .string()
+    .optional()
+    .describe("New text content (required if blocks not provided)"),
+  blocks: z
+    .array(z.any())
+    .optional()
+    .describe("New Block Kit blocks (required if text not provided)"),
+});
+
+export const UpdateMessageOutputSchema = z.object({
+  ts: z.string().describe("Updated message timestamp"),
+  channel: z.string().describe("Channel ID"),
+});
+
 // === CHANNEL TOOLS ===
 
 export const ListChannelsInputSchema = z.object({
@@ -122,5 +142,7 @@ export type ApprovalRequestOutput = z.infer<typeof ApprovalRequestOutputSchema>;
 export type GetMessageInput = z.infer<typeof GetMessageInputSchema>;
 export type GetMessageOutput = z.infer<typeof GetMessageOutputSchema>;
 export type ReplyToThreadInput = z.infer<typeof ReplyToThreadInputSchema>;
+export type UpdateMessageInput = z.infer<typeof UpdateMessageInputSchema>;
+export type UpdateMessageOutput = z.infer<typeof UpdateMessageOutputSchema>;
 export type ListChannelsInput = z.infer<typeof ListChannelsInputSchema>;
 export type ListChannelsOutput = z.infer<typeof ListChannelsOutputSchema>;
