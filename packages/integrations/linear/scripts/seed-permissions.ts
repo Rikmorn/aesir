@@ -18,6 +18,7 @@ const PERMISSIONS = [
   { agentId: "dev-agent", toolName: "update_issue_status", allowed: true },
   { agentId: "dev-agent", toolName: "list_teams", allowed: true },
   { agentId: "dev-agent", toolName: "list_labels", allowed: true },
+  { agentId: "dev-agent", toolName: "create_comment", allowed: true },
 
   // product-agent: Full access (creates issues, manages workflow)
   { agentId: "product-agent", toolName: "get_issue", allowed: true },
@@ -25,6 +26,7 @@ const PERMISSIONS = [
   { agentId: "product-agent", toolName: "update_issue_status", allowed: true },
   { agentId: "product-agent", toolName: "list_teams", allowed: true },
   { agentId: "product-agent", toolName: "list_labels", allowed: true },
+  { agentId: "product-agent", toolName: "create_comment", allowed: true },
 ];
 
 async function main() {

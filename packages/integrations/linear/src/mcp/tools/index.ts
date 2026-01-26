@@ -3,6 +3,7 @@
  */
 
 export {
+  handleCreateComment,
   handleCreateIssue,
   handleGetIssue,
   handleUpdateIssueStatus,

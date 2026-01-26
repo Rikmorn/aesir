@@ -20,6 +20,7 @@ import type { Request, RequestHandler, Response, Router } from "express";
 import { Router as createRouter } from "express";
 import rateLimit from "express-rate-limit";
 import {
+  handleCreateComment,
   handleCreateIssue,
   handleGetIssue,
   handleListLabels,
@@ -124,6 +125,25 @@ const TOOL_DEFINITIONS = [
         },
       },
       required: ["teamId"],
+    },
+  },
+  {
+    name: "create_comment",
+    description:
+      "Create a comment on a Linear issue. Use this to add notes, updates, or discussions to an issue.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        issueId: {
+          type: "string",
+          description: "Issue ID or identifier (e.g., 'ABC-123')",
+        },
+        body: {
+          type: "string",
+          description: "Comment body in markdown format",
+        },
+      },
+      required: ["issueId", "body"],
     },
   },
 ];
@@ -276,6 +296,10 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
 
           case "list_labels":
             result = await handleListLabels(context, args, teamToolDeps);
+            break;
+
+          case "create_comment":
+            result = await handleCreateComment(context, args, issueToolDeps);
             break;
 
           default:

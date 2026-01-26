@@ -14,6 +14,8 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { checkLinearToolPermission } from "../../db/permissions.js";
 import { createLinearClientFromDatabase } from "../../oauth/flow.js";
 import {
+  CreateCommentInputSchema,
+  type CreateCommentOutput,
   CreateIssueInputSchema,
   type CreateIssueOutput,
   GetIssueInputSchema,
@@ -346,6 +348,102 @@ export async function handleUpdateIssueStatus(
     return createErrorResult(
       context,
       `Failed to update issue status: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+/**
+ * Handle create_comment tool call
+ */
+export async function handleCreateComment(
+  context: MCPToolContext,
+  args: unknown,
+  deps: IssueToolDeps,
+): Promise<MCPToolResult<CreateCommentOutput>> {
+  const { db, logger: _logger, workspaceId } = deps;
+
+  // Check permission
+  const hasPermission = await checkLinearToolPermission(
+    { db, logger: context.logger },
+    { agentId: context.agentId, toolName: "create_comment" },
+  );
+
+  if (!hasPermission) {
+    context.logger.warn(
+      { agentId: context.agentId, tool: "create_comment" },
+      "Permission denied",
+    );
+    return createErrorResult(
+      context,
+      "Permission denied: create_comment not allowed for this agent",
+    );
+  }
+
+  // Validate input
+  const parseResult = CreateCommentInputSchema.safeParse(args);
+  if (!parseResult.success) {
+    context.logger.warn(
+      { errors: parseResult.error.errors },
+      "Invalid input for create_comment",
+    );
+    return createErrorResult(
+      context,
+      `Invalid input: ${parseResult.error.errors.map((e) => e.message).join(", ")}`,
+    );
+  }
+
+  const { issueId, body } = parseResult.data;
+
+  try {
+    // Create Linear client
+    const client: LinearClient =
+      await createLinearClientFromDatabase(workspaceId);
+
+    // Create comment
+    const createResult = await client.createComment({
+      issueId,
+      body,
+    });
+
+    if (!createResult.success) {
+      context.logger.error({ issueId }, "Failed to create comment");
+      return createErrorResult(context, "Failed to create comment");
+    }
+
+    const comment = await createResult.comment;
+
+    if (!comment) {
+      context.logger.error(
+        { issueId },
+        "Comment created but could not retrieve",
+      );
+      return createErrorResult(
+        context,
+        "Comment created but could not retrieve",
+      );
+    }
+
+    const output: CreateCommentOutput = {
+      id: comment.id,
+      body: comment.body,
+      createdAt: comment.createdAt.toISOString(),
+    };
+
+    context.logger.info(
+      { commentId: comment.id, issueId },
+      "Comment created successfully",
+    );
+
+    return createToolResult(
+      context,
+      `Created comment on issue ${issueId}`,
+      output,
+    );
+  } catch (error) {
+    context.logger.error({ err: error, issueId }, "Failed to create comment");
+    return createErrorResult(
+      context,
+      `Failed to create comment: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 }

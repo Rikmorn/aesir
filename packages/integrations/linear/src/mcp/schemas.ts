@@ -194,3 +194,30 @@ export const ListLabelsOutputSchema = z.object({
 });
 
 export type ListLabelsOutput = z.infer<typeof ListLabelsOutputSchema>;
+
+// ===============================================
+// CREATE COMMENT
+// ===============================================
+
+/**
+ * Input schema for create_comment tool
+ */
+export const CreateCommentInputSchema = z.object({
+  /** Issue ID (UUID) or identifier (e.g., "ABC-123") */
+  issueId: z.string().min(1, "Issue ID is required"),
+  /** Comment body in markdown format */
+  body: z.string().min(1, "Comment body is required"),
+});
+
+export type CreateCommentInput = z.infer<typeof CreateCommentInputSchema>;
+
+/**
+ * Output schema for create_comment tool
+ */
+export const CreateCommentOutputSchema = z.object({
+  id: z.string(),
+  body: z.string(),
+  createdAt: z.string(),
+});
+
+export type CreateCommentOutput = z.infer<typeof CreateCommentOutputSchema>;
