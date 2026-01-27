@@ -125,8 +125,8 @@ const {
 });
 
 // Timeouts (from context decisions: 24h/72h pattern)
-const APPROVAL_TIMEOUT = "24 hours";
-const REMINDER_WAIT = "48 hours"; // Additional wait after reminder (72h total)
+const REMINDER_TIMEOUT = "24 hours"; // Time before first reminder
+const FINAL_TIMEOUT = "48 hours"; // Additional wait after reminder (72h total)
 const FEEDBACK_TIMEOUT = "7 days"; // Wait for PR review feedback
 
 /**
@@ -243,7 +243,7 @@ export async function devAgentWorkflow(
     // Wait for approval signal with timeout
     const receivedApproval = await wf.condition(
       () => state.approval !== null,
-      APPROVAL_TIMEOUT,
+      REMINDER_TIMEOUT,
     );
 
     if (!receivedApproval) {
@@ -259,7 +259,7 @@ export async function devAgentWorkflow(
       // Wait longer (48h more = 72h total)
       const lateApproval = await wf.condition(
         () => state.approval !== null,
-        REMINDER_WAIT,
+        FINAL_TIMEOUT,
       );
 
       if (!lateApproval) {
@@ -330,7 +330,7 @@ export async function devAgentWorkflow(
             // Recursive wait for approval - loop back
             const nextApproval = await wf.condition(
               () => state.approval !== null,
-              APPROVAL_TIMEOUT,
+              REMINDER_TIMEOUT,
             );
 
             if (!nextApproval) {
@@ -344,7 +344,7 @@ export async function devAgentWorkflow(
 
               const lateFinalApproval = await wf.condition(
                 () => state.approval !== null,
-                REMINDER_WAIT,
+                FINAL_TIMEOUT,
               );
 
               if (!lateFinalApproval) {
