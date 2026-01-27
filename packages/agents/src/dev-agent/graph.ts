@@ -79,6 +79,8 @@ export function routeByPhase(state: DevAgentState): PhaseRoute {
       return "research";
     case "planning":
       return "plan";
+    case "requesting_approval":
+      return "requestApproval";
     case "awaiting_approval":
       return "end"; // Graph ends here, Temporal waits for signal
     case "executing":
@@ -230,8 +232,11 @@ export function createDevAgentGraph(options: DevAgentGraphOptions) {
     .addEdge("__start__", "receiveIssue")
 
     // After receive: route by phase
+    // Includes resume paths (execute, handleFeedback) for Temporal re-invocation
     .addConditionalEdges("receiveIssue", routeByPhase, {
       setup: "setup",
+      execute: "execute",
+      handleFeedback: "handleFeedback",
       escalate: "escalate",
       end: "__end__",
     })
@@ -257,8 +262,14 @@ export function createDevAgentGraph(options: DevAgentGraphOptions) {
       end: "__end__",
     })
 
-    // After requestApproval: always end (wait for Temporal signal)
-    .addEdge("requestApproval", "__end__")
+    // After requestApproval: route by phase
+    // In practice, always ends here (awaiting_approval -> end)
+    // But we include execute path for graph validation (Temporal re-invokes with executing phase)
+    .addConditionalEdges("requestApproval", routeByPhase, {
+      execute: "execute",
+      escalate: "escalate",
+      end: "__end__",
+    })
 
     // After execute: route by phase
     .addConditionalEdges("execute", routeByPhase, {

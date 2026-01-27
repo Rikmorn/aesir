@@ -101,7 +101,7 @@ export function createRequestApprovalNode(deps: RequestApprovalNodeDeps) {
           taskId: issue.identifier,
           title: `Plan Ready: ${executionPlan.title}`,
           summary: formatPlanSummary(executionPlan),
-          prUrl: "", // No PR yet
+          // prUrl omitted - no PR yet at plan approval stage
           actionPrefix: `approve_plan_${issue.identifier}`,
         },
         agentId: "dev-agent",
@@ -116,9 +116,9 @@ export function createRequestApprovalNode(deps: RequestApprovalNodeDeps) {
       );
 
       return {
+        phase: "awaiting_approval",
         slackChannel,
         slackMessageTs,
-        // Phase stays awaiting_approval - Temporal workflow will wait for signal
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

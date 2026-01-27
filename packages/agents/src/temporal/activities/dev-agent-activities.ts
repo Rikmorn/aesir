@@ -14,6 +14,7 @@ import type { ChatAnthropic } from "@langchain/anthropic";
 import type { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import {
   createDevAgentGraph,
+  type DevAgentGraph,
   type DevAgentPhase,
   type DevAgentState,
   type LinearIssueContext,
@@ -153,7 +154,22 @@ export async function runDevAgentGraphActivity(
     graphOptions.checkpointer = dependencies.checkpointer;
   }
 
-  const graph = createDevAgentGraph(graphOptions);
+  activityLogger.info("Creating dev-agent graph");
+  let graph: DevAgentGraph;
+  try {
+    graph = createDevAgentGraph(graphOptions);
+    activityLogger.info("Graph created successfully");
+  } catch (error) {
+    activityLogger.error(
+      {
+        err: error,
+        errorName: error instanceof Error ? error.name : "Unknown",
+        errorMessage: error instanceof Error ? error.message : String(error),
+      },
+      "Failed to create graph",
+    );
+    throw error;
+  }
 
   // Build initial state
   const initialState: Partial<DevAgentState> = {
@@ -170,7 +186,22 @@ export async function runDevAgentGraphActivity(
     },
   };
 
-  const result = await graph.invoke(initialState, config);
+  let result: DevAgentState;
+  try {
+    activityLogger.info({ initialState }, "Invoking graph with initial state");
+    result = await graph.invoke(initialState, config);
+  } catch (error) {
+    activityLogger.error(
+      {
+        err: error,
+        errorName: error instanceof Error ? error.name : "Unknown",
+        errorMessage: error instanceof Error ? error.message : String(error),
+        initialState,
+      },
+      "Graph invoke failed",
+    );
+    throw error;
+  }
 
   activityLogger.info(
     { phase: result.phase, prNumber: result.prNumber },

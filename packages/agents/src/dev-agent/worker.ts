@@ -184,3 +184,45 @@ export async function createDevAgentWorker(
 
   return worker;
 }
+
+/**
+ * Bootstrap the worker as a standalone process.
+ *
+ * This is the entry point when running `node dist/dev-agent/worker.js`
+ * for the dev-agent-worker container.
+ */
+async function bootstrap(): Promise<void> {
+  const worker = await createDevAgentWorker();
+
+  // Graceful shutdown
+  let isShuttingDown = false;
+
+  const shutdown = async (signal: string): Promise<void> => {
+    if (isShuttingDown) {
+      logger.warn({ signal }, "Shutdown already in progress, ignoring");
+      return;
+    }
+    isShuttingDown = true;
+
+    logger.info({ signal }, "Graceful shutdown initiated");
+    worker.shutdown();
+    logger.info("Worker shutdown initiated, waiting for completion...");
+  };
+
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+
+  // Run worker (blocks until shutdown)
+  logger.info("Starting worker...");
+  await worker.run();
+  logger.info("Worker stopped");
+}
+
+// Run if this is the main module
+// biome-ignore lint/suspicious/noConsole: intentional early boot logging
+console.log("[dev-agent-worker] Starting worker process...");
+bootstrap().catch((error) => {
+  // biome-ignore lint/suspicious/noConsole: intentional error logging at process exit
+  console.error("[dev-agent-worker] Bootstrap failed:", error);
+  process.exit(1);
+});

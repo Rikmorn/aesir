@@ -1,24 +1,17 @@
 /**
  * Dev Agent HTTP Service Entry Point
  *
- * Starts the Dev Agent with:
- * 1. HTTP server on port 3004 for receiving dispatched Linear events
- * 2. Temporal worker for executing dev-agent workflows
+ * HTTP server for receiving dispatched Linear events and starting workflows.
+ * The Temporal worker runs separately in dev-agent-worker container.
  *
  * Required environment variables:
  * - DATABASE_URL: PostgreSQL connection string
- * - GITHUB_REPO_URL: Repository URL for cloning
- * - GITHUB_TOKEN: GitHub token for cloning and PR operations
- * - GITHUB_OWNER: GitHub owner/org name
- * - GITHUB_REPO: GitHub repository name
  * - DEV_AGENT_SLACK_CHANNEL: Slack channel ID for notifications
- * - ANTHROPIC_API_KEY: Anthropic API key for Claude
  *
  * Optional:
  * - TEMPORAL_ADDRESS: Temporal server (default: localhost:7233)
  * - TEMPORAL_NAMESPACE: Temporal namespace (default: default)
  * - DEV_AGENT_PORT: HTTP server port (default: 3004)
- * - GITHUB_BASE_BRANCH: Base branch for PRs (default: main)
  *
  * Usage:
  *   node dist/dev-agent/main.js
@@ -46,7 +39,6 @@ import {
   createDevAgentEventsHandler,
   type DevAgentEventsHandlerDeps,
 } from "./api/index.js";
-import { createDevAgentWorker } from "./worker.js";
 
 const logger = createPinoLogger({ component: "agents:dev-agent:main" });
 
@@ -80,23 +72,6 @@ async function bootstrap(): Promise<void> {
   });
 
   logger.info({}, "Connected to Temporal client");
-
-  // Start Temporal worker (creates its own connection for polling)
-  logger.info({}, "Starting Temporal worker");
-
-  const worker = await createDevAgentWorker({
-    address: temporalAddress,
-    namespace: temporalNamespace,
-  });
-
-  // Start worker in background (non-blocking)
-  const workerPromise = worker.run();
-  workerPromise.catch((err: Error) => {
-    logger.error({ err }, `Temporal worker error: ${err.message}`);
-    process.exit(1);
-  });
-
-  logger.info({}, "Temporal worker started");
 
   // Create events handler
   const eventsHandlerDeps: DevAgentEventsHandlerDeps = {
@@ -194,12 +169,7 @@ async function bootstrap(): Promise<void> {
       logger.info("HTTP server closed");
     });
 
-    // 2. Shutdown Temporal worker (completes in-flight tasks)
-    logger.info("Shutting down Temporal worker...");
-    worker.shutdown();
-    logger.info("Temporal worker shutdown initiated");
-
-    // 3. Close Temporal client connection
+    // 2. Close Temporal client connection
     logger.info("Closing Temporal client connection...");
     await clientConnection.close();
     logger.info("Temporal client connection closed");

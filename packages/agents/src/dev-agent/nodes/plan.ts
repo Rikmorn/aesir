@@ -31,7 +31,7 @@ export interface PlanNodeDeps {
  * - Test strategy per step
  * - Confidence level (high/medium/low) with reasoning
  *
- * On success: Sets executionPlan, phase to "awaiting_approval"
+ * On success: Sets executionPlan, phase to "requesting_approval"
  * On failure: Sets phase to "failed" with error message
  */
 export function createPlanNode(deps: PlanNodeDeps = {}) {
@@ -95,7 +95,7 @@ export function createPlanNode(deps: PlanNodeDeps = {}) {
 
       return {
         executionPlan,
-        phase: "awaiting_approval",
+        phase: "requesting_approval",
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

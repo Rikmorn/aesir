@@ -2,12 +2,12 @@
  * Dev Agent Events Handler
  *
  * Handles incoming normalized events from the Linear integration dispatcher.
- * Starts Temporal workflows for issues with "agent-ready" label.
+ * Starts Temporal workflows when an agent session is created (agent assigned to issue).
  *
  * Key behaviors:
- * - Only handles Linear events (source === 'linear')
- * - Filters for "agent-ready" label
- * - Handles both issue.created and issue.updated (for late label addition)
+ * - Only handles Linear agent_session events (source === 'linear')
+ * - Triggers on agent_session.created (agent assigned to issue)
+ * - Fetches full issue details via MCP before starting workflow
  * - Starts devAgentWorkflow via Temporal client
  */
 
@@ -18,6 +18,7 @@ import {
   type PinoLogger,
 } from "@aesir/common";
 import type { Client as TemporalClient } from "@temporalio/client";
+import { callMcpTool } from "../../mcp/index.js";
 import type { DevAgentWorkflowInput } from "../../temporal/types.js";
 
 const logger: PinoLogger = createPinoLogger({
@@ -25,16 +26,37 @@ const logger: PinoLogger = createPinoLogger({
 });
 
 /**
- * Linear issue event payload structure
+ * AgentSession event payload structure (from Linear dispatcher)
  */
-interface LinearIssuePayload {
+interface AgentSessionPayload {
+  sessionId: string;
+  issueId: string;
+  status: "pending" | "active" | "completed";
+  url: string;
+  creatorId?: string;
+}
+
+/**
+ * Issue details from MCP get_issue tool
+ */
+interface IssueDetails {
   id: string;
   identifier: string;
   title: string;
-  description?: string | null;
-  priority?: number | null;
-  labels?: Array<{ id: string; name: string }>;
-  state?: { name: string };
+  description: string | null;
+  url: string;
+  state: {
+    id: string;
+    name: string;
+    type: string;
+  };
+  team: {
+    id: string;
+    name: string;
+    key: string;
+  };
+  priority: number | null;
+  labels: Array<{ id: string; name: string; color: string }>;
 }
 
 /**
@@ -124,23 +146,27 @@ export function createDevAgentEventsHandler(deps: DevAgentEventsHandlerDeps) {
         return;
       }
 
-      // Only handle issue events
-      if (!event.type.startsWith("linear.issue")) {
-        handlerLogger.debug({ type: event.type }, "Ignoring non-issue event");
+      // Only handle agent_session.created events
+      if (event.type !== "linear.agent_session.created") {
+        handlerLogger.debug(
+          { type: event.type },
+          "Ignoring non-agent_session.created event",
+        );
         res.status(200).json({
           received: true,
           eventId: event.id,
           ignored: true,
-          reason: "Not an issue event",
+          reason: "Not an agent_session.created event",
         });
         return;
       }
 
-      // Process issue event
-      await handleLinearIssueEvent(event, {
+      // Process agent session event
+      await handleAgentSessionCreated(event, {
         workflowClient,
         slackChannel,
         logger: handlerLogger,
+        correlationId: correlationId || event.id,
       });
 
       res.status(200).json({
@@ -156,63 +182,92 @@ export function createDevAgentEventsHandler(deps: DevAgentEventsHandlerDeps) {
 }
 
 /**
- * Handle Linear issue event
+ * Handle agent_session.created event
+ *
+ * When an agent is assigned to an issue in Linear, we:
+ * 1. Extract the issueId from the session payload
+ * 2. Fetch full issue details via MCP
+ * 3. Start the dev-agent workflow
  */
-async function handleLinearIssueEvent(
+async function handleAgentSessionCreated(
   event: NormalizedEvent,
   ctx: {
     workflowClient: TemporalClient;
     slackChannel: string;
     logger: PinoLogger;
+    correlationId: string;
   },
 ): Promise<void> {
-  const { workflowClient, slackChannel, logger: eventLogger } = ctx;
-  const payload = event.payload as LinearIssuePayload;
+  const {
+    workflowClient,
+    slackChannel,
+    logger: eventLogger,
+    correlationId,
+  } = ctx;
+  const payload = event.payload as AgentSessionPayload;
 
   if (!payload || typeof payload !== "object") {
     eventLogger.warn("Invalid payload structure");
     return;
   }
 
-  const { id, identifier, title, description, priority, labels } = payload;
+  const { sessionId, issueId } = payload;
 
-  if (!id || !identifier || !title) {
+  if (!sessionId || !issueId) {
     eventLogger.warn(
-      { id, identifier, title },
-      "Missing required issue fields",
+      { sessionId, issueId },
+      "Missing required agent session fields",
     );
     return;
   }
-
-  // Check for agent-ready label (DEV-02)
-  const labelNames = labels?.map((l) => l.name) || [];
-  const hasAgentReadyLabel = labelNames.includes("agent-ready");
-
-  if (!hasAgentReadyLabel) {
-    eventLogger.debug(
-      { labels: labelNames },
-      "Issue does not have agent-ready label",
-    );
-    return;
-  }
-
-  // Create workflow ID based on issue ID
-  const workflowId = `dev-agent-${id}`;
 
   eventLogger.info(
-    { workflowId, identifier, hasAgentReadyLabel },
+    { sessionId, issueId },
+    "Agent session created, fetching issue details",
+  );
+
+  // Fetch full issue details via MCP
+  let issue: IssueDetails;
+  try {
+    issue = await callMcpTool<IssueDetails>({
+      integration: "linear",
+      tool: "get_issue",
+      params: { issueId },
+      agentId: "dev-agent",
+      correlationId,
+    });
+  } catch (error) {
+    eventLogger.error(
+      { err: error, issueId },
+      "Failed to fetch issue details via MCP",
+    );
+    throw error;
+  }
+
+  eventLogger.info(
+    { issueId: issue.id, identifier: issue.identifier, title: issue.title },
+    "Issue details fetched",
+  );
+
+  // Create workflow ID based on issue ID
+  const workflowId = `dev-agent-${issue.id}`;
+
+  eventLogger.info(
+    { workflowId, identifier: issue.identifier },
     "Starting dev-agent workflow",
   );
 
+  const labelNames = issue.labels.map((l) => l.name);
+
   const input: DevAgentWorkflowInput = {
-    taskId: id,
-    issueIdentifier: identifier,
+    taskId: issue.id,
+    issueIdentifier: issue.identifier,
     issue: {
-      id,
-      identifier,
-      title,
-      description: description || null,
-      priority: priority || null,
+      id: issue.id,
+      identifier: issue.identifier,
+      title: issue.title,
+      description: issue.description,
+      priority: issue.priority,
       labels: labelNames,
     },
     slackChannel,
@@ -227,8 +282,14 @@ async function handleLinearIssueEvent(
 
     eventLogger.info({ workflowId }, "Workflow started successfully");
   } catch (error) {
-    // Workflow may already exist (duplicate event)
-    if (error instanceof Error && error.message.includes("already exists")) {
+    // Workflow may already exist (duplicate event or re-assignment)
+    const isAlreadyStarted =
+      error instanceof Error &&
+      (error.message.includes("already exists") ||
+        error.message.includes("already started") ||
+        error.name === "WorkflowExecutionAlreadyStartedError");
+
+    if (isAlreadyStarted) {
       eventLogger.info(
         { workflowId },
         "Workflow already exists, treating as duplicate",

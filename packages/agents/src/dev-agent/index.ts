@@ -11,32 +11,6 @@
  * - Node factories for testing and composition
  */
 
-// State - types, schemas, and utilities
-export {
-  createDevAgentInitialState,
-  DevAgentStateAnnotation,
-  type DevAgentPhase,
-  type DevAgentState,
-  type DevAgentStateUpdate,
-  DevAgentStateSchema,
-  type ExecutionPlan,
-  type ExecutionStep,
-  ExecutionPlanSchema,
-  ExecutionStepSchema,
-  type FileChange,
-  FileChangeSchema,
-  hasExceededTestLimit,
-  isActionablePhase,
-  isTerminalPhase,
-  type LinearIssueContext,
-  LinearIssueContextSchema,
-  MAX_TEST_ATTEMPTS,
-  type RelevantFile,
-  RelevantFileSchema,
-  type ResearchContext,
-  ResearchContextSchema,
-} from "./state.js";
-
 // Graph - workflow creation and types
 export {
   createDevAgentGraph,
@@ -45,22 +19,6 @@ export {
   type PhaseRoute,
   routeByPhase,
 } from "./graph.js";
-
-// Prompts - for testing and customization
-export {
-  buildFileWritePrompt,
-  buildPlanningPrompt,
-  buildPrFeedbackPrompt,
-  buildResearchPrompt,
-  buildTestFixPrompt,
-  FILE_WRITE_SYSTEM_PROMPT,
-  formatPlanAsMarkdown,
-  PLANNING_SYSTEM_PROMPT,
-  PR_FEEDBACK_SYSTEM_PROMPT,
-  RESEARCH_SYSTEM_PROMPT,
-  TEST_FIX_SYSTEM_PROMPT,
-} from "./prompts.js";
-
 // Nodes - for testing and custom composition
 export {
   type CreatePRNodeDeps,
@@ -77,9 +35,49 @@ export {
   type ExecuteNodeDeps,
   type HandleFeedbackNodeDeps,
   type PlanNodeDeps,
-  receiveIssueNode,
   type RequestApprovalNodeDeps,
   type ResearchNodeDeps,
+  receiveIssueNode,
   type SetupContainerNodeDeps,
   type VerifyNodeDeps,
 } from "./nodes/index.js";
+
+// Prompts - for testing and customization
+export {
+  buildFileWritePrompt,
+  buildPlanningPrompt,
+  buildPrFeedbackPrompt,
+  buildResearchPrompt,
+  buildTestFixPrompt,
+  FILE_WRITE_SYSTEM_PROMPT,
+  formatPlanAsMarkdown,
+  PLANNING_SYSTEM_PROMPT,
+  PR_FEEDBACK_SYSTEM_PROMPT,
+  RESEARCH_SYSTEM_PROMPT,
+  TEST_FIX_SYSTEM_PROMPT,
+} from "./prompts.js";
+// State - types, schemas, and utilities
+export {
+  createDevAgentInitialState,
+  type DevAgentPhase,
+  type DevAgentState,
+  DevAgentStateAnnotation,
+  DevAgentStateSchema,
+  type DevAgentStateUpdate,
+  type ExecutionPlan,
+  ExecutionPlanSchema,
+  type ExecutionStep,
+  ExecutionStepSchema,
+  type FileChange,
+  FileChangeSchema,
+  hasExceededTestLimit,
+  isActionablePhase,
+  isTerminalPhase,
+  type LinearIssueContext,
+  LinearIssueContextSchema,
+  MAX_TEST_ATTEMPTS,
+  type RelevantFile,
+  RelevantFileSchema,
+  type ResearchContext,
+  ResearchContextSchema,
+} from "./state.js";
