@@ -106,6 +106,10 @@ export function createSlackRouter(deps: SlackRouterDeps): Router {
   return router;
 }
 
+// Re-export interactions router factory
+export type { InteractionsRouterDeps } from "./interactions.js";
+export { createInteractionsRouter } from "./interactions.js";
+
 // Re-export MCP router factory
 export type { CreateMCPRouterOptions } from "./mcp.js";
 export { createMCPRouter } from "./mcp.js";

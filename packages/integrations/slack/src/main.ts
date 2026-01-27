@@ -13,6 +13,7 @@ import { createPinoLogger } from "@aesir/common";
 import type { App } from "@slack/bolt";
 import { sql } from "drizzle-orm";
 import express, { type Express } from "express";
+import { createInteractionsRouter } from "./api/interactions.js";
 import { createSlackRouter } from "./api/routes.js";
 import {
   createBoltApp,
@@ -187,12 +188,25 @@ export async function startServer(): Promise<void> {
     // Start the Bolt app
     await startBoltApp(boltApp);
 
-    // Start HTTP server for health checks and MCP in Socket Mode
+    // Start HTTP server for health checks, MCP, and interactions in Socket Mode
     // Socket Mode uses WebSocket for Slack events, but we still need HTTP for:
     // - Docker/K8s health checks
     // - MCP tool calls from agents
+    // - Slack interactive components (button clicks)
     const healthApp = express();
     healthApp.use(express.json());
+    // URL-encoded body parser for Slack interactions (button clicks)
+    healthApp.use(express.urlencoded({ extended: true }));
+
+    // Mount interactions router (Slack button clicks)
+    // Note: Must be before MCP routes to avoid path conflicts
+    const devAgentUrl =
+      process.env.DEV_AGENT_URL || "http://dev-agent:3004/events";
+    const interactionsRouter = createInteractionsRouter({
+      logger: logger.child({ component: "interactions" }),
+      dispatchUrl: devAgentUrl,
+    });
+    healthApp.use("/slack", interactionsRouter);
 
     // Mount MCP routes (agents call these to send Slack messages)
     const { createMCPRouter } = await import("./api/routes.js");
@@ -259,6 +273,18 @@ export async function startServer(): Promise<void> {
 
     // JSON body parser for event payloads
     app.use(express.json());
+    // URL-encoded body parser for Slack interactions (button clicks)
+    app.use(express.urlencoded({ extended: true }));
+
+    // Mount interactions router (Slack button clicks)
+    // Must be before other Slack routes for correct path handling
+    const devAgentUrl =
+      process.env.DEV_AGENT_URL || "http://dev-agent:3004/events";
+    const interactionsRouter = createInteractionsRouter({
+      logger: logger.child({ component: "interactions" }),
+      dispatchUrl: devAgentUrl,
+    });
+    app.use("/slack", interactionsRouter);
 
     // Create and mount Slack router
     const router = createSlackRouter({
