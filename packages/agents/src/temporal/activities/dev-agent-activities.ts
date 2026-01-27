@@ -9,7 +9,11 @@
  */
 
 import { createPinoLogger, type PinoLogger } from "@aesir/common";
-import type { DevContainerGit, DevContainerManager } from "@aesir/platform";
+import type {
+  DevContainerCleanup,
+  DevContainerGit,
+  DevContainerManager,
+} from "@aesir/platform";
 import type { ChatAnthropic } from "@langchain/anthropic";
 import type { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import {
@@ -32,6 +36,8 @@ const logger: PinoLogger = createPinoLogger({
 export interface DevAgentActivitiesDeps {
   /** Container manager for spawning/managing dev containers */
   manager: DevContainerManager;
+  /** Cleanup service for container cleanup */
+  cleanup: DevContainerCleanup;
   /** Git operations within containers */
   git: DevContainerGit;
   /** GitHub repo URL for cloning */
@@ -138,6 +144,7 @@ export async function runDevAgentGraphActivity(
   // Build graph options - handle exactOptionalPropertyTypes
   const graphOptions: Parameters<typeof createDevAgentGraph>[0] = {
     manager: dependencies.manager,
+    cleanup: dependencies.cleanup,
     git: dependencies.git,
     repoUrl: dependencies.repoUrl,
     githubToken: dependencies.githubToken,
@@ -276,6 +283,7 @@ export async function handlePRFeedbackActivity(
   // Build graph options
   const graphOptions: Parameters<typeof createDevAgentGraph>[0] = {
     manager: dependencies.manager,
+    cleanup: dependencies.cleanup,
     git: dependencies.git,
     repoUrl: dependencies.repoUrl,
     githubToken: dependencies.githubToken,

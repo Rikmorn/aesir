@@ -14,6 +14,7 @@
 
 import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import {
+  createDevContainerCleanup,
   createDevContainerGit,
   createDevContainerManager,
 } from "@aesir/platform";
@@ -82,6 +83,10 @@ export async function createDevAgentWorker(
     db: db as unknown as Parameters<typeof createDevContainerManager>[0]["db"],
     logger,
   });
+  const cleanup = createDevContainerCleanup({
+    db: db as unknown as Parameters<typeof createDevContainerCleanup>[0]["db"],
+    logger,
+  });
   const git = createDevContainerGit({ manager, logger });
   logger.info({}, "Dev container dependencies created");
 
@@ -136,6 +141,7 @@ export async function createDevAgentWorker(
   logger.info({}, "Initializing dev-agent activities");
   initDevAgentActivities({
     manager,
+    cleanup,
     git,
     repoUrl,
     githubToken,

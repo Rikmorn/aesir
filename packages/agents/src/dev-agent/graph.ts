@@ -21,11 +21,16 @@
  * -> handleFeedback -> (back to complete or escalated)
  */
 
-import type { DevContainerGit, DevContainerManager } from "@aesir/platform";
+import type {
+  DevContainerCleanup,
+  DevContainerGit,
+  DevContainerManager,
+} from "@aesir/platform";
 import type { ChatAnthropic } from "@langchain/anthropic";
 import { StateGraph } from "@langchain/langgraph";
 import type { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import {
+  createCompleteNode,
   createEscalateNode,
   createExecuteNode,
   createHandleFeedbackNode,
@@ -58,6 +63,7 @@ export type PhaseRoute =
   | "verify"
   | "createPR"
   | "notify"
+  | "complete"
   | "handleFeedback"
   | "escalate"
   | "end";
@@ -120,6 +126,8 @@ export function routeByPhase(state: DevAgentState): PhaseRoute {
 export interface DevAgentGraphOptions {
   /** DevContainerManager for container operations */
   manager: DevContainerManager;
+  /** DevContainerCleanup for container cleanup */
+  cleanup: DevContainerCleanup;
   /** DevContainerGit for git operations */
   git: DevContainerGit;
   /** GitHub repo URL for cloning */
@@ -155,6 +163,7 @@ export interface DevAgentGraphOptions {
 export function createDevAgentGraph(options: DevAgentGraphOptions) {
   const {
     manager,
+    cleanup,
     git,
     repoUrl,
     githubToken,
@@ -219,6 +228,10 @@ export function createDevAgentGraph(options: DevAgentGraphOptions) {
   });
 
   const notifyNode = createNotifyNode();
+  const completeNode = createCompleteNode({
+    cleanup,
+    slackChannel,
+  });
   const escalateNode = createEscalateNode();
 
   // Build handleFeedback node options
@@ -242,6 +255,7 @@ export function createDevAgentGraph(options: DevAgentGraphOptions) {
     .addNode("verify", verifyNode)
     .addNode("createPR", createPR)
     .addNode("notify", notifyNode)
+    .addNode("complete", completeNode)
     .addNode("escalate", escalateNode)
     .addNode("handleFeedback", handleFeedback)
 
@@ -249,11 +263,12 @@ export function createDevAgentGraph(options: DevAgentGraphOptions) {
     .addEdge("__start__", "receiveIssue")
 
     // After receive: route by phase
-    // Includes resume paths (execute, handleFeedback, rePlan) for Temporal re-invocation
+    // Includes resume paths (execute, handleFeedback, rePlan, complete) for Temporal re-invocation
     .addConditionalEdges("receiveIssue", routeByPhase, {
       setup: "setup",
       rePlan: "rePlan",
       execute: "execute",
+      complete: "complete",
       handleFeedback: "handleFeedback",
       escalate: "escalate",
       end: "__end__",
@@ -319,6 +334,9 @@ export function createDevAgentGraph(options: DevAgentGraphOptions) {
 
     // After notify: end
     .addEdge("notify", "__end__")
+
+    // After complete: end (PR merged, workflow finalized)
+    .addEdge("complete", "__end__")
 
     // After escalate: end (waits for human)
     .addEdge("escalate", "__end__")
