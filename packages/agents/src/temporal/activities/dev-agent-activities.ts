@@ -630,3 +630,196 @@ export async function handleRePlanActivity(
     slackMessageTs: result.slackMessageTs ?? undefined,
   };
 }
+
+// === Task Completion Activities ===
+
+/**
+ * Input for task completion activity (triggered by PR merge)
+ */
+export interface CompleteTaskInput {
+  /** Task ID (Linear issue UUID) */
+  taskId: string;
+  /** Linear issue ID */
+  issueId: string;
+  /** Human-readable identifier (e.g., "ABC-123") */
+  issueIdentifier: string;
+  /** Issue title */
+  issueTitle: string;
+  /** PR number that was merged */
+  prNumber: number;
+  /** PR URL */
+  prUrl: string;
+  /** Whether the PR was merged (should always be true for this activity) */
+  merged: boolean;
+  /** Slack channel for notifications */
+  slackChannel: string;
+  /** Container ID to cleanup */
+  containerId?: string;
+  /** Execution plan for stats */
+  executionPlan?: {
+    steps: Array<{ description: string; files: string[] }>;
+  };
+  /** Files changed for stats */
+  files?: Array<{ path: string; content: string }>;
+}
+
+/**
+ * Activity: Complete task after PR merge.
+ *
+ * Handles the full completion flow:
+ * 1. Update Linear status to "Done"
+ * 2. Send completion notification to Slack
+ * 3. Cleanup dev container
+ *
+ * All operations are non-critical (fail gracefully with warnings).
+ *
+ * @param input - Completion input with task, PR, and slack info
+ * @returns Success result
+ */
+export async function completeTaskActivity(
+  input: CompleteTaskInput,
+): Promise<{ success: boolean; error?: string }> {
+  const activityLogger = logger.child({
+    activity: "completeTask",
+    taskId: input.taskId,
+  });
+
+  activityLogger.info(
+    { merged: input.merged, prNumber: input.prNumber },
+    "Running task completion",
+  );
+
+  // Build stats
+  const stats = {
+    filesChanged: input.files?.length ?? 0,
+    executionSteps: input.executionPlan?.steps?.length ?? 0,
+  };
+
+  // 1. Update Linear status to Done
+  try {
+    await callMcpTool({
+      integration: "linear",
+      tool: "update_issue_status",
+      params: {
+        issueId: input.issueId,
+        statusName: "Done",
+      },
+      agentId: "dev-agent",
+      correlationId: `complete-${input.taskId}`,
+    });
+    activityLogger.info("Linear status updated to Done");
+  } catch (error) {
+    activityLogger.warn({ err: error }, "Failed to update Linear status");
+  }
+
+  // 2. Send completion notification to Slack (main channel, not thread)
+  try {
+    const message =
+      `:white_check_mark: *${input.issueIdentifier} completed!*\n\n` +
+      `*${input.issueTitle}*\n\n` +
+      `PR: <${input.prUrl}|#${input.prNumber}>\n` +
+      `Files: ${stats.filesChanged} | Steps: ${stats.executionSteps}`;
+
+    await callMcpTool({
+      integration: "slack",
+      tool: "send_message",
+      params: {
+        channel: input.slackChannel,
+        text: message,
+      },
+      agentId: "dev-agent",
+      correlationId: `complete-${input.taskId}`,
+    });
+    activityLogger.info("Completion notification sent to Slack");
+  } catch (error) {
+    activityLogger.warn(
+      { err: error },
+      "Failed to send completion notification",
+    );
+  }
+
+  // 3. Cleanup container
+  if (input.containerId) {
+    const dependencies = getDeps();
+    try {
+      await dependencies.cleanup.cleanupContainer(input.taskId);
+      activityLogger.info(
+        { containerId: input.containerId },
+        "Container cleaned up",
+      );
+    } catch (error) {
+      activityLogger.warn({ err: error }, "Failed to cleanup container");
+    }
+  }
+
+  return { success: true };
+}
+
+/**
+ * Input for handling PR closed without merge
+ */
+export interface HandlePRClosedInput {
+  /** Task ID (Linear issue UUID) */
+  taskId: string;
+  /** Linear issue ID */
+  issueId: string;
+  /** Human-readable identifier (e.g., "ABC-123") */
+  issueIdentifier: string;
+  /** PR number that was closed */
+  prNumber: number;
+  /** Slack channel for notifications */
+  slackChannel: string;
+  /** Container ID to cleanup */
+  containerId?: string;
+}
+
+/**
+ * Activity: Handle PR closed without merge.
+ *
+ * Notifies about cancellation and cleans up resources:
+ * 1. Send notification to Slack about PR closure
+ * 2. Cleanup dev container (PR is abandoned)
+ *
+ * All operations are non-critical (fail gracefully with warnings).
+ *
+ * @param input - Closure input with task and PR info
+ * @returns Success result
+ */
+export async function handlePRClosedActivity(
+  input: HandlePRClosedInput,
+): Promise<{ success: boolean }> {
+  const activityLogger = logger.child({
+    activity: "handlePRClosed",
+    taskId: input.taskId,
+  });
+
+  activityLogger.info({ prNumber: input.prNumber }, "PR closed without merge");
+
+  // Notify Slack about closure
+  try {
+    await callMcpTool({
+      integration: "slack",
+      tool: "send_message",
+      params: {
+        channel: input.slackChannel,
+        text: `:x: PR #${input.prNumber} for *${input.issueIdentifier}* was closed without merging.`,
+      },
+      agentId: "dev-agent",
+      correlationId: `pr-closed-${input.taskId}`,
+    });
+  } catch (error) {
+    activityLogger.warn({ err: error }, "Failed to notify about PR closure");
+  }
+
+  // Cleanup container (PR is abandoned)
+  if (input.containerId) {
+    const dependencies = getDeps();
+    try {
+      await dependencies.cleanup.cleanupContainer(input.taskId);
+    } catch (error) {
+      activityLogger.warn({ err: error }, "Failed to cleanup container");
+    }
+  }
+
+  return { success: true };
+}
