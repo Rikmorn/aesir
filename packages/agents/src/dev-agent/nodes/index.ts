@@ -20,6 +20,8 @@ export {
 export { createNotifyNode } from "./notify.js";
 // Planning phase
 export { createPlanNode, type PlanNodeDeps } from "./plan.js";
+// Re-planning phase
+export { createRePlanNode, type RePlanNodeDeps } from "./re-plan.js";
 // Entry - receive issue from webhook
 export { receiveIssueNode } from "./receive-issue.js";
 // Approval phase
