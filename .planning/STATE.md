@@ -11,9 +11,9 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 27 of 27 (Human-in-the-Loop)
-Plan: 7 of 13 complete
+Plan: 8 of 13 complete
 Status: In progress
-Last activity: 2026-01-27 - Completed 27-06-PLAN.md (complete node for workflow finalization)
+Last activity: 2026-01-27 - Completed 27-07-PLAN.md (approval signal handling with cross-channel sync)
 
 Progress: [████████░░] 97%
 
@@ -163,6 +163,11 @@ Key decisions that carry forward:
 - New "re_planning" phase for explicit workflow tracking
 - DevContainerCleanup for container cleanup, DevContainerManager for spawn/execute
 - Complete node has graceful failure for non-critical operations (Linear, Slack, cleanup)
+- PlanApprovalPayload extended with approverName and source fields for cross-channel sync
+- Cross-channel sync only when approval from Slack (Linear already knows if from Linear)
+- Slack message update removes buttons, shows approver + timestamp + "Executing..."
+- Rejection with feedback triggers re-planning; without feedback fails gracefully
+- REMINDER_TIMEOUT (24h) and FINAL_TIMEOUT (48h) for workflow timeout handling
 
 ### Pending Todos
 
@@ -185,9 +190,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Completed 27-06-PLAN.md
+Stopped at: Completed 27-07-PLAN.md
 Resume file: None
 Next action: Continue Phase 27 plans
 
 ---
-*Updated: 2026-01-27 - Phase 27 in progress, complete node for workflow finalization done*
+*Updated: 2026-01-27 - Phase 27 in progress, approval signal handling with cross-channel sync done*
