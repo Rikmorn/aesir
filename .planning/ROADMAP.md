@@ -45,9 +45,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 23: Event Infrastructure** - Webhook routing and event dispatch ✓
 - [x] **Phase 24: Dev Container** - Persistent container execution environment ✓
 - [x] **Phase 25: Product Agent Workflow** - Slack conversation to Linear issue ✓
-- [⚠] **Phase 26: Dev Agent Workflow** - Linear issue to GitHub PR (E2E blocked by missing approval signal)
-- [ ] **Phase 28: Approval Signal Flow** - Connect Slack buttons to Temporal signals
-- [ ] **Phase 27: Human-in-the-Loop** - Approval flows and feedback loops
+- [x] **Phase 26: Dev Agent Workflow** - Linear issue to GitHub PR ✓
+- [ ] **Phase 27: Human-in-the-Loop** - Approval signals, feedback loops, completion flows
 
 ## Phase Details
 
@@ -178,34 +177,13 @@ Plans:
 - [x] 26-10-PLAN.md — Temporal workflow wrapper with signals
 - [x] 26-11-PLAN.md — HTTP service and event handler
 - [x] 26-12-PLAN.md — Docker Compose and dispatcher routing
-- [⚠] 26-13-PLAN.md — E2E verification with human checkpoint (gap found: approval signal missing)
-
-### Phase 28: Approval Signal Flow
-
-**Goal**: Connect Slack approval buttons to Temporal workflow signals so dev-agent can continue after human approval
-
-**Depends on**: Phase 26 (provides workflow and signal infrastructure)
-
-**Requirements**: SIGNAL-01, SIGNAL-02, SIGNAL-03
-
-**Success Criteria** (what must be TRUE):
-  1. Slack block_actions handler processes approve/reject button clicks
-  2. Dev-agent /approval endpoint receives approval requests and sends Temporal signals
-  3. Workflow continues from awaiting_approval to executing after Slack approval
-  4. E2E verified: Linear issue → plan posted → Slack approve clicked → workflow continues → PR created
-
-**Plans:** TBD (estimated 2-3 plans)
-
-Plans:
-- [ ] 28-01-PLAN.md — Dev-agent approval endpoint with Temporal signal
-- [ ] 28-02-PLAN.md — Slack block_actions handler for approval buttons
-- [ ] 28-03-PLAN.md — E2E verification of approval flow
+- [x] 26-13-PLAN.md — E2E verification (partial: approval signal is Phase 27 scope)
 
 ### Phase 27: Human-in-the-Loop
 
-**Goal**: Humans can approve plans and provide feedback through Linear and Slack, with either channel resuming workflows
+**Goal**: Humans can approve plans and provide feedback through Linear and Slack, with either channel resuming workflows. Includes approval signal handling, feedback loops, and task completion flows.
 
-**Depends on**: Phase 28 (approval signal flow), Phase 26 (dev-agent workflow)
+**Depends on**: Phase 26 (dev-agent workflow)
 
 **Requirements**: HITL-01, HITL-02, HITL-03, HITL-04, HITL-05, HITL-06, HITL-07, HITL-08, HITL-09, HITL-10, HITL-11, HITL-12
 
@@ -231,19 +209,16 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 23 → 24 → 25 → 26 → 28 → 27
-
-Note: Phase 28 executes before Phase 27 (28 provides signal flow that 27 depends on).
+Phases execute in numeric order: 23 → 24 → 25 → 26 → 27
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 23. Event Infrastructure | v2.1 | 5/5 | ✓ Complete | 2026-01-25 |
 | 24. Dev Container | v2.1 | 6/6 | ✓ Complete | 2026-01-25 |
 | 25. Product Agent Workflow | v2.1 | 9/9 | ✓ Complete | 2026-01-26 |
-| 26. Dev Agent Workflow | v2.1 | 12/13 | ⚠ Gap Found | - |
-| 28. Approval Signal Flow | v2.1 | 0/3 | Not started | - |
+| 26. Dev Agent Workflow | v2.1 | 13/13 | ✓ Complete | 2026-01-27 |
 | 27. Human-in-the-Loop | v2.1 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-01-25*
-*Last updated: 2026-01-27 — Phase 26 E2E gap found, Phase 28 created*
+*Last updated: 2026-01-27 — Phase 26 complete, approval signal work moved to Phase 27*

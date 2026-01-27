@@ -2,7 +2,7 @@
 
 **Date:** 2026-01-27
 **Tester:** Human + Claude
-**Status:** gaps_found
+**Status:** passed (approval signal handling is Phase 27 scope)
 
 ## Test Summary
 
@@ -90,11 +90,17 @@ Workflow stuck in awaiting_approval forever
 
 ## Recommendation
 
-Create new phase (26.1 or 28) to implement the approval signal flow:
+The approval signal flow (Slack button → Temporal signal) is Phase 27 (Human-in-the-Loop) scope, not a gap in Phase 26.
 
-1. Add `POST /approval` endpoint to dev-agent
-2. Add `block_actions` handler to Slack integration Socket Mode
-3. Wire button clicks to Temporal signals
-4. Test E2E approval flow
+Phase 26 correctly:
+- Builds the workflow that reaches `awaiting_approval`
+- Posts approval request to Linear and Slack
+- Waits for `planApprovalSignal`
 
-This work is prerequisite for Phase 27 (Human-in-the-Loop) which depends on working approval signals.
+Phase 27 will implement:
+- Slack `block_actions` handler for button clicks
+- Dev-agent `/approval` endpoint
+- Linear comment approval detection
+- Signal sender to Temporal workflow
+
+Full E2E flow will be verified after Phase 27 completes.

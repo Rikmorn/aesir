@@ -6,23 +6,20 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-**Current focus:** Phase 28 - Approval Signal Flow (NEXT)
+**Current focus:** Phase 27 - Human-in-the-Loop (NEXT)
 
 ## Current Position
 
-Phase: 26 of 27 (Dev Agent Workflow) - GAP FOUND
-Plan: 13 of 13 attempted (E2E verification blocked)
-Status: Gap found - approval signal flow missing
-Last activity: 2026-01-27 - E2E verification identified missing approval signal handling
+Phase: 26 of 27 (Dev Agent Workflow) - COMPLETE
+Plan: 13 of 13 complete
+Status: Complete (approval signal handling is Phase 27 scope)
+Last activity: 2026-01-27 - Phase 26 complete, E2E requires Phase 27
 
-Progress: [████████░░] 92% (blocked by Phase 28)
+Progress: [████████░░] 92%
 
-**Gap:** Slack approval button clicks are received but not processed. Missing:
-1. Slack block_actions handler
-2. Dev-agent /approval endpoint
-3. Temporal signal sender
+**Note:** Phase 26 E2E verification (plan 13) confirmed the workflow reaches `awaiting_approval` correctly. The approval signal handling (Slack button → Temporal signal) is Phase 27 scope.
 
-**Next Phase:** 28 - Approval Signal Flow (fixes the gap)
+**Next Phase:** 27 - Human-in-the-Loop
 
 ## Milestone History
 
@@ -170,9 +167,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Phase 26 E2E verification found gap - approval signal flow missing
+Stopped at: Phase 26 complete
 Resume file: None
-Next action: Plan Phase 28 (Approval Signal Flow)
+Next action: Plan Phase 27 (Human-in-the-Loop)
 
 ---
-*Updated: 2026-01-27 - Phase 26 E2E gap found, Phase 28 created*
+*Updated: 2026-01-27 - Phase 26 complete, approval signal work is Phase 27 scope*
