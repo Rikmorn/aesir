@@ -390,3 +390,239 @@ export async function sendReminderActivity(
     activityLogger.warn({ err: error }, "Failed to send reminder");
   }
 }
+
+// === Approval Flow Activities ===
+
+/**
+ * Input for updating Slack approval message
+ */
+export interface UpdateSlackApprovalInput {
+  /** Slack channel where the approval message was sent */
+  slackChannel: string;
+  /** Message timestamp for update_message */
+  slackMessageTs: string;
+  /** Name of the approver */
+  approverName: string;
+  /** Whether the plan was approved or rejected */
+  approved: boolean;
+  /** Estimated execution time (shown if approved) */
+  estimatedTime?: string;
+}
+
+/**
+ * Activity: Update Slack message after approval decision.
+ *
+ * Removes buttons and shows approval/rejection status.
+ * Non-critical - fails gracefully if update fails.
+ *
+ * @param input - Input with channel, message timestamp, and approval info
+ */
+export async function updateSlackApprovalActivity(
+  input: UpdateSlackApprovalInput,
+): Promise<void> {
+  const {
+    slackChannel,
+    slackMessageTs,
+    approverName,
+    approved,
+    estimatedTime,
+  } = input;
+  const activityLogger = logger.child({
+    activity: "updateSlackApproval",
+    slackChannel,
+    messageTs: slackMessageTs,
+  });
+
+  try {
+    const timestamp = new Date().toLocaleTimeString();
+    const text = approved
+      ? `*Plan Approved* :white_check_mark:\nApproved by ${approverName} at ${timestamp}\n\nExecuting...${estimatedTime ? ` Estimated time: ~${estimatedTime}` : ""}`
+      : `*Plan Rejected* :x:\nRejected by ${approverName} at ${timestamp}`;
+
+    await callMcpTool({
+      integration: "slack",
+      tool: "update_message",
+      params: {
+        channel: slackChannel,
+        ts: slackMessageTs,
+        text,
+        blocks: [
+          {
+            type: "section",
+            text: { type: "mrkdwn", text },
+          },
+        ],
+      },
+      agentId: "dev-agent",
+      correlationId: `approval-update-${slackMessageTs}`,
+    });
+
+    activityLogger.info({ approved }, "Slack approval message updated");
+  } catch (error) {
+    // Non-critical - log but don't fail
+    activityLogger.warn({ err: error }, "Failed to update Slack message");
+  }
+}
+
+/**
+ * Input for syncing approval to Linear
+ */
+export interface SyncApprovalToLinearInput {
+  /** Linear issue ID */
+  issueId: string;
+  /** Name of the approver */
+  approverName: string;
+  /** Whether the plan was approved */
+  approved: boolean;
+  /** Source channel of the approval */
+  source: "slack" | "linear";
+}
+
+/**
+ * Activity: Sync approval to Linear.
+ *
+ * When approval comes from Slack, adds a comment to Linear and updates status.
+ * Skips sync if approval came from Linear (already there).
+ * Non-critical - fails gracefully if sync fails.
+ *
+ * @param input - Input with issue ID, approver, and approval info
+ */
+export async function syncApprovalToLinearActivity(
+  input: SyncApprovalToLinearInput,
+): Promise<void> {
+  const { issueId, approverName, approved, source } = input;
+  const activityLogger = logger.child({
+    activity: "syncApprovalToLinear",
+    issueId,
+    source,
+  });
+
+  // Only sync if approval came from Slack (Linear already knows if from Linear)
+  if (source !== "slack") {
+    activityLogger.debug("Skipping Linear sync - approval from Linear");
+    return;
+  }
+
+  try {
+    // Add comment about approval
+    const commentBody = approved
+      ? `Plan approved via Slack by ${approverName}`
+      : `Plan rejected via Slack by ${approverName}`;
+
+    await callMcpTool({
+      integration: "linear",
+      tool: "create_comment",
+      params: {
+        issueId,
+        body: commentBody,
+      },
+      agentId: "dev-agent",
+      correlationId: `linear-sync-${issueId}`,
+    });
+
+    // Update status if approved
+    if (approved) {
+      await callMcpTool({
+        integration: "linear",
+        tool: "update_issue_status",
+        params: {
+          issueId,
+          statusName: "Executing",
+        },
+        agentId: "dev-agent",
+        correlationId: `linear-sync-${issueId}`,
+      });
+    }
+
+    activityLogger.info({ approved }, "Linear synced with Slack approval");
+  } catch (error) {
+    // Non-critical - log but don't fail
+    activityLogger.warn({ err: error }, "Failed to sync approval to Linear");
+  }
+}
+
+/**
+ * Input for handling re-plan activity
+ */
+export interface HandleRePlanInput {
+  /** Task ID (Linear issue UUID) */
+  taskId: string;
+  /** Linear issue context */
+  issue: LinearIssueContext;
+  /** Slack channel for notifications */
+  slackChannel: string;
+  /** Rejection feedback to incorporate into revised plan */
+  feedback: string;
+}
+
+/**
+ * Activity: Handle plan rejection with re-planning.
+ *
+ * Runs the graph from re_planning phase with feedback.
+ * The graph will generate a revised plan and post to Slack thread.
+ *
+ * @param input - Input with task, issue, channel, and feedback
+ * @returns Graph result from re-planning
+ */
+export async function handleRePlanActivity(
+  input: HandleRePlanInput,
+): Promise<RunDevAgentGraphOutput> {
+  const { taskId, issue, slackChannel, feedback } = input;
+  const activityLogger = logger.child({
+    activity: "handleRePlan",
+    taskId,
+  });
+
+  activityLogger.info(
+    { feedbackLength: feedback.length },
+    "Starting re-plan with feedback",
+  );
+
+  const dependencies = getDeps();
+
+  // Build graph options
+  const graphOptions: Parameters<typeof createDevAgentGraph>[0] = {
+    manager: dependencies.manager,
+    cleanup: dependencies.cleanup,
+    git: dependencies.git,
+    repoUrl: dependencies.repoUrl,
+    githubToken: dependencies.githubToken,
+    owner: dependencies.owner,
+    repo: dependencies.repo,
+    baseBranch: dependencies.baseBranch,
+    slackChannel,
+  };
+
+  if (dependencies.llm !== undefined) {
+    graphOptions.llm = dependencies.llm;
+  }
+  if (dependencies.checkpointer !== undefined) {
+    graphOptions.checkpointer = dependencies.checkpointer;
+  }
+
+  const graph = createDevAgentGraph(graphOptions);
+
+  // Run from re_planning phase with feedback in state
+  const result = await graph.invoke(
+    {
+      taskId,
+      issue,
+      slackChannel,
+      phase: "re_planning" as DevAgentPhase,
+      approvalFeedback: feedback,
+    },
+    { configurable: { thread_id: taskId } },
+  );
+
+  activityLogger.info(
+    { phase: result.phase },
+    "Re-planning complete, awaiting next approval",
+  );
+
+  return {
+    phase: result.phase,
+    prNumber: result.prNumber ?? undefined,
+    prUrl: result.prUrl ?? undefined,
+    errorMessage: result.errorMessage ?? undefined,
+  };
+}

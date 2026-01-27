@@ -39,6 +39,10 @@ export interface ApprovalSignalInput {
   feedback?: string;
   /** User ID of the approver */
   approverUserId?: string;
+  /** Display name of the approver */
+  approverName?: string;
+  /** Source channel of the approval */
+  source?: "slack" | "linear";
   /** Slack channel (for logging/tracking) */
   channel?: string;
 }
@@ -102,13 +106,16 @@ export async function sendApprovalSignal(
   try {
     const handle = workflowClient.workflow.getHandle(workflowId);
 
-    // Build signal payload - only include feedback if defined
-    const signalPayload: { approved: boolean; feedback?: string } = {
+    // Build signal payload - only include optional fields if defined
+    // Uses spread pattern for exactOptionalPropertyTypes compatibility
+    const signalPayload = {
       approved: input.approved,
+      ...(input.feedback !== undefined ? { feedback: input.feedback } : {}),
+      ...(input.approverName !== undefined
+        ? { approverName: input.approverName }
+        : {}),
+      ...(input.source !== undefined ? { source: input.source } : {}),
     };
-    if (input.feedback !== undefined) {
-      signalPayload.feedback = input.feedback;
-    }
 
     await handle.signal(planApprovalSignal, signalPayload);
 

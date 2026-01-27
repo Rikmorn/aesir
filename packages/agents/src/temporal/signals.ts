@@ -34,17 +34,31 @@ export const cancelConversationSignal = wf.defineSignal("cancelConversation");
 // === Dev Agent Signals ===
 
 /**
+ * Plan approval signal payload
+ */
+export interface PlanApprovalPayload {
+  /** Whether the plan was approved */
+  approved: boolean;
+  /** Feedback explaining rejection or changes requested */
+  feedback?: string;
+  /** Name of the approver (for display purposes) */
+  approverName?: string;
+  /** Source channel of the approval */
+  source?: "slack" | "linear";
+}
+
+/**
  * Signal for plan approval (can come from Linear comment or Slack button)
  *
  * Usage from client:
  * ```typescript
  * const handle = client.workflow.getHandle(workflowId);
- * await handle.signal(planApprovalSignal, { approved: true });
+ * await handle.signal(planApprovalSignal, { approved: true, approverName: "John", source: "slack" });
  * // or with feedback: await handle.signal(planApprovalSignal, { approved: false, feedback: "Missing tests" });
  * ```
  */
 export const planApprovalSignal =
-  wf.defineSignal<[{ approved: boolean; feedback?: string }]>("planApproval");
+  wf.defineSignal<[PlanApprovalPayload]>("planApproval");
 
 /**
  * Signal for PR review feedback (from GitHub review or Slack)
