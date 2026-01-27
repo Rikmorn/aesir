@@ -1,14 +1,17 @@
 /**
  * Dev Agent Events Handler
  *
- * Handles incoming normalized events from the Linear integration dispatcher.
- * Starts Temporal workflows when an agent session is created (agent assigned to issue).
+ * Handles incoming normalized events from integration dispatchers.
+ * Supports multiple event sources and types:
+ *
+ * - Linear: agent_session.created (start workflow), comment.created (approval)
+ * - Slack: block_actions.* (approval button clicks)
+ * - GitHub: pull_request.merged/closed (completion)
  *
  * Key behaviors:
- * - Only handles Linear agent_session events (source === 'linear')
- * - Triggers on agent_session.created (agent assigned to issue)
- * - Fetches full issue details via MCP before starting workflow
- * - Starts devAgentWorkflow via Temporal client
+ * - Routes events by source and type
+ * - Starts Temporal workflows for new tasks
+ * - Sends signals to existing workflows for approvals/completions
  */
 
 import {
@@ -17,9 +20,12 @@ import {
   NormalizedEventSchema,
   type PinoLogger,
 } from "@aesir/common";
+import type { ChatAnthropic } from "@langchain/anthropic";
 import type { Client as TemporalClient } from "@temporalio/client";
 import { callMcpTool } from "../../mcp/index.js";
 import type { DevAgentWorkflowInput } from "../../temporal/types.js";
+import { classifyApprovalIntent } from "../classification/approval.js";
+import { sendApprovalSignal, sendCompletionSignal } from "./signal-handler.js";
 
 const logger: PinoLogger = createPinoLogger({
   component: "agents:dev-agent:api:events",
@@ -65,6 +71,43 @@ interface IssueDetails {
 export interface DevAgentEventsHandlerDeps {
   workflowClient: TemporalClient;
   slackChannel: string;
+  /** LLM for classifying Linear comments (optional - only needed for comment events) */
+  llm?: ChatAnthropic;
+}
+
+/**
+ * Slack block_actions event payload structure
+ */
+interface SlackBlockActionsPayload {
+  taskIdentifier: string;
+  userId: string;
+  actionId: string;
+  isApproval: boolean;
+  messageTs: string;
+  channel: string;
+}
+
+/**
+ * GitHub PR closed/merged event payload structure
+ */
+interface GitHubPRClosedPayload {
+  prNumber: number;
+  prTitle: string;
+  prUrl: string;
+  merged: boolean;
+  branchName: string;
+  repository: { owner: string; name: string };
+}
+
+/**
+ * Linear comment event payload structure
+ */
+interface LinearCommentPayload {
+  commentId: string;
+  commentBody: string;
+  issueId: string;
+  userId: string;
+  actorName: string;
 }
 
 /**
@@ -86,7 +129,7 @@ export interface EventsResponse {
  * Create dev-agent events handler
  */
 export function createDevAgentEventsHandler(deps: DevAgentEventsHandlerDeps) {
-  const { workflowClient, slackChannel } = deps;
+  const { workflowClient, slackChannel, llm } = deps;
 
   return async (req: EventsRequest, res: EventsResponse): Promise<void> => {
     const correlationId = req.headers["x-correlation-id"];
@@ -131,48 +174,159 @@ export function createDevAgentEventsHandler(deps: DevAgentEventsHandlerDeps) {
         "Event received",
       );
 
-      // Only handle Linear events
-      if (event.source !== "linear") {
-        handlerLogger.debug(
-          { source: event.source },
-          "Ignoring non-Linear event",
+      // Handle Slack button clicks (approval/rejection)
+      if (
+        event.source === "slack" &&
+        event.type.startsWith("slack.block_actions")
+      ) {
+        const payload = event.payload as SlackBlockActionsPayload;
+
+        const isApproval =
+          event.type.includes("approved") || payload.isApproval;
+
+        const signalResult = await sendApprovalSignal(
+          { workflowClient, logger: handlerLogger },
+          {
+            taskIdentifier: payload.taskIdentifier,
+            approved: isApproval,
+            ...(isApproval ? {} : { feedback: "Rejected via Slack button" }),
+            approverUserId: payload.userId,
+            channel: payload.channel,
+          },
         );
+
         res.status(200).json({
           received: true,
           eventId: event.id,
-          ignored: true,
-          reason: "Not a Linear event",
+          type: event.type,
+          signaled: signalResult.signaled,
+          workflowId: signalResult.workflowId,
         });
         return;
       }
 
-      // Only handle agent_session.created events
-      if (event.type !== "linear.agent_session.created") {
-        handlerLogger.debug(
-          { type: event.type },
-          "Ignoring non-agent_session.created event",
+      // Handle GitHub PR closed/merged events
+      if (
+        event.source === "github" &&
+        (event.type === "github.pull_request.merged" ||
+          event.type === "github.pull_request.closed")
+      ) {
+        const payload = event.payload as GitHubPRClosedPayload;
+
+        const signalResult = await sendCompletionSignal(
+          { workflowClient, logger: handlerLogger },
+          {
+            prNumber: payload.prNumber,
+            merged: payload.merged,
+            branchName: payload.branchName,
+            repository: payload.repository,
+          },
         );
+
         res.status(200).json({
           received: true,
           eventId: event.id,
-          ignored: true,
-          reason: "Not an agent_session.created event",
+          type: event.type,
+          processed: true,
+          signaled: signalResult.signaled,
         });
         return;
       }
 
-      // Process agent session event
-      await handleAgentSessionCreated(event, {
-        workflowClient,
-        slackChannel,
-        logger: handlerLogger,
-        correlationId: correlationId || event.id,
-      });
+      // Handle Linear comment events (approval via Linear)
+      if (
+        event.source === "linear" &&
+        event.type === "linear.comment.created"
+      ) {
+        const payload = event.payload as LinearCommentPayload;
 
+        if (!llm) {
+          handlerLogger.warn(
+            "LLM not configured, cannot classify Linear comment for approval",
+          );
+          res.status(200).json({
+            received: true,
+            eventId: event.id,
+            type: event.type,
+            skipped: true,
+            reason: "LLM not configured for comment classification",
+          });
+          return;
+        }
+
+        // Use classifyApprovalIntent to determine if this is an approval
+        const classification = await classifyApprovalIntent({
+          llm,
+          message: payload.commentBody,
+        });
+
+        if (
+          classification.intent === "approve" ||
+          classification.intent === "reject"
+        ) {
+          const signalResult = await sendApprovalSignal(
+            { workflowClient, logger: handlerLogger },
+            {
+              taskIdentifier: payload.issueId, // Linear issue ID
+              approved: classification.intent === "approve",
+              ...(classification.feedback
+                ? { feedback: classification.feedback }
+                : {}),
+              approverUserId: payload.userId,
+            },
+          );
+
+          res.status(200).json({
+            received: true,
+            eventId: event.id,
+            type: event.type,
+            signaled: signalResult.signaled,
+            classification: classification.intent,
+            workflowId: signalResult.workflowId,
+          });
+          return;
+        }
+
+        // Not an approval/rejection - just acknowledge
+        res.status(200).json({
+          received: true,
+          eventId: event.id,
+          type: event.type,
+          classification: classification.intent,
+        });
+        return;
+      }
+
+      // Handle Linear agent_session.created events (start workflow)
+      if (
+        event.source === "linear" &&
+        event.type === "linear.agent_session.created"
+      ) {
+        await handleAgentSessionCreated(event, {
+          workflowClient,
+          slackChannel,
+          logger: handlerLogger,
+          correlationId: correlationId || event.id,
+        });
+
+        res.status(200).json({
+          received: true,
+          eventId: event.id,
+          type: event.type,
+        });
+        return;
+      }
+
+      // Unhandled event type - acknowledge but don't process
+      handlerLogger.debug(
+        { type: event.type, source: event.source },
+        "Unhandled event type",
+      );
       res.status(200).json({
         received: true,
         eventId: event.id,
-        type: event.type,
+        ignored: true,
+        reason: `Unhandled event type: ${event.type}`,
       });
     } catch (error) {
       handlerLogger.error({ err: error }, "Unexpected error processing event");
