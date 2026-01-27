@@ -107,3 +107,75 @@ export function isAgentSessionEvent(
 export function isIssueEvent(payload: WebhookPayloadBase): boolean {
   return payload.type === "Issue";
 }
+
+// ============================================================================
+// Comment Payload Parsing (for approval intent classification)
+// ============================================================================
+
+/**
+ * Zod schema for Linear Comment webhook payload
+ *
+ * Used to validate and parse comment events for approval intent classification.
+ * When a user comments on an issue (e.g., "approved", "looks good", "hold on"),
+ * this payload captures the comment text for LLM classification.
+ */
+export const CommentPayloadSchema = z.object({
+  /** Action type for the comment event */
+  action: z.enum(["create", "update", "remove"]),
+  /** Resource type is always 'Comment' */
+  type: z.literal("Comment"),
+  /** Comment data */
+  data: z.object({
+    /** Unique identifier for the comment */
+    id: z.string(),
+    /** Comment text content (for LLM classification) */
+    body: z.string(),
+    /** ID of the issue this comment belongs to */
+    issueId: z.string(),
+    /** ID of the user who created the comment */
+    userId: z.string(),
+    /** When the comment was created */
+    createdAt: z.string(),
+  }),
+  /** User who authored the comment (optional) */
+  actor: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      email: z.string().optional(),
+    })
+    .optional(),
+  /** Timestamp when webhook was created (milliseconds since epoch) */
+  webhookTimestamp: z.number(),
+  /** Unique identifier for this webhook delivery */
+  webhookId: z.string(),
+});
+
+/**
+ * Type for validated Linear Comment webhook payload
+ */
+export type CommentPayload = z.infer<typeof CommentPayloadSchema>;
+
+/**
+ * Parse and validate a Linear Comment webhook payload
+ *
+ * @param body - Parsed JSON body from webhook request
+ * @returns Validated CommentPayload or null if validation fails
+ */
+export function parseCommentPayload(body: unknown): CommentPayload | null {
+  const result = CommentPayloadSchema.safeParse(body);
+  if (!result.success) {
+    return null;
+  }
+  return result.data;
+}
+
+/**
+ * Check if a webhook payload is a Comment event
+ *
+ * @param payload - The parsed webhook payload
+ * @returns true if this is a Comment webhook
+ */
+export function isCommentEvent(payload: WebhookPayloadBase): boolean {
+  return payload.type === "Comment";
+}
