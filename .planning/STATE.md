@@ -6,20 +6,18 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-**Current focus:** Phase 27 - Human-in-the-Loop (NEXT)
+**Current focus:** Phase 27 - Human-in-the-Loop
 
 ## Current Position
 
-Phase: 26 of 27 (Dev Agent Workflow) - COMPLETE
-Plan: 13 of 13 complete
-Status: Complete (approval signal handling is Phase 27 scope)
-Last activity: 2026-01-27 - Phase 26 complete, E2E requires Phase 27
+Phase: 27 of 27 (Human-in-the-Loop)
+Plan: 1 of 13 complete
+Status: In progress
+Last activity: 2026-01-27 - Completed 27-01-PLAN.md (approval classification)
 
-Progress: [████████░░] 92%
+Progress: [████████░░] 93%
 
-**Note:** Phase 26 E2E verification (plan 13) confirmed the workflow reaches `awaiting_approval` correctly. The approval signal handling (Slack button → Temporal signal) is Phase 27 scope.
-
-**Next Phase:** 27 - Human-in-the-Loop
+**Note:** Phase 26 complete. Phase 27 adds human-in-the-loop interactions: approval handling, feedback loops, Slack button interactivity.
 
 ## Milestone History
 
@@ -145,6 +143,11 @@ Key decisions that carry forward:
 - Separate dev-agent and dev-agent-worker containers for scalability
 - Worker depends on HTTP service health before starting
 - Dispatch all issue events, filter in handler (agent-ready label)
+- Approval classification uses flat Zod schema (four intents: approve, reject, unclear, question)
+- Approval classification extracts feedback for rejection intent
+- Empty messages return unclear/high without LLM call
+- Long messages (>4000 chars) truncated before LLM classification
+- LLM errors in approval classification return unclear/low (safe fallback)
 
 ### Pending Todos
 
@@ -167,9 +170,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Phase 26 complete
+Stopped at: Completed 27-01-PLAN.md
 Resume file: None
-Next action: Plan Phase 27 (Human-in-the-Loop)
+Next action: Execute 27-02-PLAN.md (Slack button handler)
 
 ---
-*Updated: 2026-01-27 - Phase 26 complete, approval signal work is Phase 27 scope*
+*Updated: 2026-01-27 - Phase 27 in progress, approval classification complete*
