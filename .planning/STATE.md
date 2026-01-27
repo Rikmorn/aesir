@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 27 of 27 (Human-in-the-Loop)
-Plan: 2 of 13 complete
+Plan: 3 of 13 complete
 Status: In progress
-Last activity: 2026-01-27 - Completed 27-02-PLAN.md (Slack button handler)
+Last activity: 2026-01-27 - Completed 27-03-PLAN.md (PR feedback handler)
 
-Progress: [████████░░] 94%
+Progress: [████████░░] 95%
 
 **Note:** Phase 26 complete. Phase 27 adds human-in-the-loop interactions: approval handling, feedback loops, Slack button interactivity.
 
@@ -151,6 +151,8 @@ Key decisions that carry forward:
 - Slack interactive action ID pattern: approve_plan_{taskId} and reject_plan_{taskId}
 - Slack interactions use fire-and-forget dispatch to meet 3-second acknowledgment deadline
 - DEV_AGENT_URL configurable via environment (default: http://dev-agent:3004/events)
+- PR closed event type distinguishes merged vs closed: github.pull_request.merged or github.pull_request.closed
+- Branch name included in PR closed event for container cleanup identification
 
 ### Pending Todos
 
@@ -173,9 +175,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Completed 27-02-PLAN.md
+Stopped at: Completed 27-03-PLAN.md
 Resume file: None
-Next action: Execute 27-03-PLAN.md (PR feedback handler)
+Next action: Execute 27-04-PLAN.md
 
 ---
-*Updated: 2026-01-27 - Phase 27 in progress, Slack button handler complete*
+*Updated: 2026-01-27 - Phase 27 in progress, PR feedback handler complete*
