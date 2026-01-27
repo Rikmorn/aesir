@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 27 of 27 (Human-in-the-Loop)
-Plan: 11 of 13 complete
+Plan: 12 of 13 complete
 Status: In progress
-Last activity: 2026-01-27 - Completed 27-10-PLAN.md (Signal extension and handler update)
+Last activity: 2026-01-27 - Completed 27-11-PLAN.md (Service environment configuration)
 
-Progress: [█████████░] 98%
+Progress: [█████████░] 99%
 
 **Note:** Phase 26 complete. Phase 27 adds human-in-the-loop interactions: approval handling, feedback loops, Slack button interactivity.
 
@@ -176,6 +176,8 @@ Key decisions that carry forward:
 - sendCompletionSignal follows sendApprovalSignal pattern for error handling consistency
 - PRCompletionPayload includes optional branchName for context logging
 - Workflow-not-found for PR completion returns graceful error (PR may not be linked to task)
+- DEV_AGENT_URL configured in Docker Compose for slack-integration and github-integration
+- Startup logs document supported HITL event types for service observability
 
 ### Pending Todos
 
@@ -198,9 +200,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Completed 27-10-PLAN.md
+Stopped at: Completed 27-11-PLAN.md
 Resume file: None
-Next action: Continue Phase 27 plans
+Next action: Continue Phase 27 plans (27-12 documentation, 27-13 verification)
 
 ---
-*Updated: 2026-01-27 - Phase 27 in progress, signal handler wired for PR completion*
+*Updated: 2026-01-27 - Phase 27 in progress, HITL environment configuration complete*
