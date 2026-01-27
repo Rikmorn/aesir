@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 27 of 27 (Human-in-the-Loop)
-Plan: 1 of 13 complete
+Plan: 2 of 13 complete
 Status: In progress
-Last activity: 2026-01-27 - Completed 27-01-PLAN.md (approval classification)
+Last activity: 2026-01-27 - Completed 27-02-PLAN.md (Slack button handler)
 
-Progress: [████████░░] 93%
+Progress: [████████░░] 94%
 
 **Note:** Phase 26 complete. Phase 27 adds human-in-the-loop interactions: approval handling, feedback loops, Slack button interactivity.
 
@@ -148,6 +148,9 @@ Key decisions that carry forward:
 - Empty messages return unclear/high without LLM call
 - Long messages (>4000 chars) truncated before LLM classification
 - LLM errors in approval classification return unclear/low (safe fallback)
+- Slack interactive action ID pattern: approve_plan_{taskId} and reject_plan_{taskId}
+- Slack interactions use fire-and-forget dispatch to meet 3-second acknowledgment deadline
+- DEV_AGENT_URL configurable via environment (default: http://dev-agent:3004/events)
 
 ### Pending Todos
 
@@ -170,9 +173,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Completed 27-01-PLAN.md
+Stopped at: Completed 27-02-PLAN.md
 Resume file: None
-Next action: Execute 27-02-PLAN.md (Slack button handler)
+Next action: Execute 27-03-PLAN.md (PR feedback handler)
 
 ---
-*Updated: 2026-01-27 - Phase 27 in progress, approval classification complete*
+*Updated: 2026-01-27 - Phase 27 in progress, Slack button handler complete*
