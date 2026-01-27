@@ -82,3 +82,45 @@ export function parsePRReviewPayload(
     };
   }
 }
+
+/**
+ * PR closed webhook payload schema
+ *
+ * Handles both merged PRs (merged=true) and closed-without-merge (merged=false)
+ */
+export const PRClosedPayloadSchema = z.object({
+  action: z.literal("closed"),
+  pull_request: z.object({
+    number: z.number(),
+    title: z.string(),
+    html_url: z.string().url(),
+    merged: z.boolean(),
+    merged_by: z
+      .object({
+        login: z.string(),
+      })
+      .nullable(),
+    head: z.object({
+      ref: z.string(), // branch name
+    }),
+  }),
+  repository: RepositorySchema,
+});
+
+export type PRClosedPayload = z.infer<typeof PRClosedPayloadSchema>;
+
+/**
+ * Parse and validate a GitHub PR closed webhook payload
+ *
+ * @param body - Raw request body (already parsed JSON or unknown)
+ * @returns Parsed and validated payload, or null if invalid
+ */
+export function parsePullRequestClosedPayload(
+  body: unknown,
+): PRClosedPayload | null {
+  const result = PRClosedPayloadSchema.safeParse(body);
+  if (!result.success) {
+    return null;
+  }
+  return result.data;
+}
