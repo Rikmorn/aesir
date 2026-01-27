@@ -125,6 +125,8 @@ export const DevAgentPhaseSchema = z.enum([
   "requesting_approval",
   /** Waiting for human to approve the plan */
   "awaiting_approval",
+  /** Revising plan based on rejection feedback */
+  "re_planning",
   /** Implementing the approved plan */
   "executing",
   /** Running full test suite and validation */

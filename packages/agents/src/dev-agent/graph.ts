@@ -10,11 +10,14 @@
  * After approval signal:
  * -> execute -> verify -> createPR -> notify -> END
  *
+ * Rejection handling (via Temporal signal):
+ * -> rePlan -> (generates revised plan, posts to Slack) -> END (awaits another signal)
+ *
  * Error handling:
  * - Any phase can transition to "escalated" -> escalate node -> END (waits for human)
  * - Failed phase transitions to "failed" -> END
  *
- * Feedback handling (via Temporal signal):
+ * PR Feedback handling (via Temporal signal):
  * -> handleFeedback -> (back to complete or escalated)
  */
 
@@ -29,6 +32,7 @@ import {
   createNotifyNode,
   createPlanNode,
   createPRNode,
+  createRePlanNode,
   createRequestApprovalNode,
   createResearchNode,
   createSetupContainerNode,
@@ -49,6 +53,7 @@ export type PhaseRoute =
   | "research"
   | "plan"
   | "requestApproval"
+  | "rePlan"
   | "execute"
   | "verify"
   | "createPR"
@@ -83,6 +88,8 @@ export function routeByPhase(state: DevAgentState): PhaseRoute {
       return "requestApproval";
     case "awaiting_approval":
       return "end"; // Graph ends here, Temporal waits for signal
+    case "re_planning":
+      return "rePlan";
     case "executing":
       return "execute";
     case "verifying":
@@ -187,6 +194,15 @@ export function createDevAgentGraph(options: DevAgentGraphOptions) {
     slackChannel,
   });
 
+  // Build rePlan node options
+  const rePlanOptions: Parameters<typeof createRePlanNode>[0] = {
+    slackChannel,
+  };
+  if (llm !== undefined) {
+    rePlanOptions.llm = llm;
+  }
+  const rePlanNode = createRePlanNode(rePlanOptions);
+
   // Build execute node options
   const executeOptions: Parameters<typeof createExecuteNode>[0] = { manager };
   if (llm !== undefined) {
@@ -221,6 +237,7 @@ export function createDevAgentGraph(options: DevAgentGraphOptions) {
     .addNode("research", researchNode)
     .addNode("plan", planNode)
     .addNode("requestApproval", requestApproval)
+    .addNode("rePlan", rePlanNode)
     .addNode("execute", executeNode)
     .addNode("verify", verifyNode)
     .addNode("createPR", createPR)
@@ -232,9 +249,10 @@ export function createDevAgentGraph(options: DevAgentGraphOptions) {
     .addEdge("__start__", "receiveIssue")
 
     // After receive: route by phase
-    // Includes resume paths (execute, handleFeedback) for Temporal re-invocation
+    // Includes resume paths (execute, handleFeedback, rePlan) for Temporal re-invocation
     .addConditionalEdges("receiveIssue", routeByPhase, {
       setup: "setup",
+      rePlan: "rePlan",
       execute: "execute",
       handleFeedback: "handleFeedback",
       escalate: "escalate",
@@ -267,6 +285,13 @@ export function createDevAgentGraph(options: DevAgentGraphOptions) {
     // But we include execute path for graph validation (Temporal re-invokes with executing phase)
     .addConditionalEdges("requestApproval", routeByPhase, {
       execute: "execute",
+      escalate: "escalate",
+      end: "__end__",
+    })
+
+    // After rePlan: route by phase
+    // rePlan returns awaiting_approval (end) or failed (end)
+    .addConditionalEdges("rePlan", routeByPhase, {
       escalate: "escalate",
       end: "__end__",
     })
