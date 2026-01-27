@@ -201,10 +201,21 @@ Plans:
   11. Timeout on approval wait (24h) notifies Slack
   12. E2E verified: plan posted → approval via Slack → workflow resumes → execution continues
 
-**Plans**: TBD
+**Plans:** 12 plans
 
 Plans:
-- [ ] 27-01: [Plan description TBD during planning]
+- [ ] 27-01-PLAN.md — LLM-based approval intent classification
+- [ ] 27-02-PLAN.md — Slack interactive component handler
+- [ ] 27-03-PLAN.md — GitHub PR closed webhook handler
+- [ ] 27-04-PLAN.md — Dev-agent event handler extension for signals
+- [ ] 27-05-PLAN.md — Re-planning node for rejections
+- [ ] 27-06-PLAN.md — Task completion node
+- [ ] 27-07-PLAN.md — Temporal workflow approval handling with cross-channel sync
+- [ ] 27-08-PLAN.md — Temporal workflow PR completion handling
+- [ ] 27-09-PLAN.md — Dispatcher route configuration
+- [ ] 27-10-PLAN.md — Signal definitions extension
+- [ ] 27-11-PLAN.md — Service configuration for HITL
+- [ ] 27-12-PLAN.md — E2E verification with human checkpoint
 
 ## Progress
 
@@ -217,8 +228,8 @@ Phases execute in numeric order: 23 → 24 → 25 → 26 → 27
 | 24. Dev Container | v2.1 | 6/6 | ✓ Complete | 2026-01-25 |
 | 25. Product Agent Workflow | v2.1 | 9/9 | ✓ Complete | 2026-01-26 |
 | 26. Dev Agent Workflow | v2.1 | 13/13 | ✓ Complete | 2026-01-27 |
-| 27. Human-in-the-Loop | v2.1 | 0/TBD | Not started | - |
+| 27. Human-in-the-Loop | v2.1 | 0/12 | Planning complete | - |
 
 ---
 *Roadmap created: 2026-01-25*
-*Last updated: 2026-01-27 — Phase 26 complete, approval signal work moved to Phase 27*
+*Last updated: 2026-01-27 — Phase 27 planned with 12 plans in 6 waves*
