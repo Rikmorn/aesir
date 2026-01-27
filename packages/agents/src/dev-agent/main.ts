@@ -80,6 +80,21 @@ async function bootstrap(): Promise<void> {
   };
   const eventsHandler = createDevAgentEventsHandler(eventsHandlerDeps);
 
+  // Log configured event types for HITL flow
+  logger.info(
+    {
+      eventTypes: [
+        "linear.agent_session.created",
+        "linear.comment.created",
+        "slack.block_actions.approved",
+        "slack.block_actions.rejected",
+        "github.pull_request.merged",
+        "github.pull_request.closed",
+      ],
+    },
+    "Dev-agent event handler configured for HITL workflow",
+  );
+
   // Start HTTP server
   const port = parseInt(process.env.DEV_AGENT_PORT ?? "3004", 10);
 
