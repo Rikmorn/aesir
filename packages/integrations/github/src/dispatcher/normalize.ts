@@ -5,7 +5,7 @@
  */
 
 import { createId, type NormalizedEvent } from "@aesir/common";
-import type { PRReviewPayload } from "../webhooks/parser.js";
+import type { PRClosedPayload, PRReviewPayload } from "../webhooks/parser.js";
 
 /**
  * Normalize PR review webhook payload to NormalizedEvent
@@ -72,6 +72,47 @@ export function normalizePRMergedEvent(
       prTitle,
       prUrl,
       repository,
+    },
+  };
+}
+
+/**
+ * Normalize PR closed event (handles both merged and closed-without-merge)
+ *
+ * Event types:
+ * - github.pull_request.merged: PR was merged (action=closed, merged=true)
+ * - github.pull_request.closed: PR was closed without merge (action=closed, merged=false)
+ *
+ * @param payload - Validated PR closed webhook payload
+ * @param deliveryId - X-GitHub-Delivery header value (used as correlationId)
+ * @returns Normalized event ready for dispatch
+ */
+export function normalizePRClosedEvent(
+  payload: PRClosedPayload,
+  deliveryId: string,
+): NormalizedEvent {
+  const isMerged = payload.pull_request.merged === true;
+
+  return {
+    id: createId.event(),
+    type: isMerged
+      ? "github.pull_request.merged"
+      : "github.pull_request.closed",
+    source: "github",
+    timestamp: new Date().toISOString(),
+    correlationId: deliveryId,
+    payload: {
+      prNumber: payload.pull_request.number,
+      prTitle: payload.pull_request.title,
+      prUrl: payload.pull_request.html_url,
+      merged: isMerged,
+      mergedBy: isMerged ? payload.pull_request.merged_by?.login : null,
+      branchName: payload.pull_request.head.ref,
+      repository: {
+        owner: payload.repository.owner.login,
+        name: payload.repository.name,
+        fullName: payload.repository.full_name,
+      },
     },
   };
 }
