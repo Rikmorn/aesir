@@ -5,6 +5,8 @@
  * Each node handles a specific phase of the development lifecycle.
  */
 
+// Completion phase
+export { type CompleteNodeDeps, createCompleteNode } from "./complete.js";
 // PR creation phase
 export { type CreatePRNodeDeps, createPRNode } from "./create-pr.js";
 // Escalation phase
