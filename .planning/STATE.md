@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 27 of 27 (Human-in-the-Loop)
-Plan: 8 of 13 complete
+Plan: 9 of 13 complete
 Status: In progress
-Last activity: 2026-01-27 - Completed 27-07-PLAN.md (approval signal handling with cross-channel sync)
+Last activity: 2026-01-27 - Completed 27-08-PLAN.md (PR completion signal handling)
 
-Progress: [████████░░] 97%
+Progress: [█████████░] 98%
 
 **Note:** Phase 26 complete. Phase 27 adds human-in-the-loop interactions: approval handling, feedback loops, Slack button interactivity.
 
@@ -168,6 +168,10 @@ Key decisions that carry forward:
 - Slack message update removes buttons, shows approver + timestamp + "Executing..."
 - Rejection with feedback triggers re-planning; without feedback fails gracefully
 - REMINDER_TIMEOUT (24h) and FINAL_TIMEOUT (48h) for workflow timeout handling
+- prCompletionSignal payload includes merged boolean and prNumber
+- Type assertion for state.prCompletion after wf.condition (signal-based state mutation)
+- PR merge triggers completeTaskActivity (Linear Done, Slack notification, cleanup)
+- PR close without merge triggers handlePRClosedActivity (notify, cleanup)
 
 ### Pending Todos
 
@@ -190,9 +194,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Completed 27-07-PLAN.md
+Stopped at: Completed 27-08-PLAN.md
 Resume file: None
 Next action: Continue Phase 27 plans
 
 ---
-*Updated: 2026-01-27 - Phase 27 in progress, approval signal handling with cross-channel sync done*
+*Updated: 2026-01-27 - Phase 27 in progress, PR completion signal handling done*
