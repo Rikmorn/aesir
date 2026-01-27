@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 27 of 27 (Human-in-the-Loop)
-Plan: 6 of 13 complete
+Plan: 7 of 13 complete
 Status: In progress
-Last activity: 2026-01-27 - Completed 27-05-PLAN.md (re-plan node for rejection handling)
+Last activity: 2026-01-27 - Completed 27-06-PLAN.md (complete node for workflow finalization)
 
-Progress: [████████░░] 96%
+Progress: [████████░░] 97%
 
 **Note:** Phase 26 complete. Phase 27 adds human-in-the-loop interactions: approval handling, feedback loops, Slack button interactivity.
 
@@ -161,6 +161,8 @@ Key decisions that carry forward:
 - Revised plans posted to Slack thread only (Linear gets final approved plan)
 - Re-plan node asks for clarification when feedback missing
 - New "re_planning" phase for explicit workflow tracking
+- DevContainerCleanup for container cleanup, DevContainerManager for spawn/execute
+- Complete node has graceful failure for non-critical operations (Linear, Slack, cleanup)
 
 ### Pending Todos
 
@@ -183,9 +185,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Completed 27-05-PLAN.md
+Stopped at: Completed 27-06-PLAN.md
 Resume file: None
 Next action: Continue Phase 27 plans
 
 ---
-*Updated: 2026-01-27 - Phase 27 in progress, re-plan node for rejection handling complete*
+*Updated: 2026-01-27 - Phase 27 in progress, complete node for workflow finalization done*
