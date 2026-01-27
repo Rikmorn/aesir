@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 27 of 27 (Human-in-the-Loop)
-Plan: 5 of 13 complete
+Plan: 6 of 13 complete
 Status: In progress
-Last activity: 2026-01-27 - Completed 27-04-PLAN.md (dev-agent event signal handler)
+Last activity: 2026-01-27 - Completed 27-05-PLAN.md (re-plan node for rejection handling)
 
-Progress: [████████░░] 95%
+Progress: [████████░░] 96%
 
 **Note:** Phase 26 complete. Phase 27 adds human-in-the-loop interactions: approval handling, feedback loops, Slack button interactivity.
 
@@ -158,6 +158,9 @@ Key decisions that carry forward:
 - Signal handler derives workflow ID from taskId (UUID) when available, falls back to taskIdentifier
 - LLM is optional dep in event handler - only needed for Linear comment classification
 - Completion signal extracts task identifier from feature/ABC-123 branch naming convention
+- Revised plans posted to Slack thread only (Linear gets final approved plan)
+- Re-plan node asks for clarification when feedback missing
+- New "re_planning" phase for explicit workflow tracking
 
 ### Pending Todos
 
@@ -180,9 +183,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Completed 27-04-PLAN.md
+Stopped at: Completed 27-05-PLAN.md
 Resume file: None
 Next action: Continue Phase 27 plans
 
 ---
-*Updated: 2026-01-27 - Phase 27 in progress, dev-agent event signal handler complete*
+*Updated: 2026-01-27 - Phase 27 in progress, re-plan node for rejection handling complete*
