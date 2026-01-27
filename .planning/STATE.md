@@ -11,9 +11,9 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 27 of 27 (Human-in-the-Loop)
-Plan: 3 of 13 complete
+Plan: 4 of 13 complete
 Status: In progress
-Last activity: 2026-01-27 - Completed 27-03-PLAN.md (PR feedback handler)
+Last activity: 2026-01-27 - Completed 27-13-PLAN.md (Linear comment webhook handler)
 
 Progress: [████████░░] 95%
 
@@ -153,6 +153,8 @@ Key decisions that carry forward:
 - DEV_AGENT_URL configurable via environment (default: http://dev-agent:3004/events)
 - PR closed event type distinguishes merged vs closed: github.pull_request.merged or github.pull_request.closed
 - Branch name included in PR closed event for container cleanup identification
+- Linear comment webhook uses direct type check (basicPayload.type === 'Comment') for partial payload routing
+- Comment body dispatched raw to dev-agent - classifyApprovalIntent handles LLM classification
 
 ### Pending Todos
 
@@ -175,9 +177,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Completed 27-03-PLAN.md
+Stopped at: Completed 27-13-PLAN.md
 Resume file: None
-Next action: Execute 27-04-PLAN.md
+Next action: Continue Phase 27 plans
 
 ---
-*Updated: 2026-01-27 - Phase 27 in progress, PR feedback handler complete*
+*Updated: 2026-01-27 - Phase 27 in progress, Linear comment webhook handler complete*
