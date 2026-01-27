@@ -51,4 +51,9 @@ export const DISPATCH_ROUTES: DispatchRoute[] = [
     target: process.env.DEV_AGENT_URL || "http://dev-agent:3004/events",
     mode: "async", // Cleanup can be background
   },
+  {
+    eventType: "github.pull_request.closed",
+    target: process.env.DEV_AGENT_URL || "http://dev-agent:3004/events",
+    mode: "async", // PR closed without merge - cleanup can be background
+  },
 ];

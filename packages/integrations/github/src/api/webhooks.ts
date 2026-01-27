@@ -16,17 +16,22 @@ import type { WebhookDeliveryStore } from "../db/webhook-delivery-store.js";
 import {
   createDispatcher,
   DISPATCH_ROUTES,
+  normalizePRClosedEvent,
   normalizePRReviewEvent,
 } from "../dispatcher/index.js";
 import { config } from "../types/config.js";
-import type { PRReviewPayload } from "../webhooks/parser.js";
-import { parsePRReviewPayload } from "../webhooks/parser.js";
+import type { PRClosedPayload, PRReviewPayload } from "../webhooks/parser.js";
+import {
+  parsePRReviewPayload,
+  parsePullRequestClosedPayload,
+} from "../webhooks/parser.js";
 import { verifySignature } from "../webhooks/signature.js";
 
 export interface WebhookRouterDeps {
   logger: PinoLogger;
   deliveryStore: WebhookDeliveryStore;
   onPRReview?: (payload: PRReviewPayload, deliveryId: string) => Promise<void>;
+  onPRClosed?: (payload: PRClosedPayload, deliveryId: string) => Promise<void>;
 }
 
 /**
@@ -39,7 +44,7 @@ export interface WebhookRouterDeps {
  * @returns Express router with POST / endpoint
  */
 export function createWebhookRouter(deps: WebhookRouterDeps): Router {
-  const { logger, deliveryStore, onPRReview } = deps;
+  const { logger, deliveryStore, onPRReview, onPRClosed } = deps;
 
   const router = Router();
 
@@ -155,9 +160,64 @@ export function createWebhookRouter(deps: WebhookRouterDeps): Router {
           },
           "PR review webhook processed and event dispatched",
         );
+      } else if (eventType === "pull_request") {
+        // Handle PR closed/merged events
+        let payload: unknown;
+        try {
+          payload = JSON.parse(rawBody);
+        } catch {
+          childLogger.warn("Failed to parse pull_request payload");
+          res.status(400).json({ error: "Invalid JSON" });
+          return;
+        }
+
+        // Check if action is "closed"
+        if (
+          typeof payload === "object" &&
+          payload !== null &&
+          "action" in payload
+        ) {
+          const action = (payload as { action: string }).action;
+
+          if (action === "closed") {
+            const prPayload = parsePullRequestClosedPayload(payload);
+
+            if (prPayload) {
+              // Route to handler if callback provided
+              if (onPRClosed) {
+                await onPRClosed(prPayload, deliveryId);
+              }
+
+              // Normalize and dispatch event (fire-and-forget)
+              const normalizedEvent = normalizePRClosedEvent(
+                prPayload,
+                deliveryId,
+              );
+              dispatcher.dispatch(normalizedEvent);
+
+              childLogger.info(
+                {
+                  prNumber: prPayload.pull_request.number,
+                  merged: prPayload.pull_request.merged,
+                  eventId: normalizedEvent.id,
+                  eventType: normalizedEvent.type,
+                },
+                "PR closed event dispatched",
+              );
+            } else {
+              childLogger.warn("Failed to parse PR closed payload");
+            }
+          } else {
+            // Other PR actions (opened, synchronized, etc.) - acknowledge but don't process
+            childLogger.debug(
+              { eventType, action },
+              "Ignoring non-closed PR action",
+            );
+          }
+        }
       } else {
         // Other event types - acknowledge but don't process
-        childLogger.debug({ eventType }, "Ignoring non-PR-review webhook");
+        childLogger.debug({ eventType }, "Ignoring unsupported webhook event");
       }
 
       // RECORD DELIVERY: After successful processing
