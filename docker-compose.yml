@@ -185,6 +185,7 @@ services:
           path: ./packages/common/src
 
   # GitHub Integration - handles GitHub webhooks and MCP tools
+  # Dispatches PR events to dev-agent for completion signals
   github-integration:
     build:
       context: .
@@ -206,6 +207,8 @@ services:
       - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      # Event dispatch (Docker network)
+      - DEV_AGENT_URL=http://dev-agent:3004/events
       # Server configuration
       - PORT=3002
       - NODE_ENV=${NODE_ENV:-production}
@@ -230,6 +233,9 @@ services:
           path: ./packages/common/src
 
   # Slack Integration - handles Slack events and MCP tools
+  # IMPORTANT: Configure in Slack App Dashboard (api.slack.com):
+  #   - Interactivity & Shortcuts URL: https://{your-tunnel}/slack/interactions
+  #   This receives button clicks for plan approval/rejection
   slack-integration:
     build:
       context: .
@@ -256,6 +262,7 @@ services:
       - SLACK_MODE=${SLACK_MODE:-socket}
       # Event dispatch (Docker network)
       - PRODUCT_AGENT_URL=http://product-agent:3005/events
+      - DEV_AGENT_URL=http://dev-agent:3004/events
       # Server configuration
       - PORT=3003
       - NODE_ENV=${NODE_ENV:-production}
