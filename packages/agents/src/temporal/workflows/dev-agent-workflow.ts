@@ -18,6 +18,7 @@ import { proxyActivities } from "@temporalio/workflow";
 
 import {
   escalationResolvedSignal,
+  type PlanApprovalPayload,
   planApprovalSignal,
   prFeedbackSignal,
 } from "../signals.js";
@@ -42,6 +43,7 @@ interface DevAgentActivities {
     prNumber?: number;
     prUrl?: string;
     errorMessage?: string;
+    slackMessageTs?: string;
   }>;
 
   continueAfterApprovalActivity: (input: {
@@ -53,6 +55,7 @@ interface DevAgentActivities {
     prNumber?: number;
     prUrl?: string;
     errorMessage?: string;
+    slackMessageTs?: string;
   }>;
 
   handlePRFeedbackActivity: (input: {
@@ -72,6 +75,34 @@ interface DevAgentActivities {
     slackChannel: string;
     message: string;
   }) => Promise<void>;
+
+  updateSlackApprovalActivity: (input: {
+    slackChannel: string;
+    slackMessageTs: string;
+    approverName: string;
+    approved: boolean;
+    estimatedTime?: string;
+  }) => Promise<void>;
+
+  syncApprovalToLinearActivity: (input: {
+    issueId: string;
+    approverName: string;
+    approved: boolean;
+    source: "slack" | "linear";
+  }) => Promise<void>;
+
+  handleRePlanActivity: (input: {
+    taskId: string;
+    issue: DevAgentWorkflowInput["issue"];
+    slackChannel: string;
+    feedback: string;
+  }) => Promise<{
+    phase: string;
+    prNumber?: number;
+    prUrl?: string;
+    errorMessage?: string;
+    slackMessageTs?: string;
+  }>;
 }
 
 // Configure activities with appropriate timeouts
@@ -81,6 +112,9 @@ const {
   handlePRFeedbackActivity,
   stopContainerActivity,
   sendReminderActivity,
+  updateSlackApprovalActivity,
+  syncApprovalToLinearActivity,
+  handleRePlanActivity,
 } = proxyActivities<DevAgentActivities>({
   startToCloseTimeout: "30 minutes", // LLM + container ops can take time
   retry: {
@@ -138,7 +172,7 @@ export async function devAgentWorkflow(
   // Mutable state for signal handlers
   const state = {
     phase: "pending" as DevAgentWorkflowPhase,
-    approval: null as { approved: boolean; feedback?: string } | null,
+    approval: null as PlanApprovalPayload | null,
     prFeedback: null as string | null,
     escalationResolution: null as {
       action: "retry" | "abort";
@@ -147,6 +181,7 @@ export async function devAgentWorkflow(
     prNumber: undefined as number | undefined,
     prUrl: undefined as string | undefined,
     errorMessage: undefined as string | undefined,
+    slackMessageTs: undefined as string | undefined,
   };
 
   // Signal handlers
@@ -199,6 +234,7 @@ export async function devAgentWorkflow(
   state.prNumber = graphResult.prNumber;
   state.prUrl = graphResult.prUrl;
   state.errorMessage = graphResult.errorMessage;
+  state.slackMessageTs = graphResult.slackMessageTs;
 
   // Handle awaiting_approval
   if (state.phase === "awaiting_approval") {
@@ -244,31 +280,137 @@ export async function devAgentWorkflow(
     }
 
     // Process approval decision
-    if (state.approval && !state.approval.approved) {
-      // Rejected - workflow fails
-      wf.log.info("Plan rejected", { feedback: state.approval.feedback });
-      state.phase = "failed";
+    if (state.approval) {
+      const approverName = state.approval.approverName || "User";
+      const approvalSource = state.approval.source || "slack";
 
-      await wf.condition(wf.allHandlersFinished);
-      return {
-        success: false,
-        phase: "failed",
-        errorMessage: `Plan rejected: ${state.approval.feedback || "No feedback provided"}`,
-      };
+      // Update Slack message to show approval status (remove buttons)
+      if (slackChannel && state.slackMessageTs) {
+        await updateSlackApprovalActivity({
+          slackChannel,
+          slackMessageTs: state.slackMessageTs,
+          approverName,
+          approved: state.approval.approved,
+          estimatedTime: "5-10 min",
+        });
+      }
+
+      // Sync approval to Linear if it came from Slack
+      await syncApprovalToLinearActivity({
+        issueId: issue.id,
+        approverName,
+        approved: state.approval.approved,
+        source: approvalSource,
+      });
+
+      if (!state.approval.approved) {
+        // Rejection - trigger re-planning if feedback provided
+        if (state.approval.feedback) {
+          wf.log.info("Plan rejected with feedback, re-planning", {
+            feedback: state.approval.feedback,
+          });
+
+          graphResult = await handleRePlanActivity({
+            taskId,
+            issue,
+            slackChannel,
+            feedback: state.approval.feedback,
+          });
+
+          // Reset approval state for next cycle
+          state.approval = null;
+          state.phase = graphResult.phase as DevAgentWorkflowPhase;
+          state.slackMessageTs = graphResult.slackMessageTs;
+
+          // If re-planning puts us back to awaiting_approval, loop back
+          // The workflow will handle this in the next iteration
+          // For now, return to let Temporal continue the workflow
+          if (state.phase === "awaiting_approval") {
+            wf.log.info("Revised plan posted, waiting for next approval");
+            // Recursive wait for approval - loop back
+            const nextApproval = await wf.condition(
+              () => state.approval !== null,
+              APPROVAL_TIMEOUT,
+            );
+
+            if (!nextApproval) {
+              // Another 24h timeout on revised plan
+              await stopContainerActivity(taskId);
+              await sendReminderActivity({
+                taskId,
+                slackChannel,
+                message: `Reminder: Revised plan for *${issue.identifier}* is waiting for approval.`,
+              });
+
+              const lateFinalApproval = await wf.condition(
+                () => state.approval !== null,
+                REMINDER_WAIT,
+              );
+
+              if (!lateFinalApproval) {
+                state.phase = "timeout";
+                await sendReminderActivity({
+                  taskId,
+                  slackChannel,
+                  message: `Revised plan for *${issue.identifier}* has timed out after 72 hours.`,
+                });
+
+                await wf.condition(wf.allHandlersFinished);
+                return {
+                  success: false,
+                  phase: "timeout",
+                };
+              }
+            }
+
+            // Process the next approval (simplified - doesn't handle another rejection)
+            // For full re-planning loops, this would need recursion or a while loop
+            // Type assertion needed because TypeScript doesn't understand wf.condition can change state
+            const nextApprovalDecision =
+              state.approval as PlanApprovalPayload | null;
+            if (nextApprovalDecision && !nextApprovalDecision.approved) {
+              wf.log.info("Revised plan also rejected", {
+                feedback: nextApprovalDecision.feedback,
+              });
+              state.phase = "failed";
+
+              await wf.condition(wf.allHandlersFinished);
+              return {
+                success: false,
+                phase: "failed",
+                errorMessage: `Revised plan rejected: ${nextApprovalDecision.feedback || "No feedback provided"}`,
+              };
+            }
+          }
+        } else {
+          // Rejected without feedback - fail gracefully
+          wf.log.info("Plan rejected without feedback");
+          state.phase = "failed";
+
+          await wf.condition(wf.allHandlersFinished);
+          return {
+            success: false,
+            phase: "failed",
+            errorMessage: "Plan rejected without feedback",
+          };
+        }
+      }
     }
 
-    // Approved - continue execution
-    wf.log.info("Plan approved, continuing to execution", { taskId });
-    graphResult = await continueAfterApprovalActivity({
-      taskId,
-      issue,
-      slackChannel,
-    });
+    // Approved (either first plan or revised plan) - continue execution
+    if (state.approval?.approved) {
+      wf.log.info("Plan approved, continuing to execution", { taskId });
+      graphResult = await continueAfterApprovalActivity({
+        taskId,
+        issue,
+        slackChannel,
+      });
 
-    state.phase = graphResult.phase as DevAgentWorkflowPhase;
-    state.prNumber = graphResult.prNumber;
-    state.prUrl = graphResult.prUrl;
-    state.errorMessage = graphResult.errorMessage;
+      state.phase = graphResult.phase as DevAgentWorkflowPhase;
+      state.prNumber = graphResult.prNumber;
+      state.prUrl = graphResult.prUrl;
+      state.errorMessage = graphResult.errorMessage;
+    }
   }
 
   // Handle escalation

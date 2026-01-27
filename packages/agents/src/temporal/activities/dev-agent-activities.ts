@@ -114,6 +114,8 @@ export interface RunDevAgentGraphOutput {
   prUrl?: string | undefined;
   /** Error message if failed/escalated */
   errorMessage?: string | undefined;
+  /** Slack message timestamp for update_message (set after approval request) */
+  slackMessageTs?: string | undefined;
 }
 
 /**
@@ -220,6 +222,7 @@ export async function runDevAgentGraphActivity(
     prNumber: result.prNumber ?? undefined,
     prUrl: result.prUrl ?? undefined,
     errorMessage: result.errorMessage ?? undefined,
+    slackMessageTs: result.slackMessageTs ?? undefined,
   };
 }
 
@@ -624,5 +627,6 @@ export async function handleRePlanActivity(
     prNumber: result.prNumber ?? undefined,
     prUrl: result.prUrl ?? undefined,
     errorMessage: result.errorMessage ?? undefined,
+    slackMessageTs: result.slackMessageTs ?? undefined,
   };
 }
