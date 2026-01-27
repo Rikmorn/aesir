@@ -253,6 +253,10 @@ export async function startServer(): Promise<void> {
 
     const healthServer = healthApp.listen(port, () => {
       logger.info({ port }, "Health check server started for Socket Mode");
+      logger.info(
+        { interactivityUrl: "/slack/interactions", devAgentUrl },
+        "Slack interactions endpoint configured for HITL approvals",
+      );
     });
 
     serviceState = {
@@ -316,6 +320,10 @@ export async function startServer(): Promise<void> {
       logger.info(
         { port, env: config.server.nodeEnv },
         "Slack service started in HTTP mode",
+      );
+      logger.info(
+        { interactivityUrl: "/slack/interactions", devAgentUrl },
+        "Slack interactions endpoint configured for HITL approvals",
       );
     });
 
