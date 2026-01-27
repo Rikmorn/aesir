@@ -47,4 +47,11 @@ export const DISPATCH_ROUTES: DispatchRoute[] = [
     target: process.env.DEV_AGENT_URL || "http://dev-agent:3004/events",
     mode: "sync",
   },
+  // Comment events for approval intent classification (HITL-03)
+  // Comment body is classified by dev-agent to determine approval/rejection
+  {
+    eventType: "linear.comment.created",
+    target: process.env.DEV_AGENT_URL || "http://dev-agent:3004/events",
+    mode: "async",
+  },
 ];

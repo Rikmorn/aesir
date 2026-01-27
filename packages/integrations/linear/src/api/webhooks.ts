@@ -5,7 +5,7 @@
  * - HMAC signature verification (timing-safe)
  * - Timestamp validation (replay attack prevention)
  * - Zod payload validation
- * - AgentSession event routing
+ * - Event routing (AgentSession, Comment)
  */
 
 import type { PinoLogger } from "@aesir/common";
@@ -15,11 +15,12 @@ import {
   createDispatcher,
   DISPATCH_ROUTES,
   normalizeAgentSessionEvent,
+  normalizeCommentCreatedEvent,
 } from "../dispatcher/index.js";
 import { config } from "../types/config.js";
 import {
-  isAgentSessionEvent,
   parseAgentSessionPayload,
+  parseCommentPayload,
 } from "../webhooks/parser.js";
 import {
   validateWebhookTimestamp,
@@ -90,73 +91,130 @@ export function createWebhookRouter(deps: WebhookRouterDeps): Router {
         return;
       }
 
-      // Parse payload to get timestamp
-      const parseResult = parseAgentSessionPayload(rawBody);
+      // Parse raw JSON first to determine event type
+      const basicPayload = JSON.parse(rawBody) as {
+        type?: string;
+        action?: string;
+        webhookTimestamp?: number;
+      };
 
-      if (!parseResult.success) {
-        // Check if this is an AgentSession event before logging validation error
-        const basicPayload = JSON.parse(rawBody) as { type?: string };
-
-        if (
-          !isAgentSessionEvent(basicPayload as unknown as AgentSessionPayload)
-        ) {
-          // Not an AgentSession event - ignore gracefully
+      // Route by event type
+      // Handle Comment events (for approval intent classification via Linear)
+      if (basicPayload.type === "Comment") {
+        // Only handle "create" action for new comments
+        if (basicPayload.action !== "create") {
           childLogger.debug(
-            { type: basicPayload.type },
-            "Ignoring non-AgentSession webhook",
+            { action: basicPayload.action },
+            "Ignoring non-create Comment event",
           );
           res.status(200).json({ received: true });
           return;
         }
 
-        // AgentSession event with validation error - log and reject
-        childLogger.warn(
-          { errors: parseResult.error.errors },
-          "Webhook payload validation failed",
+        const commentPayload = parseCommentPayload(basicPayload);
+
+        if (!commentPayload) {
+          childLogger.warn("Failed to parse Comment payload");
+          res.status(400).json({ error: "Invalid Comment payload" });
+          return;
+        }
+
+        // Validate timestamp (replay attack prevention)
+        const timestampValid = validateWebhookTimestamp(
+          commentPayload.webhookTimestamp,
         );
-        res.status(400).json({
-          error: "Invalid payload",
-          details: parseResult.error.errors,
-        });
+
+        if (!timestampValid) {
+          childLogger.warn(
+            { timestamp: commentPayload.webhookTimestamp },
+            "Comment webhook timestamp too old",
+          );
+          res.status(400).json({ error: "Timestamp too old" });
+          return;
+        }
+
+        // Normalize and dispatch comment event
+        const normalizedEvent = normalizeCommentCreatedEvent(
+          commentPayload,
+          deliveryId,
+        );
+        dispatcher.dispatch(normalizedEvent);
+
+        childLogger.info(
+          {
+            commentId: commentPayload.data.id,
+            issueId: commentPayload.data.issueId,
+            eventId: normalizedEvent.id,
+          },
+          "Comment created event dispatched",
+        );
+
+        res.status(200).json({ received: true });
         return;
       }
 
-      const payload = parseResult.data;
+      // Handle AgentSession events
+      if (basicPayload.type === "AgentSessionEvent") {
+        const parseResult = parseAgentSessionPayload(rawBody);
 
-      // Validate timestamp (replay attack prevention)
-      const timestampValid = validateWebhookTimestamp(payload.webhookTimestamp);
+        if (!parseResult.success) {
+          childLogger.warn(
+            { errors: parseResult.error.errors },
+            "AgentSession payload validation failed",
+          );
+          res.status(400).json({
+            error: "Invalid payload",
+            details: parseResult.error.errors,
+          });
+          return;
+        }
 
-      if (!timestampValid) {
-        childLogger.warn(
-          { timestamp: payload.webhookTimestamp },
-          "Webhook timestamp too old",
+        const payload = parseResult.data;
+
+        // Validate timestamp (replay attack prevention)
+        const timestampValid = validateWebhookTimestamp(
+          payload.webhookTimestamp,
         );
-        res.status(400).json({ error: "Timestamp too old" });
+
+        if (!timestampValid) {
+          childLogger.warn(
+            { timestamp: payload.webhookTimestamp },
+            "AgentSession webhook timestamp too old",
+          );
+          res.status(400).json({ error: "Timestamp too old" });
+          return;
+        }
+
+        // Route to handler if callback provided
+        if (onAgentSession) {
+          await onAgentSession(payload as AgentSessionPayload);
+        }
+
+        // Normalize and dispatch event (fire-and-forget)
+        const normalizedEvent = normalizeAgentSessionEvent(
+          payload as AgentSessionPayload,
+          deliveryId,
+        );
+        dispatcher.dispatch(normalizedEvent);
+
+        childLogger.info(
+          {
+            action: payload.action,
+            sessionId: payload.agentSession.id,
+            eventId: normalizedEvent.id,
+          },
+          "AgentSession webhook processed and event dispatched",
+        );
+
+        res.status(200).json({ received: true });
         return;
       }
 
-      // Route to handler if callback provided
-      if (onAgentSession) {
-        // payload is validated AgentSession event at this point
-        await onAgentSession(payload as AgentSessionPayload);
-      }
-
-      // Normalize and dispatch event (fire-and-forget)
-      const normalizedEvent = normalizeAgentSessionEvent(
-        payload as AgentSessionPayload,
-        deliveryId,
+      // Unknown event type - ignore gracefully
+      childLogger.debug(
+        { type: basicPayload.type },
+        "Ignoring unhandled webhook type",
       );
-      dispatcher.dispatch(normalizedEvent);
-
-      childLogger.info(
-        {
-          action: payload.action,
-          sessionId: payload.agentSession.id,
-          eventId: normalizedEvent.id,
-        },
-        "Webhook processed and event dispatched",
-      );
-
       res.status(200).json({ received: true });
     } catch (error) {
       childLogger.error({ err: error }, "Error processing webhook");
