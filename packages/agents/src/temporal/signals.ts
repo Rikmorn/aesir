@@ -93,6 +93,8 @@ export interface PRCompletionPayload {
   merged: boolean;
   /** PR number */
   prNumber: number;
+  /** Branch name associated with the PR (for context/logging) */
+  branchName?: string;
 }
 
 /**
