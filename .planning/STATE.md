@@ -11,9 +11,9 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 27 of 27 (Human-in-the-Loop)
-Plan: 10 of 13 complete
+Plan: 11 of 13 complete
 Status: In progress
-Last activity: 2026-01-27 - Completed 27-09-PLAN.md (Dispatcher routes for new events)
+Last activity: 2026-01-27 - Completed 27-10-PLAN.md (Signal extension and handler update)
 
 Progress: [█████████░] 98%
 
@@ -173,6 +173,9 @@ Key decisions that carry forward:
 - PR merge triggers completeTaskActivity (Linear Done, Slack notification, cleanup)
 - PR close without merge triggers handlePRClosedActivity (notify, cleanup)
 - Slack block_actions routes use sync mode for quick approval processing
+- sendCompletionSignal follows sendApprovalSignal pattern for error handling consistency
+- PRCompletionPayload includes optional branchName for context logging
+- Workflow-not-found for PR completion returns graceful error (PR may not be linked to task)
 
 ### Pending Todos
 
@@ -195,9 +198,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Completed 27-09-PLAN.md
+Stopped at: Completed 27-10-PLAN.md
 Resume file: None
 Next action: Continue Phase 27 plans
 
 ---
-*Updated: 2026-01-27 - Phase 27 in progress, dispatcher routes for new events done*
+*Updated: 2026-01-27 - Phase 27 in progress, signal handler wired for PR completion*
