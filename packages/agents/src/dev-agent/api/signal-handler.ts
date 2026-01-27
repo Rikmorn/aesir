@@ -13,7 +13,10 @@
 
 import type { PinoLogger } from "@aesir/common";
 import type { Client as TemporalClient } from "@temporalio/client";
-import { planApprovalSignal } from "../../temporal/signals.js";
+import {
+  planApprovalSignal,
+  prCompletionSignal,
+} from "../../temporal/signals.js";
 
 /**
  * Dependencies for signal handler functions
@@ -71,6 +74,8 @@ export interface CompletionSignalInput {
   branchName: string;
   /** Repository information */
   repository: { owner: string; name: string };
+  /** UUID if known (preferred for workflow lookup) */
+  taskId?: string;
 }
 
 /**
@@ -142,8 +147,8 @@ export async function sendApprovalSignal(
 /**
  * Send completion signal for PR merge/close events.
  *
- * Extracts task identifier from branch name and logs completion.
- * Actual completion flow will be extended in plan 06.
+ * Extracts task identifier from branch name and sends prCompletionSignal
+ * to the associated dev-agent workflow.
  *
  * @param deps - Signal handler dependencies
  * @param input - Completion signal input
@@ -153,7 +158,7 @@ export async function sendCompletionSignal(
   deps: SignalHandlerDeps,
   input: CompletionSignalInput,
 ): Promise<SignalResult> {
-  const { logger } = deps;
+  const { workflowClient, logger } = deps;
 
   const completionLogger = logger.child({
     action: "sendCompletionSignal",
@@ -174,12 +179,53 @@ export async function sendCompletionSignal(
 
   const taskIdentifier = branchMatch[1];
 
+  // Workflow ID format: dev-agent-{identifier}
+  // Note: If workflow was created with UUID, this may not match.
+  // For task ID lookup, the event handler should provide taskId if available.
+  const workflowId = input.taskId
+    ? `dev-agent-${input.taskId}`
+    : `dev-agent-${taskIdentifier}`;
+
   completionLogger.info(
-    { taskIdentifier },
+    { taskIdentifier, workflowId },
     `Processing PR completion (${input.merged ? "merged" : "closed"})`,
   );
 
-  // For now, just log - actual completion handling in plan 06
-  // This function will be extended to trigger completion flow
-  return { signaled: true };
+  try {
+    const handle = workflowClient.workflow.getHandle(workflowId);
+
+    // Build signal payload - include optional branchName for context
+    const signalPayload = {
+      merged: input.merged,
+      prNumber: input.prNumber,
+      ...(input.branchName !== undefined
+        ? { branchName: input.branchName }
+        : {}),
+    };
+
+    await handle.signal(prCompletionSignal, signalPayload);
+
+    completionLogger.info("PR completion signal sent");
+    return { signaled: true, workflowId };
+  } catch (error) {
+    // Check if workflow not found
+    const isNotFound =
+      error instanceof Error &&
+      (error.message.includes("not found") ||
+        error.message.includes("WorkflowNotFoundError") ||
+        error.name === "WorkflowNotFoundError");
+
+    if (isNotFound) {
+      completionLogger.warn(
+        "Workflow not found for PR completion signal - PR may not be associated with a dev-agent task",
+      );
+      return { signaled: false, error: "Workflow not found" };
+    }
+
+    completionLogger.error(
+      { err: error },
+      "Failed to send PR completion signal",
+    );
+    throw error;
+  }
 }
