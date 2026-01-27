@@ -84,3 +84,28 @@ export const escalationResolvedSignal =
   wf.defineSignal<[{ action: "retry" | "abort"; guidance?: string }]>(
     "escalationResolved",
   );
+
+/**
+ * PR completion signal payload
+ */
+export interface PRCompletionPayload {
+  /** Whether the PR was merged (true) or closed without merge (false) */
+  merged: boolean;
+  /** PR number */
+  prNumber: number;
+}
+
+/**
+ * Signal for PR completion (merge or close)
+ *
+ * Sent when a GitHub PR associated with a task is merged or closed.
+ *
+ * Usage from client:
+ * ```typescript
+ * const handle = client.workflow.getHandle(workflowId);
+ * await handle.signal(prCompletionSignal, { merged: true, prNumber: 42 });
+ * // or for closed: await handle.signal(prCompletionSignal, { merged: false, prNumber: 42 });
+ * ```
+ */
+export const prCompletionSignal =
+  wf.defineSignal<[PRCompletionPayload]>("prCompletion");

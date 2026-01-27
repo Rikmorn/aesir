@@ -19,7 +19,9 @@ import { proxyActivities } from "@temporalio/workflow";
 import {
   escalationResolvedSignal,
   type PlanApprovalPayload,
+  type PRCompletionPayload,
   planApprovalSignal,
+  prCompletionSignal,
   prFeedbackSignal,
 } from "../signals.js";
 import type {
@@ -103,6 +105,31 @@ interface DevAgentActivities {
     errorMessage?: string;
     slackMessageTs?: string;
   }>;
+
+  completeTaskActivity: (input: {
+    taskId: string;
+    issueId: string;
+    issueIdentifier: string;
+    issueTitle: string;
+    prNumber: number;
+    prUrl: string;
+    merged: boolean;
+    slackChannel: string;
+    containerId?: string;
+    executionPlan?: {
+      steps: Array<{ description: string; files: string[] }>;
+    };
+    files?: Array<{ path: string; content: string }>;
+  }) => Promise<{ success: boolean; error?: string }>;
+
+  handlePRClosedActivity: (input: {
+    taskId: string;
+    issueId: string;
+    issueIdentifier: string;
+    prNumber: number;
+    slackChannel: string;
+    containerId?: string;
+  }) => Promise<{ success: boolean }>;
 }
 
 // Configure activities with appropriate timeouts
@@ -115,6 +142,8 @@ const {
   updateSlackApprovalActivity,
   syncApprovalToLinearActivity,
   handleRePlanActivity,
+  completeTaskActivity,
+  handlePRClosedActivity,
 } = proxyActivities<DevAgentActivities>({
   startToCloseTimeout: "30 minutes", // LLM + container ops can take time
   retry: {
@@ -174,6 +203,7 @@ export async function devAgentWorkflow(
     phase: "pending" as DevAgentWorkflowPhase,
     approval: null as PlanApprovalPayload | null,
     prFeedback: null as string | null,
+    prCompletion: null as PRCompletionPayload | null,
     escalationResolution: null as {
       action: "retry" | "abort";
       guidance?: string;
@@ -182,6 +212,7 @@ export async function devAgentWorkflow(
     prUrl: undefined as string | undefined,
     errorMessage: undefined as string | undefined,
     slackMessageTs: undefined as string | undefined,
+    containerId: undefined as string | undefined,
   };
 
   // Signal handlers
@@ -204,6 +235,14 @@ export async function devAgentWorkflow(
       action: resolution.action,
     });
     state.escalationResolution = resolution;
+  });
+
+  wf.setHandler(prCompletionSignal, (completion) => {
+    wf.log.info("Received PR completion signal", {
+      merged: completion.merged,
+      prNumber: completion.prNumber,
+    });
+    state.prCompletion = completion;
   });
 
   // Query handler for status
@@ -443,18 +482,80 @@ export async function devAgentWorkflow(
 
   // Handle complete (PR created)
   if (state.phase === "complete" && state.prUrl) {
-    wf.log.info("Workflow complete, PR created", {
+    wf.log.info("PR created, waiting for merge, close, or feedback", {
       prNumber: state.prNumber,
       prUrl: state.prUrl,
     });
 
-    // Wait for PR feedback (optional - can receive review comments)
-    const receivedFeedback = await wf.condition(
-      () => state.prFeedback !== null,
+    // Wait for PR completion (merge/close) or feedback signal
+    const receivedSignal = await wf.condition(
+      () => state.prCompletion !== null || state.prFeedback !== null,
       FEEDBACK_TIMEOUT,
     );
 
-    if (receivedFeedback && state.prFeedback) {
+    // Handle PR completion (merge or close)
+    if (state.prCompletion) {
+      const prCompletion = state.prCompletion;
+      // Capture containerId for use in activities (exactOptionalPropertyTypes)
+      const containerIdParam = state.containerId;
+
+      if (prCompletion.merged) {
+        // PR merged - run completion flow
+        wf.log.info("PR merged, running completion flow", {
+          prNumber: prCompletion.prNumber,
+        });
+
+        await completeTaskActivity({
+          taskId,
+          issueId: issue.id,
+          issueIdentifier: issue.identifier,
+          issueTitle: issue.title,
+          prNumber: state.prNumber ?? prCompletion.prNumber,
+          prUrl: state.prUrl,
+          merged: true,
+          slackChannel,
+          ...(containerIdParam !== undefined
+            ? { containerId: containerIdParam }
+            : {}),
+        });
+
+        await wf.condition(wf.allHandlersFinished);
+        return {
+          success: true,
+          phase: "complete",
+          prNumber: state.prNumber,
+          prUrl: state.prUrl,
+        };
+      } else {
+        // PR closed without merge - handle cancellation
+        wf.log.info("PR closed without merge", {
+          prNumber: prCompletion.prNumber,
+        });
+
+        await handlePRClosedActivity({
+          taskId,
+          issueId: issue.id,
+          issueIdentifier: issue.identifier,
+          prNumber: prCompletion.prNumber,
+          slackChannel,
+          ...(containerIdParam !== undefined
+            ? { containerId: containerIdParam }
+            : {}),
+        });
+
+        await wf.condition(wf.allHandlersFinished);
+        return {
+          success: false,
+          phase: "failed",
+          errorMessage: "PR closed without merging",
+          prNumber: state.prNumber,
+          prUrl: state.prUrl,
+        };
+      }
+    }
+
+    // Handle PR feedback (review comments)
+    if (receivedSignal && state.prFeedback) {
       wf.log.info("Received PR feedback, addressing", { taskId });
 
       const feedbackResult = await handlePRFeedbackActivity({
@@ -476,8 +577,74 @@ export async function devAgentWorkflow(
           prUrl: state.prUrl,
         };
       }
+
+      // Reset feedback and wait for next signal (feedback addressed, continue waiting)
+      state.prFeedback = null;
+
+      // Loop back to wait for more feedback or completion
+      await wf.condition(
+        () => state.prCompletion !== null || state.prFeedback !== null,
+        FEEDBACK_TIMEOUT,
+      );
+
+      // Handle completion if received after feedback
+      // Type assertion needed: TypeScript doesn't understand signal-based state mutation
+      // After wf.condition, state.prCompletion may have been set by signal handler
+      const postFeedbackCompletion =
+        state.prCompletion as PRCompletionPayload | null;
+      const postFeedbackContainerId = state.containerId;
+
+      if (postFeedbackCompletion !== null) {
+        if (postFeedbackCompletion.merged) {
+          await completeTaskActivity({
+            taskId,
+            issueId: issue.id,
+            issueIdentifier: issue.identifier,
+            issueTitle: issue.title,
+            prNumber: state.prNumber ?? postFeedbackCompletion.prNumber,
+            prUrl: state.prUrl,
+            merged: true,
+            slackChannel,
+            ...(postFeedbackContainerId !== undefined
+              ? { containerId: postFeedbackContainerId }
+              : {}),
+          });
+
+          await wf.condition(wf.allHandlersFinished);
+          return {
+            success: true,
+            phase: "complete",
+            prNumber: state.prNumber,
+            prUrl: state.prUrl,
+          };
+        } else {
+          await handlePRClosedActivity({
+            taskId,
+            issueId: issue.id,
+            issueIdentifier: issue.identifier,
+            prNumber: postFeedbackCompletion.prNumber,
+            slackChannel,
+            ...(postFeedbackContainerId !== undefined
+              ? { containerId: postFeedbackContainerId }
+              : {}),
+          });
+
+          await wf.condition(wf.allHandlersFinished);
+          return {
+            success: false,
+            phase: "failed",
+            errorMessage: "PR closed without merging",
+            prNumber: state.prNumber,
+            prUrl: state.prUrl,
+          };
+        }
+      }
+
+      // No completion signal received, continue (PR still open)
+      wf.log.info("No completion signal after feedback, PR still open");
     }
 
+    // If we didn't receive any signals, complete (PR exists, timeout reached)
     await wf.condition(wf.allHandlersFinished);
     return {
       success: true,
