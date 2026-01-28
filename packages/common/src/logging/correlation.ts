@@ -27,23 +27,3 @@ export interface CorrelationContext {
 export function generateCorrelationId(type: OperationType): string {
   return `${type}_${nanoid(16)}`;
 }
-
-/**
- * Generate a child correlation ID, linking to parent.
- * Returns both the new ID and context object.
- */
-export function generateChildCorrelationId(
-  parentId: string,
-  type: OperationType,
-): CorrelationContext {
-  const childId = generateCorrelationId(type);
-
-  // Extract root from parent if it exists, otherwise parent is root
-  const rootId = parentId.includes("_") ? parentId : parentId;
-
-  return {
-    correlationId: childId,
-    parentCorrelationId: parentId,
-    rootCorrelationId: rootId,
-  };
-}

@@ -7,7 +7,6 @@
 // Correlation ID utilities
 export {
   type CorrelationContext,
-  generateChildCorrelationId,
   generateCorrelationId,
   type OperationType,
 } from "./correlation.js";
