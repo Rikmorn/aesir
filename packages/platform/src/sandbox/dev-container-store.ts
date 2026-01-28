@@ -5,8 +5,8 @@
  * Provides CRUD operations for container tracking.
  */
 
-import type { PinoLogger } from "@aesir/common";
 import { createId } from "@aesir/common";
+import type { PinoLogger } from "@aesir/platform";
 import { and, eq, lt, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {

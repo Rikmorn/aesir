@@ -5,7 +5,7 @@
  * Bridges between Bolt's OAuth flow and our credential storage.
  */
 
-import type { PinoLogger } from "@aesir/common";
+import type { PinoLogger } from "@aesir/platform";
 import type {
   Installation,
   InstallationQuery,

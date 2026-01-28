@@ -9,7 +9,7 @@ import {
   createPinoLogger,
   generateCorrelationId,
   type PinoLogger,
-} from "@aesir/common";
+} from "@aesir/platform";
 import { AIMessage } from "@langchain/core/messages";
 import { callMcpTool } from "../../mcp/index.js";
 import type { ProductAgentState, ProductAgentStateUpdate } from "../state.js";

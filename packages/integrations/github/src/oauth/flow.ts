@@ -6,7 +6,7 @@
  */
 
 import crypto from "node:crypto";
-import { createPinoLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/platform";
 import type { Octokit } from "@octokit/rest";
 import { createGitHubClient } from "../client/factory.js";
 import type { GitHubCredentialStore } from "../db/credential-store.js";

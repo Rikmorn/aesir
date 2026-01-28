@@ -11,7 +11,7 @@
  * - Handles errors gracefully with user-friendly error messages
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import type { ChatAnthropic } from "@langchain/anthropic";
 import type { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import type { App } from "@slack/bolt";
@@ -422,7 +422,7 @@ export function registerHandlers(
   );
 
   // Handle @mentions in channels (primary handler)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // biome-ignore lint/suspicious/noExplicitAny: Bolt's event handler type signature mismatch
   app.event("app_mention", handleAppMention(options) as any);
 
   // Handle message events for:

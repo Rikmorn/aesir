@@ -4,7 +4,7 @@
  * Creates and configures an MCP server for Slack operations.
  */
 
-import type { MCPToolContext, PinoLogger } from "@aesir/common";
+import type { MCPLogger, MCPToolContext } from "@aesir/common";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
   CallToolRequestSchema,
@@ -33,7 +33,7 @@ import {
 
 export interface SlackMCPServerOptions {
   db: PostgresJsDatabase | NodePgDatabase;
-  logger: PinoLogger;
+  logger: MCPLogger;
   teamId?: string;
 }
 

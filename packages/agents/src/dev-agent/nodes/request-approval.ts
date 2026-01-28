@@ -9,7 +9,7 @@
  * Implements DEV-08 from the dev-agent workflow spec.
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import { callMcpTool } from "../../mcp/index.js";
 import type { DevAgentState, ExecutionPlan } from "../state.js";
 

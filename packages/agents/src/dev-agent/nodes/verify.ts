@@ -8,9 +8,12 @@
  * Implements DEV-13 through DEV-14 from the dev-agent workflow spec.
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import type { DevContainerManager } from "@aesir/platform";
-import { DEV_CONTAINER_TIMEOUTS } from "@aesir/platform";
+import {
+  createPinoLogger,
+  DEV_CONTAINER_TIMEOUTS,
+  type PinoLogger,
+} from "@aesir/platform";
 import type { DevAgentState } from "../state.js";
 import {
   detectPackageManager,

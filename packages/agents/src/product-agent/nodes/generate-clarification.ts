@@ -11,7 +11,7 @@
  * - Accepts LLM via options for testability
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { AIMessage } from "@langchain/core/messages";
 import { GENERATE_CLARIFICATION_PROMPT } from "../prompts.js";
@@ -160,7 +160,9 @@ function buildClarificationContext(state: ProductAgentState): string {
   if (missing.length > 0) {
     parts.push("");
     parts.push("I still need to understand:");
-    missing.forEach((m) => parts.push(`- ${m}`));
+    for (const m of missing) {
+      parts.push(`- ${m}`);
+    }
   }
 
   parts.push("");

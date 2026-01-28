@@ -10,7 +10,7 @@
  * - Returns structured output with response, phase, and created tasks
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import type { ChatAnthropic } from "@langchain/anthropic";
 import { AIMessage, HumanMessage } from "@langchain/core/messages";
 import type { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";

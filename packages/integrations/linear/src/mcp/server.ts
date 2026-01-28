@@ -4,7 +4,7 @@
  * Creates and configures an MCP server for Linear operations.
  */
 
-import type { PinoLogger } from "@aesir/common";
+import type { PinoLogger } from "@aesir/platform";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
   CallToolRequestSchema,
@@ -164,6 +164,7 @@ export function createLinearMCPServer(options: LinearMCPServerOptions): Server {
     };
 
     // Route to appropriate handler and get result
+    // biome-ignore lint/suspicious/noImplicitAnyLet: Result type varies by tool handler
     let result;
     switch (toolName) {
       case "get_issue":

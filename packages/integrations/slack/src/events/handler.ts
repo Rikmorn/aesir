@@ -5,7 +5,7 @@
  * Uses event delivery store for idempotent event processing.
  */
 
-import type { PinoLogger } from "@aesir/common";
+import type { PinoLogger } from "@aesir/platform";
 import { errAsync, okAsync, type ResultAsync } from "neverthrow";
 import type { SlackEventDeliveryStore } from "../db/event-delivery-store.js";
 import { SlackError } from "../types/errors.js";

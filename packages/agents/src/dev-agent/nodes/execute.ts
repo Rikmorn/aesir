@@ -8,9 +8,12 @@
  * Implements DEV-10 through DEV-12 from the dev-agent workflow spec.
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import type { DevContainerManager } from "@aesir/platform";
-import { DEV_CONTAINER_TIMEOUTS } from "@aesir/platform";
+import {
+  createPinoLogger,
+  DEV_CONTAINER_TIMEOUTS,
+  type PinoLogger,
+} from "@aesir/platform";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
 import { buildFileWritePrompt, FILE_WRITE_SYSTEM_PROMPT } from "../prompts.js";

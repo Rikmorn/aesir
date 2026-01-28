@@ -5,7 +5,7 @@
  * Uses the Git Data API to create commits without needing a local working directory.
  */
 
-import { createPinoLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/platform";
 import type { Octokit } from "@octokit/rest";
 import type { CommitInfo, CreateCommitOptions } from "../client/types.js";
 import { getBranch } from "./branches.js";

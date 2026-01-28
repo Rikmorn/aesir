@@ -6,7 +6,7 @@
  */
 
 import * as path from "node:path";
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import type { Container } from "dockerode";
 import Docker from "dockerode";
 import * as tar from "tar-stream";

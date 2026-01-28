@@ -35,9 +35,11 @@
     "@temporalio/workflow": "^1.14.1",
     "dockerode": "^4.0.9",
     "drizzle-orm": "^0.45.1",
+    "nanoid": "^5.1.6",
     "neverthrow": "^8.2.0",
     "pg": "^8.17.2",
     "pino": "^10.2.1",
+    "pino-http": "^11.0.0",
     "tar-stream": "^3.1.7"
   },
   "devDependencies": {

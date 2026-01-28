@@ -11,8 +11,8 @@
 import {
   createErrorResult,
   createToolResult,
+  type MCPLogger,
   type MCPToolContext,
-  type PinoLogger,
 } from "@aesir/common";
 import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import type { Block, KnownBlock } from "@slack/web-api";
@@ -44,7 +44,7 @@ import {
 export interface RegisterMessageToolsDeps {
   server: Server;
   db: NodePgDatabase;
-  logger: PinoLogger;
+  logger: MCPLogger;
   teamId: string;
 }
 

@@ -12,11 +12,12 @@
  * - Poll 'dev-agent' task queue
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import {
   createDevContainerCleanup,
   createDevContainerGit,
   createDevContainerManager,
+  createPinoLogger,
+  type PinoLogger,
 } from "@aesir/platform";
 import { db } from "@aesir/platform/db/client";
 import { ChatAnthropic } from "@langchain/anthropic";

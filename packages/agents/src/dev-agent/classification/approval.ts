@@ -13,7 +13,7 @@
  * - Confidence levels enable routing unclear messages for clarification
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import type { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
 

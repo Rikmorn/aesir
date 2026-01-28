@@ -6,14 +6,12 @@
  */
 
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { ValidationError } from "@aesir/common";
 import {
   createChildLogger,
   createPinoLogger,
   generateCorrelationId,
   type PinoLogger,
-  ValidationError,
-} from "@aesir/common";
-import {
   sendApprovalSignal,
   sendChangesRequestedSignal,
 } from "@aesir/platform";

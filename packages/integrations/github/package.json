@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@aesir/common": "workspace:*",
+    "@aesir/platform": "workspace:*",
     "@modelcontextprotocol/sdk": "1",
     "@octokit/rest": "^22.0.1",
     "@octokit/webhooks-methods": "^5.1.0",

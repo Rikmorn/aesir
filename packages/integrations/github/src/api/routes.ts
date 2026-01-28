@@ -4,7 +4,7 @@
  * Combines all API routes (webhook, OAuth) into a single router.
  */
 
-import { createHttpLogger, type PinoLogger } from "@aesir/common";
+import { createHttpLogger, type PinoLogger } from "@aesir/platform";
 import { Router } from "express";
 import type { GitHubCredentialStore } from "../db/credential-store.js";
 import type { WebhookDeliveryStore } from "../db/webhook-delivery-store.js";

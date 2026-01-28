@@ -8,7 +8,8 @@
  * is delayed. This store enables idempotent event handling.
  */
 
-import { createId, type PinoLogger } from "@aesir/common";
+import { createId } from "@aesir/common";
+import type { PinoLogger } from "@aesir/platform";
 import { eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { fromPromise, type ResultAsync } from "neverthrow";

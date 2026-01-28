@@ -8,8 +8,8 @@
 import {
   createErrorResult,
   createToolResult,
+  type MCPLogger,
   type MCPToolContext,
-  type PinoLogger,
 } from "@aesir/common";
 import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
@@ -26,7 +26,7 @@ import {
 export interface RegisterChannelToolsDeps {
   server: Server;
   db: NodePgDatabase;
-  logger: PinoLogger;
+  logger: MCPLogger;
   teamId: string;
 }
 

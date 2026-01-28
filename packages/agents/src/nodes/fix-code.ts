@@ -11,11 +11,8 @@
  * - Returns FileChange[] for sandbox to write
  */
 
-import {
-  createPinoLogger,
-  type DevWorkflowStateType,
-  FileChangeSchema,
-} from "@aesir/common";
+import { type DevWorkflowStateType, FileChangeSchema } from "@aesir/common";
+import { createPinoLogger } from "@aesir/platform";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
 

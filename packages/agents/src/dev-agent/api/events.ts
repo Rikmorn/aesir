@@ -14,12 +14,8 @@
  * - Sends signals to existing workflows for approvals/completions
  */
 
-import {
-  createPinoLogger,
-  type NormalizedEvent,
-  NormalizedEventSchema,
-  type PinoLogger,
-} from "@aesir/common";
+import { type NormalizedEvent, NormalizedEventSchema } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import type { ChatAnthropic } from "@langchain/anthropic";
 import type { Client as TemporalClient } from "@temporalio/client";
 import { callMcpTool } from "../../mcp/index.js";

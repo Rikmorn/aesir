@@ -8,7 +8,7 @@
  * Run with: pnpm test:integration
  */
 
-import type { PinoLogger } from "@aesir/common";
+import type { PinoLogger } from "@aesir/platform";
 import {
   cleanupPostgresContainer,
   createMockLogger,

@@ -6,7 +6,7 @@
  * Thread ID from Slack is used as the checkpointer thread_id for continuity.
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import { HumanMessage } from "@langchain/core/messages";
 import {
   createProductAgentGraph,

@@ -7,7 +7,7 @@
  * @see https://docs.slack.dev/reference/methods/chat.postMessage/
  */
 
-import { createPinoLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/platform";
 import type { Block, KnownBlock, WebClient } from "@slack/web-api";
 import { SlackError } from "../types/errors.js";
 import {

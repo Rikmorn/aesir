@@ -5,7 +5,7 @@
  * GitHub uses X-Hub-Signature-256 header with sha256= prefix.
  */
 
-import { createPinoLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/platform";
 import { verify } from "@octokit/webhooks-methods";
 
 const logger = createPinoLogger({

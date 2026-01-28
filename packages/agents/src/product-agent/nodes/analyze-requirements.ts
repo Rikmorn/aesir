@@ -11,7 +11,7 @@
  * - Accepts LLM via options for testability
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
 import { ANALYZE_REQUIREMENTS_PROMPT } from "../prompts.js";

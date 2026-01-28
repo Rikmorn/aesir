@@ -11,7 +11,7 @@
  * - Graceful handling of workflow-not-found errors
  */
 
-import type { PinoLogger } from "@aesir/common";
+import type { PinoLogger } from "@aesir/platform";
 import type { Client as TemporalClient } from "@temporalio/client";
 import {
   escalationResolvedSignal,

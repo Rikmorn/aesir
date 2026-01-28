@@ -5,7 +5,7 @@
  * Activities communicate with the GitHub integration service via HTTP.
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import { callMcpTool } from "../../mcp/index.js";
 
 const logger: PinoLogger = createPinoLogger({

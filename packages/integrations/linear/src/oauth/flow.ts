@@ -5,7 +5,7 @@
  * Automatically handles token refresh and persistence.
  */
 
-import { createPinoLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/platform";
 import type { LinearClient } from "@linear/sdk";
 import { createLinearClient, getLinearClient } from "../client/factory.js";
 import type { LinearOAuthConfig } from "../client/types.js";

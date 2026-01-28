@@ -8,7 +8,7 @@
  * Implements DEV-05, DEV-06, DEV-07 from the dev-agent workflow spec.
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { buildPlanningPrompt, PLANNING_SYSTEM_PROMPT } from "../prompts.js";
 import type { DevAgentState } from "../state.js";

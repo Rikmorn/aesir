@@ -38,7 +38,7 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
-import { createPinoLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/platform";
 import { Client, Connection } from "@temporalio/client";
 import {
   createProductAgentEventsHandler,

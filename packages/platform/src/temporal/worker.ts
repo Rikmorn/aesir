@@ -7,7 +7,7 @@
  * Activities are passed in from @aesir/agents via the config.activities parameter.
  */
 
-import { createPinoLogger, createTemporalLogger } from "@aesir/common";
+import { createPinoLogger, createTemporalLogger } from "@aesir/platform";
 import { NativeConnection, Runtime, Worker } from "@temporalio/worker";
 
 // Install Temporal runtime with pino-based logger

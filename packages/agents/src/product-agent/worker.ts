@@ -11,7 +11,7 @@
  * - Poll 'product-agent' task queue
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import {
   NativeConnection,
   Worker,

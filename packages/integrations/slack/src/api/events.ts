@@ -7,7 +7,7 @@
  * - Retry handling (X-Slack-Retry-Num header)
  */
 
-import type { PinoLogger } from "@aesir/common";
+import type { PinoLogger } from "@aesir/platform";
 import type { Request, Response } from "express";
 import { Router } from "express";
 import type { SlackEventDeliveryStore } from "../db/event-delivery-store.js";

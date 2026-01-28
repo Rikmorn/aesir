@@ -5,11 +5,8 @@
  * Validates payloads, routes by source, and logs for observability.
  */
 
-import {
-  type NormalizedEvent,
-  NormalizedEventSchema,
-  type PinoLogger,
-} from "@aesir/common";
+import { type NormalizedEvent, NormalizedEventSchema } from "@aesir/common";
+import type { PinoLogger } from "@aesir/platform";
 
 export interface EventsHandlerDeps {
   logger: PinoLogger;

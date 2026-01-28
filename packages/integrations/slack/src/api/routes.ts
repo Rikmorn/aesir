@@ -5,7 +5,7 @@
  * Provides health check endpoint and HTTP logging middleware.
  */
 
-import { createHttpLogger, type PinoLogger } from "@aesir/common";
+import { createHttpLogger, type PinoLogger } from "@aesir/platform";
 import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Router } from "express";

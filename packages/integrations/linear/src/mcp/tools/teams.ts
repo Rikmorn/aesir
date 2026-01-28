@@ -6,7 +6,7 @@
  * - list_labels: List labels (optionally filtered by team)
  */
 
-import type { MCPToolContext, MCPToolResult, PinoLogger } from "@aesir/common";
+import type { MCPLogger, MCPToolContext, MCPToolResult } from "@aesir/common";
 import { createErrorResult, createToolResult } from "@aesir/common";
 import type { LinearClient } from "@linear/sdk";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -21,7 +21,7 @@ import {
 
 export interface TeamToolDeps {
   db: PostgresJsDatabase;
-  logger: PinoLogger;
+  logger: MCPLogger;
   workspaceId: string;
 }
 

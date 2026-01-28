@@ -5,7 +5,7 @@
  * Handles token refresh when tokens are near expiration.
  */
 
-import { createPinoLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/platform";
 import { LinearClient } from "@linear/sdk";
 import type { LinearOAuthConfig } from "./types.js";
 

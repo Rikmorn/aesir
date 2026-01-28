@@ -3,7 +3,7 @@ import {
   createTraceStore,
   type PinoLogger,
   type TraceStore,
-} from "@aesir/common";
+} from "@aesir/platform";
 import type { Serialized } from "@langchain/core/load/serializable";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createLangGraphTracer, LangGraphTracer } from "./langgraph-tracer.js";

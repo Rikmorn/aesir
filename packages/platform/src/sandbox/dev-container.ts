@@ -7,7 +7,7 @@
  * Uses dockerode for Docker API and database store for state tracking.
  */
 
-import type { PinoLogger } from "@aesir/common";
+import type { PinoLogger } from "@aesir/platform";
 import type { Container } from "dockerode";
 import Docker from "dockerode";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";

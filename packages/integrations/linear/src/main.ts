@@ -5,7 +5,7 @@
  * Designed to run as an independent containerized service.
  */
 
-import { createHttpLogger, createPinoLogger } from "@aesir/common";
+import { createHttpLogger, createPinoLogger } from "@aesir/platform";
 import { sql } from "drizzle-orm";
 import express from "express";
 import { createMCPRouter, createRoutes } from "./api/routes.js";

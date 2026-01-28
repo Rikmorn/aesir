@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@aesir/common": "workspace:*",
+    "@aesir/platform": "workspace:*",
     "@modelcontextprotocol/sdk": "1",
     "@slack/bolt": "^4.3.0",
     "@slack/web-api": "^7.10.0",

@@ -5,7 +5,7 @@
  * If no permission row exists, access is denied by default.
  */
 
-import type { PinoLogger } from "@aesir/common";
+import type { MCPLogger } from "@aesir/common";
 import { and, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { mcpToolPermissions } from "./schema.js";
@@ -17,7 +17,7 @@ export interface CheckPermissionOptions {
 
 export interface CheckPermissionDeps {
   db: PostgresJsDatabase;
-  logger: PinoLogger;
+  logger: MCPLogger;
 }
 
 /**

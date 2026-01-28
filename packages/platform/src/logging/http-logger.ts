@@ -43,7 +43,7 @@ export interface HttpLoggerOptions {
  * @example
  * ```typescript
  * import express from 'express';
- * import { createLogger, createHttpLogger } from '@aesir/common';
+ * import { createLogger, createHttpLogger } from "@aesir/platform";
  *
  * const app = express();
  * const baseLogger = createLogger({ component: 'api:webhooks' });

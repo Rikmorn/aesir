@@ -33,7 +33,7 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
-import { createPinoLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/platform";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { Client, Connection } from "@temporalio/client";
 import {

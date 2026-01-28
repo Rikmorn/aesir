@@ -14,7 +14,7 @@
  * - LLM errors fall back to gathering phase (conservative approach)
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
 import { CLASSIFY_MESSAGE_PROMPT } from "../prompts.js";

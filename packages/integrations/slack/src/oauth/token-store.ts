@@ -5,7 +5,7 @@
  * credential store. Provides simple interface for token persistence.
  */
 
-import { createPinoLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/platform";
 import { db, pool } from "../db/client.js";
 import { createSlackCredentialStore } from "../db/credential-store.js";
 

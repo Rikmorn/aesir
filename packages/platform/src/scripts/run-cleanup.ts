@@ -10,7 +10,7 @@
  *   npm run cleanup -- --dry-run
  */
 
-import { createPinoLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/platform";
 import { Pool } from "pg";
 import { createCleanupService } from "../services/cleanup.js";
 

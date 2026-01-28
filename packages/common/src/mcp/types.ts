@@ -5,15 +5,29 @@
  * Provides consistent context, results, and metadata structures.
  */
 
-import type { Logger } from "pino";
+/**
+ * Minimal logger interface for MCP tools
+ * Compatible with pino but doesn't require pino as a dependency
+ */
+export interface MCPLogger {
+  info(obj: object, msg?: string): void;
+  info(msg: string): void;
+  error(obj: object, msg?: string): void;
+  error(msg: string): void;
+  warn(obj: object, msg?: string): void;
+  warn(msg: string): void;
+  debug(obj: object, msg?: string): void;
+  debug(msg: string): void;
+  child(bindings: object): MCPLogger;
+}
 
 /**
  * Context passed to MCP tool handlers
  * Provides dependencies and request context
  */
 export interface MCPToolContext {
-  /** Pino logger with correlation ID already bound */
-  logger: Logger;
+  /** Logger with correlation ID already bound */
+  logger: MCPLogger;
   /** Correlation ID for distributed tracing */
   correlationId: string;
   /** Agent ID from X-Agent-ID header (for permission checks) */

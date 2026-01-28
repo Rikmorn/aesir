@@ -5,7 +5,8 @@
  * Provides factory functions for different usage patterns.
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
+import type { MCPLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/platform";
 import { WebClient } from "@slack/web-api";
 import type { SlackCredentialStore } from "../db/credential-store.js";
 import { SlackError } from "../types/errors.js";
@@ -52,7 +53,7 @@ export interface CreateSlackClientFromDatabaseOptions {
   /** Credential store instance */
   credentialStore: SlackCredentialStore;
   /** Logger instance */
-  logger: PinoLogger;
+  logger: MCPLogger;
 }
 
 /**

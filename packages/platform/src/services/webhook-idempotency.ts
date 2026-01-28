@@ -5,7 +5,7 @@
  * atomic insert (ON CONFLICT DO NOTHING) for race-condition-safe deduplication.
  */
 
-import type { PinoLogger } from "@aesir/common";
+import type { PinoLogger } from "@aesir/platform";
 import { sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { fromPromise, type ResultAsync } from "neverthrow";

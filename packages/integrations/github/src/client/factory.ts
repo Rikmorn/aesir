@@ -5,7 +5,7 @@
  * Provides factory functions for different authentication patterns.
  */
 
-import { createPinoLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/platform";
 import { Octokit } from "@octokit/rest";
 import type { GitHubConfig } from "./types.js";
 

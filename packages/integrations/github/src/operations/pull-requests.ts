@@ -5,7 +5,7 @@
  * Uses Octokit to interact with the GitHub REST API.
  */
 
-import { createPinoLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/platform";
 import type { Octokit } from "@octokit/rest";
 import type {
   CreatePROptions,

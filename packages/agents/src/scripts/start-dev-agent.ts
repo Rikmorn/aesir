@@ -40,9 +40,9 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
-import { createPinoLogger } from "@aesir/common";
 import { createExecutionTracker } from "@aesir/observability";
 import {
+  createPinoLogger,
   createTemporalWorker,
   createWebhookIdempotencyService,
   DockerSandbox,

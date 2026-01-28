@@ -5,7 +5,7 @@
  * Used by API endpoints and webhook handlers to interact with running workflows.
  */
 
-import { createPinoLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/platform";
 import { Client, Connection, type WorkflowHandle } from "@temporalio/client";
 import { approvalSignal, changesRequestedSignal } from "./signals.js";
 import type { ApprovalDecision, ChangesRequested } from "./types.js";

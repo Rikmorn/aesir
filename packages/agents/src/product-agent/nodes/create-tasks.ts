@@ -15,7 +15,7 @@ import {
   createPinoLogger,
   generateCorrelationId,
   type PinoLogger,
-} from "@aesir/common";
+} from "@aesir/platform";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
 import { callMcpTool } from "../../mcp/index.js";

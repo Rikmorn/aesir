@@ -29,7 +29,7 @@ console.log("[product-agent] NODE_ENV:", process.env.NODE_ENV);
 // Environment must be loaded FIRST before any other imports
 import "@aesir/common";
 
-import { createPinoLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/platform";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { App } from "@slack/bolt";

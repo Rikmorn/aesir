@@ -5,7 +5,7 @@
  * Wraps git CLI commands executed via DevContainerManager.
  */
 
-import type { PinoLogger } from "@aesir/common";
+import type { PinoLogger } from "@aesir/platform";
 import type { DevContainerManager } from "./dev-container.js";
 import { DEV_CONTAINER_TIMEOUTS } from "./types.js";
 

@@ -10,7 +10,7 @@
  * For production, consider using Redis for distributed deployments.
  */
 
-import type { PinoLogger } from "@aesir/common";
+import type { PinoLogger } from "@aesir/platform";
 import type { Request, Response } from "express";
 import { Router } from "express";
 import type { SlackCredentialStore } from "../db/credential-store.js";

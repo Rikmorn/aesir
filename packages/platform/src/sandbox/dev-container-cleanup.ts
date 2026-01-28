@@ -6,7 +6,7 @@
  * - Inactivity timeout: 24h cleanup via scheduled job
  */
 
-import type { PinoLogger } from "@aesir/common";
+import type { PinoLogger } from "@aesir/platform";
 import type { Container } from "dockerode";
 import Docker from "dockerode";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";

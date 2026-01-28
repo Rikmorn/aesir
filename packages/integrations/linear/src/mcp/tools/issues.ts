@@ -7,7 +7,7 @@
  * - update_issue_status: Change issue workflow state
  */
 
-import type { MCPToolContext, MCPToolResult, PinoLogger } from "@aesir/common";
+import type { MCPLogger, MCPToolContext, MCPToolResult } from "@aesir/common";
 import { createErrorResult, createToolResult } from "@aesir/common";
 import type { Issue, LinearClient } from "@linear/sdk";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -26,7 +26,7 @@ import {
 
 export interface IssueToolDeps {
   db: PostgresJsDatabase;
-  logger: PinoLogger;
+  logger: MCPLogger;
   workspaceId: string;
 }
 

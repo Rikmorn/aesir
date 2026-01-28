@@ -12,7 +12,7 @@
  * Only the final approved plan gets posted to Linear.
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { callMcpTool } from "../../mcp/index.js";
 import type { DevAgentState, ExecutionPlan } from "../state.js";

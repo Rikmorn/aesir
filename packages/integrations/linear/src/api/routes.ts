@@ -4,7 +4,7 @@
  * Combines all API routes (webhook, OAuth) into a single router.
  */
 
-import type { PinoLogger } from "@aesir/common";
+import type { PinoLogger } from "@aesir/platform";
 import { Router } from "express";
 import type { AgentSessionPayload } from "../webhooks/types.js";
 import { createOAuthRouter } from "./oauth.js";

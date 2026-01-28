@@ -8,7 +8,7 @@
  * from crashing the workflow.
  */
 
-import type { PinoLogger, TraceEntry, TraceStore } from "@aesir/common";
+import type { PinoLogger, TraceEntry, TraceStore } from "@aesir/platform";
 import { BaseCallbackHandler } from "@langchain/core/callbacks/base";
 import type { Serialized } from "@langchain/core/load/serializable";
 import type { LLMResult } from "@langchain/core/outputs";

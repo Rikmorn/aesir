@@ -5,7 +5,7 @@
  * credential store. Provides simple interface for token persistence.
  */
 
-import { createPinoLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/platform";
 import type { LinearOAuthConfig } from "../client/types.js";
 import { db } from "../db/client.js";
 import {

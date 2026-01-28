@@ -1,11 +1,9 @@
-// @aesir/common - shared contracts, config loading, utilities
+// @aesir/common - shared contracts and utilities
 
 // Errors
 export * from "./errors/index.js";
 // Events (normalized event schema for dispatcher)
 export * from "./events/index.js";
-// Logging
-export * from "./logging/index.js";
 // MCP (Model Context Protocol)
 export * from "./mcp/index.js";
 // State schemas and types (used by agents and platform)

@@ -14,7 +14,7 @@
  * On failure: Sets phase to "failed" with error message
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import type { DevAgentState } from "../state.js";
 
 const logger: PinoLogger = createPinoLogger({

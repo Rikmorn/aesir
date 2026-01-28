@@ -8,7 +8,7 @@
  * Run with: pnpm test:integration packages/agents/src/dev-agent/integration.test.ts
  */
 
-import type { PinoLogger } from "@aesir/common";
+import type { PinoLogger } from "@aesir/platform";
 import type { Client as TemporalClient } from "@temporalio/client";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {

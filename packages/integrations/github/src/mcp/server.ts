@@ -4,7 +4,8 @@
  * Creates and configures an MCP server for GitHub operations.
  */
 
-import type { MCPToolResult, PinoLogger } from "@aesir/common";
+import type { MCPToolResult } from "@aesir/common";
+import type { PinoLogger } from "@aesir/platform";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
   CallToolRequestSchema,

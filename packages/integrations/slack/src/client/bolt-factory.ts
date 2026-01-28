@@ -5,7 +5,7 @@
  * Supports both Socket Mode (development) and HTTP mode (production).
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import {
   App,
   type Installation,

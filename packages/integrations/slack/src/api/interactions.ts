@@ -12,7 +12,8 @@
  * - Dispatch to dev-agent is fire-and-forget (async)
  */
 
-import { createId, type NormalizedEvent, type PinoLogger } from "@aesir/common";
+import { createId, type NormalizedEvent } from "@aesir/common";
+import type { PinoLogger } from "@aesir/platform";
 import type { Request, Response } from "express";
 import { Router } from "express";
 

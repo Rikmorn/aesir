@@ -8,12 +8,12 @@
  * before activities are used.
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import type {
   DevContainerCleanup,
   DevContainerGit,
   DevContainerManager,
 } from "@aesir/platform";
+import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import type { ChatAnthropic } from "@langchain/anthropic";
 import type { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import {

@@ -9,7 +9,7 @@
  */
 
 import type { Server } from "node:http";
-import { createPinoLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/platform";
 import type { App } from "@slack/bolt";
 import { sql } from "drizzle-orm";
 import express, { type Express } from "express";

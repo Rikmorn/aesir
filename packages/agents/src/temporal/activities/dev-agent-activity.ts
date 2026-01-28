@@ -6,7 +6,7 @@
  * retry, timeout, and monitoring capabilities.
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import {
   type DevWorkflowDependencies,
   type DevWorkflowResult,

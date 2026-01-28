@@ -12,7 +12,7 @@
  */
 
 import { existsSync } from "node:fs";
-import { createLogger } from "@aesir/common";
+import { createLogger } from "@aesir/platform";
 import Docker from "dockerode";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { DevContainerManager } from "./dev-container.js";

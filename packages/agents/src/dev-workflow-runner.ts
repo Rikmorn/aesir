@@ -13,13 +13,15 @@
  */
 
 import {
-  createPinoLogger,
-  createTraceStore,
   DEFAULT_DEV_WORKFLOW_CONFIG,
   type DevWorkflowConfig,
+} from "@aesir/common";
+import {
+  createPinoLogger,
+  createTraceStore,
   type PinoLogger,
   type TraceEntry,
-} from "@aesir/common";
+} from "@aesir/platform";
 import {
   createDevWorkflow,
   type DevWorkflowDependencies,

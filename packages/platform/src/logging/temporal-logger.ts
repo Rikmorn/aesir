@@ -54,7 +54,7 @@ export interface TemporalLoggerInterface {
  * @example
  * ```typescript
  * import { Runtime } from '@temporalio/worker';
- * import { createTemporalLogger } from '@aesir/common';
+ * import { createTemporalLogger } from "@aesir/platform";
  *
  * // Install before creating workers
  * Runtime.install({

@@ -9,7 +9,7 @@
  */
 
 import type { DevWorkflowStateType } from "@aesir/common";
-import { generateCorrelationId } from "@aesir/common";
+import { generateCorrelationId } from "@aesir/platform";
 import { callMcpTool } from "../mcp/index.js";
 
 const AGENT_ID = "dev-agent";

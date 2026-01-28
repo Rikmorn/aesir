@@ -5,7 +5,8 @@
  * Calculates duration_ms on completion/failure.
  */
 
-import { createId, type PinoLogger } from "@aesir/common";
+import { createId } from "@aesir/common";
+import type { PinoLogger } from "@aesir/platform";
 import { eq, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { fromPromise, type ResultAsync } from "neverthrow";

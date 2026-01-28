@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@aesir/common": "workspace:*",
+    "@aesir/platform": "workspace:*",
     "@linear/sdk": "^70.0.0",
     "@modelcontextprotocol/sdk": "1",
     "dotenv-flow": "^4.1.0",

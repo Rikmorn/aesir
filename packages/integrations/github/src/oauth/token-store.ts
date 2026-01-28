@@ -5,7 +5,7 @@
  * credential store. Provides simple interface for token persistence.
  */
 
-import { createPinoLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/platform";
 import type { GitHubCredentialStore } from "../db/credential-store.js";
 
 const logger = createPinoLogger({ component: "integrations:github:oauth" });

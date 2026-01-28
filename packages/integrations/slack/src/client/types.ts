@@ -4,7 +4,7 @@
  * Configuration interfaces for WebClient and Bolt app factories.
  */
 
-import type { PinoLogger } from "@aesir/common";
+import type { PinoLogger } from "@aesir/platform";
 import type { SlackCredentialStore } from "../db/credential-store.js";
 import type { SlackEventDeliveryStore } from "../db/event-delivery-store.js";
 

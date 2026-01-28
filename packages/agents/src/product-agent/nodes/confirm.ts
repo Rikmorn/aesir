@@ -11,7 +11,7 @@
  * - Sets awaitingConfirmation flag for workflow routing
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
+import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { AIMessage } from "@langchain/core/messages";
 import { z } from "zod";

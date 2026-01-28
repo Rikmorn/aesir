@@ -1,7 +1,9 @@
-// @aesir/platform - temporal, sandbox, testing
+// @aesir/platform - temporal, sandbox, logging, testing
 
 // Errors
 export * from "./errors/index.js";
+// Logging
+export * from "./logging/index.js";
 // Sandbox
 export * from "./sandbox/index.js";
 // Services

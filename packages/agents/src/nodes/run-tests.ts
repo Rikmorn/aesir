@@ -12,13 +12,13 @@
  */
 
 import {
-  createPinoLogger,
   DEFAULT_DEV_WORKFLOW_CONFIG,
   type DevWorkflowConfig,
   type DevWorkflowStateType,
   type Sandbox,
   type TestResult,
 } from "@aesir/common";
+import { createPinoLogger } from "@aesir/platform";
 
 const logger = createPinoLogger({ component: "agents:nodes:run-tests" });
 

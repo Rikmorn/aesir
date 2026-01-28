@@ -7,8 +7,7 @@
  * All service boundary methods return ResultAsync for explicit error handling.
  */
 
-import type { PinoLogger } from "@aesir/common";
-import { createId } from "@aesir/common";
+import { createId, type MCPLogger } from "@aesir/common";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { fromPromise, type ResultAsync } from "neverthrow";
@@ -65,7 +64,7 @@ export interface DecryptedInstallation {
 /** Options for creating a Slack credential store */
 export interface SlackCredentialStoreOptions {
   db: NodePgDatabase;
-  logger: PinoLogger;
+  logger: MCPLogger;
 }
 
 /** Slack credential store service interface */
@@ -219,7 +218,7 @@ export function createSlackCredentialStore(
 
 async function storeInstallationImpl(
   db: NodePgDatabase,
-  logger: PinoLogger,
+  logger: MCPLogger,
   input: StoreInstallationInput,
 ): Promise<string> {
   const {
@@ -355,7 +354,7 @@ async function fetchInstallationImpl(
 
 async function deleteInstallationImpl(
   db: NodePgDatabase,
-  logger: PinoLogger,
+  logger: MCPLogger,
   query: DeleteInstallationQuery,
 ): Promise<boolean> {
   const { teamId, enterpriseId, isEnterpriseInstall } = query;

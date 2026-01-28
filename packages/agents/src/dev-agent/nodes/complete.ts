@@ -8,8 +8,8 @@
  * Non-critical operations fail gracefully to ensure workflow completion.
  */
 
-import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import type { DevContainerCleanup } from "@aesir/platform";
+import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import { callMcpTool } from "../../mcp/index.js";
 import type { DevAgentState } from "../state.js";
 

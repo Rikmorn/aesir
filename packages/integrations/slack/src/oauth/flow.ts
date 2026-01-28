@@ -11,7 +11,7 @@
  */
 
 import crypto from "node:crypto";
-import { createPinoLogger } from "@aesir/common";
+import { createPinoLogger } from "@aesir/platform";
 
 const logger = createPinoLogger({ component: "integrations:slack:oauth" });
 
