@@ -5,14 +5,6 @@
  */
 
 export {
-  createSyncCursorService,
-  type SyncCursorKey,
-  type SyncCursorService,
-  type SyncCursorServiceOptions,
-  type SyncCursorValue,
-} from "./sync-cursor.js";
-
-export {
   type CheckAndRecordResult,
   createWebhookIdempotencyService,
   WEBHOOK_DELIVERY_HEADERS,

@@ -14,6 +14,21 @@
       "project": ["src/**/*.ts"],
       "ignore": ["**/*.test.ts", "**/testing/**"]
     },
+    "packages/integrations/linear": {
+      "entry": ["src/main.ts", "src/index.ts", "scripts/*.ts"],
+      "project": ["src/**/*.ts", "scripts/**/*.ts"],
+      "ignore": ["**/*.test.ts", "**/testing/**"]
+    },
+    "packages/integrations/github": {
+      "entry": ["src/main.ts", "src/index.ts", "scripts/*.ts"],
+      "project": ["src/**/*.ts", "scripts/**/*.ts"],
+      "ignore": ["**/*.test.ts", "**/testing/**"]
+    },
+    "packages/integrations/slack": {
+      "entry": ["src/main.ts", "src/index.ts", "scripts/*.ts"],
+      "project": ["src/**/*.ts", "scripts/**/*.ts"],
+      "ignore": ["**/*.test.ts", "**/testing/**"]
+    },
     "packages/observability": {
       "project": ["src/**/*.ts"],
       "ignore": ["**/*.test.ts", "**/testing/**"]

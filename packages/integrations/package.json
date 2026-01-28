@@ -19,29 +19,14 @@
     "build": "tsc -b",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio",
-    "migrate-tokens": "tsx src/db/scripts/migrate-tokens.ts"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@aesir/common": "workspace:*",
-    "@aesir/integration-github": "workspace:*",
-    "@aesir/integration-linear": "workspace:*",
-    "@aesir/integration-slack": "workspace:*",
-    "@aesir/platform": "workspace:*",
-    "@linear/sdk": "^70.0.0",
-    "@octokit/rest": "^22.0.1",
-    "@slack/bolt": "^4.6.0",
-    "@slack/web-api": "^7.13.0",
     "drizzle-orm": "^0.45.1",
-    "neverthrow": "^8.2.0",
-    "pg": "^8.17.2"
+    "neverthrow": "^8.2.0"
   },
   "devDependencies": {
-    "@types/pg": "^8.16.0",
-    "drizzle-kit": "^0.31.8",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   }

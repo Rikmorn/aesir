@@ -1,20 +1,7 @@
-export { closeDatabase, db } from "./client.js";
-export {
-  type CredentialProvider,
-  type CredentialStore,
-  type CredentialStoreOptions,
-  createCredentialStore,
-  type DecryptedCredential,
-  deleteCredential,
-  getCredential,
-  getCredentialByProvider,
-  type StoreCredentialInput,
-  storeCredential,
-  updateCredentialTokens,
-} from "./credential-store.js";
-export {
-  decryptToken,
-  EncryptionKeyError,
-  encryptToken,
-} from "./encryption.js";
+/**
+ * Integrations Database Layer
+ *
+ * Exports database schema for webhook idempotency service.
+ */
+
 export * from "./schema.js";

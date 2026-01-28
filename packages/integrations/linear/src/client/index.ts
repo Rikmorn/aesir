@@ -1,14 +1,3 @@
-// === TYPES ===
-
-// === ACTIVITIES ===
-export {
-  emitAction,
-  emitElicitation,
-  emitError,
-  emitResponse,
-  emitThought,
-  updateSessionPlan,
-} from "./activities.js";
 // === CLIENT FACTORY ===
 export {
   createLinearClient,
