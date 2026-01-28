@@ -104,7 +104,8 @@ services:
       - temporal
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
-      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000,http://localhost:8080
+      - TEMPORAL_CSRF_COOKIE_INSECURE=true
     ports:
       - "8080:8080"
     networks:
@@ -207,6 +208,7 @@ services:
       - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - OAUTH_CALLBACK_URL=${OAUTH_CALLBACK_URL:-}
       # Event dispatch (Docker network)
       - DEV_AGENT_URL=http://dev-agent:3004/events
       # Server configuration
