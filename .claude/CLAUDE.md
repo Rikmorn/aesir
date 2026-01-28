@@ -175,6 +175,15 @@ Each integration:
 
 ### Local Development (Docker Compose)
 
+**First-time setup:**
+```bash
+docker compose up -d postgresql  # Start database first
+pnpm db:migrate                  # Run all migrations (REQUIRED)
+pnpm --filter @aesir/integration-github seed:permissions  # Seed MCP permissions
+docker compose up -d             # Start all services
+```
+
+**Daily usage:**
 ```bash
 docker compose up              # Start all services (PostgreSQL, Temporal, agents, integrations)
 docker compose up -d           # Start in background
@@ -246,6 +255,48 @@ npm run infra:up     # Start PostgreSQL + Temporal via Docker (prefer docker com
 npm run infra:down   # Stop infrastructure
 npm run infra:logs   # View infrastructure logs
 ```
+
+### Database Setup
+
+**IMPORTANT:** Database migrations must be run before using the system. Each integration package has its own PostgreSQL schema.
+
+```bash
+# Run ALL migrations (recommended for fresh setup)
+pnpm db:migrate
+
+# Run migrations for specific packages
+pnpm db:migrate:platform      # platform.* schema
+pnpm db:migrate:integrations  # integrations.* schema (legacy)
+pnpm db:migrate:observability # observability.* schema
+pnpm db:migrate:linear        # linear.* schema
+pnpm db:migrate:github        # github.* schema
+pnpm db:migrate:slack         # slack.* schema
+```
+
+**Database Schemas:**
+| Schema | Package | Description |
+|--------|---------|-------------|
+| `platform` | @aesir/platform | Workspaces, configurations |
+| `integrations` | @aesir/integrations | Legacy shared credentials |
+| `observability` | @aesir/observability | Execution tracking |
+| `linear` | @aesir/integration-linear | Linear credentials, webhooks, MCP permissions |
+| `github` | @aesir/integration-github | GitHub credentials, webhooks, MCP permissions |
+| `slack` | @aesir/integration-slack | Slack credentials, events, MCP permissions |
+
+**Seed MCP Permissions:**
+After migrations, seed default tool permissions for agents:
+
+```bash
+pnpm --filter @aesir/integration-linear seed:permissions
+pnpm --filter @aesir/integration-github seed:permissions
+pnpm --filter @aesir/integration-slack seed:permissions
+```
+
+**Migration Files Location:**
+- Platform: `packages/platform/src/db/migrations/`
+- Linear: `packages/integrations/linear/src/db/migrations/`
+- GitHub: `packages/integrations/github/src/db/migrations/`
+- Slack: `packages/integrations/slack/src/db/migrations/`
 
 ## Code Patterns
 
@@ -665,6 +716,14 @@ describe("ComponentName", () => {
 - Rebuilds entire container (TypeScript compilation happens in Dockerfile)
 - For faster iteration, run services locally with `tsx watch` instead
 - Watch mode is opt-in; default `docker compose up` is stable without file watching
+
+### Database Migrations
+
+- **CRITICAL**: Run `pnpm db:migrate` before first use - schemas won't exist otherwise
+- Each extracted integration has its own schema (`linear.*`, `github.*`, `slack.*`)
+- MCP tool permissions require seeding after migration (see Database Setup section)
+- Migrations are NOT run automatically by Docker Compose or on service startup
+- If you get "relation does not exist" errors, you likely need to run migrations
 
 ## v2.0 Foundation Work
 

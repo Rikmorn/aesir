@@ -10,10 +10,7 @@ import type { PinoLogger } from "@aesir/common";
 import type { Container } from "dockerode";
 import Docker from "dockerode";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import {
-  createDevContainerStore,
-  type DevContainerStore,
-} from "./dev-container-store.js";
+import { createDevContainerStore } from "./dev-container-store.js";
 
 /** 24 hours in milliseconds */
 const INACTIVITY_TIMEOUT_MS = 24 * 60 * 60 * 1000;
