@@ -62,7 +62,6 @@ export function createPRNode(deps: CreatePRNodeDeps) {
 
       const prResult = await callMcpTool<{
         number: number;
-        html_url: string;
         url: string;
       }>({
         integration: "github",
@@ -80,7 +79,7 @@ export function createPRNode(deps: CreatePRNodeDeps) {
       });
 
       const prNumber = prResult.number;
-      const prUrl = prResult.html_url;
+      const prUrl = prResult.url;
 
       nodeLogger.info({ prNumber, prUrl }, "PR created");
 
