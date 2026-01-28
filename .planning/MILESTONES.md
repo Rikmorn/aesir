@@ -1,5 +1,31 @@
 # Project Milestones: Aesir
 
+## v2.1 Agents That Ship (Shipped: 2026-01-28)
+
+**Delivered:** End-to-end automated development workflow where Slack messages become mergeable PRs through agent collaboration with human-in-the-loop approvals
+
+**Phases completed:** 23-27 (5 phases, 46 plans total)
+
+**Key accomplishments:**
+- End-to-end workflow: Slack message → Linear issue → dev container → approved plan → merged PR
+- Product Agent with Slack conversation, clarifying questions, and well-structured Linear issue creation
+- Dev Agent with container-based execution, codebase research, execution planning, and PR creation
+- Human-in-the-loop approvals via dual-channel (Linear comments + Slack buttons) with cross-channel sync
+- Dev container infrastructure with persistent Docker containers and 24h inactivity cleanup
+- Event infrastructure with webhook routing, normalized events, and integration-embedded dispatchers
+
+**Stats:**
+- 250 files modified
+- +42,251 lines of TypeScript (84,065 total)
+- 5 phases, 46 plans, 60 requirements
+- 175 commits over 4 days (2026-01-25 → 2026-01-28)
+
+**Git range:** `feat(23-01)` → `feat(27-12)`
+
+**What's next:** Production deployment, agent intelligence improvements, multi-agent coordination
+
+---
+
 ## v2.0 Foundation (Shipped: 2026-01-25)
 
 **Delivered:** Full architectural restructure from "prove it works" to "maintainable and scalable" with 3-layer architecture, independent integrations, and MCP-based agent communication

@@ -2,22 +2,22 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-01-25)
+See: .planning/PROJECT.md (updated 2026-01-28)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-**Current focus:** v2.1 Milestone Complete
+**Current focus:** Planning next milestone (v3.0 Production Ready)
 
 ## Current Position
 
-Phase: 27 of 27 (Human-in-the-Loop) - COMPLETE
-Plan: 13 of 13 complete
-Status: Complete
-Last activity: 2026-01-28 - Completed 27-12-PLAN.md (E2E verification)
+Phase: N/A - Between milestones
+Plan: N/A
+Status: Ready to plan next milestone
+Last activity: 2026-01-28 — v2.1 milestone complete
 
-Progress: [██████████] 100%
+Progress: [██████████] v2.1 shipped
 
-**Note:** Phase 27 complete. Human-in-the-loop approval flow verified end-to-end: Slack button → Temporal signal → workflow resumes → PR created.
+**Note:** v2.1 complete. Next: `/gsd:new-milestone` to define v3.0 requirements and roadmap.
 
 ## Milestone History
 
@@ -25,159 +25,42 @@ Progress: [██████████] 100%
 |-----------|---------|--------|-------|
 | v1 MVP | 2026-01-19 | 9 | 34 |
 | v2.0 Foundation | 2026-01-25 | 14 | 104 |
+| v2.1 Agents That Ship | 2026-01-28 | 5 | 46 |
 
 ## Performance Metrics
 
-**Velocity (v2.0):**
-- Total plans completed: 104
-- Average duration: ~5.8 min
-- Total execution time: ~601 min
+**Velocity (v2.1):**
+- Total plans completed: 46
+- Phases: 5 (23-27)
+- Timeline: 4 days
 
 **By Phase:**
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 10-foundation-setup | 4/4 | ~44 min | ~11 min |
-| 11-monorepo-setup | 4/4 | ~41 min | ~10 min |
-| 12-observability | 8/8 | 78 min | 10 min |
-| 13-data-layer | 6/6 | 38 min | 6 min |
-| 14-platform-services | 8/8 | 14 min | 2 min |
-| 15-code-quality | 8/8 | 111 min | 14 min |
-| 16-linear-extraction | 11/11 | 55 min | 5 min |
-| 17-github-extraction | 11/11 | 36 min | 3 min |
-| 18-slack-extraction | 12/12 | 35 min | 3 min |
-| 19-mcp-layer | 8/8 | 47 min | 5.9 min |
-| 20-testing-pyramid | 8/8 | 35 min | 4.4 min |
-| 22-local-dev-environment | 5/5 | 12 min | 2.4 min |
-| 22.1-common-library-refactor | 5/5 | 35 min | 7 min |
-| 22.2-agent-mcp-migration | 6/6 | 23 min | 3.8 min |
-| 23-event-infrastructure | 5/5 | ~25 min | ~5 min |
-| 24-dev-container | 6/6 | 18 min | 3 min |
-| 25-product-agent-workflow | 9/9 | ~72 min | ~8.0 min |
-| 26-dev-agent-workflow | 13/13 | 52 min | 4.0 min |
+| Phase | Plans | Status | Completed |
+|-------|-------|--------|-----------|
+| 23. Event Infrastructure | 5/5 | Complete | 2026-01-25 |
+| 24. Dev Container | 6/6 | Complete | 2026-01-25 |
+| 25. Product Agent Workflow | 9/9 | Complete | 2026-01-26 |
+| 26. Dev Agent Workflow | 13/13 | Complete | 2026-01-27 |
+| 27. Human-in-the-Loop | 13/13 | Complete | 2026-01-28 |
 
 ## Accumulated Context
 
 ### Decisions
 
 v2.0 decisions archived in milestones/v2.0-ROADMAP.md.
+v2.1 decisions archived in milestones/v2.1-ROADMAP.md.
 
 Key decisions that carry forward:
 - 3-layer architecture (Platform -> Integrations -> Agents) is established pattern
 - MCP for agent-integration communication (HTTP-based, not direct SDK imports)
 - Pure library pattern for @aesir/common (no env validation at import time)
 - Infrastructure phases must include consumer migration (E2E verification requirements)
-- pnpm monorepo with TypeScript project references
-- Docker Compose for local development
 - Event type uses dotted notation (source.resource.action) for consistent parsing
-- Event IDs use evt_ prefix matching existing ID patterns (cred_, exec_, ws_)
 - Integration-embedded dispatcher pattern: each integration dispatches its own events
-- Fire-and-forget HTTP dispatch: does not block webhook response
-- GitHub event type includes review state (review_approved, review_changes_requested, etc.) for fine-grained routing
-- Slack dispatcher routes app_mention (sync mode) and message (async mode) to product-agent
-- Event callbacks optional for v2.1: dev-agent just logs and acknowledges, actual processing in Phase 26
 - Dev container uses sleep infinity and Docker API exec for command execution
-- Dev container image: node:20-slim with pnpm, git, rg, fd, jq, gh
-- Platform schema subdirectory pattern: new tables in packages/platform/src/db/schema/*.ts
-- Dev container IDs use dcont_ prefix (createId.devContainer())
-- DevContainerManager: spawn() reuses running containers, execute() updates last_activity
-- Container naming: dev-container-{taskId} enables lookup by task
-- Timeout presets: research 30s, install 5min, test 3min, build 2min, git 1min
-- Git credential helper store at /tmp/.git-credentials with oauth2 format
-- Shallow clone (--depth 1) by default for faster repository setup
-- Feature branch naming: feature/{issueId}
-- Container cleanup: 24h inactivity timeout, 10s graceful shutdown, 1h cleanup interval
-- Cleanup always deletes DB record even if container removal fails
-- Docker socket detection: check ~/.docker/run/docker.sock (macOS) and /var/run/docker.sock (Linux)
-- Classification uses flat Zod schema for LLM structured output reliability
-- Low confidence on any classification type routes to clarifying phase
-- LLM errors in classification fall back to gathering phase (conservative approach)
-- IssueDraft includes slackThreadUrl for linking back to conversation
-- Preview message uses Slack markdown with *bold* formatting for labels
-- Error handling in confirm node falls back to gathering phase, not failure
-- Graph classification at entry filters non-actionable messages before analysis
-- Confirmation step always precedes task creation (no bypass path)
-- Workflow uses 24h/72h timeout (24h to first reminder, 72h total)
-- Max 20 conversation iterations to prevent infinite loops
-- Declined is success: true (correctly identified non-actionable)
-- Singleton checkpointer pattern avoids multiple DB connections
-- Thread timestamp as thread_id for conversation continuity across iterations
-- exactOptionalPropertyTypes: use `| undefined` for optional return properties
-- Product-agent uses shared Dockerfile with command override (follows dev-agent pattern)
-- Temporal worker creates its own NativeConnection (separate from client connection)
-- Checkpointer initialized at worker startup before activity registration
-- Slack thread URL uses app_redirect format for cross-workspace compatibility
-- agent-ready label auto-added to all created issues for dev-agent routing
-- Missing labels logged as warning, not blocking issue creation
-- Notify node gracefully handles MCP errors without failing workflow
-- Linear URL format: https://linear.app/issue/{identifier}
-- Slack bold formatting uses asterisks (*text*) for native rendering
-- DevAgentPhase includes 13 phases covering full workflow lifecycle
-- ExecutionPlan includes confidence level (high/medium/low) for approval quality gate
-- ResearchContext captures unknowns explicitly (honest about gaps)
-- Prompts include environment issue detection patterns for escalation
-- Research uses ripgrep (rg) for fast file search with type filtering
-- Limit relevant files to 15 to keep LLM context manageable
-- Node factory pattern: createXNode(deps) returns async function for DI
-- LLM structured output via withStructuredOutput for type-safe artifacts
-- receive-issue validates agent-ready label before proceeding to setup
-- setup-container returns containerId even on failure for cleanup tracking
-- Status update to "Awaiting Approval" is non-critical (workflow may not have this status)
-- Full plan to Linear (permanent record), summary to Slack (real-time buttons)
-- slackMessageTs captured in state for later update_message calls
-- Use for-of with entries() for safe array iteration with noUncheckedIndexedAccess
-- Heredoc delimiter: AESIR_EOF_{timestamp} prevents content injection
-- Unfixable patterns escalate immediately (ECONNREFUSED, ENOENT, etc.)
-- Verification failures always escalate (need human help)
-- Extended timeout for full test suite (3x normal)
-- Container expiry escalates to human rather than auto-re-spawn (simpler first iteration)
-- Feedback heredoc delimiter: AESIR_FEEDBACK_EOF_{timestamp} for safety
-- Container resume: check findByTaskId before any container operations
-- routeByPhase uses exhaustive switch for type-safe phase handling
-- Graph ends at approval/feedback points for Temporal signal handling
-- Escalation path accessible from any node via phase-based routing
-- Temporal signals: planApproval, prFeedback, escalationResolved
-- 24h timeout stops container, 72h timeout ends workflow
-- initDevAgentActivities() called at worker startup for DI
-- proxyActivities with 30min timeout, 3 retries for graph activities
-- Separate dev-agent and dev-agent-worker containers for scalability
-- Worker depends on HTTP service health before starting
-- Dispatch all issue events, filter in handler (agent-ready label)
-- Approval classification uses flat Zod schema (four intents: approve, reject, unclear, question)
-- Approval classification extracts feedback for rejection intent
-- Empty messages return unclear/high without LLM call
-- Long messages (>4000 chars) truncated before LLM classification
-- LLM errors in approval classification return unclear/low (safe fallback)
-- Slack interactive action ID pattern: approve_plan_{taskId} and reject_plan_{taskId}
-- Slack interactions use fire-and-forget dispatch to meet 3-second acknowledgment deadline
-- DEV_AGENT_URL configurable via environment (default: http://dev-agent:3004/events)
-- PR closed event type distinguishes merged vs closed: github.pull_request.merged or github.pull_request.closed
-- Branch name included in PR closed event for container cleanup identification
-- Linear comment webhook uses direct type check (basicPayload.type === 'Comment') for partial payload routing
-- Comment body dispatched raw to dev-agent - classifyApprovalIntent handles LLM classification
-- Signal handler derives workflow ID from taskId (UUID) when available, falls back to taskIdentifier
-- LLM is optional dep in event handler - only needed for Linear comment classification
-- Completion signal extracts task identifier from feature/ABC-123 branch naming convention
-- Revised plans posted to Slack thread only (Linear gets final approved plan)
-- Re-plan node asks for clarification when feedback missing
-- New "re_planning" phase for explicit workflow tracking
-- DevContainerCleanup for container cleanup, DevContainerManager for spawn/execute
-- Complete node has graceful failure for non-critical operations (Linear, Slack, cleanup)
-- PlanApprovalPayload extended with approverName and source fields for cross-channel sync
-- Cross-channel sync only when approval from Slack (Linear already knows if from Linear)
-- Slack message update removes buttons, shows approver + timestamp + "Executing..."
-- Rejection with feedback triggers re-planning; without feedback fails gracefully
-- REMINDER_TIMEOUT (24h) and FINAL_TIMEOUT (48h) for workflow timeout handling
-- prCompletionSignal payload includes merged boolean and prNumber
-- Type assertion for state.prCompletion after wf.condition (signal-based state mutation)
-- PR merge triggers completeTaskActivity (Linear Done, Slack notification, cleanup)
-- PR close without merge triggers handlePRClosedActivity (notify, cleanup)
-- Slack block_actions routes use sync mode for quick approval processing
-- sendCompletionSignal follows sendApprovalSignal pattern for error handling consistency
-- PRCompletionPayload includes optional branchName for context logging
-- Workflow-not-found for PR completion returns graceful error (PR may not be linked to task)
-- DEV_AGENT_URL configured in Docker Compose for slack-integration and github-integration
-- Startup logs document supported HITL event types for service observability
+- Dual-channel approval: full plan to Linear (permanent record), summary to Slack (real-time buttons)
+- Temporal signals for workflow continuation (planApproval, prFeedback)
 
 ### Pending Todos
 
@@ -190,8 +73,9 @@ Key decisions that carry forward:
 2. **Run dev-agent container as non-root** (infrastructure)
    - File: `.planning/todos/pending/2026-01-19-dev-agent-container-root-user.md`
 
-3. **Orphaned mcp/server.ts files** (cleanup)
-   - Three files in integration packages (api/mcp.ts HTTP routes used instead)
+3. **11 tests skipped pending infrastructure** (testing)
+   - Cross-channel sync tests (pending MCP mock)
+   - Workflow state transition tests (pending Temporal test framework)
 
 ### Blockers/Concerns
 
@@ -200,9 +84,9 @@ None blocking next milestone.
 ## Session Continuity
 
 Last session: 2026-01-28
-Stopped at: Phase 27 complete - v2.1 milestone achieved
+Stopped at: v2.1 milestone archived
 Resume file: None
-Next action: Plan next milestone (v3.0 or define new requirements)
+Next action: `/gsd:new-milestone` to start v3.0 planning
 
 ---
-*Updated: 2026-01-28 - Phase 27 complete, v2.1 milestone shipped*
+*Updated: 2026-01-28 — v2.1 shipped, ready for v3.0*

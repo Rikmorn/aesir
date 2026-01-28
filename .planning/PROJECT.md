@@ -10,11 +10,11 @@ End-to-end automated development workflow where agents handle routine developmen
 
 ## Current State
 
-**Version:** v2.0 Foundation shipped (2026-01-25)
+**Version:** v2.1 Agents That Ship shipped (2026-01-28)
 
 **Tech Stack:**
 - TypeScript/Node.js monorepo (pnpm workspaces)
-- 67,044 lines across 659 files in 6 packages
+- 84,065 lines across 909 files in 6 packages
 - LangGraph for agent orchestration, Temporal for durable workflows
 - PostgreSQL for all persistence (credentials, checkpoints, execution tracking)
 - Docker Compose for local development with health checks and watch mode
@@ -30,10 +30,11 @@ End-to-end automated development workflow where agents handle routine developmen
 ```
 
 **Key Capabilities:**
-- Agents communicate with integrations via MCP HTTP protocol (19 tools across 3 services)
+- Agents communicate with integrations via MCP HTTP protocol (21 tools across 3 services)
 - Each integration has own database schema, Dockerfile, and lifecycle
 - pino logging with correlation IDs across all service boundaries
 - One-command startup: `docker compose up`
+- End-to-end workflow: Slack message → Linear issue → dev container → PR
 
 ## Requirements
 
@@ -62,12 +63,22 @@ End-to-end automated development workflow where agents handle routine developmen
 - [x] One-command local dev via Docker Compose
 - [x] Graceful shutdown and health checks
 
+**v2.1 Agents That Ship (shipped 2026-01-28):**
+- [x] Event infrastructure: webhook routing, normalized events, integration dispatchers
+- [x] Dev container: persistent Docker containers with Node.js, pnpm, git, gh CLI
+- [x] Product-agent: Slack conversation → clarifying questions → well-structured Linear issue
+- [x] Dev-agent: Linear issue → codebase research → execution plan → code → tests → PR
+- [x] Human-in-the-loop: dual-channel approvals (Linear + Slack), cross-channel sync
+- [x] Feedback loops: plan revision on rejection, PR review → additional commits
+- [x] Task completion: PR merge → Linear status → Slack notification → container cleanup
+
 ### Active
 
-**v2.1 Agents That Ship:**
-- [ ] Product-agent: Slack conversation → well-defined Linear issue
-- [ ] Dev-agent: Linear issue → mergeable PR (container-based execution)
-- [ ] Human-in-the-loop: Approvals and feedback loops
+**v3.0 Production Ready:**
+- [ ] CI/CD pipeline for deployment
+- [ ] Monitoring and alerting
+- [ ] Rate limiting and cost controls
+- [ ] Security sandboxing for code execution
 
 ### Out of Scope
 
@@ -124,19 +135,18 @@ Lessons learned during development that guide future phases.
 | Infrastructure phases must include consumer migration | Phase 19 created MCP servers but didn't wire agents to use them. When building infrastructure, include at least one consumer migration to validate end-to-end. |
 | Pure library pattern for shared packages | @aesir/common should never validate env vars at import time. Services own their config and pass dependencies to libraries. |
 
-## Current Milestone: v2.1 Agents That Ship
+## Next Milestone: v3.0 Production Ready
 
-**Goal:** End-to-end working agents where feature requests become shipped code without manual intervention.
+**Goal:** Deploy Aesir to production with monitoring, security, and operational excellence.
 
 **Target features:**
-- Product-agent receives Slack messages, asks clarifying questions, creates well-structured Linear issues
-- Dev-agent receives Linear issues, works in dev container, produces mergeable PRs
-- Human-in-the-loop approvals from both Linear and Slack
-- Feedback loops for PR reviews and plan revisions
+- CI/CD pipeline for automated deployment
+- Monitoring and alerting for agent health and performance
+- Rate limiting and cost controls for LLM usage
+- Security sandboxing for code execution
+- Multi-environment configuration (dev/staging/prod)
 
-**Success bar:** Output quality matches "competent junior developer" - not perfect, but reasonable and reviewable.
-
-**v2.1 Rule:** No phase is complete until its output is verified working in the full flow.
+**Success bar:** System can run in production with minimal manual intervention and clear operational visibility.
 
 ---
-*Last updated: 2026-01-25 after v2.1 milestone start*
+*Last updated: 2026-01-28 after v2.1 milestone completion*

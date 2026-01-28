@@ -153,7 +153,7 @@ export async function startServer(): Promise<void> {
         const buttonAction = action as any;
         const actionId = buttonAction.action_id as string;
         const value = buttonAction.value as string;
-        const boltBody = body as Record<string, unknown>;
+        const boltBody = body as unknown as Record<string, unknown>;
         const userId = (boltBody.user as Record<string, unknown>)?.id as
           | string
           | undefined;
