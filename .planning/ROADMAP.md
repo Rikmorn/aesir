@@ -46,7 +46,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 24: Dev Container** - Persistent container execution environment ✓
 - [x] **Phase 25: Product Agent Workflow** - Slack conversation to Linear issue ✓
 - [x] **Phase 26: Dev Agent Workflow** - Linear issue to GitHub PR ✓
-- [ ] **Phase 27: Human-in-the-Loop** - Approval signals, feedback loops, completion flows
+- [x] **Phase 27: Human-in-the-Loop** - Approval signals, feedback loops, completion flows ✓
 
 ## Phase Details
 
@@ -204,18 +204,19 @@ Plans:
 **Plans:** 12 plans
 
 Plans:
-- [ ] 27-01-PLAN.md — LLM-based approval intent classification
-- [ ] 27-02-PLAN.md — Slack interactive component handler
-- [ ] 27-03-PLAN.md — GitHub PR closed webhook handler
-- [ ] 27-04-PLAN.md — Dev-agent event handler extension for signals
-- [ ] 27-05-PLAN.md — Re-planning node for rejections
-- [ ] 27-06-PLAN.md — Task completion node
-- [ ] 27-07-PLAN.md — Temporal workflow approval handling with cross-channel sync
-- [ ] 27-08-PLAN.md — Temporal workflow PR completion handling
-- [ ] 27-09-PLAN.md — Dispatcher route configuration
-- [ ] 27-10-PLAN.md — Signal definitions extension
-- [ ] 27-11-PLAN.md — Service configuration for HITL
-- [ ] 27-12-PLAN.md — E2E verification with human checkpoint
+- [x] 27-01-PLAN.md — LLM-based approval intent classification ✓
+- [x] 27-02-PLAN.md — Slack interactive component handler ✓
+- [x] 27-03-PLAN.md — GitHub PR closed webhook handler ✓
+- [x] 27-04-PLAN.md — Dev-agent event handler extension for signals ✓
+- [x] 27-05-PLAN.md — Re-planning node for rejections ✓
+- [x] 27-06-PLAN.md — Task completion node ✓
+- [x] 27-07-PLAN.md — Temporal workflow approval handling with cross-channel sync ✓
+- [x] 27-08-PLAN.md — Temporal workflow PR completion handling ✓
+- [x] 27-09-PLAN.md — Dispatcher route configuration ✓
+- [x] 27-10-PLAN.md — Signal definitions extension ✓
+- [x] 27-11-PLAN.md — Service configuration for HITL ✓
+- [x] 27-12-PLAN.md — E2E verification with human checkpoint ✓
+- [x] 27-13-PLAN.md — Linear comment webhook handler (bonus) ✓
 
 ## Progress
 
@@ -228,8 +229,8 @@ Phases execute in numeric order: 23 → 24 → 25 → 26 → 27
 | 24. Dev Container | v2.1 | 6/6 | ✓ Complete | 2026-01-25 |
 | 25. Product Agent Workflow | v2.1 | 9/9 | ✓ Complete | 2026-01-26 |
 | 26. Dev Agent Workflow | v2.1 | 13/13 | ✓ Complete | 2026-01-27 |
-| 27. Human-in-the-Loop | v2.1 | 0/12 | Planning complete | - |
+| 27. Human-in-the-Loop | v2.1 | 13/13 | ✓ Complete | 2026-01-28 |
 
 ---
 *Roadmap created: 2026-01-25*
-*Last updated: 2026-01-27 — Phase 27 planned with 12 plans in 6 waves*
+*Last updated: 2026-01-28 — Phase 27 complete with 13 plans executed*
