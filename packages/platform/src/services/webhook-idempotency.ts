@@ -10,7 +10,7 @@ import { sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { fromPromise, type ResultAsync } from "neverthrow";
 import { webhookDeliveries } from "../db/schema.js";
-import { IntegrationServiceError } from "../errors/index.js";
+import { WebhookError } from "../errors/platform-errors.js";
 
 /**
  * Webhook delivery ID headers by provider
@@ -47,7 +47,7 @@ export interface WebhookIdempotencyService {
     provider: WebhookProvider,
     deliveryId: string,
     eventType: string,
-  ): ResultAsync<CheckAndRecordResult, IntegrationServiceError>;
+  ): ResultAsync<CheckAndRecordResult, WebhookError>;
 
   /**
    * Health check for the service
@@ -81,7 +81,7 @@ export function createWebhookIdempotencyService(
       provider: WebhookProvider,
       deliveryId: string,
       eventType: string,
-    ): ResultAsync<CheckAndRecordResult, IntegrationServiceError> {
+    ): ResultAsync<CheckAndRecordResult, WebhookError> {
       return fromPromise(
         checkAndRecordImpl(db, logger, provider, deliveryId, eventType),
         (error) => {
@@ -89,8 +89,8 @@ export function createWebhookIdempotencyService(
             { err: error, provider, deliveryId, eventType },
             "Failed to check/record webhook delivery",
           );
-          return new IntegrationServiceError(
-            "INT_SVC_DATABASE",
+          return new WebhookError(
+            "PLT_WEBHOOK_DATABASE",
             "Failed to check/record webhook delivery",
             {
               cause: error instanceof Error ? error : new Error(String(error)),

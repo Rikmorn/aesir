@@ -25,7 +25,6 @@
   },
   "dependencies": {
     "@aesir/common": "workspace:*",
-    "@aesir/integrations": "workspace:*",
     "@aesir/observability": "workspace:*",
     "@aesir/platform": "workspace:*",
     "@langchain/anthropic": "^0.3.0",

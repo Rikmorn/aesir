@@ -73,8 +73,38 @@ export const configurations = platformSchema.table(
   ],
 );
 
+/**
+ * Webhook deliveries table
+ *
+ * Tracks webhook delivery attempts for idempotency.
+ */
+export const webhookDeliveries = platformSchema.table(
+  "webhook_deliveries",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId.webhookDelivery()),
+    provider: text("provider").notNull(),
+    delivery_id: text("delivery_id").notNull(),
+    event_type: text("event_type").notNull(),
+    payload_hash: text("payload_hash"),
+    processed_at: timestamp("processed_at", { withTimezone: true }),
+    created_at: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("webhook_deliveries_provider_delivery_unique").on(
+      table.provider,
+      table.delivery_id,
+    ),
+  ],
+);
+
 // Type exports
 export type Workspace = typeof workspaces.$inferSelect;
 export type NewWorkspace = typeof workspaces.$inferInsert;
 export type Configuration = typeof configurations.$inferSelect;
 export type NewConfiguration = typeof configurations.$inferInsert;
+export type WebhookDelivery = typeof webhookDeliveries.$inferSelect;
+export type NewWebhookDelivery = typeof webhookDeliveries.$inferInsert;

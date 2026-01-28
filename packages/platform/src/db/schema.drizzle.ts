@@ -62,3 +62,29 @@ export const configurations = platformSchema.table(
       .where(sql`${table.deleted_at} IS NULL`),
   ],
 );
+
+/**
+ * Webhook deliveries table
+ *
+ * Tracks webhook delivery attempts for idempotency.
+ */
+export const webhookDeliveries = platformSchema.table(
+  "webhook_deliveries",
+  {
+    id: text("id").primaryKey(),
+    provider: text("provider").notNull(),
+    delivery_id: text("delivery_id").notNull(),
+    event_type: text("event_type").notNull(),
+    payload_hash: text("payload_hash"),
+    processed_at: timestamp("processed_at", { withTimezone: true }),
+    created_at: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("webhook_deliveries_provider_delivery_unique").on(
+      table.provider,
+      table.delivery_id,
+    ),
+  ],
+);

@@ -131,3 +131,23 @@ export class CleanupError extends AppError {
     this.code = code;
   }
 }
+
+// Webhook idempotency error codes
+export type WebhookErrorCode = "PLT_WEBHOOK_DATABASE" | "PLT_WEBHOOK_DUPLICATE";
+
+export class WebhookError extends AppError {
+  readonly code: WebhookErrorCode;
+
+  constructor(
+    code: WebhookErrorCode,
+    message: string,
+    options?: {
+      cause?: Error;
+      metadata?: ErrorMetadata;
+      recovery?: RecoveryHint;
+    },
+  ) {
+    super(message, options);
+    this.code = code;
+  }
+}

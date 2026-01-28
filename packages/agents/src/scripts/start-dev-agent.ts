@@ -41,9 +41,12 @@ import {
   type ServerResponse,
 } from "node:http";
 import { createPinoLogger } from "@aesir/common";
-import { createWebhookIdempotencyService } from "@aesir/integrations/services/webhook-idempotency";
 import { createExecutionTracker } from "@aesir/observability";
-import { createTemporalWorker, DockerSandbox } from "@aesir/platform";
+import {
+  createTemporalWorker,
+  createWebhookIdempotencyService,
+  DockerSandbox,
+} from "@aesir/platform";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { createEventsHandler } from "../api/events/index.js";

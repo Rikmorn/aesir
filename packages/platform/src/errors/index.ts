@@ -7,4 +7,6 @@ export {
   type SandboxErrorCode,
   TemporalError,
   type TemporalErrorCode,
+  WebhookError,
+  type WebhookErrorCode,
 } from "./platform-errors.js";
