@@ -1,5 +1,4 @@
 // packages/common/src/logging/types.ts
-import type { Logger } from "pino";
 
 /**
  * Options for creating a logger instance.

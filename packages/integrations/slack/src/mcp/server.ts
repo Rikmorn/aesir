@@ -25,7 +25,6 @@ import {
   GetMessageInputSchema,
   type GetMessageOutput,
   ListChannelsInputSchema,
-  type ListChannelsOutput,
   MessageOutputSchema,
   ReplyToThreadInputSchema,
   SendApprovalRequestInputSchema,

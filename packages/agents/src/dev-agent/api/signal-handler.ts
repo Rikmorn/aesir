@@ -14,6 +14,7 @@
 import type { PinoLogger } from "@aesir/common";
 import type { Client as TemporalClient } from "@temporalio/client";
 import {
+  escalationResolvedSignal,
   planApprovalSignal,
   prCompletionSignal,
 } from "../../temporal/signals.js";
@@ -225,6 +226,86 @@ export async function sendCompletionSignal(
     completionLogger.error(
       { err: error },
       "Failed to send PR completion signal",
+    );
+    throw error;
+  }
+}
+
+/**
+ * Input for escalation resolution signal
+ */
+export interface EscalationResolvedInput {
+  /** Task identifier (Linear issue ID or UUID) */
+  taskIdentifier: string;
+  /** UUID if known (preferred for workflow lookup) */
+  taskId?: string;
+  /** Action to take: retry the failed operation or abort */
+  action: "retry" | "abort";
+  /** Human guidance for the retry attempt */
+  guidance?: string;
+  /** User who resolved the escalation */
+  resolverUserId?: string;
+  /** Display name of resolver */
+  resolverName?: string;
+  /** Source channel */
+  source?: "slack" | "linear";
+}
+
+/**
+ * Send escalation resolution signal to a dev-agent workflow.
+ *
+ * Called when a human provides guidance to resolve an escalated workflow.
+ * The workflow will either retry with the guidance or abort.
+ *
+ * @param deps - Signal handler dependencies
+ * @param input - Escalation resolution input
+ * @returns Result indicating success/failure
+ */
+export async function sendEscalationResolvedSignal(
+  deps: SignalHandlerDeps,
+  input: EscalationResolvedInput,
+): Promise<SignalResult> {
+  const { workflowClient, logger } = deps;
+
+  // Workflow ID format: dev-agent-{issueUUID}
+  const workflowId = input.taskId
+    ? `dev-agent-${input.taskId}`
+    : `dev-agent-${input.taskIdentifier}`;
+
+  const signalLogger = logger.child({
+    action: "sendEscalationResolvedSignal",
+    workflowId,
+    taskIdentifier: input.taskIdentifier,
+    escalationAction: input.action,
+  });
+
+  try {
+    const handle = workflowClient.workflow.getHandle(workflowId);
+
+    const signalPayload = {
+      action: input.action,
+      ...(input.guidance !== undefined ? { guidance: input.guidance } : {}),
+    };
+
+    await handle.signal(escalationResolvedSignal, signalPayload);
+
+    signalLogger.info("Escalation resolved signal sent");
+    return { signaled: true, workflowId };
+  } catch (error) {
+    const isNotFound =
+      error instanceof Error &&
+      (error.message.includes("not found") ||
+        error.message.includes("WorkflowNotFoundError") ||
+        error.name === "WorkflowNotFoundError");
+
+    if (isNotFound) {
+      signalLogger.warn("Workflow not found for escalation resolution signal");
+      return { signaled: false, error: "Workflow not found" };
+    }
+
+    signalLogger.error(
+      { err: error },
+      "Failed to send escalation resolution signal",
     );
     throw error;
   }

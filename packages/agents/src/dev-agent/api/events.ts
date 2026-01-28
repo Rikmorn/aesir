@@ -25,7 +25,11 @@ import type { Client as TemporalClient } from "@temporalio/client";
 import { callMcpTool } from "../../mcp/index.js";
 import type { DevAgentWorkflowInput } from "../../temporal/types.js";
 import { classifyApprovalIntent } from "../classification/approval.js";
-import { sendApprovalSignal, sendCompletionSignal } from "./signal-handler.js";
+import {
+  sendApprovalSignal,
+  sendCompletionSignal,
+  sendEscalationResolvedSignal,
+} from "./signal-handler.js";
 
 const logger: PinoLogger = createPinoLogger({
   component: "agents:dev-agent:api:events",
@@ -81,8 +85,22 @@ export interface DevAgentEventsHandlerDeps {
 interface SlackBlockActionsPayload {
   taskIdentifier: string;
   userId: string;
+  userName?: string;
   actionId: string;
   isApproval: boolean;
+  messageTs: string;
+  channel: string;
+}
+
+/**
+ * Slack escalation button event payload structure
+ */
+interface SlackEscalationPayload {
+  taskIdentifier: string;
+  userId: string;
+  userName?: string;
+  actionId: string;
+  escalationAction: "retry" | "abort";
   messageTs: string;
   channel: string;
 }
@@ -191,6 +209,8 @@ export function createDevAgentEventsHandler(deps: DevAgentEventsHandlerDeps) {
             approved: isApproval,
             ...(isApproval ? {} : { feedback: "Rejected via Slack button" }),
             approverUserId: payload.userId,
+            ...(payload.userName ? { approverName: payload.userName } : {}),
+            source: "slack",
             channel: payload.channel,
           },
         );
@@ -200,6 +220,36 @@ export function createDevAgentEventsHandler(deps: DevAgentEventsHandlerDeps) {
           eventId: event.id,
           type: event.type,
           signaled: signalResult.signaled,
+          workflowId: signalResult.workflowId,
+        });
+        return;
+      }
+
+      // Handle Slack escalation button clicks (retry/abort)
+      if (
+        event.source === "slack" &&
+        (event.type === "slack.block_actions.escalation_retry" ||
+          event.type === "slack.block_actions.escalation_abort")
+      ) {
+        const payload = event.payload as SlackEscalationPayload;
+
+        const signalResult = await sendEscalationResolvedSignal(
+          { workflowClient, logger: handlerLogger },
+          {
+            taskIdentifier: payload.taskIdentifier,
+            action: payload.escalationAction,
+            resolverUserId: payload.userId,
+            ...(payload.userName ? { resolverName: payload.userName } : {}),
+            source: "slack",
+          },
+        );
+
+        res.status(200).json({
+          received: true,
+          eventId: event.id,
+          type: event.type,
+          signaled: signalResult.signaled,
+          escalationAction: payload.escalationAction,
           workflowId: signalResult.workflowId,
         });
         return;
@@ -287,7 +337,34 @@ export function createDevAgentEventsHandler(deps: DevAgentEventsHandlerDeps) {
           return;
         }
 
-        // Not an approval/rejection - just acknowledge
+        // Handle escalation guidance/abort
+        if (
+          classification.intent === "guidance" ||
+          classification.intent === "abort"
+        ) {
+          const signalResult = await sendEscalationResolvedSignal(
+            { workflowClient, logger: handlerLogger },
+            {
+              taskIdentifier: payload.issueId,
+              action: classification.intent === "abort" ? "abort" : "retry",
+              guidance: classification.feedback || payload.commentBody,
+              resolverUserId: payload.userId,
+              source: "linear",
+            },
+          );
+
+          res.status(200).json({
+            received: true,
+            eventId: event.id,
+            type: event.type,
+            signaled: signalResult.signaled,
+            classification: classification.intent,
+            workflowId: signalResult.workflowId,
+          });
+          return;
+        }
+
+        // Not an actionable intent - just acknowledge
         res.status(200).json({
           received: true,
           eventId: event.id,

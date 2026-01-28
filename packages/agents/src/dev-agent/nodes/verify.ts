@@ -12,10 +12,52 @@ import { createPinoLogger, type PinoLogger } from "@aesir/common";
 import type { DevContainerManager } from "@aesir/platform";
 import { DEV_CONTAINER_TIMEOUTS } from "@aesir/platform";
 import type { DevAgentState } from "../state.js";
+import {
+  detectPackageManager,
+  getLintCommand,
+  getTestCommand,
+} from "../utils/index.js";
 
 const logger: PinoLogger = createPinoLogger({
   component: "agents:dev-agent:verify",
 });
+
+/**
+ * File extensions that don't require testing or linting.
+ */
+const NON_CODE_EXTENSIONS = [
+  ".md",
+  ".mdx",
+  ".txt",
+  ".rst",
+  ".json",
+  ".yaml",
+  ".yml",
+  ".toml",
+  ".lock",
+  ".gitignore",
+  ".gitattributes",
+  ".editorconfig",
+  ".prettierrc",
+  ".eslintignore",
+  ".dockerignore",
+  "LICENSE",
+  "CHANGELOG",
+  "README",
+];
+
+function isNonCodeFile(filePath: string): boolean {
+  const lowerPath = filePath.toLowerCase();
+  return NON_CODE_EXTENSIONS.some(
+    (ext) =>
+      lowerPath.endsWith(ext.toLowerCase()) ||
+      lowerPath.includes(ext.toLowerCase()),
+  );
+}
+
+function allFilesAreNonCode(files: string[]): boolean {
+  return files.length > 0 && files.every(isNonCodeFile);
+}
 
 export interface VerifyNodeDeps {
   manager: DevContainerManager;
@@ -38,7 +80,7 @@ export function createVerifyNode(deps: VerifyNodeDeps) {
   return async function verifyNode(
     state: DevAgentState,
   ): Promise<Partial<DevAgentState>> {
-    const { taskId, branchName } = state;
+    const { taskId, branchName, executionPlan } = state;
     const nodeLogger = logger.child({ taskId });
 
     if (!branchName) {
@@ -50,46 +92,64 @@ export function createVerifyNode(deps: VerifyNodeDeps) {
 
     nodeLogger.info({ branchName }, "Running verification checks");
 
+    // Check if this is a non-code-only change (e.g., README update)
+    const allPlanFiles = executionPlan?.steps.flatMap((s) => s.files) ?? [];
+    const isNonCodeOnlyChange = allFilesAreNonCode(allPlanFiles);
+
+    if (isNonCodeOnlyChange) {
+      nodeLogger.info(
+        { files: allPlanFiles },
+        "Non-code files only - skipping test suite and lint checks",
+      );
+    }
+
     try {
-      // Step 1: Full test suite
-      nodeLogger.debug("Running full test suite");
-      const testResult = await manager.execute(taskId, {
-        command: ["pnpm", "test"],
-        workdir: "/workspace/repo",
-        timeoutMs: DEV_CONTAINER_TIMEOUTS.test * 3, // Allow more time for full suite
-      });
+      // Only run tests and lint for code changes
+      if (!isNonCodeOnlyChange) {
+        // Detect package manager for this repo
+        const pm = await detectPackageManager({ manager, taskId });
+        nodeLogger.debug({ packageManager: pm }, "Detected package manager");
 
-      if (testResult.exitCode !== 0) {
-        nodeLogger.error(
-          { output: testResult.stderr.slice(0, 500) },
-          "Full test suite failed",
-        );
-        return {
-          phase: "escalated",
-          errorMessage: `Full test suite failed: ${testResult.stderr.slice(0, 200)}`,
-        };
+        // Step 1: Full test suite
+        nodeLogger.debug("Running full test suite");
+        const testResult = await manager.execute(taskId, {
+          command: getTestCommand(pm),
+          workdir: "/workspace/repo",
+          timeoutMs: DEV_CONTAINER_TIMEOUTS.test * 3, // Allow more time for full suite
+        });
+
+        if (testResult.exitCode !== 0) {
+          nodeLogger.error(
+            { output: testResult.stderr.slice(0, 500) },
+            "Full test suite failed",
+          );
+          return {
+            phase: "escalated",
+            errorMessage: `Full test suite failed: ${testResult.stderr.slice(0, 200)}`,
+          };
+        }
+
+        // Step 2: Lint check
+        nodeLogger.debug("Running lint check");
+        const lintResult = await manager.execute(taskId, {
+          command: getLintCommand(pm),
+          workdir: "/workspace/repo",
+          timeoutMs: DEV_CONTAINER_TIMEOUTS.build,
+        });
+
+        if (lintResult.exitCode !== 0) {
+          nodeLogger.error(
+            { output: lintResult.stderr.slice(0, 500) },
+            "Lint check failed",
+          );
+          return {
+            phase: "escalated",
+            errorMessage: `Lint check failed: ${lintResult.stderr.slice(0, 200)}`,
+          };
+        }
       }
 
-      // Step 2: Lint check
-      nodeLogger.debug("Running lint check");
-      const lintResult = await manager.execute(taskId, {
-        command: ["pnpm", "lint"],
-        workdir: "/workspace/repo",
-        timeoutMs: DEV_CONTAINER_TIMEOUTS.build,
-      });
-
-      if (lintResult.exitCode !== 0) {
-        nodeLogger.error(
-          { output: lintResult.stderr.slice(0, 500) },
-          "Lint check failed",
-        );
-        return {
-          phase: "escalated",
-          errorMessage: `Lint check failed: ${lintResult.stderr.slice(0, 200)}`,
-        };
-      }
-
-      // Step 3: Push branch
+      // Push branch (always needed)
       nodeLogger.debug("Pushing branch to remote");
       const pushResult = await manager.execute(taskId, {
         command: ["git", "push", "-u", "origin", branchName],

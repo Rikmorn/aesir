@@ -13,19 +13,21 @@ import type { Block, KnownBlock, WebClient } from "@slack/web-api";
 export type NotificationType = "approval_needed" | "status_update";
 
 /**
- * Approval notification - sent when PR is ready for review
+ * Approval notification - sent when plan or PR is ready for review
  */
 export interface ApprovalNotification {
   /** Notification type discriminator */
   type: "approval_needed";
   /** Linear task identifier (e.g., ABC-123) */
   taskId: string;
-  /** GitHub PR URL */
+  /** GitHub PR URL (empty string if not applicable, e.g., plan approval) */
   prUrl: string;
   /** PR or task title */
   title: string;
   /** Brief description of changes */
   summary: string;
+  /** Action ID prefix for buttons (default "approve") */
+  actionPrefix?: string;
 }
 
 /**
@@ -124,6 +126,22 @@ export interface ApprovalBlockOptions {
   /** Brief description of changes */
   summary: string;
   /** Action ID prefix for buttons (default "approve") */
+  actionPrefix?: string;
+}
+
+/**
+ * Options for building escalation blocks
+ *
+ * Used when agent needs help and wants user to choose retry or abort.
+ */
+export interface EscalationBlockOptions {
+  /** Linear task identifier (e.g., ABC-123) */
+  taskId: string;
+  /** Escalation title (e.g., "Dev-agent needs help with ON-123!") */
+  title: string;
+  /** Error message or description of what went wrong */
+  errorDetails: string;
+  /** Action ID prefix for buttons (default "escalation") */
   actionPrefix?: string;
 }
 

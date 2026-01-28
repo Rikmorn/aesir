@@ -208,7 +208,7 @@ Follow the plan exactly. Match existing patterns from the codebase.
 Include appropriate error handling following project standards.
 Add JSDoc for public APIs and inline comments for complex logic.
 
-Output the complete file content - do not truncate.
+IMPORTANT: You MUST use the provided tool to return the file content. Call the tool with the complete file content in the "content" parameter. Do not respond with plain text - always use the tool.
 
 CRITICAL RULES:
 1. Follow patterns from the research phase - don't invent new approaches
@@ -216,7 +216,8 @@ CRITICAL RULES:
 3. Include proper TypeScript types (no 'any' unless existing code uses it)
 4. Add error handling that matches project patterns
 5. Include imports at the top, exports at the bottom
-6. Maintain consistent formatting and spacing`;
+6. Maintain consistent formatting and spacing
+7. ALWAYS call the tool with the content parameter - never skip this`;
 
 /**
  * Build the user prompt for file writing.
@@ -433,10 +434,10 @@ function truncateContent(content: string, maxLength: number): string {
   const lastNewline = truncated.lastIndexOf("\n");
 
   if (lastNewline > maxLength * 0.8) {
-    return truncated.slice(0, lastNewline) + "\n... (truncated)";
+    return `${truncated.slice(0, lastNewline)}\n... (truncated)`;
   }
 
-  return truncated + "... (truncated)";
+  return `${truncated}... (truncated)`;
 }
 
 /**

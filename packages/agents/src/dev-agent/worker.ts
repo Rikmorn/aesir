@@ -27,12 +27,17 @@ import {
   type WorkerOptions,
 } from "@temporalio/worker";
 import {
+  completeTaskActivity,
   continueAfterApprovalActivity,
+  handlePRClosedActivity,
   handlePRFeedbackActivity,
+  handleRePlanActivity,
   initDevAgentActivities,
   runDevAgentGraphActivity,
   sendReminderActivity,
   stopContainerActivity,
+  syncApprovalToLinearActivity,
+  updateSlackApprovalActivity,
 } from "../temporal/activities/dev-agent-activities.js";
 
 const logger: PinoLogger = createPinoLogger({
@@ -178,6 +183,11 @@ export async function createDevAgentWorker(
       handlePRFeedbackActivity,
       stopContainerActivity,
       sendReminderActivity,
+      updateSlackApprovalActivity,
+      syncApprovalToLinearActivity,
+      handleRePlanActivity,
+      completeTaskActivity,
+      handlePRClosedActivity,
     },
   };
 

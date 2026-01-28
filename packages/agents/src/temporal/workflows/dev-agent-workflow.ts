@@ -452,8 +452,8 @@ export async function devAgentWorkflow(
     }
   }
 
-  // Handle escalation
-  if (state.phase === "escalated") {
+  // Handle escalation with retry loop
+  while (state.phase === "escalated") {
     wf.log.info("Workflow escalated, waiting for human resolution", { taskId });
 
     const resolved = await wf.condition(
@@ -470,14 +470,32 @@ export async function devAgentWorkflow(
       };
     }
 
-    // Retry logic could be implemented here in future
-    wf.log.info("Escalation resolved, but retry not yet implemented");
-    await wf.condition(wf.allHandlersFinished);
-    return {
-      success: false,
-      phase: "escalated",
-      errorMessage: "Escalation resolved but automatic retry not implemented",
-    };
+    // Retry execution with guidance
+    const guidance = state.escalationResolution?.guidance;
+    wf.log.info("Escalation resolved with retry, re-running execution", {
+      taskId,
+      hasGuidance: !!guidance,
+    });
+
+    // Reset escalation state for potential future escalations
+    state.escalationResolution = null;
+
+    // Re-run execution phase
+    // TODO: Pass guidance to the graph for context-aware retry
+    graphResult = await runDevAgentGraphActivity({
+      taskId,
+      issue,
+      slackChannel,
+      startPhase: "executing",
+    });
+
+    // Update state from retry result
+    state.phase = graphResult.phase as DevAgentWorkflowPhase;
+    state.prNumber = graphResult.prNumber;
+    state.prUrl = graphResult.prUrl;
+    state.errorMessage = graphResult.errorMessage;
+
+    // Loop continues if still escalated, exits if phase changed to complete/etc
   }
 
   // Handle complete (PR created)

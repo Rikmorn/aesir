@@ -21,15 +21,21 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 import { createSlackClientFromDatabase } from "../../client/factory.js";
 import { createSlackCredentialStore } from "../../db/credential-store.js";
 import { checkSlackToolPermission } from "../../db/permissions.js";
-import { sendApprovalRequest, sendMessage } from "../../messages/sender.js";
+import {
+  sendApprovalRequest,
+  sendEscalationRequest,
+  sendMessage,
+} from "../../messages/sender.js";
 import type { ApprovalNotification } from "../../messages/types.js";
 import {
   ApprovalRequestOutputSchema,
+  EscalationRequestOutputSchema,
   GetMessageInputSchema,
   type GetMessageOutput,
   MessageOutputSchema,
   ReplyToThreadInputSchema,
   SendApprovalRequestInputSchema,
+  SendEscalationRequestInputSchema,
   SendMessageInputSchema,
   UpdateMessageInputSchema,
   UpdateMessageOutputSchema,
@@ -68,6 +74,12 @@ export function registerMessageTools(deps: RegisterMessageToolsDeps): void {
           description:
             "Send an approval request message with approve/reject buttons. Used for PR reviews and task approvals.",
           inputSchema: zodToJsonSchema(SendApprovalRequestInputSchema),
+        },
+        {
+          name: "send_escalation_request",
+          description:
+            "Send an escalation request message with retry/abort buttons. Used when agent needs human help.",
+          inputSchema: zodToJsonSchema(SendEscalationRequestInputSchema),
         },
         {
           name: "get_message",
@@ -193,6 +205,7 @@ export function registerMessageTools(deps: RegisterMessageToolsDeps): void {
             title: input.title,
             summary: input.summary,
             prUrl: input.prUrl || "",
+            actionPrefix: input.actionPrefix,
           };
 
           const result = await sendApprovalRequest(
@@ -213,6 +226,45 @@ export function registerMessageTools(deps: RegisterMessageToolsDeps): void {
           return createToolResult(
             context,
             `Approval request sent to ${output.channel}`,
+            output,
+          );
+        }
+
+        case "send_escalation_request": {
+          const validation = SendEscalationRequestInputSchema.safeParse(args);
+          if (!validation.success) {
+            return createErrorResult(
+              context,
+              `Invalid input: ${validation.error.message}`,
+            );
+          }
+
+          const input = validation.data;
+          const escalationOptions = {
+            taskId: input.taskId,
+            title: input.title,
+            errorDetails: input.errorDetails,
+            actionPrefix: input.actionPrefix,
+          };
+
+          const result = await sendEscalationRequest(
+            client,
+            escalationOptions,
+            input.channel,
+          );
+
+          const output = EscalationRequestOutputSchema.parse({
+            ts: result.ts,
+            channel: result.channel,
+            actionIds: {
+              retry: `${input.actionPrefix}_retry`,
+              abort: `${input.actionPrefix}_abort`,
+            },
+          });
+
+          return createToolResult(
+            context,
+            `Escalation request sent to ${output.channel}`,
             output,
           );
         }

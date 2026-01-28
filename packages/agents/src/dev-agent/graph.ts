@@ -312,8 +312,10 @@ export function createDevAgentGraph(options: DevAgentGraphOptions) {
     })
 
     // After execute: route by phase
+    // createPR added for non-code files that skip verification
     .addConditionalEdges("execute", routeByPhase, {
       verify: "verify",
+      createPR: "createPR",
       escalate: "escalate",
       end: "__end__",
     })

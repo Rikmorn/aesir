@@ -29,6 +29,8 @@ export const ApprovalIntentSchema = z.enum([
   "reject",
   "unclear",
   "question",
+  "guidance",
+  "abort",
 ]);
 
 export type ApprovalIntent = z.infer<typeof ApprovalIntentSchema>;
@@ -134,6 +136,35 @@ Examples:
 - unrelated topics
 - "hmm" or single letters
 - cannot determine intent
+
+## guidance
+Indicates the human is providing help, suggestions, or workarounds for a stuck/escalated task.
+Use this when the agent has reported being stuck and the human is helping resolve it.
+
+Examples:
+- "try using mocks instead"
+- "skip the tests for now"
+- "the API endpoint changed to X"
+- "you need to install Y first"
+- "use this workaround: ..."
+- "here's how to fix it: ..."
+- "the issue is with Z, try..."
+- technical suggestions or fixes
+- workaround instructions
+
+Extract the guidance text as feedback.
+
+## abort
+Indicates the human wants to stop/cancel the current task entirely.
+
+Examples:
+- "abort"
+- "stop"
+- "cancel this task"
+- "don't bother"
+- "forget it"
+- "give up on this"
+- "close the ticket"
 
 ## Guidelines
 

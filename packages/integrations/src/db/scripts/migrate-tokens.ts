@@ -61,19 +61,15 @@ const credentials = integrationsSchema.table(
 const log = {
   info: (obj: Record<string, unknown> | string, msg?: string) => {
     if (typeof obj === "string") {
-      // biome-ignore lint/suspicious/noConsole: Migration script uses console for output
       console.log(`[INFO] ${obj}`);
     } else {
-      // biome-ignore lint/suspicious/noConsole: Migration script uses console for output
       console.log(`[INFO] ${msg}`, JSON.stringify(obj));
     }
   },
   error: (obj: Record<string, unknown> | string, msg?: string) => {
     if (typeof obj === "string") {
-      // biome-ignore lint/suspicious/noConsole: Migration script uses console for output
       console.error(`[ERROR] ${obj}`);
     } else {
-      // biome-ignore lint/suspicious/noConsole: Migration script uses console for output
       console.error(`[ERROR] ${msg}`, JSON.stringify(obj));
     }
   },

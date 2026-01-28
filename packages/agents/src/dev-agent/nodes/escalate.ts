@@ -71,19 +71,22 @@ export function createEscalateNode() {
       }
     }
 
-    // Notify Slack
+    // Notify Slack with action buttons for retry/abort
     if (slackChannel) {
       try {
-        const slackMessage = issue
-          ? `*Dev-agent needs help with ${issue.identifier}!*\n\n${safeError}\n\nPlease check the Linear issue for details.`
-          : `*Dev-agent needs help!*\n\n${safeError}`;
+        const escalationTaskId = issue?.id || taskId;
+        const identifier = issue?.identifier || "unknown";
 
+        // Send escalation message with retry/abort buttons
         await callMcpTool({
           integration: "slack",
-          tool: "send_message",
+          tool: "send_escalation_request",
           params: {
             channel: slackChannel,
-            text: slackMessage,
+            taskId: escalationTaskId,
+            title: `Dev-agent needs help with ${identifier}!`,
+            errorDetails: safeError,
+            actionPrefix: `escalation_${identifier}`,
           },
           agentId: "dev-agent",
           correlationId,

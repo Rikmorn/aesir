@@ -15,6 +15,7 @@ const PERMISSIONS = [
   // dev-agent: Full access (notifications are collaborative)
   { agentId: "dev-agent", toolName: "send_message", allowed: true },
   { agentId: "dev-agent", toolName: "send_approval_request", allowed: true },
+  { agentId: "dev-agent", toolName: "send_escalation_request", allowed: true },
   { agentId: "dev-agent", toolName: "get_message", allowed: true },
   { agentId: "dev-agent", toolName: "reply_to_thread", allowed: true },
   { agentId: "dev-agent", toolName: "list_channels", allowed: true },

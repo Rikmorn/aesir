@@ -140,6 +140,161 @@ export async function startServer(): Promise<void> {
       }
     });
 
+    // Button clicks (approve/reject plan)
+    // In Socket Mode, interactive payloads come through Bolt, not HTTP
+    // Action IDs: approve_plan_{taskId}_pr (plan approval) or approve_pr (PR approval) or reject_pr
+    boltApp.action(
+      /^(approve_plan_.+_pr|approve_pr|reject_pr)$/,
+      async ({ ack, action, body }) => {
+        // Acknowledge immediately (Slack 3-second timeout)
+        await ack();
+
+        // biome-ignore lint/suspicious/noExplicitAny: Bolt action type
+        const buttonAction = action as any;
+        const actionId = buttonAction.action_id as string;
+        const value = buttonAction.value as string;
+        const boltBody = body as Record<string, unknown>;
+        const userId = (boltBody.user as Record<string, unknown>)?.id as
+          | string
+          | undefined;
+        const userRecord = boltBody.user as Record<string, unknown> | undefined;
+        const userName = (userRecord?.name || userRecord?.username) as
+          | string
+          | undefined;
+        const channel = (boltBody.channel as Record<string, unknown>)?.id as
+          | string
+          | undefined;
+        const messageTs = (boltBody.message as Record<string, unknown>)?.ts as
+          | string
+          | undefined;
+
+        logger.info(
+          { actionId, value, userId, channel },
+          "Button click received in Socket Mode",
+        );
+
+        // Parse action_id to determine intent
+        // Format: approve_plan_{taskId}_pr (plan) or approve_pr (PR) or reject_pr
+        const isApproval = actionId.startsWith("approve_");
+        // Extract taskId from action_id (plan approval) or button value (PR approval)
+        const planMatch = actionId.match(/^approve_plan_(.+)_pr$/);
+        const taskIdentifier = planMatch?.[1] ?? value;
+
+        // Normalize to event format compatible with dev-agent /events
+        const { createId } = await import("@aesir/common");
+        const eventId = createId.event();
+        const normalizedEvent = {
+          id: eventId,
+          type: isApproval
+            ? "slack.block_actions.approved"
+            : "slack.block_actions.rejected",
+          source: "slack" as const,
+          timestamp: new Date().toISOString(),
+          correlationId: eventId,
+          payload: {
+            taskIdentifier,
+            userId,
+            userName,
+            actionId,
+            isApproval,
+            messageTs,
+            channel,
+          },
+        };
+
+        // Dispatch to dev-agent (fire-and-forget)
+        const devAgentUrl =
+          process.env.DEV_AGENT_URL || "http://dev-agent:3004/events";
+        try {
+          const response = await fetch(devAgentUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(normalizedEvent),
+          });
+          logger.info(
+            { eventId, taskIdentifier, isApproval, status: response.status },
+            "Button click dispatched to dev-agent",
+          );
+        } catch (err) {
+          logger.error({ err, eventId }, "Failed to dispatch button click");
+        }
+      },
+    );
+
+    // Escalation button clicks (retry/abort)
+    // Action IDs: escalation_retry or escalation_abort (or with prefix like escalation_ON-123_retry)
+    boltApp.action(/^.+_(retry|abort)$/, async ({ ack, action, body }) => {
+      // Acknowledge immediately (Slack 3-second timeout)
+      await ack();
+
+      // biome-ignore lint/suspicious/noExplicitAny: Bolt action type
+      const buttonAction = action as any;
+      const actionId = buttonAction.action_id as string;
+      const value = buttonAction.value as string; // Contains taskId
+      // biome-ignore lint/suspicious/noExplicitAny: Bolt body type
+      const userId = (body as any).user?.id;
+      // biome-ignore lint/suspicious/noExplicitAny: Bolt body type
+      const userName = (body as any).user?.name || (body as any).user?.username;
+      // biome-ignore lint/suspicious/noExplicitAny: Bolt body type
+      const channel = (body as any).channel?.id;
+      // biome-ignore lint/suspicious/noExplicitAny: Bolt body type
+      const messageTs = (body as any).message?.ts;
+
+      // Determine if this is a retry or abort action
+      const isRetry = actionId.endsWith("_retry");
+      const escalationAction = isRetry ? "retry" : "abort";
+
+      logger.info(
+        { actionId, value, userId, channel, escalationAction },
+        "Escalation button click received in Socket Mode",
+      );
+
+      // Normalize to event format for escalation resolution
+      const { createId } = await import("@aesir/common");
+      const eventId = createId.event();
+      const normalizedEvent = {
+        id: eventId,
+        type: `slack.block_actions.escalation_${escalationAction}`,
+        source: "slack" as const,
+        timestamp: new Date().toISOString(),
+        correlationId: eventId,
+        payload: {
+          taskIdentifier: value, // taskId from button value
+          userId,
+          userName,
+          actionId,
+          escalationAction,
+          messageTs,
+          channel,
+        },
+      };
+
+      // Dispatch to dev-agent (fire-and-forget)
+      const devAgentUrl =
+        process.env.DEV_AGENT_URL || "http://dev-agent:3004/events";
+      try {
+        const response = await fetch(devAgentUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(normalizedEvent),
+        });
+        logger.info(
+          {
+            eventId,
+            taskIdentifier: value,
+            escalationAction,
+            status: response.status,
+          },
+          "Escalation button click dispatched to dev-agent",
+        );
+      } catch (err) {
+        logger.error(
+          { err, eventId },
+          "Failed to dispatch escalation button click",
+        );
+      }
+    });
+
     // Messages (thread replies)
     boltApp.event("message", async ({ event, context }) => {
       // biome-ignore lint/suspicious/noExplicitAny: Bolt context extension

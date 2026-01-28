@@ -14,6 +14,7 @@ import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
 import { callMcpTool } from "../../mcp/index.js";
 import type { DevAgentState } from "../state.js";
+import { detectPackageManager, getTestCommand } from "../utils/index.js";
 
 const logger: PinoLogger = createPinoLogger({
   component: "agents:dev-agent:handle-feedback",
@@ -112,6 +113,10 @@ export function createHandleFeedbackNode(deps: HandleFeedbackNodeDeps) {
         "Container found, resuming",
       );
 
+      // Detect package manager for this repo
+      const pm = await detectPackageManager({ manager, taskId });
+      nodeLogger.debug({ packageManager: pm }, "Detected package manager");
+
       // Step 2: Pull latest changes (in case of any remote updates)
       const pullResult = await manager.execute(taskId, {
         command: ["git", "pull", "origin", branchName],
@@ -191,7 +196,7 @@ export function createHandleFeedbackNode(deps: HandleFeedbackNodeDeps) {
 
       if (testFiles.length > 0) {
         const testResult = await manager.execute(taskId, {
-          command: ["pnpm", "test", "--", ...testFiles],
+          command: getTestCommand(pm, testFiles),
           workdir: "/workspace/repo",
           timeoutMs: DEV_CONTAINER_TIMEOUTS.test,
         });

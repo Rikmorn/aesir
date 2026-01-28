@@ -10,6 +10,7 @@
 import type { Block, KnownBlock } from "@slack/web-api";
 import type {
   ApprovalBlockOptions,
+  EscalationBlockOptions,
   ProgressBlockOptions,
   StatusBlockOptions,
 } from "./types.js";
@@ -205,6 +206,75 @@ export function buildProgressBlocks(
   }
 
   return blocks;
+}
+
+/**
+ * Build escalation blocks with interactive retry/abort buttons
+ *
+ * Creates a formatted message for when the agent needs human help.
+ * Buttons allow user to either retry with guidance or abort the task.
+ *
+ * @param options - Escalation block options
+ * @returns Block Kit blocks array
+ */
+export function buildEscalationBlocks(
+  options: EscalationBlockOptions,
+): (Block | KnownBlock)[] {
+  const { taskId, title, errorDetails, actionPrefix = "escalation" } = options;
+
+  return [
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `:warning: *${title}*`,
+      },
+    },
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `\`\`\`\n${errorDetails}\n\`\`\``,
+      },
+    },
+    {
+      type: "actions",
+      block_id: `${actionPrefix}_${taskId}`,
+      elements: [
+        {
+          type: "button",
+          text: {
+            type: "plain_text",
+            text: "Retry",
+            emoji: true,
+          },
+          style: "primary",
+          action_id: `${actionPrefix}_retry`,
+          value: taskId,
+        },
+        {
+          type: "button",
+          text: {
+            type: "plain_text",
+            text: "Abort",
+            emoji: true,
+          },
+          style: "danger",
+          action_id: `${actionPrefix}_abort`,
+          value: taskId,
+        },
+      ],
+    },
+    {
+      type: "context",
+      elements: [
+        {
+          type: "mrkdwn",
+          text: `Task: ${taskId} | You can also reply in this thread with guidance`,
+        },
+      ],
+    },
+  ];
 }
 
 /**

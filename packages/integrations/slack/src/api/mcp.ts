@@ -26,11 +26,16 @@ import {
   MessageOutputSchema,
   ReplyToThreadInputSchema,
   SendApprovalRequestInputSchema,
+  SendEscalationRequestInputSchema,
   SendMessageInputSchema,
   UpdateMessageInputSchema,
   UpdateMessageOutputSchema,
 } from "../mcp/schemas.js";
-import { sendApprovalRequest, sendMessage } from "../messages/sender.js";
+import {
+  sendApprovalRequest,
+  sendEscalationRequest,
+  sendMessage,
+} from "../messages/sender.js";
 import type { ApprovalNotification } from "../messages/types.js";
 
 export interface CreateMCPRouterOptions {
@@ -87,6 +92,28 @@ const TOOL_DEFINITIONS = [
         },
       },
       required: ["channel", "taskId", "title", "summary"],
+    },
+  },
+  {
+    name: "send_escalation_request",
+    description:
+      "Send an escalation request message with retry/abort buttons. Used when agent needs human help.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        channel: { type: "string", description: "Channel ID" },
+        taskId: { type: "string", description: "Task identifier" },
+        title: { type: "string", description: "Escalation title" },
+        errorDetails: {
+          type: "string",
+          description: "Details about the error or issue",
+        },
+        actionPrefix: {
+          type: "string",
+          description: "Action ID prefix for buttons",
+        },
+      },
+      required: ["channel", "taskId", "title", "errorDetails", "actionPrefix"],
     },
   },
   {
@@ -412,6 +439,54 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
               data: {
                 ts: approvalResult.ts,
                 channel: approvalResult.channel,
+              },
+            };
+            break;
+          }
+
+          case "send_escalation_request": {
+            const validation = SendEscalationRequestInputSchema.safeParse(args);
+            if (!validation.success) {
+              requestLogger.warn(
+                { error: validation.error.message },
+                "Invalid send_escalation_request input",
+              );
+              res.status(400).json({
+                error: `Invalid input: ${validation.error.message}`,
+                isError: true,
+                meta: { correlation_id: correlationId },
+              });
+              return;
+            }
+
+            const input = validation.data;
+            const escalationOptions = {
+              taskId: input.taskId,
+              title: input.title,
+              errorDetails: input.errorDetails,
+              actionPrefix: input.actionPrefix,
+            };
+
+            const escalationResult = await sendEscalationRequest(
+              client,
+              escalationOptions,
+              input.channel,
+            );
+
+            responseData = {
+              content: [
+                {
+                  type: "text" as const,
+                  text: `Escalation request sent to ${escalationResult.channel}`,
+                },
+              ],
+              data: {
+                ts: escalationResult.ts,
+                channel: escalationResult.channel,
+                actionIds: {
+                  retry: `${input.actionPrefix}_retry`,
+                  abort: `${input.actionPrefix}_abort`,
+                },
               },
             };
             break;

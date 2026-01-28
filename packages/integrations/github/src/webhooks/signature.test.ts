@@ -35,7 +35,7 @@ describe("verifySignature", () => {
   });
 
   it("returns false for invalid signature", async () => {
-    const wrongSignature = "sha256=" + "0".repeat(64); // Invalid signature
+    const wrongSignature = `sha256=${"0".repeat(64)}`; // Invalid signature
     const result = await verifySignature(rawBody, wrongSignature, secret);
     expect(result).toBe(false);
   });
@@ -95,7 +95,7 @@ describe("verifyWebhookRequest", () => {
 
   it("returns false when signature is invalid", async () => {
     const headers = {
-      "x-hub-signature-256": "sha256=" + "0".repeat(64),
+      "x-hub-signature-256": `sha256=${"0".repeat(64)}`,
       "x-github-delivery": "12345-67890-abcdef",
       "x-github-event": "pull_request_review",
     };

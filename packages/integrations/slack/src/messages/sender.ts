@@ -12,11 +12,13 @@ import type { Block, KnownBlock, WebClient } from "@slack/web-api";
 import { SlackError } from "../types/errors.js";
 import {
   buildApprovalBlocks,
+  buildEscalationBlocks,
   buildStatusBlocks,
   getFallbackText,
 } from "./blocks.js";
 import type {
   ApprovalNotification,
+  EscalationBlockOptions,
   MessageResult,
   PostNotificationOptions,
   ReplyToEventOptions,
@@ -155,12 +157,17 @@ export async function postNotification(
   let text: string;
 
   if (notification.type === "approval_needed") {
-    blocks = buildApprovalBlocks({
+    // Build approval block options with conditional actionPrefix
+    const approvalOptions: Parameters<typeof buildApprovalBlocks>[0] = {
       taskId: notification.taskId,
       prUrl: notification.prUrl,
       title: notification.title,
       summary: notification.summary,
-    });
+    };
+    if (notification.actionPrefix) {
+      approvalOptions.actionPrefix = notification.actionPrefix;
+    }
+    blocks = buildApprovalBlocks(approvalOptions);
     text = getFallbackText(
       "approval_needed",
       notification.taskId,
@@ -263,6 +270,45 @@ export async function sendStatusUpdate(
   }
 
   return postNotification(options);
+}
+
+/**
+ * Send an escalation request notification
+ *
+ * Sends a message with Retry/Abort buttons when the agent needs human help.
+ *
+ * @param client - WebClient instance
+ * @param options - Escalation options (taskId, title, errorDetails)
+ * @param channel - Channel ID to post to
+ * @param threadTs - Optional thread timestamp for replies
+ * @returns Message result with ts and channel
+ */
+export async function sendEscalationRequest(
+  client: WebClient,
+  options: EscalationBlockOptions,
+  channel: string,
+  threadTs?: string,
+): Promise<MessageResult> {
+  const blocks = buildEscalationBlocks(options);
+  const text = `${options.title}\n${options.errorDetails}`;
+
+  logger.info(
+    { channel, taskId: options.taskId },
+    "Posting escalation request",
+  );
+
+  const sendOptions: SendMessageOptions = {
+    client,
+    channel,
+    text,
+    blocks,
+  };
+
+  if (threadTs) {
+    sendOptions.threadTs = threadTs;
+  }
+
+  return sendMessage(sendOptions);
 }
 
 /**

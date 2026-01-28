@@ -15,6 +15,11 @@ import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
 import { buildFileWritePrompt, FILE_WRITE_SYSTEM_PROMPT } from "../prompts.js";
 import type { DevAgentState, ExecutionPlan } from "../state.js";
+import {
+  detectPackageManager,
+  getTestCommand,
+  type PackageManager,
+} from "../utils/index.js";
 
 const logger: PinoLogger = createPinoLogger({
   component: "agents:dev-agent:execute",
@@ -22,6 +27,50 @@ const logger: PinoLogger = createPinoLogger({
 
 /** Max self-fix attempts before escalation */
 const MAX_FIX_ATTEMPTS = 3;
+
+/**
+ * File extensions that don't require testing or linting.
+ * These are documentation, config, or non-executable files.
+ */
+const NON_CODE_EXTENSIONS = [
+  ".md",
+  ".mdx",
+  ".txt",
+  ".rst",
+  ".json", // config files
+  ".yaml",
+  ".yml",
+  ".toml",
+  ".lock",
+  ".gitignore",
+  ".gitattributes",
+  ".editorconfig",
+  ".prettierrc",
+  ".eslintignore",
+  ".dockerignore",
+  "LICENSE",
+  "CHANGELOG",
+  "README",
+];
+
+/**
+ * Check if a file is a non-code file that doesn't need testing.
+ */
+function isNonCodeFile(filePath: string): boolean {
+  const lowerPath = filePath.toLowerCase();
+  return NON_CODE_EXTENSIONS.some(
+    (ext) =>
+      lowerPath.endsWith(ext.toLowerCase()) ||
+      lowerPath.includes(ext.toLowerCase()),
+  );
+}
+
+/**
+ * Check if all files in a list are non-code files.
+ */
+function allFilesAreNonCode(files: string[]): boolean {
+  return files.length > 0 && files.every(isNonCodeFile);
+}
 
 /**
  * Patterns indicating unfixable issues that should escalate immediately.
@@ -88,6 +137,24 @@ export function createExecuteNode(deps: ExecuteNodeDeps) {
       "Starting execution",
     );
 
+    // Check if this is a non-code-only change (e.g., README update)
+    const allPlanFiles = executionPlan.steps.flatMap((s) => s.files);
+    const isNonCodeOnlyChange = allFilesAreNonCode(allPlanFiles);
+
+    if (isNonCodeOnlyChange) {
+      nodeLogger.info(
+        { files: allPlanFiles },
+        "Non-code files only - skipping package manager detection and tests",
+      );
+    }
+
+    // Only detect package manager if we have code files to test
+    let pm: PackageManager = "npm"; // default, won't be used for non-code
+    if (!isNonCodeOnlyChange) {
+      pm = await detectPackageManager({ manager, taskId });
+      nodeLogger.debug({ packageManager: pm }, "Detected package manager");
+    }
+
     let testAttempts = state.testAttempts || 0;
 
     try {
@@ -99,12 +166,24 @@ export function createExecuteNode(deps: ExecuteNodeDeps) {
 
         // Generate and write files for this step
         for (const filePath of step.files) {
+          // Read existing file content if it exists (for modification tasks)
+          let existingFileContent: string | undefined;
+          const readResult = await manager.execute(taskId, {
+            command: ["cat", filePath],
+            workdir: "/workspace/repo",
+            timeoutMs: 5000,
+          });
+          if (readResult.exitCode === 0 && readResult.stdout.trim()) {
+            existingFileContent = readResult.stdout;
+          }
+
           const content = await generateFileContent(llm, {
             filePath,
             stepDescription: step.description,
             issue,
             researchContext,
             existingPatterns: researchContext.existingPatterns,
+            ...(existingFileContent ? { existingFileContent } : {}),
           });
 
           const writeResult = await writeFileViaHeredoc(
@@ -121,60 +200,74 @@ export function createExecuteNode(deps: ExecuteNodeDeps) {
           }
         }
 
-        // Run affected tests for this step
-        const testResult = await runAffectedTests(manager, taskId, step.files);
+        // Skip tests for non-code files (README, docs, config)
+        if (allFilesAreNonCode(step.files)) {
+          nodeLogger.debug(
+            { files: step.files },
+            "Skipping tests for non-code files",
+          );
+        } else {
+          // Run affected tests for this step
+          const testResult = await runAffectedTests(
+            manager,
+            taskId,
+            step.files,
+            pm,
+          );
 
-        if (!testResult.passed) {
-          // Check for unfixable patterns
-          if (isUnfixable(testResult.output)) {
-            nodeLogger.error(
-              { output: testResult.output.slice(0, 500) },
-              "Unfixable error detected",
-            );
-            return {
-              phase: "escalated",
-              errorMessage: `Unfixable error during step ${stepIndex + 1}: ${testResult.output.slice(0, 200)}`,
-              testAttempts,
-            };
-          }
-
-          // Attempt fixes
-          let fixed = false;
-          while (testAttempts < MAX_FIX_ATTEMPTS && !fixed) {
-            testAttempts++;
-            nodeLogger.info(
-              { attempt: testAttempts },
-              "Attempting to fix test failure",
-            );
-
-            // TODO: In future, use LLM to analyze and fix
-            // For now, re-run tests (simple retry for flaky tests)
-            const retryResult = await runAffectedTests(
-              manager,
-              taskId,
-              step.files,
-            );
-            if (retryResult.passed) {
-              fixed = true;
-            } else if (isUnfixable(retryResult.output)) {
+          if (!testResult.passed) {
+            // Check for unfixable patterns
+            if (isUnfixable(testResult.output)) {
+              nodeLogger.error(
+                { output: testResult.output.slice(0, 500) },
+                "Unfixable error detected",
+              );
               return {
                 phase: "escalated",
-                errorMessage: `Unfixable error after ${testAttempts} attempts: ${retryResult.output.slice(0, 200)}`,
+                errorMessage: `Unfixable error during step ${stepIndex + 1}: ${testResult.output.slice(0, 200)}`,
                 testAttempts,
               };
             }
-          }
 
-          if (!fixed) {
-            nodeLogger.error(
-              { testAttempts },
-              "Exhausted fix attempts, escalating",
-            );
-            return {
-              phase: "escalated",
-              errorMessage: `Tests still failing after ${testAttempts} fix attempts`,
-              testAttempts,
-            };
+            // Attempt fixes
+            let fixed = false;
+            while (testAttempts < MAX_FIX_ATTEMPTS && !fixed) {
+              testAttempts++;
+              nodeLogger.info(
+                { attempt: testAttempts },
+                "Attempting to fix test failure",
+              );
+
+              // TODO: In future, use LLM to analyze and fix
+              // For now, re-run tests (simple retry for flaky tests)
+              const retryResult = await runAffectedTests(
+                manager,
+                taskId,
+                step.files,
+                pm,
+              );
+              if (retryResult.passed) {
+                fixed = true;
+              } else if (isUnfixable(retryResult.output)) {
+                return {
+                  phase: "escalated",
+                  errorMessage: `Unfixable error after ${testAttempts} attempts: ${retryResult.output.slice(0, 200)}`,
+                  testAttempts,
+                };
+              }
+            }
+
+            if (!fixed) {
+              nodeLogger.error(
+                { testAttempts },
+                "Exhausted fix attempts, escalating",
+              );
+              return {
+                phase: "escalated",
+                errorMessage: `Tests still failing after ${testAttempts} fix attempts`,
+                testAttempts,
+              };
+            }
           }
         }
 
@@ -186,6 +279,34 @@ export function createExecuteNode(deps: ExecuteNodeDeps) {
             "Commit failed (non-critical for now)",
           );
         }
+      }
+
+      // For non-code changes, skip verification entirely and go straight to PR
+      if (isNonCodeOnlyChange) {
+        nodeLogger.info(
+          "Non-code change complete, skipping verification - proceeding to PR",
+        );
+
+        // Push the branch directly
+        const branchToPush = state.branchName ?? `task/${taskId}`;
+        const pushResult = await manager.execute(taskId, {
+          command: ["git", "push", "-u", "origin", branchToPush],
+          workdir: "/workspace/repo",
+          timeoutMs: 30000,
+        });
+
+        if (pushResult.exitCode !== 0) {
+          nodeLogger.error({ stderr: pushResult.stderr }, "Push failed");
+          return {
+            phase: "escalated",
+            errorMessage: `Push failed: ${pushResult.stderr.slice(0, 200)}`,
+          };
+        }
+
+        return {
+          phase: "creating_pr",
+          testAttempts,
+        };
       }
 
       nodeLogger.info("Execution complete, proceeding to verification");
@@ -206,8 +327,12 @@ export function createExecuteNode(deps: ExecuteNodeDeps) {
   };
 }
 
+/** Max retries for LLM content generation */
+const MAX_GENERATION_RETRIES = 2;
+
 /**
  * Generate file content via LLM structured output.
+ * Includes retry logic for transient empty responses.
  */
 async function generateFileContent(
   llm: ChatAnthropic,
@@ -220,6 +345,7 @@ async function generateFileContent(
       relevantFiles: Array<{ path: string; patterns: string[] }>;
     };
     existingPatterns: string[];
+    existingFileContent?: string;
   },
 ): Promise<string> {
   const structuredLlm = llm.withStructuredOutput(FileContentSchema);
@@ -229,14 +355,46 @@ async function generateFileContent(
     targetFiles: [context.filePath],
     relatedPatterns: context.existingPatterns,
     taskContext: `${context.issue.title}\n\n${context.issue.description || ""}`,
+    ...(context.existingFileContent
+      ? { existingFileContent: context.existingFileContent }
+      : {}),
   });
 
-  const result = await structuredLlm.invoke([
-    { role: "system", content: FILE_WRITE_SYSTEM_PROMPT },
-    { role: "user", content: prompt },
-  ]);
+  // Retry logic for transient empty responses
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt <= MAX_GENERATION_RETRIES; attempt++) {
+    try {
+      const result = await structuredLlm.invoke([
+        { role: "system", content: FILE_WRITE_SYSTEM_PROMPT },
+        { role: "user", content: prompt },
+      ]);
 
-  return result.content;
+      // Validate that content was returned
+      if (!result.content || result.content.trim() === "") {
+        throw new Error("LLM returned empty content");
+      }
+
+      return result.content;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      logger.warn(
+        {
+          attempt: attempt + 1,
+          maxRetries: MAX_GENERATION_RETRIES,
+          err: lastError,
+        },
+        "File content generation failed, retrying",
+      );
+
+      // Don't retry on the last attempt
+      if (attempt < MAX_GENERATION_RETRIES) {
+        // Brief delay before retry
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+  }
+
+  throw lastError || new Error("Failed to generate file content after retries");
 }
 
 /**
@@ -290,6 +448,7 @@ async function runAffectedTests(
   manager: DevContainerManager,
   taskId: string,
   files: string[],
+  pm: PackageManager,
 ): Promise<{ passed: boolean; output: string }> {
   // Find test files that correspond to changed files
   const testFiles = files
@@ -301,9 +460,9 @@ async function runAffectedTests(
     return { passed: true, output: "No affected tests" };
   }
 
-  // Run tests via pnpm
+  // Run tests using detected package manager
   const result = await manager.execute(taskId, {
-    command: ["pnpm", "test", "--", ...testFiles],
+    command: getTestCommand(pm, testFiles),
     workdir: "/workspace/repo",
     timeoutMs: DEV_CONTAINER_TIMEOUTS.test,
   });

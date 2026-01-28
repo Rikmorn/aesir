@@ -98,7 +98,9 @@ export function createRequestApprovalNode(deps: RequestApprovalNodeDeps) {
         tool: "send_approval_request",
         params: {
           channel: slackChannel,
-          taskId: issue.identifier,
+          // Use issue.id (UUID) for button value - enables workflow lookup
+          // The identifier is shown in actionPrefix for readability
+          taskId: issue.id,
           title: `Plan Ready: ${executionPlan.title}`,
           summary: formatPlanSummary(executionPlan),
           // prUrl omitted - no PR yet at plan approval stage

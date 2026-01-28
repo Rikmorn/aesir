@@ -61,6 +61,30 @@ export const ApprovalRequestOutputSchema = z.object({
   }),
 });
 
+export const SendEscalationRequestInputSchema = z.object({
+  channel: z.string().describe("Channel ID to post escalation request"),
+  taskId: z.string().describe("Task/issue identifier (e.g., 'ABC-123')"),
+  title: z
+    .string()
+    .describe("Title of the escalation (e.g., 'Dev-agent needs help!')"),
+  errorDetails: z
+    .string()
+    .describe("Error message or description of what went wrong"),
+  actionPrefix: z
+    .string()
+    .default("escalation")
+    .describe("Prefix for action IDs (default: 'escalation')"),
+});
+
+export const EscalationRequestOutputSchema = z.object({
+  ts: z.string(),
+  channel: z.string(),
+  actionIds: z.object({
+    retry: z.string(),
+    abort: z.string(),
+  }),
+});
+
 export const GetMessageInputSchema = z.object({
   channel: z.string().describe("Channel ID"),
   ts: z.string().describe("Message timestamp"),
@@ -139,6 +163,12 @@ export type SendApprovalRequestInput = z.infer<
   typeof SendApprovalRequestInputSchema
 >;
 export type ApprovalRequestOutput = z.infer<typeof ApprovalRequestOutputSchema>;
+export type SendEscalationRequestInput = z.infer<
+  typeof SendEscalationRequestInputSchema
+>;
+export type EscalationRequestOutput = z.infer<
+  typeof EscalationRequestOutputSchema
+>;
 export type GetMessageInput = z.infer<typeof GetMessageInputSchema>;
 export type GetMessageOutput = z.infer<typeof GetMessageOutputSchema>;
 export type ReplyToThreadInput = z.infer<typeof ReplyToThreadInputSchema>;
