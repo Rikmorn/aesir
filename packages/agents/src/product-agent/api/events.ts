@@ -11,8 +11,8 @@
  * - Thread replies signal existing workflows (userReply or cancel)
  */
 
-import { type NormalizedEvent, NormalizedEventSchema } from "@aesir/common";
 import { createPinoLogger, type PinoLogger } from "@aesir/platform";
+import { type NormalizedEvent, NormalizedEventSchema } from "@aesir/types";
 import type { Client as TemporalClient } from "@temporalio/client";
 import {
   cancelConversationSignal,

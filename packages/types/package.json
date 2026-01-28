@@ -1,5 +1,5 @@
 {
-  "name": "@aesir/common",
+  "name": "@aesir/types",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -22,13 +22,10 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@langchain/core": "^0.3.0",
-    "@langchain/langgraph": "^0.2.0",
     "nanoid": "^5.1.6",
     "zod": "3.25.67"
   },
   "devDependencies": {
-    "@types/pg": "^8.16.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   }

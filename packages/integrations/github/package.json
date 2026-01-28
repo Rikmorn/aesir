@@ -29,7 +29,7 @@
     "seed:permissions": "tsx scripts/seed-permissions.ts"
   },
   "dependencies": {
-    "@aesir/common": "workspace:*",
+    "@aesir/types": "workspace:*",
     "@aesir/platform": "workspace:*",
     "@modelcontextprotocol/sdk": "1",
     "@octokit/rest": "^22.0.1",

@@ -5,7 +5,7 @@
  * Uses pgSchema for schema namespace isolation.
  */
 
-import { createId } from "@aesir/common";
+import { createId } from "@aesir/types";
 import { index, integer, pgSchema, text, timestamp } from "drizzle-orm/pg-core";
 
 export const observabilitySchema = pgSchema("observability");

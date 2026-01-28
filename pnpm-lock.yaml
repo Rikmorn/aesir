@@ -32,15 +32,15 @@ importers:
 
   packages/agents:
     dependencies:
-      '@aesir/common':
-        specifier: workspace:*
-        version: link:../common
       '@aesir/observability':
         specifier: workspace:*
         version: link:../observability
       '@aesir/platform':
         specifier: workspace:*
         version: link:../platform
+      '@aesir/types':
+        specifier: workspace:*
+        version: link:../types
       '@langchain/anthropic':
         specifier: ^0.3.0
         version: 0.3.34(@langchain/core@0.3.80)(zod@3.25.67)
@@ -109,39 +109,14 @@ importers:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@22.19.7)(jiti@2.6.1)(msw@2.12.7(@types/node@22.19.7)(typescript@5.9.3))(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
 
-  packages/common:
-    dependencies:
-      '@langchain/core':
-        specifier: ^0.3.0
-        version: 0.3.80
-      '@langchain/langgraph':
-        specifier: ^0.2.0
-        version: 0.2.74(@langchain/core@0.3.80)(zod-to-json-schema@3.25.1(zod@3.25.67))
-      nanoid:
-        specifier: ^5.1.6
-        version: 5.1.6
-      zod:
-        specifier: 3.25.67
-        version: 3.25.67
-    devDependencies:
-      '@types/pg':
-        specifier: ^8.16.0
-        version: 8.16.0
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.4(@types/node@22.19.7)(jiti@2.6.1)(msw@2.12.7(@types/node@22.19.7)(typescript@5.9.3))(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
-
   packages/integrations/github:
     dependencies:
-      '@aesir/common':
-        specifier: workspace:*
-        version: link:../../common
       '@aesir/platform':
         specifier: workspace:*
         version: link:../../platform
+      '@aesir/types':
+        specifier: workspace:*
+        version: link:../../types
       '@modelcontextprotocol/sdk':
         specifier: '1'
         version: 1.25.3(@cfworker/json-schema@4.1.1)(hono@4.11.5)(zod@3.25.67)
@@ -197,12 +172,12 @@ importers:
 
   packages/integrations/linear:
     dependencies:
-      '@aesir/common':
-        specifier: workspace:*
-        version: link:../../common
       '@aesir/platform':
         specifier: workspace:*
         version: link:../../platform
+      '@aesir/types':
+        specifier: workspace:*
+        version: link:../../types
       '@linear/sdk':
         specifier: ^70.0.0
         version: 70.0.0(graphql@16.12.0)
@@ -261,12 +236,12 @@ importers:
 
   packages/integrations/slack:
     dependencies:
-      '@aesir/common':
-        specifier: workspace:*
-        version: link:../../common
       '@aesir/platform':
         specifier: workspace:*
         version: link:../../platform
+      '@aesir/types':
+        specifier: workspace:*
+        version: link:../../types
       '@modelcontextprotocol/sdk':
         specifier: '1'
         version: 1.25.3(@cfworker/json-schema@4.1.1)(hono@4.11.5)(zod@3.25.67)
@@ -325,12 +300,12 @@ importers:
 
   packages/observability:
     dependencies:
-      '@aesir/common':
-        specifier: workspace:*
-        version: link:../common
       '@aesir/platform':
         specifier: workspace:*
         version: link:../platform
+      '@aesir/types':
+        specifier: workspace:*
+        version: link:../types
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@types/pg@8.16.0)(pg@8.17.2)(postgres@3.4.8)
@@ -356,9 +331,9 @@ importers:
 
   packages/platform:
     dependencies:
-      '@aesir/common':
+      '@aesir/types':
         specifier: workspace:*
-        version: link:../common
+        version: link:../types
       '@langchain/core':
         specifier: ^0.3.0
         version: 0.3.80
@@ -417,9 +392,9 @@ importers:
 
   packages/test-utils:
     dependencies:
-      '@aesir/common':
+      '@aesir/types':
         specifier: workspace:*
-        version: link:../common
+        version: link:../types
       neverthrow:
         specifier: ^8.2.0
         version: 8.2.0
@@ -436,6 +411,22 @@ importers:
       postgres:
         specifier: ^3.4.7
         version: 3.4.8
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.19.7)(jiti@2.6.1)(msw@2.12.7(@types/node@22.19.7)(typescript@5.9.3))(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
+
+  packages/types:
+    dependencies:
+      nanoid:
+        specifier: ^5.1.6
+        version: 5.1.6
+      zod:
+        specifier: 3.25.67
+        version: 3.25.67
+    devDependencies:
       typescript:
         specifier: ^5.7.0
         version: 5.9.3

@@ -4,9 +4,10 @@
  * Tests for fixCodeNode with mock LLM.
  */
 
-import type { DevWorkflowStateType, TestResult } from "@aesir/common";
+import type { TestResult } from "@aesir/types";
 import type { ChatAnthropic } from "@langchain/anthropic";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { DevWorkflowStateType } from "../state/index.js";
 import {
   type FixCodeOutput,
   FixCodeOutputSchema,

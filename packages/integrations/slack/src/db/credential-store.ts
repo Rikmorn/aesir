@@ -7,7 +7,7 @@
  * All service boundary methods return ResultAsync for explicit error handling.
  */
 
-import { createId, type MCPLogger } from "@aesir/common";
+import { createId, type MCPLogger } from "@aesir/types";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { fromPromise, type ResultAsync } from "neverthrow";

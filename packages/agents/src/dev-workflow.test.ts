@@ -4,13 +4,7 @@
  * Tests for the StateGraph workflow definition and routing logic.
  */
 
-import type {
-  DevWorkflowConfig,
-  DevWorkflowStateType,
-  Sandbox,
-  TestResult,
-} from "@aesir/common";
-import { DEFAULT_DEV_WORKFLOW_CONFIG } from "@aesir/common";
+import type { Sandbox, TestResult } from "@aesir/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type AfterTestRoute,
@@ -18,6 +12,8 @@ import {
   type DevWorkflowDependencies,
   routeAfterTest,
 } from "./dev-workflow.js";
+import type { DevWorkflowConfig, DevWorkflowStateType } from "./state/index.js";
+import { DEFAULT_DEV_WORKFLOW_CONFIG } from "./state/index.js";
 
 // Mock the logger
 vi.mock("../logging/index.js", () => ({

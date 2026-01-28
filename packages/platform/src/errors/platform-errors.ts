@@ -8,7 +8,7 @@
  * - PLT_CLEANUP_* for cleanup service errors
  */
 
-import { AppError, type ErrorMetadata, type RecoveryHint } from "@aesir/common";
+import { AppError, type ErrorMetadata, type RecoveryHint } from "@aesir/types";
 
 // Database error codes
 export type DatabaseErrorCode =

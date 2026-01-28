@@ -4,7 +4,7 @@
  * Converts Linear webhook payloads to NormalizedEvent format.
  */
 
-import { createId, type NormalizedEvent } from "@aesir/common";
+import { createId, type NormalizedEvent } from "@aesir/types";
 import type { CommentPayload } from "../webhooks/parser.js";
 import type { AgentSessionPayload } from "../webhooks/types.js";
 

@@ -26,7 +26,7 @@ console.log("[dev-agent] NODE_ENV:", process.env.NODE_ENV);
 console.log("[dev-agent] TEMPORAL_ADDRESS:", process.env.TEMPORAL_ADDRESS);
 
 // Environment must be loaded FIRST before any other imports
-import "@aesir/common";
+import "@aesir/types";
 
 import {
   createServer,

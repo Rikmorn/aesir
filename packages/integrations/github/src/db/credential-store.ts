@@ -7,8 +7,8 @@
  * All service boundary methods return ResultAsync for explicit error handling.
  */
 
-import { createId } from "@aesir/common";
 import type { PinoLogger } from "@aesir/platform";
+import { createId } from "@aesir/types";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { fromPromise, type ResultAsync } from "neverthrow";

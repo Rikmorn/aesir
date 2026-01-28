@@ -11,9 +11,9 @@
  * - TestResult imported from sandbox types for consistency
  */
 
+import type { TestResult } from "@aesir/types";
 import { Annotation } from "@langchain/langgraph";
 import { z } from "zod";
-import type { TestResult } from "../types/index.js";
 
 /**
  * Schema for a single file change in the workflow.

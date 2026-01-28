@@ -4,7 +4,7 @@
  * Tests for handleCreateComment MCP tool handler.
  */
 
-import type { MCPToolContext, MCPToolResult } from "@aesir/common";
+import type { MCPToolContext, MCPToolResult } from "@aesir/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CreateCommentOutput } from "../schemas.js";
 import { handleCreateComment, type IssueToolDeps } from "./issues.js";

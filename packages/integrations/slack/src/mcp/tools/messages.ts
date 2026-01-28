@@ -13,7 +13,7 @@ import {
   createToolResult,
   type MCPLogger,
   type MCPToolContext,
-} from "@aesir/common";
+} from "@aesir/types";
 import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import type { Block, KnownBlock } from "@slack/web-api";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";

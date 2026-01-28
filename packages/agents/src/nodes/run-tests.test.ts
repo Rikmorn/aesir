@@ -4,8 +4,9 @@
  * Tests for runTestsNode with mock sandbox.
  */
 
-import type { DevWorkflowStateType, Sandbox, TestResult } from "@aesir/common";
+import type { Sandbox, TestResult } from "@aesir/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { DevWorkflowStateType } from "../state/index.js";
 import { createRunTestsNode } from "./run-tests.js";
 
 // Mock the logger

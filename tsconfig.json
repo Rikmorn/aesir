@@ -1,7 +1,7 @@
 {
   "files": [],
   "references": [
-    { "path": "packages/common" },
+    { "path": "packages/types" },
     { "path": "packages/platform" },
     { "path": "packages/integrations" },
     { "path": "packages/observability" },

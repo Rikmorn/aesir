@@ -5,8 +5,8 @@
  * Used by the Product Agent to create tasks from gathered requirements.
  */
 
-import type { IssueStatus } from "@aesir/common";
 import { createPinoLogger } from "@aesir/platform";
+import type { IssueStatus } from "@aesir/types";
 import type {
   Issue,
   IssueLabel,

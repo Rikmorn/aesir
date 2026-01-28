@@ -28,7 +28,7 @@
     "cleanup:dry-run": "tsx src/scripts/run-cleanup.ts --dry-run"
   },
   "dependencies": {
-    "@aesir/common": "workspace:*",
+    "@aesir/types": "workspace:*",
     "@langchain/core": "^0.3.0",
     "@temporalio/client": "^1.14.1",
     "@temporalio/worker": "^1.14.1",

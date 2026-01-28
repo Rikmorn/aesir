@@ -5,7 +5,7 @@
  * Uses pgSchema for schema namespace isolation.
  */
 
-import { createId } from "@aesir/common";
+import { createId } from "@aesir/types";
 import { sql } from "drizzle-orm";
 import {
   jsonb,

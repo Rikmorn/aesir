@@ -9,7 +9,7 @@
  * - event_deliveries: Event deduplication via event_id
  */
 
-import { createId } from "@aesir/common";
+import { createId } from "@aesir/types";
 import {
   boolean,
   index,

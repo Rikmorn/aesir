@@ -2,8 +2,8 @@
  * MCP Client Type Definitions
  *
  * CLIENT-SIDE types for consuming MCP HTTP responses.
- * These are intentionally separate from @aesir/common/mcp SERVER-SIDE types:
- * - @aesir/common/mcp: MCPToolContext, MCPToolResult (for building MCP handlers)
+ * These are intentionally separate from @aesir/types/mcp SERVER-SIDE types:
+ * - @aesir/types/mcp: MCPToolContext, MCPToolResult (for building MCP handlers)
  * - @aesir/agents/mcp: McpCallOptions, McpErrorResponse (for consuming MCP HTTP)
  *
  * Why separate: Servers produce MCPToolResult, clients consume the wire format.

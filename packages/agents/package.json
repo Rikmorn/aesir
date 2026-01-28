@@ -24,7 +24,7 @@
     "product-agent": "tsx src/scripts/start-product-agent.ts"
   },
   "dependencies": {
-    "@aesir/common": "workspace:*",
+    "@aesir/types": "workspace:*",
     "@aesir/observability": "workspace:*",
     "@aesir/platform": "workspace:*",
     "@langchain/anthropic": "^0.3.0",

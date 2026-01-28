@@ -10,8 +10,8 @@
 import { describe, expect, it, vi } from "vitest";
 import type { StoreInstallationInput } from "./credential-store.js";
 
-// Mock @aesir/common to prevent config validation
-vi.mock("@aesir/common", () => ({
+// Mock @aesir/types to prevent config validation
+vi.mock("@aesir/types", () => ({
   createId: {
     credential: vi.fn(() => "cred_test123"),
   },

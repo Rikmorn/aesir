@@ -4,8 +4,8 @@
  * Fire-and-forget HTTP client for dispatching normalized events to agents.
  */
 
-import type { NormalizedEvent } from "@aesir/common";
 import type { PinoLogger } from "@aesir/platform";
+import type { NormalizedEvent } from "@aesir/types";
 import type { DispatchRoute } from "./routes.js";
 
 export interface DispatcherOptions {

@@ -14,13 +14,7 @@
  * - Complete workflow from task pickup to PR creation
  */
 
-import {
-  DEFAULT_DEV_WORKFLOW_CONFIG,
-  type DevWorkflowConfig,
-  DevWorkflowState,
-  type DevWorkflowStateType,
-  type Sandbox,
-} from "@aesir/common";
+import type { Sandbox } from "@aesir/types";
 import { END, StateGraph } from "@langchain/langgraph";
 import { createCommitPRNode } from "./nodes/commit-pr.js";
 import { createBranchNode } from "./nodes/create-branch.js";
@@ -28,6 +22,12 @@ import { fixCodeNode } from "./nodes/fix-code.js";
 import { generateCodeNode } from "./nodes/generate-code.js";
 import { createPickupTaskNode } from "./nodes/pickup-task.js";
 import { createRunTestsNode } from "./nodes/run-tests.js";
+import {
+  DEFAULT_DEV_WORKFLOW_CONFIG,
+  type DevWorkflowConfig,
+  DevWorkflowState,
+  type DevWorkflowStateType,
+} from "./state/index.js";
 
 /**
  * Routing result after test execution

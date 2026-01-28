@@ -11,10 +11,10 @@
  * - Separate schema for code generation output vs file changes
  */
 
-import { type DevWorkflowStateType, FileChangeSchema } from "@aesir/common";
 import { createPinoLogger } from "@aesir/platform";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
+import { type DevWorkflowStateType, FileChangeSchema } from "../state/index.js";
 
 /**
  * Schema for code generation structured output

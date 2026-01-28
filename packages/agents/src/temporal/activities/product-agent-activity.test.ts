@@ -21,8 +21,8 @@ vi.mock("../../product-agent/index.js", () => ({
 }));
 
 // Mock the logger
-vi.mock("@aesir/common", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@aesir/common")>();
+vi.mock("@aesir/types", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@aesir/types")>();
   return {
     ...original,
     createPinoLogger: () => ({

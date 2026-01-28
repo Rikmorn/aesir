@@ -11,7 +11,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
-// Use drizzle schema to avoid @aesir/common dependency
+// Use drizzle schema to avoid @aesir/types dependency
 import * as schema from "../schema.drizzle.js";
 
 const { workspaces } = schema;

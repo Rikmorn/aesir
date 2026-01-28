@@ -7,6 +7,6 @@
   "include": ["src/**/*"],
   "exclude": ["src/**/*.test.ts", "src/**/*.integration.test.ts"],
   "references": [
-    { "path": "../../common" }
+    { "path": "../../types" }
   ]
 }

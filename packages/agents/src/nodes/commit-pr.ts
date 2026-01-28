@@ -8,9 +8,9 @@
  * it commits the generated code, opens a PR, and updates Linear status to Done.
  */
 
-import type { DevWorkflowStateType } from "@aesir/common";
 import { generateCorrelationId } from "@aesir/platform";
 import { callMcpTool } from "../mcp/index.js";
+import type { DevWorkflowStateType } from "../state/index.js";
 
 const AGENT_ID = "dev-agent";
 

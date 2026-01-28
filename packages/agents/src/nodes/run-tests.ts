@@ -11,14 +11,13 @@
  * - Updates testAttempts and status based on result
  */
 
+import { createPinoLogger } from "@aesir/platform";
+import type { Sandbox, TestResult } from "@aesir/types";
 import {
   DEFAULT_DEV_WORKFLOW_CONFIG,
   type DevWorkflowConfig,
   type DevWorkflowStateType,
-  type Sandbox,
-  type TestResult,
-} from "@aesir/common";
-import { createPinoLogger } from "@aesir/platform";
+} from "../state/index.js";
 
 const logger = createPinoLogger({ component: "agents:nodes:run-tests" });
 

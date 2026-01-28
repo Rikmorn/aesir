@@ -10,7 +10,7 @@ import type { ProductAgentPhase, ProductAgentState } from "../state.js";
 import { notifyNode } from "./notify.js";
 
 // Mock the logger
-vi.mock("@aesir/common", () => ({
+vi.mock("@aesir/types", () => ({
   createPinoLogger: () => ({
     child: () => ({
       debug: vi.fn(),

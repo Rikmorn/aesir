@@ -16,7 +16,7 @@ import {
 } from "./create-tasks.js";
 
 // Mock the logger
-vi.mock("@aesir/common", () => ({
+vi.mock("@aesir/types", () => ({
   createPinoLogger: () => ({
     child: () => ({
       debug: vi.fn(),

@@ -5,7 +5,7 @@
  * If no permission row exists, access is denied by default.
  */
 
-import type { MCPLogger } from "@aesir/common";
+import type { MCPLogger } from "@aesir/types";
 import { and, eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { mcpToolPermissions } from "./schema.js";

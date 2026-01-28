@@ -4,8 +4,8 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock @aesir/common to prevent config validation
-vi.mock("@aesir/common", () => ({
+// Mock @aesir/types to prevent config validation
+vi.mock("@aesir/types", () => ({
   DEFAULT_DEV_WORKFLOW_CONFIG: {
     maxTestAttempts: 5,
     testCommand: ["npm", "test"],
@@ -35,11 +35,11 @@ vi.mock("./dev-workflow.js", () => ({
   createDevWorkflow: vi.fn(),
 }));
 
-import { DEFAULT_DEV_WORKFLOW_CONFIG } from "@aesir/common";
 import {
   type DevWorkflowDependencies,
   runDevWorkflow,
 } from "./dev-workflow-runner.js";
+import { DEFAULT_DEV_WORKFLOW_CONFIG } from "./state/index.js";
 
 // Mock MCP client
 vi.mock("./mcp/index.js", () => ({

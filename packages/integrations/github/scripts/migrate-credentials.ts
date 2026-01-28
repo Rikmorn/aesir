@@ -172,7 +172,7 @@ async function migrate(): Promise<void> {
     const { createGitHubCredentialStore } = await import(
       "../dist/db/credential-store.js"
     );
-    const { createPinoLogger } = await import("@aesir/common");
+    const { createPinoLogger } = await import("@aesir/types");
 
     const logger = createPinoLogger({
       component: "integrations:github:migration",

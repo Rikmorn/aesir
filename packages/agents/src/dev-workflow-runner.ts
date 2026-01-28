@@ -13,10 +13,6 @@
  */
 
 import {
-  DEFAULT_DEV_WORKFLOW_CONFIG,
-  type DevWorkflowConfig,
-} from "@aesir/common";
-import {
   createPinoLogger,
   createTraceStore,
   type PinoLogger,
@@ -27,6 +23,10 @@ import {
   type DevWorkflowDependencies,
 } from "./dev-workflow.js";
 import { callMcpTool } from "./mcp/index.js";
+import {
+  DEFAULT_DEV_WORKFLOW_CONFIG,
+  type DevWorkflowConfig,
+} from "./state/index.js";
 import { createLangGraphTracer } from "./tracing/index.js";
 
 const logger: PinoLogger = createPinoLogger({

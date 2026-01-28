@@ -2,7 +2,7 @@
  * Slack Database Schema (Drizzle Kit Version)
  *
  * This file is ONLY for drizzle-kit migration generation.
- * Uses inline nanoid instead of @aesir/common to avoid CJS bundler issues.
+ * Uses inline nanoid instead of @aesir/types to avoid CJS bundler issues.
  *
  * DO NOT import this file in application code - use schema.ts instead.
  */

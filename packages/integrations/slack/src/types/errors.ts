@@ -1,4 +1,4 @@
-import { AppError, type ErrorMetadata, type RecoveryHint } from "@aesir/common";
+import { AppError, type ErrorMetadata, type RecoveryHint } from "@aesir/types";
 
 /**
  * Slack-specific error codes

@@ -6,8 +6,8 @@
  * - list_labels: List labels (optionally filtered by team)
  */
 
-import type { MCPLogger, MCPToolContext, MCPToolResult } from "@aesir/common";
-import { createErrorResult, createToolResult } from "@aesir/common";
+import type { MCPLogger, MCPToolContext, MCPToolResult } from "@aesir/types";
+import { createErrorResult, createToolResult } from "@aesir/types";
 import type { LinearClient } from "@linear/sdk";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { checkLinearToolPermission } from "../../db/permissions.js";

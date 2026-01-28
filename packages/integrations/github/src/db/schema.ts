@@ -5,7 +5,7 @@
  * GitHub owns its data completely for independent deployment and containerization.
  */
 
-import { createId } from "@aesir/common";
+import { createId } from "@aesir/types";
 import {
   boolean,
   pgSchema,

@@ -8,8 +8,8 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock @aesir/common to prevent config validation
-vi.mock("@aesir/common", () => ({
+// Mock @aesir/types to prevent config validation
+vi.mock("@aesir/types", () => ({
   createId: {
     credential: vi.fn(() => "cred_test_123"),
   },

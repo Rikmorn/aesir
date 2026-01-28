@@ -5,7 +5,7 @@
  * Database-first approach enables multi-host scenarios and audit trail.
  */
 
-import { createId } from "@aesir/common";
+import { createId } from "@aesir/types";
 import { text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { platformSchema } from "../schema.js";
 

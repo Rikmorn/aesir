@@ -7,8 +7,8 @@
  * - update_issue_status: Change issue workflow state
  */
 
-import type { MCPLogger, MCPToolContext, MCPToolResult } from "@aesir/common";
-import { createErrorResult, createToolResult } from "@aesir/common";
+import type { MCPLogger, MCPToolContext, MCPToolResult } from "@aesir/types";
+import { createErrorResult, createToolResult } from "@aesir/types";
 import type { Issue, LinearClient } from "@linear/sdk";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { checkLinearToolPermission } from "../../db/permissions.js";

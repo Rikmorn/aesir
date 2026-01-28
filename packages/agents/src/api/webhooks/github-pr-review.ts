@@ -6,7 +6,6 @@
  */
 
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { ValidationError } from "@aesir/common";
 import {
   createChildLogger,
   createPinoLogger,
@@ -15,6 +14,7 @@ import {
   sendApprovalSignal,
   sendChangesRequestedSignal,
 } from "@aesir/platform";
+import { ValidationError } from "@aesir/types";
 import { type PRReviewPayload, parsePRReviewPayload } from "./schemas/index.js";
 
 const baseLogger: PinoLogger = createPinoLogger({

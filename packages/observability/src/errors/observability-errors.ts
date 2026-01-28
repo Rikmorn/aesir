@@ -5,7 +5,7 @@
  * - OBS_TRACKER_* for execution tracker errors
  */
 
-import { AppError, type ErrorMetadata, type RecoveryHint } from "@aesir/common";
+import { AppError, type ErrorMetadata, type RecoveryHint } from "@aesir/types";
 
 export type ExecutionTrackerErrorCode =
   | "OBS_TRACKER_START"

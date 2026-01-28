@@ -181,7 +181,7 @@ export async function startServer(): Promise<void> {
         const taskIdentifier = planMatch?.[1] ?? value;
 
         // Normalize to event format compatible with dev-agent /events
-        const { createId } = await import("@aesir/common");
+        const { createId } = await import("@aesir/types");
         const eventId = createId.event();
         const normalizedEvent = {
           id: eventId,
@@ -250,7 +250,7 @@ export async function startServer(): Promise<void> {
       );
 
       // Normalize to event format for escalation resolution
-      const { createId } = await import("@aesir/common");
+      const { createId } = await import("@aesir/types");
       const eventId = createId.event();
       const normalizedEvent = {
         id: eventId,

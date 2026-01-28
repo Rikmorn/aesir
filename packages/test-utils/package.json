@@ -24,7 +24,7 @@
     "lint:fix": "biome check --write --max-diagnostics=1000 src/"
   },
   "dependencies": {
-    "@aesir/common": "workspace:*",
+    "@aesir/types": "workspace:*",
     "neverthrow": "^8.2.0"
   },
   "devDependencies": {

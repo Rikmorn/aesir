@@ -27,7 +27,7 @@ console.log("[product-agent] Starting... (early boot)");
 console.log("[product-agent] NODE_ENV:", process.env.NODE_ENV);
 
 // Environment must be loaded FIRST before any other imports
-import "@aesir/common";
+import "@aesir/types";
 
 import { createPinoLogger } from "@aesir/platform";
 import { ChatAnthropic } from "@langchain/anthropic";

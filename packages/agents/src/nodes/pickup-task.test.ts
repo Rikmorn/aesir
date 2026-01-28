@@ -2,8 +2,8 @@
  * Tests for Pickup Task Node
  */
 
-import type { DevWorkflowStateType } from "@aesir/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { DevWorkflowStateType } from "../state/index.js";
 import { createPickupTaskNode } from "./pickup-task.js";
 
 // Create mock fetch using vi.hoisted
@@ -18,9 +18,9 @@ vi.mock("fetch-retry-ts", () => ({
   fetchBuilder: () => mockFetch,
 }));
 
-// Mock @aesir/common to prevent environment validation
-vi.mock("@aesir/common", async () => {
-  const actual = (await vi.importActual("@aesir/common")) as object;
+// Mock @aesir/types to prevent environment validation
+vi.mock("@aesir/types", async () => {
+  const actual = (await vi.importActual("@aesir/types")) as object;
   return {
     ...actual,
     generateCorrelationId: () => "test-corr-id",

@@ -5,8 +5,8 @@
  * Same implementation as Linear/GitHub dispatcher - could be shared in future.
  */
 
-import type { NormalizedEvent } from "@aesir/common";
 import type { PinoLogger } from "@aesir/platform";
+import type { NormalizedEvent } from "@aesir/types";
 import type { DispatchRoute } from "./routes.js";
 
 export interface DispatcherOptions {

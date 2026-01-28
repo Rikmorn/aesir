@@ -4,11 +4,35 @@
  * Creates deterministic test agent and dev workflow states.
  * Uses incrementing counters for predictable test assertions.
  *
- * Note: Uses simple message type instead of importing BaseMessage
- * from @langchain/core to avoid adding LangChain as a dependency.
+ * Note: Defines types locally to avoid dependency on @aesir/agents
+ * which would create circular dependency issues.
  */
 
-import type { AgentStatus, DevWorkflowStatus, FileChange } from "@aesir/common";
+/**
+ * Agent execution status - mirrors AgentStatus from agents package
+ */
+export type AgentStatus = "running" | "completed" | "error" | "timeout";
+
+/**
+ * Dev workflow status - mirrors DevWorkflowStatus from agents package
+ */
+export type DevWorkflowStatus =
+  | "pending"
+  | "coding"
+  | "testing"
+  | "fixing"
+  | "committing"
+  | "complete"
+  | "failed";
+
+/**
+ * File change in workflow - mirrors FileChange from agents package
+ */
+export interface FileChange {
+  path: string;
+  content: string;
+  operation: "create" | "update" | "delete";
+}
 
 /**
  * Simple message type for test agents.
@@ -60,7 +84,7 @@ export function resetAgentCounter(): void {
 
 /**
  * Simple test result type.
- * Mirrors the TestResult type from @aesir/common but avoids import.
+ * Mirrors the TestResult type from @aesir/types but avoids import.
  */
 export interface TestTestResult {
   passed: boolean;

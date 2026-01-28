@@ -7,7 +7,6 @@
  */
 
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { ValidationError } from "@aesir/common";
 import type { ExecutionTracker } from "@aesir/observability";
 import {
   type ApprovalWorkflowInput,
@@ -16,7 +15,9 @@ import {
   generateCorrelationId,
   type PinoLogger,
   startApprovalWorkflow,
+  type WebhookError,
 } from "@aesir/platform";
+import { ValidationError } from "@aesir/types";
 import type { ResultAsync } from "neverthrow";
 
 /**
@@ -29,7 +30,7 @@ export interface WebhookIdempotencyService {
     eventType: string,
   ): ResultAsync<
     { isDuplicate: boolean; deliveryRecordId?: string | undefined },
-    Error
+    WebhookError
   >;
   health(): Promise<{ healthy: boolean; latencyMs: number }>;
   close(): Promise<void>;

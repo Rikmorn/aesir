@@ -4,7 +4,7 @@
  * Converts GitHub webhook payloads to NormalizedEvent format.
  */
 
-import { createId, type NormalizedEvent } from "@aesir/common";
+import { createId, type NormalizedEvent } from "@aesir/types";
 import type { PRClosedPayload, PRReviewPayload } from "../webhooks/parser.js";
 
 /**

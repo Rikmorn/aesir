@@ -1,4 +1,6 @@
-// @aesir/common - shared contracts and utilities
+// @aesir/types - shared type contracts and utilities
+// This package contains pure types, interfaces, and lightweight utilities.
+// No heavy runtime dependencies - just nanoid and zod.
 
 // Errors
 export * from "./errors/index.js";
@@ -6,8 +8,6 @@ export * from "./errors/index.js";
 export * from "./events/index.js";
 // MCP (Model Context Protocol)
 export * from "./mcp/index.js";
-// State schemas and types (used by agents and platform)
-export * from "./state/index.js";
 // Temporal types (workflow-activity contracts)
 export * from "./temporal/index.js";
 // Shared types (cross-layer contracts)

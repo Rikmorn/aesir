@@ -20,7 +20,7 @@ import {
 } from "./classify.js";
 
 // Mock the logger
-vi.mock("@aesir/common", () => ({
+vi.mock("@aesir/types", () => ({
   createPinoLogger: () => ({
     child: () => ({
       info: vi.fn(),

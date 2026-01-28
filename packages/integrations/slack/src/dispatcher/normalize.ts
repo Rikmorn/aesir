@@ -4,7 +4,7 @@
  * Converts Slack event payloads to NormalizedEvent format.
  */
 
-import { createId, type NormalizedEvent } from "@aesir/common";
+import { createId, type NormalizedEvent } from "@aesir/types";
 import type { SlackEventPayload } from "../events/types.js";
 
 /**

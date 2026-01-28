@@ -5,8 +5,8 @@
  * Activities communicate with the Linear integration service via HTTP.
  */
 
-import type { IssueStatus } from "@aesir/common";
 import { createPinoLogger, type PinoLogger } from "@aesir/platform";
+import type { IssueStatus } from "@aesir/types";
 import { callMcpTool } from "../../mcp/index.js";
 
 const logger: PinoLogger = createPinoLogger({

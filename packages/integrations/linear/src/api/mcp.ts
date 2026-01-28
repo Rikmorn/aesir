@@ -8,8 +8,8 @@
  * Correlation ID and Agent ID are extracted from headers.
  */
 
-import type { MCPToolContext, MCPToolResult } from "@aesir/common";
 import { generateCorrelationId, type PinoLogger } from "@aesir/platform";
+import type { MCPToolContext, MCPToolResult } from "@aesir/types";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { Request, RequestHandler, Response, Router } from "express";

@@ -6,7 +6,7 @@
  * so they don't require SDK clients to be injected.
  */
 
-import type { Sandbox } from "@aesir/common";
+import type { Sandbox } from "@aesir/types";
 import {
   completeTaskActivity,
   continueAfterApprovalActivity,

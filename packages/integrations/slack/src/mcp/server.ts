@@ -4,7 +4,7 @@
  * Creates and configures an MCP server for Slack operations.
  */
 
-import type { MCPLogger, MCPToolContext } from "@aesir/common";
+import type { MCPLogger, MCPToolContext } from "@aesir/types";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
   CallToolRequestSchema,

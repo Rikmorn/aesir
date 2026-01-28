@@ -11,10 +11,10 @@
  * - Returns FileChange[] for sandbox to write
  */
 
-import { type DevWorkflowStateType, FileChangeSchema } from "@aesir/common";
 import { createPinoLogger } from "@aesir/platform";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
+import { type DevWorkflowStateType, FileChangeSchema } from "../state/index.js";
 
 /**
  * Schema for fix code structured output
