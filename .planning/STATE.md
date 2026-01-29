@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 28 (first of 9 in v2.2) - Agentic Loop Runtime
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-01-29 -- Roadmap created for v2.2 (9 phases, 78 requirements)
+Plan: 1 of 2
+Status: In progress
+Last activity: 2026-01-29 -- Completed 28-01-PLAN.md (SDK install, types, budget, errors)
 
-Progress: ░░░░░░░░░░ 0%
+Progress: █░░░░░░░░░ 5% (1/18 plans)
 
 ## Milestone History
 
@@ -41,6 +41,11 @@ v2.2 key decisions:
 - Non-streaming LLM calls for backend agents in Temporal
 - Custom `runAgentLoop()` over SDK's `toolRunner()` for control over tracing/budgets
 
+Phase 28 decisions:
+- Import PinoLogger from @aesir/platform (not directly from pino) -- consistent with codebase pattern
+- Set error name in constructor body (not override readonly) -- TypeScript literal type narrowing constraint
+- SDK resolved to ^0.72.0 (compatible with planned ^0.71.2)
+
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
@@ -54,9 +59,9 @@ None blocking v2.2.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Roadmap created for v2.2 milestone
+Stopped at: Completed 28-01-PLAN.md
 Resume file: None
-Next action: Plan Phase 28 (Agentic Loop Runtime)
+Next action: Execute 28-02-PLAN.md (core runAgentLoop() implementation and tests)
 
 ---
-*Updated: 2026-01-29 -- v2.2 roadmap created (9 phases, 78 requirements mapped)*
+*Updated: 2026-01-29 -- Completed 28-01 (SDK install, types, token budget, errors)*

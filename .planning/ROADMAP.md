@@ -41,7 +41,7 @@ Replace LangGraph state machine architecture with agentic tool-use loops where L
   5. The loop handles all Anthropic `stop_reason` values without breaking, including unexpected future values
 **Plans**: 2 plans
 Plans:
-- [ ] 28-01-PLAN.md -- SDK installation, types, token budget, errors, barrel exports
+- [x] 28-01-PLAN.md -- SDK installation, types, token budget, errors, barrel exports
 - [ ] 28-02-PLAN.md -- Core runAgentLoop() implementation and comprehensive tests
 
 ### Phase 29: Database Schema & Context Management
