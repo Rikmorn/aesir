@@ -183,7 +183,7 @@ services:
         - action: rebuild
           path: ./packages/integrations/linear/package.json
         - action: rebuild
-          path: ./packages/common/src
+          path: ./packages/types/src
 
   # GitHub Integration - handles GitHub webhooks and MCP tools
   # Dispatches PR events to dev-agent for completion signals
@@ -232,7 +232,7 @@ services:
         - action: rebuild
           path: ./packages/integrations/github/package.json
         - action: rebuild
-          path: ./packages/common/src
+          path: ./packages/types/src
 
   # Slack Integration - handles Slack events and MCP tools
   # IMPORTANT: Configure in Slack App Dashboard (api.slack.com):
@@ -286,7 +286,7 @@ services:
         - action: rebuild
           path: ./packages/integrations/slack/package.json
         - action: rebuild
-          path: ./packages/common/src
+          path: ./packages/types/src
 
   # Dev Agent - handles Linear task automation via MCP
   # HTTP service for receiving events from Linear dispatcher
@@ -369,7 +369,7 @@ services:
         - action: rebuild
           path: ./packages/agents/package.json
         - action: rebuild
-          path: ./packages/common/src
+          path: ./packages/types/src
         - action: rebuild
           path: ./packages/platform/src
 
@@ -437,7 +437,7 @@ services:
         - action: rebuild
           path: ./packages/agents/package.json
         - action: rebuild
-          path: ./packages/common/src
+          path: ./packages/types/src
         - action: rebuild
           path: ./packages/platform/src
 
@@ -506,7 +506,7 @@ services:
         - action: rebuild
           path: ./packages/agents/package.json
         - action: rebuild
-          path: ./packages/common/src
+          path: ./packages/types/src
         - action: rebuild
           path: ./packages/platform/src
 
