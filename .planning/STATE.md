@@ -6,14 +6,14 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-**Current focus:** v2.2 Agentic Architecture — replacing LangGraph state machines with agentic tool-use loops
+**Current focus:** v2.2 Agentic Architecture -- Phase 28: Agentic Loop Runtime
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-01-29 — Milestone v2.2 started
+Phase: 28 (first of 9 in v2.2) - Agentic Loop Runtime
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-01-29 -- Roadmap created for v2.2 (9 phases, 78 requirements)
 
 Progress: ░░░░░░░░░░ 0%
 
@@ -29,41 +29,23 @@ Progress: ░░░░░░░░░░ 0%
 
 ### Decisions
 
-v2.0 decisions archived in milestones/v2.0-ROADMAP.md.
-v2.1 decisions archived in milestones/v2.1-ROADMAP.md.
-
-Key decisions that carry forward:
-- 3-layer architecture (Platform -> Integrations -> Agents) is established pattern
-- MCP for agent-integration communication (HTTP-based, not direct SDK imports)
-- Pure library pattern for @aesir/types (no env validation at import time)
-- Infrastructure phases must include consumer migration (E2E verification requirements)
-- Event type uses dotted notation (source.resource.action) for consistent parsing
-- Integration-embedded dispatcher pattern: each integration dispatches its own events
-- Dev container uses sleep infinity and Docker API exec for command execution
-- Dual-channel approval: full plan to Linear (permanent record), summary to Slack (real-time buttons)
-- Temporal signals for workflow continuation (planApproval, prFeedback)
+v2.0/v2.1 decisions archived in milestones/.
 
 v2.2 key decisions:
 - Replace @langchain/* with @anthropic-ai/sdk for native tool-use
 - Agentic tool-use loops replace LangGraph state machine graphs
 - Orchestrator + focused sub-agents pattern for dev agent
-- Smart router (LLM-based) replaces hardcoded event switches
+- Hybrid smart router (deterministic rules + LLM for ambiguous events)
 - Semantic context snapshots replace LangGraph checkpoint persistence
+- In-process sub-agent spawning (nested function calls, not Temporal activities)
+- Non-streaming LLM calls for backend agents in Temporal
+- Custom `runAgentLoop()` over SDK's `toolRunner()` for control over tracing/budgets
 
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
-   - commit-pr.test.ts - missing GitHub config mock
-   - create-branch.test.ts - missing GitHub config mock
-   - github-pr-review.test.ts - missing GitHub config mock
-   - linear/integration.test.ts - module resolution issue
-
 2. **Run dev-agent container as non-root** (infrastructure)
-   - File: `.planning/todos/pending/2026-01-19-dev-agent-container-root-user.md`
-
 3. **11 tests skipped pending infrastructure** (testing)
-   - Cross-channel sync tests (pending MCP mock)
-   - Workflow state transition tests (pending Temporal test framework)
 
 ### Blockers/Concerns
 
@@ -72,9 +54,9 @@ None blocking v2.2.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Milestone v2.2 initialization — defining requirements
+Stopped at: Roadmap created for v2.2 milestone
 Resume file: None
-Next action: Complete requirements and roadmap definition
+Next action: Plan Phase 28 (Agentic Loop Runtime)
 
 ---
-*Updated: 2026-01-29 — v2.2 Agentic Architecture milestone started*
+*Updated: 2026-01-29 -- v2.2 roadmap created (9 phases, 78 requirements mapped)*
