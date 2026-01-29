@@ -75,16 +75,20 @@ packages/
 │   └── src/
 │       ├── dev-agent/   # Development workflow automation
 │       │   ├── api/     # HTTP handlers, webhooks, events
+│       │   ├── classification/ # Approval intent classifier
 │       │   ├── code-workflow/  # Simple LangGraph code generation
 │       │   │   ├── nodes/      # Workflow nodes
 │       │   │   └── state/      # Workflow state
-│       │   ├── nodes/   # HITL workflow nodes
+│       │   ├── workflow/ # HITL workflow (graph, state, prompts, nodes)
+│       │   │   └── nodes/ # LangGraph nodes for each phase
+│       │   ├── utils/   # Package manager detection
 │       │   ├── main.ts  # HTTP server entry
 │       │   └── worker.ts # Temporal worker entry
 │       ├── product-agent/ # Product conversation agent
 │       │   ├── api/     # HTTP handlers
-│       │   ├── nodes/   # LangGraph nodes
-│       │   ├── slack/   # Slack-specific handlers
+│       │   ├── workflow/ # Conversation workflow (graph, state, prompts, nodes)
+│       │   │   └── nodes/ # LangGraph nodes
+│       │   ├── slack/   # Slack event handlers
 │       │   ├── main.ts  # HTTP server entry
 │       │   └── worker.ts # Temporal worker entry
 │       └── shared/      # Common infrastructure
@@ -198,7 +202,7 @@ The agents package follows an agent-centric organization with shared infrastruct
 ### Dev Agent
 
 Automates Linear issue resolution through multi-phase workflows:
-- **HITL Workflow** (`graph.ts`): Full Temporal orchestration with approval gates
+- **HITL Workflow** (`workflow/`): Full Temporal orchestration with approval gates
   - Receive issue → Research → Plan → Approval → Execute → PR → Review
 - **Code Workflow** (`code-workflow/`): Lightweight LangGraph-only for simple tasks
   - Pickup task → Create branch → Generate code → Test → Commit PR
@@ -318,16 +322,11 @@ npm run infra:logs   # View infrastructure logs
 **IMPORTANT:** Database migrations must be run before using the system. Each integration package has its own PostgreSQL schema.
 
 ```bash
-# Run ALL migrations (recommended for fresh setup)
+# Run ALL migrations (sequential, respects workspace dependency order)
 pnpm db:migrate
 
-# Run migrations for specific packages
-pnpm db:migrate:platform      # platform.* schema
-pnpm db:migrate:integrations  # integrations.* schema (legacy)
-pnpm db:migrate:observability # observability.* schema
-pnpm db:migrate:linear        # linear.* schema
-pnpm db:migrate:github        # github.* schema
-pnpm db:migrate:slack         # slack.* schema
+# Run migration for a specific package
+pnpm --filter @aesir/platform db:migrate
 ```
 
 **Database Schemas:**
@@ -839,6 +838,6 @@ v2.1 focused on package consolidation and organization improvements.
 - **Test Utils Extraction**: Created `@aesir/test-utils` for shared test utilities
 - **Agents Restructure**: Agent-centric organization with shared infrastructure
   - `shared/` - MCP client, Temporal, tracing, config, state
-  - `dev-agent/` - HITL workflow + code-workflow subdirectory
-  - `product-agent/` - Conversation workflow + Slack handlers
+  - `dev-agent/` - HITL `workflow/` + `code-workflow/` subdirectories
+  - `product-agent/` - Conversation `workflow/` + `slack/` subdirectories
 - **Dead Code Removal**: Cleaned up unused exports and legacy code
