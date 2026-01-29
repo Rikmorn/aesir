@@ -18,7 +18,7 @@ import {
 } from "@aesir/platform";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
-import { callMcpTool } from "../../shared/mcp/index.js";
+import { callMcpTool } from "../../../shared/mcp/index.js";
 import { CREATE_TASKS_PROMPT } from "../prompts.js";
 import type {
   CreatedTask,

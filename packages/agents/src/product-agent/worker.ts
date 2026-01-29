@@ -17,7 +17,7 @@ import {
   Worker,
   type WorkerOptions,
 } from "@temporalio/worker";
-import { createProductAgentCheckpointer } from "./checkpointer.js";
+import { createProductAgentCheckpointer } from "./workflow/checkpointer.js";
 
 const logger: PinoLogger = createPinoLogger({
   component: "agents:product-agent:worker",

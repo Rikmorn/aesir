@@ -1,42 +1,17 @@
 /**
- * Product Agent Module
+ * Product Agent Workflow
  *
- * Provides the Product Agent conversation graph for gathering requirements
+ * LangGraph conversation graph for gathering requirements
  * through natural dialogue and creating Linear issues.
- *
- * @example
- * ```typescript
- * import {
- *   createProductAgentGraph,
- *   ProductAgentStateAnnotation,
- *   createProductAgentInitialState,
- * } from './agents/product-agent';
- *
- * // Create the conversation graph
- * const graph = createProductAgentGraph({
- *   linearClient,
- *   teamId: "team-123",
- * });
- *
- * // Create initial state for a new conversation
- * const state = createProductAgentInitialState({
- *   channelId: "C12345678",
- *   threadTs: null,
- *   userId: "U12345678",
- * });
- *
- * // Invoke the graph
- * const result = await graph.invoke(state);
- * ```
  */
 
-// PostgreSQL checkpointer for conversation persistence
+// Checkpointer
 export {
   closeProductAgentCheckpointer,
   createProductAgentCheckpointer,
   getProductAgentCheckpointer,
   resetCheckpointerForTesting,
-} from "./workflow/checkpointer.js";
+} from "./checkpointer.js";
 // Graph factory and routing
 export {
   type AfterAnalysisRoute,
@@ -44,36 +19,44 @@ export {
   type ProductAgentGraph,
   type ProductAgentGraphOptions,
   routeAfterAnalysis,
-} from "./workflow/graph.js";
-// Conversation nodes
+} from "./graph.js";
+// Nodes
 export {
   type AnalyzeRequirementsNodeOptions,
   analyzeRequirementsNode,
+  type ClassificationOutput,
+  ClassificationOutputSchema,
+  type ClassifyNodeOptions,
+  type ConfirmNodeOptions,
   type CreateTasksNodeOptions,
+  classifyNode,
+  confirmNode,
   createTasksNode,
   type GenerateClarificationNodeOptions,
   type GeneratedTask,
   generateClarificationNode,
+  type IssueDraftOutput,
+  IssueDraftOutputSchema,
+  notifyNode,
   type RequirementAnalysis,
   RequirementAnalysisSchema,
   type TaskList,
   TaskListSchema,
-} from "./workflow/nodes/index.js";
+} from "./nodes/index.js";
 // Prompts
 export {
   ANALYZE_REQUIREMENTS_PROMPT,
   CREATE_TASKS_PROMPT,
   GENERATE_CLARIFICATION_PROMPT,
-} from "./workflow/prompts.js";
-// Runner for Slack integration
+} from "./prompts.js";
+// Runner
 export {
   type RunProductAgentInput,
   type RunProductAgentOptions,
   type RunProductAgentOutput,
   runProductAgent,
-} from "./workflow/runner.js";
-// State schema and types
-// Zod schemas for validation
+} from "./runner.js";
+// State
 export {
   type CreatedTask,
   CreatedTaskSchema,
@@ -90,4 +73,4 @@ export {
   RequirementsSchema,
   type SlackContext,
   SlackContextSchema,
-} from "./workflow/state.js";
+} from "./state.js";

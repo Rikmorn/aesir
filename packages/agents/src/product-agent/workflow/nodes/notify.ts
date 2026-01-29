@@ -11,7 +11,7 @@ import {
   type PinoLogger,
 } from "@aesir/platform";
 import { AIMessage } from "@langchain/core/messages";
-import { callMcpTool } from "../../shared/mcp/index.js";
+import { callMcpTool } from "../../../shared/mcp/index.js";
 import type { ProductAgentState, ProductAgentStateUpdate } from "../state.js";
 
 const logger: PinoLogger = createPinoLogger({
