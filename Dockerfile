@@ -15,7 +15,7 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY tsconfig.base.json ./
 
 # Copy all package.json files for dependency resolution
-COPY packages/common/package.json ./packages/common/
+COPY packages/types/package.json ./packages/types/
 COPY packages/platform/package.json ./packages/platform/
 COPY packages/observability/package.json ./packages/observability/
 COPY packages/integrations/package.json ./packages/integrations/
@@ -28,7 +28,7 @@ COPY packages/agents/package.json ./packages/agents/
 RUN pnpm install --frozen-lockfile
 
 # Copy source files
-COPY packages/common/ ./packages/common/
+COPY packages/types/ ./packages/types/
 COPY packages/platform/ ./packages/platform/
 COPY packages/observability/ ./packages/observability/
 COPY packages/integrations/ ./packages/integrations/
@@ -38,7 +38,7 @@ COPY packages/agents/ ./packages/agents/
 COPY langgraph.json ./
 
 # Build all packages in dependency order
-RUN pnpm --filter @aesir/common build
+RUN pnpm --filter @aesir/types build
 RUN pnpm --filter @aesir/platform build
 RUN pnpm --filter @aesir/observability build
 RUN pnpm --filter @aesir/integration-linear build

@@ -2,13 +2,17 @@
   "$schema": "https://unpkg.com/knip@latest/schema.json",
   "exclude": ["duplicates"],
   "workspaces": {
-    "packages/common": {
+    "packages/types": {
       "project": ["src/**/*.ts"],
       "ignore": ["**/*.test.ts", "**/testing/**"]
     },
     "packages/platform": {
       "project": ["src/**/*.ts"],
       "ignore": ["**/*.test.ts", "**/testing/**"]
+    },
+    "packages/test-utils": {
+      "project": ["src/**/*.ts"],
+      "ignore": ["**/*.test.ts"]
     },
     "packages/integrations": {
       "project": ["src/**/*.ts"],
@@ -34,7 +38,13 @@
       "ignore": ["**/*.test.ts", "**/testing/**"]
     },
     "packages/agents": {
-      "entry": ["src/scripts/*.ts"],
+      "entry": [
+        "src/dev-agent/main.ts",
+        "src/dev-agent/worker.ts",
+        "src/product-agent/main.ts",
+        "src/product-agent/worker.ts",
+        "src/index.ts"
+      ],
       "project": ["src/**/*.ts"],
       "ignore": ["**/*.test.ts", "**/testing/**"]
     }
