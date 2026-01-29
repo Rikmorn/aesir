@@ -9,15 +9,15 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Agentic Loop Runtime
 
-- [ ] **LOOP-01**: Core `runAgentLoop()` function iterates: send to LLM -> receive tool calls -> execute tools -> feed results back -> repeat until LLM responds with text only or guardrail hit
-- [ ] **LOOP-02**: Uses `@anthropic-ai/sdk` native tool-use API (messages.create with tools parameter), replacing all `@langchain/anthropic` usage
-- [ ] **LOOP-03**: Tool definitions use Zod schemas converted to JSON Schema via SDK's `betaZodTool()` -- no separate conversion library
-- [ ] **LOOP-04**: Configurable iteration limit per agent invocation (default: 50 sub-agent, 100 orchestrator, 10 router)
-- [ ] **LOOP-05**: Configurable token budget per task, shared across orchestrator and all sub-agents via mutable counter
-- [ ] **LOOP-06**: AbortSignal support for clean cancellation of in-flight LLM calls
-- [ ] **LOOP-07**: Tracing callbacks (onToolCall, onResponse) called on every iteration for automatic trace recording
-- [ ] **LOOP-08**: Returns structured result: status (completed/max_iterations/max_tokens/aborted/error), output, structured output, tool call count, token counts, trace
-- [ ] **LOOP-09**: Handles all Anthropic `stop_reason` values (end_turn, tool_use, max_tokens, stop_sequence, and any new values) -- does not break on unexpected values
+- [x] **LOOP-01**: Core `runAgentLoop()` function iterates: send to LLM -> receive tool calls -> execute tools -> feed results back -> repeat until LLM responds with text only or guardrail hit
+- [x] **LOOP-02**: Uses `@anthropic-ai/sdk` native tool-use API (messages.create with tools parameter), replacing all `@langchain/anthropic` usage
+- [x] **LOOP-03**: Tool definitions use Zod schemas converted to JSON Schema via SDK's `betaZodTool()` -- no separate conversion library
+- [x] **LOOP-04**: Configurable iteration limit per agent invocation (default: 50 sub-agent, 100 orchestrator, 10 router)
+- [x] **LOOP-05**: Configurable token budget per task, shared across orchestrator and all sub-agents via mutable counter
+- [x] **LOOP-06**: AbortSignal support for clean cancellation of in-flight LLM calls
+- [x] **LOOP-07**: Tracing callbacks (onToolCall, onResponse) called on every iteration for automatic trace recording
+- [x] **LOOP-08**: Returns structured result: status (completed/max_iterations/max_tokens/aborted/error), output, structured output, tool call count, token counts, trace
+- [x] **LOOP-09**: Handles all Anthropic `stop_reason` values (end_turn, tool_use, max_tokens, stop_sequence, and any new values) -- does not break on unexpected values
 
 ### Agent Tool Library
 
@@ -158,15 +158,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LOOP-01 | Phase 28 | Pending |
-| LOOP-02 | Phase 28 | Pending |
-| LOOP-03 | Phase 28 | Pending |
-| LOOP-04 | Phase 28 | Pending |
-| LOOP-05 | Phase 28 | Pending |
-| LOOP-06 | Phase 28 | Pending |
-| LOOP-07 | Phase 28 | Pending |
-| LOOP-08 | Phase 28 | Pending |
-| LOOP-09 | Phase 28 | Pending |
+| LOOP-01 | Phase 28 | Complete |
+| LOOP-02 | Phase 28 | Complete |
+| LOOP-03 | Phase 28 | Complete |
+| LOOP-04 | Phase 28 | Complete |
+| LOOP-05 | Phase 28 | Complete |
+| LOOP-06 | Phase 28 | Complete |
+| LOOP-07 | Phase 28 | Complete |
+| LOOP-08 | Phase 28 | Complete |
+| LOOP-09 | Phase 28 | Complete |
 | TOOL-01 | Phase 30 | Pending |
 | TOOL-02 | Phase 30 | Pending |
 | TOOL-03 | Phase 30 | Pending |
