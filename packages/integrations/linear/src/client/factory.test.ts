@@ -22,13 +22,14 @@ vi.mock("@aesir/types", async (importOriginal) => {
   };
 });
 
-// Mock @linear/sdk
-vi.mock("@linear/sdk", () => ({
-  LinearClient: vi.fn().mockImplementation(() => ({
-    issue: vi.fn(),
-    updateIssue: vi.fn(),
-  })),
-}));
+// Mock @linear/sdk with a class-based mock (required for `new` usage in vitest v4)
+vi.mock("@linear/sdk", () => {
+  const MockLinearClient = class {
+    issue = vi.fn();
+    updateIssue = vi.fn();
+  };
+  return { LinearClient: MockLinearClient };
+});
 
 import { getLinearClient } from "./factory.js";
 

@@ -21,25 +21,31 @@ vi.mock("@aesir/types", async (importOriginal) => {
   };
 });
 
-// Mock @octokit/rest
+// Track constructor calls for assertions
+const mockOctokitConstructor = vi.fn();
+
+// Mock @octokit/rest with a class-based mock (required for `new` usage in vitest v4)
 vi.mock("@octokit/rest", () => {
-  return {
-    Octokit: vi.fn().mockImplementation(() => ({
-      rest: {
-        git: {
-          getRef: vi.fn(),
-          createRef: vi.fn(),
+  const MockOctokit = class {
+    constructor(options: unknown) {
+      mockOctokitConstructor(options);
+      Object.assign(this, {
+        rest: {
+          git: {
+            getRef: vi.fn(),
+            createRef: vi.fn(),
+          },
+          repos: {
+            listBranches: vi.fn(),
+          },
         },
-        repos: {
-          listBranches: vi.fn(),
-        },
-      },
-    })),
+      });
+    }
   };
+  return { Octokit: MockOctokit };
 });
 
 // Import after mocking
-import { Octokit } from "@octokit/rest";
 import { createGitHubClient, getOctokit } from "./factory.js";
 import type { GitHubConfig } from "./types.js";
 
@@ -55,7 +61,7 @@ describe("createGitHubClient", () => {
 
     const client = createGitHubClient(config);
 
-    expect(Octokit).toHaveBeenCalledWith({
+    expect(mockOctokitConstructor).toHaveBeenCalledWith({
       auth: "test-github-token",
     });
     expect(client).toBeDefined();
@@ -68,7 +74,7 @@ describe("createGitHubClient", () => {
 
     createGitHubClient(config);
 
-    expect(Octokit).toHaveBeenCalledWith({
+    expect(mockOctokitConstructor).toHaveBeenCalledWith({
       auth: "ghp_xxxxxxxxxxxxxxxxxxxx",
     });
   });
@@ -82,7 +88,7 @@ describe("getOctokit", () => {
   it("creates Octokit instance with direct token", () => {
     const client = getOctokit("direct-token");
 
-    expect(Octokit).toHaveBeenCalledWith({
+    expect(mockOctokitConstructor).toHaveBeenCalledWith({
       auth: "direct-token",
     });
     expect(client).toBeDefined();
@@ -92,8 +98,12 @@ describe("getOctokit", () => {
     getOctokit("token-1");
     getOctokit("token-2");
 
-    expect(Octokit).toHaveBeenCalledTimes(2);
-    expect(Octokit).toHaveBeenNthCalledWith(1, { auth: "token-1" });
-    expect(Octokit).toHaveBeenNthCalledWith(2, { auth: "token-2" });
+    expect(mockOctokitConstructor).toHaveBeenCalledTimes(2);
+    expect(mockOctokitConstructor).toHaveBeenNthCalledWith(1, {
+      auth: "token-1",
+    });
+    expect(mockOctokitConstructor).toHaveBeenNthCalledWith(2, {
+      auth: "token-2",
+    });
   });
 });
