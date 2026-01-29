@@ -24,9 +24,10 @@
     "product-agent": "tsx src/product-agent/main.ts"
   },
   "dependencies": {
-    "@aesir/types": "workspace:*",
     "@aesir/observability": "workspace:*",
     "@aesir/platform": "workspace:*",
+    "@aesir/types": "workspace:*",
+    "@anthropic-ai/sdk": "^0.72.0",
     "@langchain/anthropic": "^0.3.0",
     "@langchain/core": "^0.3.0",
     "@langchain/langgraph": "^0.2.0",
