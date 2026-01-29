@@ -19,21 +19,25 @@ import {
   classifyNode,
 } from "./classify.js";
 
-// Mock the logger
-vi.mock("@aesir/types", () => ({
-  createPinoLogger: () => ({
-    child: () => ({
+// Mock @aesir/types - partial mock to preserve error exports
+vi.mock("@aesir/types", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@aesir/types")>();
+  return {
+    ...actual,
+    createPinoLogger: () => ({
+      child: () => ({
+        info: vi.fn(),
+        debug: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+      }),
       info: vi.fn(),
       debug: vi.fn(),
       error: vi.fn(),
       warn: vi.fn(),
     }),
-    info: vi.fn(),
-    debug: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-  }),
-}));
+  };
+});
 
 /**
  * Create a mock LLM that returns the specified classification output

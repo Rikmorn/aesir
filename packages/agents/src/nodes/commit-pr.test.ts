@@ -18,9 +18,9 @@ vi.mock("fetch-retry-ts", () => ({
   fetchBuilder: () => mockFetch,
 }));
 
-// Mock @aesir/types to prevent environment validation
-vi.mock("@aesir/types", async () => {
-  const actual = (await vi.importActual("@aesir/types")) as object;
+// Mock @aesir/platform to control correlation ID generation
+vi.mock("@aesir/platform", async () => {
+  const actual = (await vi.importActual("@aesir/platform")) as object;
   return {
     ...actual,
     generateCorrelationId: () => "test-corr-id",

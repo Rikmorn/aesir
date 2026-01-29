@@ -19,14 +19,17 @@ describe("parsePRReviewPayload", () => {
         },
         body: "Looks good to me!",
         state: "approved",
+        submitted_at: "2024-01-15T10:30:00Z",
       },
       pull_request: {
         number: 42,
         title: "Add new feature",
         body: "This PR adds a new feature",
+        html_url: "https://github.com/test-org/test-repo/pull/42",
       },
       repository: {
         name: "test-repo",
+        full_name: "test-org/test-repo",
         owner: {
           login: "test-org",
         },
@@ -55,14 +58,17 @@ describe("parsePRReviewPayload", () => {
         },
         body: "Please fix the tests",
         state: "changes_requested",
+        submitted_at: "2024-01-15T11:00:00Z",
       },
       pull_request: {
         number: 10,
         title: "Fix bug",
         body: null,
+        html_url: "https://github.com/my-org/my-repo/pull/10",
       },
       repository: {
         name: "my-repo",
+        full_name: "my-org/my-repo",
         owner: {
           login: "my-org",
         },
@@ -88,14 +94,17 @@ describe("parsePRReviewPayload", () => {
         },
         body: "Just a comment",
         state: "commented",
+        submitted_at: "2024-01-15T12:00:00Z",
       },
       pull_request: {
         number: 5,
         title: "Update docs",
         body: "Documentation updates",
+        html_url: "https://github.com/docs-org/docs-repo/pull/5",
       },
       repository: {
         name: "docs-repo",
+        full_name: "docs-org/docs-repo",
         owner: {
           login: "docs-org",
         },
@@ -131,10 +140,12 @@ describe("parsePRReviewPayload", () => {
         },
         body: "LGTM",
         state: "approved",
+        submitted_at: "2024-01-15T10:00:00Z",
       },
       // Missing pull_request field
       repository: {
         name: "test-repo",
+        full_name: "test-org/test-repo",
         owner: {
           login: "test-org",
         },
@@ -164,14 +175,17 @@ describe("parsePRReviewPayload", () => {
         },
         body: "LGTM",
         state: "approved",
+        submitted_at: "2024-01-15T10:00:00Z",
       },
       pull_request: {
         number: 42,
         title: "Test PR",
         body: null,
+        html_url: "https://github.com/test-org/test-repo/pull/42",
       },
       repository: {
         name: "test-repo",
+        full_name: "test-org/test-repo",
         owner: {
           login: "test-org",
         },
@@ -198,14 +212,17 @@ describe("parsePRReviewPayload", () => {
         },
         body: "LGTM",
         state: "invalid_state",
+        submitted_at: "2024-01-15T10:00:00Z",
       },
       pull_request: {
         number: 42,
         title: "Test PR",
         body: null,
+        html_url: "https://github.com/test-org/test-repo/pull/42",
       },
       repository: {
         name: "test-repo",
+        full_name: "test-org/test-repo",
         owner: {
           login: "test-org",
         },
@@ -234,14 +251,17 @@ describe("parsePRReviewPayload", () => {
         },
         body: null,
         state: "approved",
+        submitted_at: "2024-01-15T10:00:00Z",
       },
       pull_request: {
         number: 42,
         title: "Test PR",
         body: "PR body",
+        html_url: "https://github.com/test-org/test-repo/pull/42",
       },
       repository: {
         name: "test-repo",
+        full_name: "test-org/test-repo",
         owner: {
           login: "test-org",
         },
@@ -266,14 +286,17 @@ describe("parsePRReviewPayload", () => {
         },
         body: "Dismissed review",
         state: "dismissed",
+        submitted_at: "2024-01-15T10:00:00Z",
       },
       pull_request: {
         number: 42,
         title: "Test PR",
         body: null,
+        html_url: "https://github.com/test-org/test-repo/pull/42",
       },
       repository: {
         name: "test-repo",
+        full_name: "test-org/test-repo",
         owner: {
           login: "test-org",
         },

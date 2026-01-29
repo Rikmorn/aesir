@@ -7,11 +7,15 @@ import {
   type PRReviewEvent,
 } from "./github-pr-review.js";
 
-// Mock the platform module for Temporal signals
-vi.mock("@aesir/platform", () => ({
-  sendApprovalSignal: vi.fn().mockResolvedValue(undefined),
-  sendChangesRequestedSignal: vi.fn().mockResolvedValue(undefined),
-}));
+// Mock @aesir/platform - partial mock to preserve logger and other exports
+vi.mock("@aesir/platform", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@aesir/platform")>();
+  return {
+    ...actual,
+    sendApprovalSignal: vi.fn().mockResolvedValue(undefined),
+    sendChangesRequestedSignal: vi.fn().mockResolvedValue(undefined),
+  };
+});
 
 // Import after mocking
 import * as temporalClient from "@aesir/platform";

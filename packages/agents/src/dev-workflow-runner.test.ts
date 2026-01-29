@@ -4,31 +4,35 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock @aesir/types to prevent config validation
-vi.mock("@aesir/types", () => ({
-  DEFAULT_DEV_WORKFLOW_CONFIG: {
-    maxTestAttempts: 5,
-    testCommand: ["npm", "test"],
-    recursionLimit: 50,
-    timeoutMs: 300000,
-  },
-  createPinoLogger: vi.fn(() => ({
-    info: vi.fn(),
-    debug: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    child: vi.fn(function (this: unknown) {
-      return this;
-    }),
-  })),
-  createTraceStore: vi.fn(() => ({
-    append: vi.fn(),
-    getByTaskId: vi.fn().mockReturnValue([]),
-    getByWorkflowId: vi.fn().mockReturnValue([]),
-    clear: vi.fn(),
-    size: vi.fn().mockReturnValue(0),
-  })),
-}));
+// Mock @aesir/types - partial mock to preserve error exports
+vi.mock("@aesir/types", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@aesir/types")>();
+  return {
+    ...actual,
+    DEFAULT_DEV_WORKFLOW_CONFIG: {
+      maxTestAttempts: 5,
+      testCommand: ["npm", "test"],
+      recursionLimit: 50,
+      timeoutMs: 300000,
+    },
+    createPinoLogger: vi.fn(() => ({
+      info: vi.fn(),
+      debug: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      child: vi.fn(function (this: unknown) {
+        return this;
+      }),
+    })),
+    createTraceStore: vi.fn(() => ({
+      append: vi.fn(),
+      getByTaskId: vi.fn().mockReturnValue([]),
+      getByWorkflowId: vi.fn().mockReturnValue([]),
+      clear: vi.fn(),
+      size: vi.fn().mockReturnValue(0),
+    })),
+  };
+});
 
 // Mock the dev-workflow module
 vi.mock("./dev-workflow.js", () => ({

@@ -31,9 +31,13 @@ export interface MockLogger {
   clear: () => void;
 }
 
-export function createMockLogger(options: MockLoggerOptions = {}): MockLogger {
-  const calls: LogCall[] = [];
-
+/**
+ * Internal implementation that accepts a shared calls array
+ */
+function createMockLoggerInternal(
+  options: MockLoggerOptions,
+  sharedCalls: LogCall[],
+): MockLogger {
   function log(level: string, obj: object | string, msg?: string): void {
     const context =
       typeof obj === "object" ? (obj as Record<string, unknown>) : undefined;
@@ -44,7 +48,7 @@ export function createMockLogger(options: MockLoggerOptions = {}): MockLogger {
     if (context !== undefined) {
       logCall.context = context;
     }
-    calls.push(logCall);
+    sharedCalls.push(logCall);
 
     if (options.verbose) {
       // biome-ignore lint/suspicious/noConsole: Intentional for verbose debugging in tests
@@ -63,12 +67,13 @@ export function createMockLogger(options: MockLoggerOptions = {}): MockLogger {
     warn: (obj, msg) => log("warn", obj, msg),
     error: (obj, msg) => log("error", obj, msg),
     fatal: (obj, msg) => log("fatal", obj, msg),
-    child: (_bindings) => createMockLogger(options),
+    // Child loggers share the same calls array with parent
+    child: (_bindings) => createMockLoggerInternal(options, sharedCalls),
 
-    calls,
-    getCallsAt: (level) => calls.filter((c) => c.level === level),
+    calls: sharedCalls,
+    getCallsAt: (level) => sharedCalls.filter((c) => c.level === level),
     hasLoggedAt: (level, pattern) => {
-      const levelCalls = calls.filter((c) => c.level === level);
+      const levelCalls = sharedCalls.filter((c) => c.level === level);
       if (!pattern) return levelCalls.length > 0;
 
       return levelCalls.some((c) =>
@@ -78,9 +83,13 @@ export function createMockLogger(options: MockLoggerOptions = {}): MockLogger {
       );
     },
     clear: () => {
-      calls.length = 0;
+      sharedCalls.length = 0;
     },
   };
 
   return logger;
+}
+
+export function createMockLogger(options: MockLoggerOptions = {}): MockLogger {
+  return createMockLoggerInternal(options, []);
 }

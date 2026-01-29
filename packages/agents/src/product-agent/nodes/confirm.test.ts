@@ -14,17 +14,21 @@ import {
   IssueDraftOutputSchema,
 } from "./confirm.js";
 
-// Mock the logger
-vi.mock("@aesir/types", () => ({
-  createPinoLogger: () => ({
-    child: () => ({
-      debug: vi.fn(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
+// Mock @aesir/types - partial mock to preserve error exports
+vi.mock("@aesir/types", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@aesir/types")>();
+  return {
+    ...actual,
+    createPinoLogger: () => ({
+      child: () => ({
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+      }),
     }),
-  }),
-}));
+  };
+});
 
 /**
  * Create a mock LLM that returns a structured output

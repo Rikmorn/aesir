@@ -8,15 +8,19 @@
 import type { Issue, IssueLabel, LinearClient, Team } from "@linear/sdk";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock @aesir/types to prevent config validation
-vi.mock("@aesir/types", () => ({
-  createPinoLogger: vi.fn(() => ({
-    info: vi.fn(),
-    debug: vi.fn(),
-    error: vi.fn(),
-  })),
-  IssueStatus: {},
-}));
+// Mock @aesir/types - partial mock to preserve error exports
+vi.mock("@aesir/types", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@aesir/types")>();
+  return {
+    ...actual,
+    createPinoLogger: vi.fn(() => ({
+      info: vi.fn(),
+      debug: vi.fn(),
+      error: vi.fn(),
+    })),
+    IssueStatus: {},
+  };
+});
 
 import type { CreateIssueParams } from "./issues.js";
 import { createIssue, listLabels, listTeams } from "./issues.js";

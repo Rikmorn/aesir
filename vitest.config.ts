@@ -8,7 +8,7 @@ export default defineConfig({
     // Projects mode for monorepo - each package has its own vitest.config.ts
     // Note: packages/integrations/{linear,github,slack} are nested packages
     projects: [
-      "packages/common",
+      "packages/types",
       "packages/platform",
       "packages/observability",
       "packages/agents",
@@ -32,7 +32,7 @@ export default defineConfig({
       // Per-package thresholds using glob patterns
       thresholds: {
         // Core packages: higher thresholds (shared, foundational code)
-        "packages/common/**/*.ts": {
+        "packages/types/**/*.ts": {
           lines: 70,
           functions: 70,
           branches: 70,

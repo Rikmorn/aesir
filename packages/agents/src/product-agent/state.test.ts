@@ -146,6 +146,8 @@ describe("ProductAgentStateSchema", () => {
         userId: "U123",
       },
       createdTasks: [],
+      issueDraft: null,
+      awaitingConfirmation: false,
     };
 
     const result = ProductAgentStateSchema.parse(state);

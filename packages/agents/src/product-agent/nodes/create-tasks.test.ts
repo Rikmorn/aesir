@@ -15,18 +15,22 @@ import {
   TaskListSchema,
 } from "./create-tasks.js";
 
-// Mock the logger
-vi.mock("@aesir/types", () => ({
-  createPinoLogger: () => ({
-    child: () => ({
-      debug: vi.fn(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
+// Mock @aesir/platform for logger and correlation ID
+vi.mock("@aesir/platform", async () => {
+  const actual = (await vi.importActual("@aesir/platform")) as object;
+  return {
+    ...actual,
+    createPinoLogger: () => ({
+      child: () => ({
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+      }),
     }),
-  }),
-  generateCorrelationId: () => "test-correlation-id",
-}));
+    generateCorrelationId: () => "test-correlation-id",
+  };
+});
 
 // Mock the MCP client
 vi.mock("../../mcp/index.js", () => ({

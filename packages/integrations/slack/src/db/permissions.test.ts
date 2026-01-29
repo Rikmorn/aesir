@@ -5,6 +5,7 @@
  * Full integration tests with real database deferred to Phase 20.
  */
 
+import { createMockLogger, type MockLogger } from "@aesir/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock @aesir/types to prevent config validation during schema.ts import
@@ -31,16 +32,11 @@ vi.mock("@aesir/types", () => ({
 import { checkSlackToolPermission } from "./permissions.js";
 
 describe("checkSlackToolPermission", () => {
-  const mockLogger = {
-    child: vi.fn().mockReturnThis(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  };
+  let mockLogger: MockLogger;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockLogger = createMockLogger();
   });
 
   it("should return true when permission exists with allowed=true", async () => {
@@ -121,6 +117,6 @@ describe("checkSlackToolPermission", () => {
     );
 
     expect(result).toBe(false);
-    expect(mockLogger.error).toHaveBeenCalled();
+    expect(mockLogger.hasLoggedAt("error")).toBe(true);
   });
 });
