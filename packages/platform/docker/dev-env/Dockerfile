@@ -2,7 +2,7 @@
 # Provides Node.js, pnpm, and code exploration tools
 #
 # Usage:
-#   docker build -t aesir-dev-env:latest -f docker/dev-env/Dockerfile docker/dev-env/
+#   docker build -t aesir-dev-env:latest -f packages/platform/docker/dev-env/Dockerfile packages/platform/docker/dev-env/
 #   docker run -d --name dev-env aesir-dev-env:latest
 
 FROM node:20-slim
