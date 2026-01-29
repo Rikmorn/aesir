@@ -6,14 +6,14 @@
 
 import type { Sandbox, TestResult } from "@aesir/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { DevWorkflowConfig, DevWorkflowStateType } from "./state/index.js";
+import { DEFAULT_DEV_WORKFLOW_CONFIG } from "./state/index.js";
 import {
   type AfterTestRoute,
   createDevWorkflow,
   type DevWorkflowDependencies,
   routeAfterTest,
-} from "./dev-workflow.js";
-import type { DevWorkflowConfig, DevWorkflowStateType } from "./state/index.js";
-import { DEFAULT_DEV_WORKFLOW_CONFIG } from "./state/index.js";
+} from "./workflow.js";
 
 // Mock the logger
 vi.mock("../logging/index.js", () => ({

@@ -1,15 +1,22 @@
 /**
  * Dev Agent Module
  *
- * LangGraph-based workflow for automated development:
- * Linear issue -> Research -> Plan -> Execute -> PR
+ * Two workflow modes:
+ * 1. HITL Workflow (graph.ts): Linear issue -> Research -> Plan -> Execute -> PR
+ *    Human-in-the-loop with Temporal for approval flows
+ * 2. Code Workflow (code-workflow/): Simple LangGraph code generation
+ *    Lightweight: pickup task -> generate code -> run tests -> commit PR
  *
  * Exports:
  * - State types and schemas for workflow data structures
  * - Graph creator for building the LangGraph workflow
  * - Prompts for testing/customization
  * - Node factories for testing and composition
+ * - Code workflow for simple code generation tasks
  */
+
+// Code Workflow - simple LangGraph code generation
+export * from "./code-workflow/index.js";
 
 // Graph - workflow creation and types
 export {

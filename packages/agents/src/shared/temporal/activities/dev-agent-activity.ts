@@ -11,7 +11,7 @@ import {
   type DevWorkflowDependencies,
   type DevWorkflowResult,
   runDevWorkflow,
-} from "../../dev-workflow-runner.js";
+} from "../../../dev-agent/code-workflow/runner.js";
 
 const logger: PinoLogger = createPinoLogger({
   component: "agents:temporal:dev-agent-activity",

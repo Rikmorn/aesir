@@ -27,12 +27,12 @@ vi.mock("@aesir/platform", async () => {
 });
 
 // Mock the MCP client
-vi.mock("../../mcp/index.js", () => ({
+vi.mock("../../shared/mcp/index.js", () => ({
   callMcpTool: vi.fn(),
 }));
 
 // Import the mocked module for assertions
-import { callMcpTool } from "../../mcp/index.js";
+import { callMcpTool } from "../../shared/mcp/index.js";
 
 const mockCallMcpTool = vi.mocked(callMcpTool);
 

@@ -10,7 +10,7 @@
 
 import type { DevContainerCleanup } from "@aesir/platform";
 import { createPinoLogger, type PinoLogger } from "@aesir/platform";
-import { callMcpTool } from "../../mcp/index.js";
+import { callMcpTool } from "../../shared/mcp/index.js";
 import type { DevAgentState } from "../state.js";
 
 const logger: PinoLogger = createPinoLogger({

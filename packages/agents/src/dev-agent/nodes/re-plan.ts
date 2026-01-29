@@ -14,7 +14,7 @@
 
 import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import { ChatAnthropic } from "@langchain/anthropic";
-import { callMcpTool } from "../../mcp/index.js";
+import { callMcpTool } from "../../shared/mcp/index.js";
 import type { DevAgentState, ExecutionPlan } from "../state.js";
 import { ExecutionPlanSchema } from "../state.js";
 

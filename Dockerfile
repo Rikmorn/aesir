@@ -72,5 +72,8 @@ USER aesir
 # tini handles SIGTERM/SIGINT forwarding to Node.js
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
-# Default command - start dev-agent (can be overridden for product-agent)
-CMD ["node", "dist/scripts/start-dev-agent.js"]
+# Default command - start dev-agent HTTP service (can be overridden for product-agent)
+# Other entry points:
+#   - dev-agent worker: node dist/dev-agent/worker.js
+#   - product-agent: node dist/product-agent/main.js
+CMD ["node", "dist/dev-agent/main.js"]

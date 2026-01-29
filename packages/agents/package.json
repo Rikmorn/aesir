@@ -20,8 +20,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "dev-agent": "tsx src/scripts/start-dev-agent.ts",
-    "product-agent": "tsx src/scripts/start-product-agent.ts"
+    "dev-agent": "tsx src/dev-agent/main.ts",
+    "product-agent": "tsx src/product-agent/main.ts"
   },
   "dependencies": {
     "@aesir/types": "workspace:*",

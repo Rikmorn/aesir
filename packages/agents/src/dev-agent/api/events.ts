@@ -18,8 +18,8 @@ import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import { type NormalizedEvent, NormalizedEventSchema } from "@aesir/types";
 import type { ChatAnthropic } from "@langchain/anthropic";
 import type { Client as TemporalClient } from "@temporalio/client";
-import { callMcpTool } from "../../mcp/index.js";
-import type { DevAgentWorkflowInput } from "../../temporal/types.js";
+import { callMcpTool } from "../../shared/mcp/index.js";
+import type { DevAgentWorkflowInput } from "../../shared/temporal/types.js";
 import { classifyApprovalIntent } from "../classification/approval.js";
 import {
   sendApprovalSignal,

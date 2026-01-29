@@ -1,34 +1,12 @@
 /**
  * Agents Module Public API
  *
- * Exports agent definitions and utilities.
+ * Exports agent definitions and utilities for dev-agent and product-agent.
  */
 
-export * from "./config/index.js";
-// Config
-export * from "./config.js";
-// Dev Workflow exports
-export {
-  type AfterTestRoute,
-  createDevWorkflow,
-  type DevWorkflow,
-  type DevWorkflowDependencies,
-  type DevWorkflowOptions,
-  type GitHubConfig,
-  routeAfterTest,
-} from "./dev-workflow.js";
-export {
-  type DevWorkflowResult,
-  runDevWorkflow,
-} from "./dev-workflow-runner.js";
-// MCP exports
-export * from "./mcp/index.js";
-// Product Agent
+// Dev Agent exports
+export * from "./dev-agent/index.js";
+// Product Agent exports
 export * from "./product-agent/index.js";
-// State schemas and types
-export * from "./state/index.js";
-// Tracing exports
-export {
-  createLangGraphTracer,
-  LangGraphTracer,
-} from "./tracing/index.js";
+// Shared infrastructure (MCP, Temporal, Tracing, Config, State)
+export * from "./shared/index.js";

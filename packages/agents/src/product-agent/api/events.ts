@@ -18,7 +18,7 @@ import {
   cancelConversationSignal,
   type ProductAgentWorkflowInput,
   userReplySignal,
-} from "../../temporal/index.js";
+} from "../../shared/temporal/index.js";
 
 const logger: PinoLogger = createPinoLogger({
   component: "agents:product-agent:api:events",

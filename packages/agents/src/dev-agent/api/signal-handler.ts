@@ -17,7 +17,7 @@ import {
   escalationResolvedSignal,
   planApprovalSignal,
   prCompletionSignal,
-} from "../../temporal/signals.js";
+} from "../../shared/temporal/signals.js";
 
 /**
  * Dependencies for signal handler functions

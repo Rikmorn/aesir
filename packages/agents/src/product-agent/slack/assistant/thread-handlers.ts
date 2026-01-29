@@ -17,10 +17,7 @@ import type { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import type { App } from "@slack/bolt";
 import type { AppMentionEvent, GenericMessageEvent } from "@slack/types";
 import type { WebClient } from "@slack/web-api";
-import {
-  type RunProductAgentInput,
-  runProductAgent,
-} from "../../product-agent/runner.js";
+import { type RunProductAgentInput, runProductAgent } from "../../runner.js";
 
 const logger: PinoLogger = createPinoLogger({
   component: "agents:slack:thread-handlers",

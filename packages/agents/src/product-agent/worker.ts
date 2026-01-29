@@ -80,7 +80,7 @@ export async function createProductAgentWorker(
 
     // Workflows are loaded via workflowsPath for bundling
     workflowsPath: new URL(
-      "../temporal/workflows/product-agent-workflow.js",
+      "../shared/temporal/workflows/product-agent-workflow.js",
       import.meta.url,
     ).pathname,
 
@@ -107,10 +107,10 @@ export async function createProductAgentWorker(
 async function loadActivities(): Promise<Record<string, unknown>> {
   // Import activity modules
   const productAgentActivity = await import(
-    "../temporal/activities/product-agent-activity.js"
+    "../shared/temporal/activities/product-agent-activity.js"
   );
   const slackActivities = await import(
-    "../temporal/activities/slack-activities.js"
+    "../shared/temporal/activities/slack-activities.js"
   );
 
   logger.info({}, "Activities loaded");

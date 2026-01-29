@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { runProductAgentActivity } from "./product-agent-activity.js";
 
 // Mock the product-agent graph
-vi.mock("../../product-agent/index.js", () => ({
+vi.mock("../../../product-agent/index.js", () => ({
   createProductAgentGraph: vi.fn(() => ({
     invoke: vi.fn(),
   })),
@@ -49,7 +49,7 @@ describe("runProductAgentActivity", () => {
     vi.clearAllMocks();
 
     // Get mocks from the module
-    const productAgentModule = await import("../../product-agent/index.js");
+    const productAgentModule = await import("../../../product-agent/index.js");
     mockGetCheckpointer = vi.mocked(
       productAgentModule.getProductAgentCheckpointer,
     );

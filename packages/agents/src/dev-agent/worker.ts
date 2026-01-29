@@ -39,7 +39,7 @@ import {
   stopContainerActivity,
   syncApprovalToLinearActivity,
   updateSlackApprovalActivity,
-} from "../temporal/activities/dev-agent-activities.js";
+} from "../shared/temporal/activities/dev-agent-activities.js";
 
 const logger: PinoLogger = createPinoLogger({
   component: "agents:dev-agent:worker",
@@ -173,7 +173,7 @@ export async function createDevAgentWorker(
 
     // Workflows are loaded via workflowsPath for bundling
     workflowsPath: new URL(
-      "../temporal/workflows/dev-agent-workflow.js",
+      "../shared/temporal/workflows/dev-agent-workflow.js",
       import.meta.url,
     ).pathname,
 

@@ -22,7 +22,7 @@ import {
   type DevAgentPhase,
   type DevAgentState,
   type LinearIssueContext,
-} from "../../dev-agent/index.js";
+} from "../../../dev-agent/index.js";
 import { callMcpTool } from "../../mcp/index.js";
 
 const logger: PinoLogger = createPinoLogger({

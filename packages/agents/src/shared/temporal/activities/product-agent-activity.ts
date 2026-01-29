@@ -13,7 +13,7 @@ import {
   getProductAgentCheckpointer,
   type ProductAgentPhase,
   type ProductAgentState,
-} from "../../product-agent/index.js";
+} from "../../../product-agent/index.js";
 
 const logger: PinoLogger = createPinoLogger({
   component: "agents:temporal:product-agent-activity",

@@ -1,3 +1,11 @@
+/**
+ * Dev Agent API Module
+ *
+ * HTTP handlers, webhook processors, and event routing.
+ */
+
+// Legacy event handlers
+export * from "./events/index.js";
 export {
   createDevAgentEventsHandler,
   type DevAgentEventsHandlerDeps,
@@ -14,3 +22,5 @@ export {
   sendApprovalSignal,
   sendCompletionSignal,
 } from "./signal-handler.js";
+// Webhook handlers
+export * from "./webhooks/index.js";

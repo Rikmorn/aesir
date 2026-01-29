@@ -35,23 +35,20 @@ vi.mock("@aesir/types", async (importOriginal) => {
 });
 
 // Mock the dev-workflow module
-vi.mock("./dev-workflow.js", () => ({
+vi.mock("./workflow.js", () => ({
   createDevWorkflow: vi.fn(),
 }));
 
-import {
-  type DevWorkflowDependencies,
-  runDevWorkflow,
-} from "./dev-workflow-runner.js";
+import { type DevWorkflowDependencies, runDevWorkflow } from "./runner.js";
 import { DEFAULT_DEV_WORKFLOW_CONFIG } from "./state/index.js";
 
 // Mock MCP client
-vi.mock("./mcp/index.js", () => ({
+vi.mock("../../shared/mcp/index.js", () => ({
   callMcpTool: vi.fn(),
 }));
 
 // Mock tracing module
-vi.mock("./tracing/index.js", () => ({
+vi.mock("../../shared/tracing/index.js", () => ({
   createLangGraphTracer: vi.fn(() => ({
     name: "LangGraphTracer",
     handleChainStart: vi.fn(),
@@ -64,9 +61,9 @@ vi.mock("./tracing/index.js", () => ({
   })),
 }));
 
-import { createDevWorkflow } from "./dev-workflow.js";
 // Import dependencies after mocks
-import { callMcpTool } from "./mcp/index.js";
+import { callMcpTool } from "../../shared/mcp/index.js";
+import { createDevWorkflow } from "./workflow.js";
 
 const mockCreateDevWorkflow = vi.mocked(createDevWorkflow);
 const mockCallMcpTool = vi.mocked(callMcpTool);

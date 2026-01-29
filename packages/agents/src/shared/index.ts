@@ -1,0 +1,19 @@
+/**
+ * Shared Module
+ *
+ * Common utilities and infrastructure used by all agents.
+ * This includes MCP client, Temporal activities, tracing, and state management.
+ */
+
+// Agent configuration
+export * from "./config/index.js";
+// Environment configuration
+export * from "./env/index.js";
+// MCP client for integration communication
+export * from "./mcp/index.js";
+// Shared state schemas
+export * from "./state/index.js";
+// Temporal workflows and activities
+export * from "./temporal/index.js";
+// Tracing and observability
+export * from "./tracing/index.js";

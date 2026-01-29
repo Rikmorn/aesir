@@ -18,16 +18,13 @@ import {
   type PinoLogger,
   type TraceEntry,
 } from "@aesir/platform";
-import {
-  createDevWorkflow,
-  type DevWorkflowDependencies,
-} from "./dev-workflow.js";
-import { callMcpTool } from "./mcp/index.js";
+import { callMcpTool } from "../../shared/mcp/index.js";
+import { createLangGraphTracer } from "../../shared/tracing/index.js";
 import {
   DEFAULT_DEV_WORKFLOW_CONFIG,
   type DevWorkflowConfig,
 } from "./state/index.js";
-import { createLangGraphTracer } from "./tracing/index.js";
+import { createDevWorkflow, type DevWorkflowDependencies } from "./workflow.js";
 
 const logger: PinoLogger = createPinoLogger({
   component: "agents:dev-workflow",
@@ -186,4 +183,4 @@ export async function runDevWorkflow(
 }
 
 // Re-export types for convenience
-export type { DevWorkflowDependencies } from "./dev-workflow.js";
+export type { DevWorkflowDependencies } from "./workflow.js";
