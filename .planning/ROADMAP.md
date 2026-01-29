@@ -17,7 +17,7 @@ Replace LangGraph state machine architecture with agentic tool-use loops where L
 - Integer phases (28, 29, 30...): Planned milestone work
 - Decimal phases (28.1, 28.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 28: Agentic Loop Runtime** - Core `runAgentLoop()` function with Anthropic SDK native tool-use
+- [x] **Phase 28: Agentic Loop Runtime** - Core `runAgentLoop()` function with Anthropic SDK native tool-use
 - [ ] **Phase 29: Database Schema & Context Management** - Storage layer for context snapshots, task state, and execution traces
 - [ ] **Phase 30: Agent Tool Library** - Codebase tools, MCP wrappers, git tools, spawn_agent, per-agent toolkits
 - [ ] **Phase 31: Dev Agent Orchestrator** - Orchestrator agentic loop with sub-agents (researcher, coder, tester)
@@ -42,7 +42,7 @@ Replace LangGraph state machine architecture with agentic tool-use loops where L
 **Plans**: 2 plans
 Plans:
 - [x] 28-01-PLAN.md -- SDK installation, types, token budget, errors, barrel exports
-- [ ] 28-02-PLAN.md -- Core runAgentLoop() implementation and comprehensive tests
+- [x] 28-02-PLAN.md -- Core runAgentLoop() implementation and comprehensive tests
 
 ### Phase 29: Database Schema & Context Management
 **Goal**: Agents can persist semantic context across Temporal activity boundaries and all tool calls are automatically recorded for observability
@@ -145,7 +145,7 @@ Phases execute in numeric order: 28 -> 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35 ->
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 28. Agentic Loop Runtime | 0/2 | Planned | - |
+| 28. Agentic Loop Runtime | 2/2 | Complete | 2026-01-29 |
 | 29. Database Schema & Context | 0/TBD | Not started | - |
 | 30. Agent Tool Library | 0/TBD | Not started | - |
 | 31. Dev Agent Orchestrator | 0/TBD | Not started | - |

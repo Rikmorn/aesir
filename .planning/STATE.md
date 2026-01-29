@@ -6,16 +6,16 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-**Current focus:** v2.2 Agentic Architecture -- Phase 28: Agentic Loop Runtime
+**Current focus:** v2.2 Agentic Architecture -- Phase 28: Agentic Loop Runtime (COMPLETE)
 
 ## Current Position
 
 Phase: 28 (first of 9 in v2.2) - Agentic Loop Runtime
-Plan: 1 of 2
-Status: In progress
-Last activity: 2026-01-29 -- Completed 28-01-PLAN.md (SDK install, types, budget, errors)
+Plan: 2 of 2
+Status: Phase complete
+Last activity: 2026-01-29 -- Completed 28-02-PLAN.md (core runAgentLoop() implementation and tests)
 
-Progress: █░░░░░░░░░ 5% (1/18 plans)
+Progress: ██░░░░░░░░ 11% (2/18 plans)
 
 ## Milestone History
 
@@ -45,6 +45,9 @@ Phase 28 decisions:
 - Import PinoLogger from @aesir/platform (not directly from pino) -- consistent with codebase pattern
 - Set error name in constructor body (not override readonly) -- TypeScript literal type narrowing constraint
 - SDK resolved to ^0.72.0 (compatible with planned ^0.71.2)
+- Cast betaZodTool result via unknown to Anthropic.Tool -- BetaRunnableTool union type too broad
+- Use ToolDefinition.description directly instead of converted result -- exactOptionalPropertyTypes compat
+- Build trace step as mutable then conditionally set stopReason -- exactOptionalPropertyTypes compat
 
 ### Pending Todos
 
@@ -59,9 +62,9 @@ None blocking v2.2.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed 28-01-PLAN.md
+Stopped at: Completed 28-02-PLAN.md (Phase 28 complete)
 Resume file: None
-Next action: Execute 28-02-PLAN.md (core runAgentLoop() implementation and tests)
+Next action: Execute Phase 29 plans (next phase in v2.2 roadmap)
 
 ---
-*Updated: 2026-01-29 -- Completed 28-01 (SDK install, types, token budget, errors)*
+*Updated: 2026-01-29 -- Completed Phase 28 (Agentic Loop Runtime: SDK, types, budget, errors, runAgentLoop)*
