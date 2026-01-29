@@ -2,22 +2,20 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-01-28)
+See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-**Current focus:** Planning next milestone (v3.0 Production Ready)
+**Current focus:** v2.2 Agentic Architecture — replacing LangGraph state machines with agentic tool-use loops
 
 ## Current Position
 
-Phase: N/A - Between milestones
-Plan: N/A
-Status: Ready to plan next milestone
-Last activity: 2026-01-28 — v2.1 milestone complete
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-01-29 — Milestone v2.2 started
 
-Progress: [██████████] v2.1 shipped
-
-**Note:** v2.1 complete. Next: `/gsd:new-milestone` to define v3.0 requirements and roadmap.
+Progress: ░░░░░░░░░░ 0%
 
 ## Milestone History
 
@@ -26,23 +24,6 @@ Progress: [██████████] v2.1 shipped
 | v1 MVP | 2026-01-19 | 9 | 34 |
 | v2.0 Foundation | 2026-01-25 | 14 | 104 |
 | v2.1 Agents That Ship | 2026-01-28 | 5 | 46 |
-
-## Performance Metrics
-
-**Velocity (v2.1):**
-- Total plans completed: 46
-- Phases: 5 (23-27)
-- Timeline: 4 days
-
-**By Phase:**
-
-| Phase | Plans | Status | Completed |
-|-------|-------|--------|-----------|
-| 23. Event Infrastructure | 5/5 | Complete | 2026-01-25 |
-| 24. Dev Container | 6/6 | Complete | 2026-01-25 |
-| 25. Product Agent Workflow | 9/9 | Complete | 2026-01-26 |
-| 26. Dev Agent Workflow | 13/13 | Complete | 2026-01-27 |
-| 27. Human-in-the-Loop | 13/13 | Complete | 2026-01-28 |
 
 ## Accumulated Context
 
@@ -62,6 +43,13 @@ Key decisions that carry forward:
 - Dual-channel approval: full plan to Linear (permanent record), summary to Slack (real-time buttons)
 - Temporal signals for workflow continuation (planApproval, prFeedback)
 
+v2.2 key decisions:
+- Replace @langchain/* with @anthropic-ai/sdk for native tool-use
+- Agentic tool-use loops replace LangGraph state machine graphs
+- Orchestrator + focused sub-agents pattern for dev agent
+- Smart router (LLM-based) replaces hardcoded event switches
+- Semantic context snapshots replace LangGraph checkpoint persistence
+
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
@@ -79,14 +67,14 @@ Key decisions that carry forward:
 
 ### Blockers/Concerns
 
-None blocking next milestone.
+None blocking v2.2.
 
 ## Session Continuity
 
-Last session: 2026-01-28
-Stopped at: v2.1 milestone archived
+Last session: 2026-01-29
+Stopped at: Milestone v2.2 initialization — defining requirements
 Resume file: None
-Next action: `/gsd:new-milestone` to start v3.0 planning
+Next action: Complete requirements and roadmap definition
 
 ---
-*Updated: 2026-01-28 — v2.1 shipped, ready for v3.0*
+*Updated: 2026-01-29 — v2.2 Agentic Architecture milestone started*

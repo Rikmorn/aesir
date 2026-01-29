@@ -74,7 +74,17 @@ End-to-end automated development workflow where agents handle routine developmen
 
 ### Active
 
-**v3.0 Production Ready:**
+**v2.2 Agentic Architecture:**
+- [ ] Agentic tool-use loop runtime with @anthropic-ai/sdk native tool-use
+- [ ] Agent tool library: codebase tools, MCP wrappers, spawn_agent coordinator
+- [ ] Dev agent orchestrator with sub-agents (researcher, coder, tester)
+- [ ] Product agent as single adaptive agentic loop
+- [ ] Smart router: LLM-based event classification replacing hardcoded switches
+- [ ] Context management: semantic snapshots replacing LangGraph checkpoints
+- [ ] Execution tracing with parent/child agent correlation
+- [ ] Guardrails: iteration limits, cost budgets, escalation with diagnosis
+
+**v3.0 Production Ready (deferred):**
 - [ ] CI/CD pipeline for deployment
 - [ ] Monitoring and alerting
 - [ ] Rate limiting and cost controls
@@ -113,7 +123,7 @@ End-to-end automated development workflow where agents handle routine developmen
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| LangGraph for agent orchestration | StateGraph + checkpointing, good TypeScript support | ✓ Good |
+| LangGraph for agent orchestration | StateGraph + checkpointing, good TypeScript support | ⚠️ Revisit — replacing with agentic tool-use loops in v2.2 |
 | Temporal for durable workflows | Signal-based approval, built-in retry | ✓ Good |
 | Webhooks over polling | Cost/load savings; agents wake on events | ✓ Good |
 | Full containerization | Reproducible environments | ✓ Good |
@@ -135,18 +145,24 @@ Lessons learned during development that guide future phases.
 | Infrastructure phases must include consumer migration | Phase 19 created MCP servers but didn't wire agents to use them. When building infrastructure, include at least one consumer migration to validate end-to-end. |
 | Pure library pattern for shared packages | @aesir/types should never validate env vars at import time. Services own their config and pass dependencies to libraries. |
 
-## Next Milestone: v3.0 Production Ready
+## Current Milestone: v2.2 Agentic Architecture
 
-**Goal:** Deploy Aesir to production with monitoring, security, and operational excellence.
+**Goal:** Replace LangGraph state machine architecture with agentic tool-use loops where LLMs make control flow decisions — agents reason about what to do, use tools to act, observe results, and adapt.
 
 **Target features:**
-- CI/CD pipeline for automated deployment
-- Monitoring and alerting for agent health and performance
-- Rate limiting and cost controls for LLM usage
-- Security sandboxing for code execution
-- Multi-environment configuration (dev/staging/prod)
+- Agentic loop runtime with @anthropic-ai/sdk native tool-use (replacing @langchain/*)
+- Dev agent orchestrator + focused sub-agents (researcher, coder, tester)
+- Product agent as single adaptive agentic loop
+- Smart router: LLM-based event classification
+- Context management via semantic snapshots (replacing LangGraph checkpoints)
+- Execution tracing with full parent/child agent correlation
+- Guardrails: iteration limits, cost budgets, intelligent escalation
 
-**Success bar:** System can run in production with minimal manual intervention and clear operational visibility.
+**Success bar:** End-to-end flow works: Slack message → product agent → Linear issue → dev agent → approved PR, with agents reasoning about their actions instead of following fixed graphs.
+
+**What stays:** Temporal workflows, MCP layer, integration packages, platform, Docker Compose, dev containers, all signals.
+
+**What goes:** @langchain/* dependencies, LangGraph graphs/nodes/state, fixed phase enums, routeByPhase().
 
 ---
-*Last updated: 2026-01-28 after v2.1 milestone completion*
+*Last updated: 2026-01-29 after v2.2 milestone start*
