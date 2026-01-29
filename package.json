@@ -26,7 +26,6 @@
     "docker:dev-agent": "docker compose up -d dev-agent && docker compose logs -f dev-agent",
     "docker:product-agent": "docker compose up -d product-agent && docker compose logs -f product-agent",
     "infra:up": "docker compose up -d postgresql temporal temporal-ui",
-    "infra:down": "docker compose down",
     "infra:logs": "docker compose logs -f postgresql temporal temporal-ui",
     "db:generate": "pnpm --filter @aesir/platform db:generate && pnpm --filter @aesir/observability db:generate && pnpm --filter @aesir/integration-linear db:generate && pnpm --filter @aesir/integration-github db:generate && pnpm --filter @aesir/integration-slack db:generate",
     "db:migrate": "pnpm --filter @aesir/platform db:migrate && pnpm --filter @aesir/observability db:migrate && pnpm --filter @aesir/integration-linear db:migrate && pnpm --filter @aesir/integration-github db:migrate && pnpm --filter @aesir/integration-slack db:migrate",

@@ -14,10 +14,6 @@
       "project": ["src/**/*.ts"],
       "ignore": ["**/*.test.ts"]
     },
-    "packages/integrations": {
-      "project": ["src/**/*.ts"],
-      "ignore": ["**/*.test.ts", "**/testing/**"]
-    },
     "packages/integrations/linear": {
       "entry": ["src/main.ts", "src/index.ts", "scripts/*.ts"],
       "project": ["src/**/*.ts", "scripts/**/*.ts"],

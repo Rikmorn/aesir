@@ -1,6 +1,6 @@
 {
   "name": "@aesir/integration-slack",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
@@ -20,8 +20,6 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "biome check --max-diagnostics=1000 src/",
-    "lint:fix": "biome check --write --max-diagnostics=1000 src/",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",

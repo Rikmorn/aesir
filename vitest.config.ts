@@ -12,7 +12,6 @@ export default defineConfig({
       "packages/platform",
       "packages/observability",
       "packages/agents",
-      "packages/integrations",
       "packages/integrations/linear",
       "packages/integrations/github",
       "packages/integrations/slack",
