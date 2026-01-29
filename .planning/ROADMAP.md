@@ -39,7 +39,10 @@ Replace LangGraph state machine architecture with agentic tool-use loops where L
   3. Tool definitions use Zod schemas converted via `@anthropic-ai/sdk`'s `betaZodTool()` -- no LangChain imports exist in the runtime
   4. Tracing callbacks (`onToolCall`, `onResponse`) fire on every iteration, providing the hook points that Phase 29 will use for automatic trace recording
   5. The loop handles all Anthropic `stop_reason` values without breaking, including unexpected future values
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 28-01-PLAN.md -- SDK installation, types, token budget, errors, barrel exports
+- [ ] 28-02-PLAN.md -- Core runAgentLoop() implementation and comprehensive tests
 
 ### Phase 29: Database Schema & Context Management
 **Goal**: Agents can persist semantic context across Temporal activity boundaries and all tool calls are automatically recorded for observability
@@ -142,7 +145,7 @@ Phases execute in numeric order: 28 -> 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35 ->
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 28. Agentic Loop Runtime | 0/TBD | Not started | - |
+| 28. Agentic Loop Runtime | 0/2 | Planned | - |
 | 29. Database Schema & Context | 0/TBD | Not started | - |
 | 30. Agent Tool Library | 0/TBD | Not started | - |
 | 31. Dev Agent Orchestrator | 0/TBD | Not started | - |
