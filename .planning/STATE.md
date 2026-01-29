@@ -54,7 +54,7 @@ v2.1 decisions archived in milestones/v2.1-ROADMAP.md.
 Key decisions that carry forward:
 - 3-layer architecture (Platform -> Integrations -> Agents) is established pattern
 - MCP for agent-integration communication (HTTP-based, not direct SDK imports)
-- Pure library pattern for @aesir/common (no env validation at import time)
+- Pure library pattern for @aesir/types (no env validation at import time)
 - Infrastructure phases must include consumer migration (E2E verification requirements)
 - Event type uses dotted notation (source.resource.action) for consistent parsing
 - Integration-embedded dispatcher pattern: each integration dispatches its own events

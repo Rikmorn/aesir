@@ -26,7 +26,7 @@ End-to-end automated development workflow where agents handle routine developmen
    ↓ HTTP/MCP
 @aesir/integration-{linear,github,slack} (independent services)
    ↓ imports
-@aesir/platform, @aesir/common (shared infrastructure)
+@aesir/platform, @aesir/types (shared infrastructure)
 ```
 
 **Key Capabilities:**
@@ -133,7 +133,7 @@ Lessons learned during development that guide future phases.
 | Principle | Context |
 |-----------|---------|
 | Infrastructure phases must include consumer migration | Phase 19 created MCP servers but didn't wire agents to use them. When building infrastructure, include at least one consumer migration to validate end-to-end. |
-| Pure library pattern for shared packages | @aesir/common should never validate env vars at import time. Services own their config and pass dependencies to libraries. |
+| Pure library pattern for shared packages | @aesir/types should never validate env vars at import time. Services own their config and pass dependencies to libraries. |
 
 ## Next Milestone: v3.0 Production Ready
 
