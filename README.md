@@ -39,15 +39,20 @@ Edit `.env` with your credentials. At minimum you need:
 | Variable | Where to Get It |
 |----------|-----------------|
 | `ANTHROPIC_API_KEY` | console.anthropic.com > API Keys |
+| `CREDENTIAL_ENCRYPTION_KEY` | Generate with `openssl rand -hex 32` |
+| `SLACK_BOT_TOKEN` | Slack App > OAuth & Permissions |
+| `SLACK_APP_TOKEN` | Slack App > Basic Information > App-Level Tokens |
+| `SLACK_CHANNEL_ID` | Right-click channel > View channel details > ID at bottom |
+| `SLACK_SIGNING_SECRET` | Slack App > Basic Information > Signing Secret |
 | `LINEAR_ACCESS_TOKEN` | Linear > Settings > API > Personal API keys |
 | `LINEAR_TEAM_ID` | Linear > Settings > Teams > Team settings (URL) |
 | `GITHUB_TOKEN` | GitHub > Settings > Developer settings > Personal access tokens |
-| `GITHUB_REPO` | Your repository in `owner/repo` format |
-| `SLACK_BOT_TOKEN` | Slack App > OAuth & Permissions |
-| `SLACK_APP_TOKEN` | Slack App > Basic Information > App-Level Tokens |
-| `CREDENTIAL_ENCRYPTION_KEY` | Generate with `openssl rand -hex 32` |
+| `GITHUB_OWNER` | Your GitHub organization or username |
+| `GITHUB_REPO` | Repository name (not the full URL) |
+| `GITHUB_REPO_URL` | Full git clone URL (e.g., `https://github.com/org/repo.git`) |
+| `DEV_AGENT_SLACK_CHANNEL` | Slack channel ID for dev-agent notifications |
 
-See [Environment Setup](#environment-setup) for full configuration.
+See `.env.example` for the complete list with documentation.
 
 ### 3. Start Infrastructure
 
@@ -237,20 +242,27 @@ packages/
 
 ## Environment Setup
 
-Create `.env` from the example:
+The project uses a single `.env` file for all configuration. Two files exist:
+
+- **`.env.example`** (tracked in git) - Template with all variables, placeholder values, and documentation
+- **`.env`** (gitignored) - Your actual configuration with real credentials
 
 ```bash
 cp .env.example .env
+# Edit .env with your real values
 ```
 
-See `.env.example` for all available variables with documentation. Key sections:
+See `.env.example` for the complete list of variables, organized by section:
 
+- **General**: `NODE_ENV`, `LOG_LEVEL`
 - **Anthropic**: API key for LLM reasoning
-- **Slack**: Bot token, app token, signing secret, OAuth credentials
-- **Linear**: Access token, team ID, webhook secret, OAuth credentials
-- **GitHub**: Token, repository, webhook secret, OAuth credentials
-- **Database**: PostgreSQL connection string, credential encryption key
+- **Database**: PostgreSQL connection, credential encryption key
 - **Temporal**: Server address and namespace
+- **Slack**: Bot token, app token, signing secret, OAuth credentials, connection mode
+- **Linear**: Access token, team ID, webhook secret, OAuth credentials
+- **GitHub**: Token, owner, repo name, clone URL, webhook secret, OAuth credentials
+- **OAuth**: Callback URL for integration OAuth flows
+- **Agent Config**: Dev-agent Slack channel, product-agent allowed channels, event dispatch URL
 - **Observability**: LangSmith tracing (optional)
 - **Cloudflare**: Tunnel token for webhook exposure (optional)
 

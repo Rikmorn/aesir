@@ -358,7 +358,9 @@ pnpm --filter @aesir/integration-slack seed:permissions
 
 ### Environment Configuration
 
-Environment is validated at startup via `src/config/env.ts`. Import it first in entry points:
+**Env files:** Only `.env` (gitignored, real credentials) and `.env.example` (tracked, template). dotenv-flow loads `.env` at startup. No per-environment files (`.env.development`, `.env.test`, etc.).
+
+Each service validates its environment at startup via a Zod schema. Missing or invalid variables cause immediate process exit with clear error messages.
 
 ```typescript
 // Entry point - env must be first
@@ -739,7 +741,7 @@ describe("ComponentName", () => {
 - GitHub OAuth tokens stored in PostgreSQL `github.credentials` table (encrypted)
 - Slack OAuth tokens stored in PostgreSQL `slack.credentials` table (encrypted)
 - Each integration uses its own database schema (`linear.*`, `github.*`, `slack.*`)
-- Run `npm run linear-oauth` or `npm run github-oauth` to authenticate
+- OAuth flows available via integration HTTP endpoints (e.g., `/linear/oauth/authorize`)
 - Slack uses Bolt's built-in OAuth flow with PostgreSQL installationStore
 - Requires `CREDENTIAL_ENCRYPTION_KEY` environment variable (generate with `openssl rand -hex 32`)
 

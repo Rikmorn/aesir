@@ -5,7 +5,7 @@
  * Importing this module triggers validation - env errors exit immediately.
  *
  * Design decisions:
- * - dotenv-flow loads .env files in order: .env.local > .env.{NODE_ENV} > .env
+ * - dotenv-flow loads .env (and .env.local if present)
  * - Zod schema validates all required variables
  * - Validation runs at import time (not lazy)
  * - Process exits with error message if validation fails

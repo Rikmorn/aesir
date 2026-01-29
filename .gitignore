@@ -5,11 +5,10 @@ node_modules/
 dist/
 *.tsbuildinfo
 
-# Environment files
+# Environment files (only .env.example is tracked)
 .env
-.env.local
-.env.*.local
-.env.production
+.env.*
+!.env.example
 
 # IDE
 .idea/
