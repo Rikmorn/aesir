@@ -5,6 +5,8 @@
  * This includes MCP client, Temporal activities, tracing, and state management.
  */
 
+// Agent loop runtime
+export * from "./agent-loop/index.js";
 // Agent configuration
 export * from "./config/index.js";
 // Environment configuration
