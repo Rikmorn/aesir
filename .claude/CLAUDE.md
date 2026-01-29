@@ -22,7 +22,7 @@ Platform (config, logging, state, temporal)
 - Agents communicate with Integrations via HTTP/MCP (no direct imports)
 - Integrations import from Platform only
 - Platform imports nothing from Agents or Integrations
-- Agents import from Platform and Common only
+- Agents import from Platform and Types only
 
 **Integration Extraction:**
 Each integration is extracted to its own package for independent deployment, versioning, and lifecycle management. The extraction pattern enables:
@@ -50,7 +50,7 @@ Each integration is extracted to its own package for independent deployment, ver
 Agents communicate with integrations via MCP HTTP protocol, not direct SDK clients.
 
 **MCP Client:**
-- Located: `packages/agents/src/mcp/`
+- Located: `packages/agents/src/shared/mcp/`
 - Function: `callMcpTool(options)` - makes HTTP POST to /mcp/tools/:name
 - Headers: X-Agent-ID (required), X-Correlation-ID (for tracing)
 - Retry: Exponential backoff on 5xx/429, fail immediately on network errors
@@ -74,7 +74,26 @@ packages/
 ├── agents/              # @aesir/agents - Agent definitions
 │   └── src/
 │       ├── dev-agent/   # Development workflow automation
-│       └── product-agent/ # Product roadmap management
+│       │   ├── api/     # HTTP handlers, webhooks, events
+│       │   ├── code-workflow/  # Simple LangGraph code generation
+│       │   │   ├── nodes/      # Workflow nodes
+│       │   │   └── state/      # Workflow state
+│       │   ├── nodes/   # HITL workflow nodes
+│       │   ├── main.ts  # HTTP server entry
+│       │   └── worker.ts # Temporal worker entry
+│       ├── product-agent/ # Product conversation agent
+│       │   ├── api/     # HTTP handlers
+│       │   ├── nodes/   # LangGraph nodes
+│       │   ├── slack/   # Slack-specific handlers
+│       │   ├── main.ts  # HTTP server entry
+│       │   └── worker.ts # Temporal worker entry
+│       └── shared/      # Common infrastructure
+│           ├── mcp/     # MCP client for integrations
+│           ├── temporal/ # Workflows, activities, signals
+│           ├── tracing/ # LangGraph execution tracing
+│           ├── config/  # Agent configuration
+│           ├── state/   # Shared state schemas
+│           └── env/     # Environment validation
 ├── integrations/
 │   ├── linear/          # @aesir/integration-linear (independent)
 │   │   ├── src/
@@ -130,11 +149,12 @@ packages/
 │   └── src/
 │       ├── db/          # observability.* schema
 │       └── services/    # ExecutionTracker, IdempotencyChecker
-└── common/              # @aesir/common - Shared types
-    └── src/
-        ├── errors/      # Error classes
-        ├── types/       # Domain types
-        └── state/       # LangGraph state definitions
+├── types/               # @aesir/types - Shared type definitions
+│   └── src/
+│       ├── errors/      # Error classes
+│       └── types/       # Domain types, Zod schemas
+└── test-utils/          # @aesir/test-utils - Test utilities
+    └── src/             # Vitest mocks, test factories
 ```
 
 ## Integration Packages
@@ -170,6 +190,41 @@ Each integration:
 - Own database schema namespace (isolated data)
 - HTTP API (webhooks, OAuth, health check)
 - Can be deployed independently via Docker
+
+## Agents Package (`@aesir/agents`)
+
+The agents package follows an agent-centric organization with shared infrastructure.
+
+### Dev Agent
+
+Automates Linear issue resolution through multi-phase workflows:
+- **HITL Workflow** (`graph.ts`): Full Temporal orchestration with approval gates
+  - Receive issue → Research → Plan → Approval → Execute → PR → Review
+- **Code Workflow** (`code-workflow/`): Lightweight LangGraph-only for simple tasks
+  - Pickup task → Create branch → Generate code → Test → Commit PR
+
+**Entry points:**
+- `main.ts` - HTTP server (port 3004) for receiving events
+- `worker.ts` - Temporal worker for workflow execution
+
+### Product Agent
+
+Handles Slack conversations to gather requirements and create Linear issues:
+- Classify intent → Analyze requirements → Clarify → Confirm → Create tasks
+
+**Entry points:**
+- `main.ts` - HTTP server (port 3005) for receiving events
+- `worker.ts` - Temporal worker for workflow execution
+
+### Shared Infrastructure (`shared/`)
+
+Common utilities used by all agents:
+- **mcp/** - MCP client for integration communication (`callMcpTool`)
+- **temporal/** - Workflows, activities, and signals
+- **tracing/** - LangGraph execution tracing
+- **config/** - Agent configuration utilities
+- **state/** - Shared state schemas
+- **env/** - Environment validation
 
 ## Common Commands
 
@@ -227,9 +282,11 @@ pnpm run typecheck    # Type check without emit
 ### Agents
 
 ```bash
-pnpm run dev-agent      # Start dev agent directly
-pnpm run product-agent  # Start product agent directly
+pnpm --filter @aesir/agents dev-agent      # Start dev-agent HTTP server
+pnpm --filter @aesir/agents product-agent  # Start product-agent HTTP server
 ```
+
+Entry points are in `src/{agent}/main.ts`. Workers are started separately via `worker.ts`.
 
 ### Testing
 
@@ -695,7 +752,8 @@ describe("ComponentName", () => {
 - Each extracted integration has its own package scope and dependencies
 - `@aesir/integrations` maintains re-exports for backward compatibility
 - Platform utilities imported via `@aesir/platform`
-- Shared types imported via `@aesir/common`
+- Shared types imported via `@aesir/types` (formerly `@aesir/common`)
+- Test utilities imported via `@aesir/test-utils`
 
 ### Agent Integration Communication
 
@@ -769,3 +827,18 @@ Phases 16-18 establish the pattern for extracting integrations into independent 
 - MCP tool layer for all integrations (complete)
 - Testing infrastructure with testcontainers (complete)
 - Docker Compose local development (complete)
+
+## v2.1 Codebase Cleanup
+
+v2.1 focused on package consolidation and organization improvements.
+
+### Completed Work
+
+- **Package Rename**: `@aesir/common` → `@aesir/types` (clearer purpose)
+- **Logging Consolidation**: Moved logging from common to `@aesir/platform`
+- **Test Utils Extraction**: Created `@aesir/test-utils` for shared test utilities
+- **Agents Restructure**: Agent-centric organization with shared infrastructure
+  - `shared/` - MCP client, Temporal, tracing, config, state
+  - `dev-agent/` - HITL workflow + code-workflow subdirectory
+  - `product-agent/` - Conversation workflow + Slack handlers
+- **Dead Code Removal**: Cleaned up unused exports and legacy code
