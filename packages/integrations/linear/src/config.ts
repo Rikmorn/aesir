@@ -29,7 +29,7 @@ export const linearEnvSchema = z.object({
   LINEAR_CLIENT_ID: z.string().min(1, "LINEAR_CLIENT_ID is required"),
   LINEAR_CLIENT_SECRET: z.string().min(1, "LINEAR_CLIENT_SECRET is required"),
   LINEAR_WEBHOOK_SECRET: z.string().min(1, "LINEAR_WEBHOOK_SECRET is required"),
-  OAUTH_CALLBACK_URL: z.string().url().optional(),
+  LINEAR_OAUTH_CALLBACK_URL: z.string().url().optional(),
 
   // Database - use DB_* names (standard for all services)
   DB_HOST: z.string().default("localhost"),
@@ -79,7 +79,7 @@ export const config = {
     clientId: env.LINEAR_CLIENT_ID,
     clientSecret: env.LINEAR_CLIENT_SECRET,
     webhookSecret: env.LINEAR_WEBHOOK_SECRET,
-    oauthCallbackUrl: env.OAUTH_CALLBACK_URL,
+    oauthCallbackUrl: env.LINEAR_OAUTH_CALLBACK_URL,
   },
   database: {
     host: env.DB_HOST,

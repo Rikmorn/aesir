@@ -162,6 +162,7 @@ services:
       - LINEAR_WEBHOOK_SECRET=${LINEAR_WEBHOOK_SECRET}
       - LINEAR_CLIENT_ID=${LINEAR_CLIENT_ID}
       - LINEAR_CLIENT_SECRET=${LINEAR_CLIENT_SECRET}
+      - LINEAR_OAUTH_CALLBACK_URL=${LINEAR_OAUTH_CALLBACK_URL:-}
       # Server configuration
       - PORT=3001
       - NODE_ENV=${NODE_ENV:-production}
@@ -208,7 +209,7 @@ services:
       - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
-      - OAUTH_CALLBACK_URL=${OAUTH_CALLBACK_URL:-}
+      - GITHUB_OAUTH_CALLBACK_URL=${GITHUB_OAUTH_CALLBACK_URL:-}
       # Event dispatch (Docker network)
       - DEV_AGENT_URL=http://dev-agent:3004/events
       # Server configuration
@@ -262,6 +263,7 @@ services:
       - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
       - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
       - SLACK_MODE=${SLACK_MODE:-socket}
+      - SLACK_OAUTH_CALLBACK_URL=${SLACK_OAUTH_CALLBACK_URL:-}
       # Event dispatch (Docker network)
       - PRODUCT_AGENT_URL=http://product-agent:3005/events
       - DEV_AGENT_URL=http://dev-agent:3004/events

@@ -29,7 +29,7 @@ export const githubEnvSchema = z.object({
   GITHUB_CLIENT_ID: z.string().min(1, "GITHUB_CLIENT_ID is required"),
   GITHUB_CLIENT_SECRET: z.string().min(1, "GITHUB_CLIENT_SECRET is required"),
   GITHUB_WEBHOOK_SECRET: z.string().min(1, "GITHUB_WEBHOOK_SECRET is required"),
-  OAUTH_CALLBACK_URL: z.string().url().optional(),
+  GITHUB_OAUTH_CALLBACK_URL: z.string().url().optional(),
 
   // Database - use DB_* names (standard for all services)
   DB_HOST: z.string().default("localhost"),
@@ -79,7 +79,7 @@ export const config = {
     clientId: env.GITHUB_CLIENT_ID,
     clientSecret: env.GITHUB_CLIENT_SECRET,
     webhookSecret: env.GITHUB_WEBHOOK_SECRET,
-    oauthCallbackUrl: env.OAUTH_CALLBACK_URL,
+    oauthCallbackUrl: env.GITHUB_OAUTH_CALLBACK_URL,
   },
   database: {
     host: env.DB_HOST,

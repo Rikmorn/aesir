@@ -42,7 +42,7 @@ export const slackEnvSchema = z
     SLACK_CLIENT_ID: z.string().min(1, "SLACK_CLIENT_ID is required"),
     SLACK_CLIENT_SECRET: z.string().min(1, "SLACK_CLIENT_SECRET is required"),
     SLACK_STATE_SECRET: z.string().optional(), // For OAuth state validation
-    OAUTH_CALLBACK_URL: z.string().url().optional(),
+    SLACK_OAUTH_CALLBACK_URL: z.string().url().optional(),
 
     // Database - use DB_* names (standard for all services)
     DB_HOST: z.string().default("localhost"),
@@ -107,7 +107,7 @@ export const config = {
     clientId: env.SLACK_CLIENT_ID,
     clientSecret: env.SLACK_CLIENT_SECRET,
     stateSecret: env.SLACK_STATE_SECRET,
-    oauthCallbackUrl: env.OAUTH_CALLBACK_URL,
+    oauthCallbackUrl: env.SLACK_OAUTH_CALLBACK_URL,
   },
   database: {
     host: env.DB_HOST,

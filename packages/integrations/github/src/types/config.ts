@@ -35,7 +35,7 @@ export const githubEnvSchema = z.object({
   GITHUB_CLIENT_ID: z.string().min(1, "GITHUB_CLIENT_ID is required"),
   GITHUB_CLIENT_SECRET: z.string().min(1, "GITHUB_CLIENT_SECRET is required"),
   GITHUB_WEBHOOK_SECRET: z.string().min(1, "GITHUB_WEBHOOK_SECRET is required"),
-  OAUTH_CALLBACK_URL: z.string().url().optional(),
+  GITHUB_OAUTH_CALLBACK_URL: z.string().url().optional(),
 
   // Database
   DB_HOST: z.string().default("localhost"),
@@ -98,7 +98,7 @@ function buildConfig(e: GitHubEnv) {
       clientId: e.GITHUB_CLIENT_ID,
       clientSecret: e.GITHUB_CLIENT_SECRET,
       webhookSecret: e.GITHUB_WEBHOOK_SECRET,
-      oauthCallbackUrl: e.OAUTH_CALLBACK_URL,
+      oauthCallbackUrl: e.GITHUB_OAUTH_CALLBACK_URL,
     },
     database: {
       host: e.DB_HOST,
