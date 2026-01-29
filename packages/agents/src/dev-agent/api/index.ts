@@ -4,8 +4,6 @@
  * HTTP handlers, webhook processors, and event routing.
  */
 
-// Legacy event handlers
-export * from "./events/index.js";
 export {
   createDevAgentEventsHandler,
   type DevAgentEventsHandlerDeps,

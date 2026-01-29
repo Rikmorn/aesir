@@ -1,40 +1,32 @@
 /**
- * Dev Agent Module
+ * Dev Agent HITL Workflow
  *
- * Two workflow modes:
- * 1. HITL Workflow (graph.ts): Linear issue -> Research -> Plan -> Execute -> PR
- *    Human-in-the-loop with Temporal for approval flows
- * 2. Code Workflow (code-workflow/): Simple LangGraph code generation
- *    Lightweight: pickup task -> generate code -> run tests -> commit PR
+ * LangGraph StateGraph for the complete dev-agent workflow with
+ * Temporal-orchestrated human-in-the-loop approval flows.
  *
- * Exports:
- * - State types and schemas for workflow data structures
- * - Graph creator for building the LangGraph workflow
- * - Prompts for testing/customization
- * - Node factories for testing and composition
- * - Code workflow for simple code generation tasks
+ * Flow: receive issue -> research -> plan -> approval -> execute -> verify -> PR
  */
 
-// Code Workflow - simple LangGraph code generation
-export * from "./code-workflow/index.js";
-
-// Graph - workflow creation and types
+// Graph factory and routing
 export {
   createDevAgentGraph,
   type DevAgentGraph,
   type DevAgentGraphOptions,
   type PhaseRoute,
   routeByPhase,
-} from "./workflow/graph.js";
-// Nodes - for testing and custom composition
+} from "./graph.js";
+// Nodes
 export {
+  type CompleteNodeDeps,
   type CreatePRNodeDeps,
+  createCompleteNode,
   createEscalateNode,
   createExecuteNode,
   createHandleFeedbackNode,
   createNotifyNode,
   createPlanNode,
   createPRNode,
+  createRePlanNode,
   createRequestApprovalNode,
   createResearchNode,
   createSetupContainerNode,
@@ -42,14 +34,14 @@ export {
   type ExecuteNodeDeps,
   type HandleFeedbackNodeDeps,
   type PlanNodeDeps,
+  type RePlanNodeDeps,
   type RequestApprovalNodeDeps,
   type ResearchNodeDeps,
   receiveIssueNode,
   type SetupContainerNodeDeps,
   type VerifyNodeDeps,
-} from "./workflow/nodes/index.js";
-
-// Prompts - for testing and customization
+} from "./nodes/index.js";
+// Prompts
 export {
   buildFileWritePrompt,
   buildPlanningPrompt,
@@ -62,8 +54,8 @@ export {
   PR_FEEDBACK_SYSTEM_PROMPT,
   RESEARCH_SYSTEM_PROMPT,
   TEST_FIX_SYSTEM_PROMPT,
-} from "./workflow/prompts.js";
-// State - types, schemas, and utilities
+} from "./prompts.js";
+// State
 export {
   createDevAgentInitialState,
   type DevAgentPhase,
@@ -87,4 +79,4 @@ export {
   RelevantFileSchema,
   type ResearchContext,
   ResearchContextSchema,
-} from "./workflow/state.js";
+} from "./state.js";

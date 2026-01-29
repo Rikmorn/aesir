@@ -14,12 +14,12 @@ import {
   DEV_CONTAINER_TIMEOUTS,
   type PinoLogger,
 } from "@aesir/platform";
-import type { DevAgentState } from "../state.js";
 import {
   detectPackageManager,
   getLintCommand,
   getTestCommand,
-} from "../utils/index.js";
+} from "../../utils/index.js";
+import type { DevAgentState } from "../state.js";
 
 const logger: PinoLogger = createPinoLogger({
   component: "agents:dev-agent:verify",

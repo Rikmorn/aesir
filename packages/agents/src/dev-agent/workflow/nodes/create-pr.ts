@@ -9,7 +9,7 @@
  */
 
 import { createPinoLogger, type PinoLogger } from "@aesir/platform";
-import { callMcpTool } from "../../shared/mcp/index.js";
+import { callMcpTool } from "../../../shared/mcp/index.js";
 import type { DevAgentState, ExecutionPlan } from "../state.js";
 
 const logger: PinoLogger = createPinoLogger({

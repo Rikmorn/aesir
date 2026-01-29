@@ -15,9 +15,9 @@ import {
 } from "@aesir/platform";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
-import { callMcpTool } from "../../shared/mcp/index.js";
+import { callMcpTool } from "../../../shared/mcp/index.js";
+import { detectPackageManager, getTestCommand } from "../../utils/index.js";
 import type { DevAgentState } from "../state.js";
-import { detectPackageManager, getTestCommand } from "../utils/index.js";
 
 const logger: PinoLogger = createPinoLogger({
   component: "agents:dev-agent:handle-feedback",
