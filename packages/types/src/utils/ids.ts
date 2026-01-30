@@ -22,29 +22,38 @@ const nanoid = customAlphabet(
  * const id = createId.execution();  // "exec_def456..."
  */
 export const createId = {
-  /** Credential ID (integrations.credentials) */
-  credential: () => `cred_${nanoid()}`,
-
-  /** Agent execution ID (observability.agent_executions) */
-  execution: () => `exec_${nanoid()}`,
-
-  /** Workspace ID (platform.workspaces) */
-  workspace: () => `ws_${nanoid()}`,
+  /** Agent task ID (agents.tasks) */
+  agentTask: () => `atask_${nanoid()}`,
 
   /** Configuration ID (platform.configurations) */
   configuration: () => `conf_${nanoid()}`,
 
-  /** Webhook delivery ID (integrations.webhook_deliveries) */
-  webhookDelivery: () => `whd_${nanoid()}`,
+  /** Context snapshot ID (agents.context_snapshots) */
+  contextSnapshot: () => `ctx_${nanoid()}`,
 
-  /** Sync cursor ID (integrations.sync_cursors) */
-  syncCursor: () => `sync_${nanoid()}`,
+  /** Credential ID (integrations.credentials) */
+  credential: () => `cred_${nanoid()}`,
+
+  /** Dev container ID (platform.dev_containers) */
+  devContainer: () => `dcont_${nanoid()}`,
 
   /** Event ID (event dispatch) */
   event: () => `evt_${nanoid()}`,
 
-  /** Dev container ID (platform.dev_containers) */
-  devContainer: () => `dcont_${nanoid()}`,
+  /** Agent execution ID (observability.agent_executions) */
+  execution: () => `exec_${nanoid()}`,
+
+  /** Execution trace ID (agents.execution_traces) */
+  executionTrace: () => `trace_${nanoid()}`,
+
+  /** Sync cursor ID (integrations.sync_cursors) */
+  syncCursor: () => `sync_${nanoid()}`,
+
+  /** Webhook delivery ID (integrations.webhook_deliveries) */
+  webhookDelivery: () => `whd_${nanoid()}`,
+
+  /** Workspace ID (platform.workspaces) */
+  workspace: () => `ws_${nanoid()}`,
 } as const;
 
 /** ID prefix types for branded types in Phase 15 */
