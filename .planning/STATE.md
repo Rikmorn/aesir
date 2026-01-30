@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 34 (seventh of 9 in v2.2) - Smart Router
-Plan: 4 of 5
-Status: In progress
-Last activity: 2026-01-30 -- Completed 34-04-PLAN.md (integration wiring)
+Plan: 5 of 5
+Status: Phase complete
+Last activity: 2026-01-30 -- Completed 34-05-PLAN.md (router tests)
 
-Progress: ██████████████████░ 95% (21/22 plans)
+Progress: ████████████████████ 100% (22/22 plans)
 
 ## Milestone History
 
@@ -126,6 +126,8 @@ Phase 34 decisions:
 - ROUTER_URL env var as unified dispatch target (default http://router:3006/events)
 - Router depends only on Temporal (minimal startup deps, no DB or integration health)
 - Pre-commit hook bypassed for pre-existing tsc -b failures (consistent with Phase 34 commits)
+- Optional chaining (?.) over non-null assertions (!) per Biome lint rules in test files
+- Dynamic await import() after vi.mock() for ESM mock compatibility in Vitest
 
 ### Blockers/Concerns
 
@@ -134,9 +136,9 @@ None blocking v2.2.
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 34-04-PLAN.md
+Stopped at: Completed 34-05-PLAN.md (Phase 34 complete)
 Resume file: None
-Next action: Execute 34-05-PLAN.md (router tests)
+Next action: Phase 34 complete -- all 5 plans executed
 
 ---
-*Updated: 2026-01-30 -- Completed 34-04-PLAN.md (integration wiring)*
+*Updated: 2026-01-30 -- Completed 34-05-PLAN.md (router tests -- Phase 34 complete)*
