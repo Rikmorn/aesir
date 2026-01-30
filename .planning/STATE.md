@@ -6,16 +6,16 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-**Current focus:** v2.2 Agentic Architecture -- Phase 30 in progress
+**Current focus:** v2.2 Agentic Architecture -- Phase 30 complete
 
 ## Current Position
 
 Phase: 30 (third of 9 in v2.2) - Agent Tool Library
-Plan: 2 of 3
-Status: In progress
-Last activity: 2026-01-30 -- Completed 30-02-PLAN.md (MCP integration tools)
+Plan: 3 of 3
+Status: Phase complete
+Last activity: 2026-01-30 -- Completed 30-03-PLAN.md (coordination tools & toolkit assembly)
 
-Progress: ██████░░░░ 39% (7/18 plans)
+Progress: ████████░░ 44% (8/18 plans)
 
 ## Milestone History
 
@@ -67,6 +67,10 @@ Phase 30 decisions:
 - Local Zod schemas for MCP tools (no imports from @aesir/integration-*) -- avoids cross-package coupling
 - Namespaced tool display names (linear_, github_, slack_ prefixes) -- prevents LLM confusion between integrations
 - Block Kit parameters omitted from Slack tools -- text-based messaging sufficient for agent communication
+- Recursive runAgentLoop() for sub-agent spawning with shared TokenBudget -- keeps reference intact
+- Sentinel HUMAN_INPUT_MARKER in tool result -- Temporal activity wrapper parses to pause workflow
+- Integration tool filtering by name for orchestrator subset -- avoids duplicating tool configs
+- Placeholder sub-agent system prompts in toolkits.ts -- detailed prompts deferred to Phase 31
 
 ### Pending Todos
 
@@ -81,9 +85,9 @@ None blocking v2.2.
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 30-02-PLAN.md (MCP integration tools)
+Stopped at: Completed 30-03-PLAN.md (coordination tools & toolkit assembly)
 Resume file: None
-Next action: Continue Phase 30 Plan 03 (toolkit assembly)
+Next action: Begin Phase 31 (Dev Agent Orchestrator)
 
 ---
-*Updated: 2026-01-30 -- Completed 30-02 (MCP integration tools -- 19 tool factories with 20 tests)*
+*Updated: 2026-01-30 -- Completed Phase 30 (agent tool library -- 25 tool factories, 4 toolkits, 98 tests)*
