@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 30 (third of 9 in v2.2) - Agent Tool Library
-Plan: 1 of 3
+Plan: 2 of 3
 Status: In progress
-Last activity: 2026-01-30 -- Completed 30-01-PLAN.md (codebase tools)
+Last activity: 2026-01-30 -- Completed 30-02-PLAN.md (MCP integration tools)
 
-Progress: █████░░░░░ 33% (6/18 plans)
+Progress: ██████░░░░ 39% (7/18 plans)
 
 ## Milestone History
 
@@ -64,6 +64,9 @@ Phase 30 decisions:
 - MAX_STDERR_BYTES (50KB) added alongside MAX_OUTPUT_BYTES (100KB) -- run_command truncates stdout/stderr separately
 - Conditional property assignment for isError to respect exactOptionalPropertyTypes
 - Biome enforces type imports before value imports in combined import statements
+- Local Zod schemas for MCP tools (no imports from @aesir/integration-*) -- avoids cross-package coupling
+- Namespaced tool display names (linear_, github_, slack_ prefixes) -- prevents LLM confusion between integrations
+- Block Kit parameters omitted from Slack tools -- text-based messaging sufficient for agent communication
 
 ### Pending Todos
 
@@ -78,9 +81,9 @@ None blocking v2.2.
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 30-01-PLAN.md (codebase tools)
+Stopped at: Completed 30-02-PLAN.md (MCP integration tools)
 Resume file: None
-Next action: Continue Phase 30 Plan 02 (MCP integration tool wrappers)
+Next action: Continue Phase 30 Plan 03 (toolkit assembly)
 
 ---
-*Updated: 2026-01-30 -- Completed 30-01 (codebase tools -- 5 tool factories with 44 tests)*
+*Updated: 2026-01-30 -- Completed 30-02 (MCP integration tools -- 19 tool factories with 20 tests)*
