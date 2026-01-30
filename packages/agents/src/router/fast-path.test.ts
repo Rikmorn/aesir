@@ -198,7 +198,7 @@ describe("matchFastPath", () => {
 
   // === Linear Agent Session ===
 
-  it("matches linear.agent_session.created -> start devAgentWorkflow", () => {
+  it("matches linear.agent_session.created -> start orchestratorWorkflow", () => {
     const event = createTestEvent({
       source: "linear",
       type: "linear.agent_session.created",
@@ -209,8 +209,8 @@ describe("matchFastPath", () => {
     expect(action).not.toBeNull();
     expect(action?.type).toBe("start");
     if (action?.type === "start") {
-      expect(action.workflowName).toBe("devAgentWorkflow");
-      expect(action.taskQueue).toBe("dev-agent");
+      expect(action.workflowName).toBe("orchestratorWorkflow");
+      expect(action.taskQueue).toBe("dev-agent-v2");
       expect(action.workflowId).toBe("dev-agent-issue-uuid-abc");
       expect(action.needsEnrichment).toBe(true);
       expect(action.enrichmentContext).toEqual({ issueId: "issue-uuid-abc" });
@@ -471,8 +471,8 @@ describe("executeFastPath", () => {
     const result = await executeFastPath(
       {
         type: "start",
-        workflowName: "devAgentWorkflow",
-        taskQueue: "dev-agent",
+        workflowName: "orchestratorWorkflow",
+        taskQueue: "dev-agent-v2",
         workflowId: "dev-agent-NEW-1",
         args: [],
       },
@@ -480,14 +480,14 @@ describe("executeFastPath", () => {
     );
 
     expect(result.status).toBe("routed");
-    expect(result.action).toBe("start:devAgentWorkflow");
+    expect(result.action).toBe("start:orchestratorWorkflow");
     expect(result.workflowId).toBe("dev-agent-NEW-1");
 
     const client = deps.workflowClient as unknown as {
       workflow: { start: ReturnType<typeof vi.fn> };
     };
-    expect(client.workflow.start).toHaveBeenCalledWith("devAgentWorkflow", {
-      taskQueue: "dev-agent",
+    expect(client.workflow.start).toHaveBeenCalledWith("orchestratorWorkflow", {
+      taskQueue: "dev-agent-v2",
       workflowId: "dev-agent-NEW-1",
       args: [],
     });
@@ -506,8 +506,8 @@ describe("executeFastPath", () => {
     const result = await executeFastPath(
       {
         type: "start",
-        workflowName: "devAgentWorkflow",
-        taskQueue: "dev-agent",
+        workflowName: "orchestratorWorkflow",
+        taskQueue: "dev-agent-v2",
         workflowId: "dev-agent-DUP-1",
         args: [],
       },
@@ -530,8 +530,8 @@ describe("executeFastPath", () => {
     const result = await executeFastPath(
       {
         type: "start",
-        workflowName: "devAgentWorkflow",
-        taskQueue: "dev-agent",
+        workflowName: "orchestratorWorkflow",
+        taskQueue: "dev-agent-v2",
         workflowId: "dev-agent-FAIL-1",
         args: [],
       },
@@ -550,8 +550,8 @@ describe("executeFastPath", () => {
     const result = await executeFastPath(
       {
         type: "start",
-        workflowName: "devAgentWorkflow",
-        taskQueue: "dev-agent",
+        workflowName: "orchestratorWorkflow",
+        taskQueue: "dev-agent-v2",
         workflowId: "dev-agent-ENRICH-1",
         args: [],
         needsEnrichment: true,
