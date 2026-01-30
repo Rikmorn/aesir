@@ -1,93 +1,33 @@
 /**
  * Product Agent Module
  *
- * Provides the Product Agent conversation graph for gathering requirements
- * through natural dialogue and creating Linear issues.
+ * Provides the Product Agent for gathering requirements through
+ * natural Slack dialogue and creating Linear issues.
+ *
+ * The agent uses an agentic tool-use loop driven by a static system
+ * prompt, replacing the previous LangGraph state machine graph.
+ * It communicates with the user directly via Slack tools and creates
+ * Linear issues via MCP tool calls.
  *
  * @example
  * ```typescript
- * import {
- *   createProductAgentGraph,
- *   ProductAgentStateAnnotation,
- *   createProductAgentInitialState,
- * } from './agents/product-agent';
+ * import { runProductAgent, PRODUCT_AGENT_SYSTEM_PROMPT } from './agents/product-agent';
  *
- * // Create the conversation graph
- * const graph = createProductAgentGraph({
- *   linearClient,
- *   teamId: "team-123",
- * });
- *
- * // Create initial state for a new conversation
- * const state = createProductAgentInitialState({
+ * const result = await runProductAgent({
+ *   threadTs: "1234567890.123456",
  *   channelId: "C12345678",
- *   threadTs: null,
- *   userId: "U12345678",
+ *   message: "I need a dark mode feature",
+ *   linearTeamId: "team-123",
+ *   agentId: "product-agent",
+ *   correlationId: "product-1234567890.123456",
+ *   db,
+ *   logger,
  * });
- *
- * // Invoke the graph
- * const result = await graph.invoke(state);
  * ```
  */
 
-// PostgreSQL checkpointer for conversation persistence
 export {
-  closeProductAgentCheckpointer,
-  createProductAgentCheckpointer,
-  getProductAgentCheckpointer,
-  resetCheckpointerForTesting,
-} from "./workflow/checkpointer.js";
-// Graph factory and routing
-export {
-  type AfterAnalysisRoute,
-  createProductAgentGraph,
-  type ProductAgentGraph,
-  type ProductAgentGraphOptions,
-  routeAfterAnalysis,
-} from "./workflow/graph.js";
-// Conversation nodes
-export {
-  type AnalyzeRequirementsNodeOptions,
-  analyzeRequirementsNode,
-  type CreateTasksNodeOptions,
-  createTasksNode,
-  type GenerateClarificationNodeOptions,
-  type GeneratedTask,
-  generateClarificationNode,
-  type RequirementAnalysis,
-  RequirementAnalysisSchema,
-  type TaskList,
-  TaskListSchema,
-} from "./workflow/nodes/index.js";
-// Prompts
-export {
-  ANALYZE_REQUIREMENTS_PROMPT,
-  CREATE_TASKS_PROMPT,
-  GENERATE_CLARIFICATION_PROMPT,
-} from "./workflow/prompts.js";
-// Runner for Slack integration
-export {
-  type RunProductAgentInput,
-  type RunProductAgentOptions,
-  type RunProductAgentOutput,
+  PRODUCT_AGENT_SYSTEM_PROMPT,
+  type ProductAgentOptions,
   runProductAgent,
-} from "./workflow/runner.js";
-// State schema and types
-// Zod schemas for validation
-export {
-  type CreatedTask,
-  CreatedTaskSchema,
-  createProductAgentInitialState,
-  DEFAULT_REQUIREMENTS,
-  hasMinimumRequirements,
-  type ProductAgentPhase,
-  ProductAgentPhaseSchema,
-  type ProductAgentState,
-  ProductAgentStateAnnotation,
-  ProductAgentStateSchema,
-  type ProductAgentStateUpdate,
-  type Requirements,
-  RequirementsSchema,
-  type SlackContext,
-  SlackContextSchema,
-} from "./workflow/state.js";
+} from "./orchestrator/index.js";
