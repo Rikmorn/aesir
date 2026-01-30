@@ -1,10 +1,18 @@
 /**
  * Product Agent Conversation Workflow Tests
  *
- * Unit tests for workflow signal handling, phase transitions, and timeout logic.
+ * Tests for the product agent workflow covering:
+ * - Conversation history accumulation across turns
+ * - Agent self-messaging (sendSlackReplyActivity NOT called after agent turns)
+ * - Phase-based flow control (complete, declined, awaiting_reply, cancelled)
+ * - Timeout handling (24h reminder, 72h total)
+ * - Signal handling (userReply, cancelConversation)
+ * - Query handler (conversationStatus)
+ * - allHandlersFinished protocol
  *
- * Note: Full workflow execution testing requires Temporal test server.
- * These tests validate the workflow logic at the unit level.
+ * Uses the state machine simulation pattern from orchestrator-workflow.test.ts:
+ * mock @temporalio/workflow, capture signal handlers, simulate state transitions.
+ * Full TestWorkflowEnvironment deferred to integration tests.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -14,9 +22,10 @@ import type {
   ProductAgentWorkflowResult,
 } from "../types.js";
 
-// Mock @temporalio/workflow module
-// In real workflow tests, you'd use TestWorkflowEnvironment
-const mockSetHandler = vi.fn();
+// ---------------------------------------------------------------------------
+// Mock @temporalio/workflow
+// ---------------------------------------------------------------------------
+
 const mockCondition = vi.fn();
 const mockLog = {
   info: vi.fn(),
@@ -25,14 +34,36 @@ const mockLog = {
 };
 const mockAllHandlersFinished = vi.fn();
 
+/** Captured signal/query handlers for testing */
+const capturedHandlers = new Map<string, (...args: unknown[]) => unknown>();
+
+/** Track activity calls for behavioral assertions */
+const activityCalls: Array<{
+  name: string;
+  args: unknown[];
+}> = [];
+
+const mockRunProductAgentActivity = vi.fn();
+const mockSendSlackReplyActivity = vi.fn();
+
 vi.mock("@temporalio/workflow", () => ({
   proxyActivities: vi.fn(() => ({
-    runProductAgentActivity: vi.fn(),
-    sendSlackReplyActivity: vi.fn(),
+    runProductAgentActivity: (...args: unknown[]) => {
+      activityCalls.push({ name: "runProductAgentActivity", args });
+      return mockRunProductAgentActivity(...args);
+    },
+    sendSlackReplyActivity: (...args: unknown[]) => {
+      activityCalls.push({ name: "sendSlackReplyActivity", args });
+      return mockSendSlackReplyActivity(...args);
+    },
   })),
-  defineQuery: vi.fn(() => "mockQuery"),
+  defineQuery: vi.fn((name: string) => `mockQuery_${name}`),
   defineSignal: vi.fn((name: string) => `mockSignal_${name}`),
-  setHandler: mockSetHandler,
+  setHandler: vi.fn(
+    (signal: string, handler: (...args: unknown[]) => unknown) => {
+      capturedHandlers.set(signal, handler);
+    },
+  ),
   condition: mockCondition,
   log: mockLog,
   allHandlersFinished: mockAllHandlersFinished,
@@ -40,11 +71,640 @@ vi.mock("@temporalio/workflow", () => ({
 
 // Mock signals
 vi.mock("../signals.js", () => ({
-  userReplySignal: "mockUserReplySignal",
-  cancelConversationSignal: "mockCancelConversationSignal",
+  userReplySignal: "mockSignal_userReply",
+  cancelConversationSignal: "mockSignal_cancelConversation",
 }));
 
-describe("Product Agent Workflow Types", () => {
+// Import workflow after mocks
+const { productAgentConversationWorkflow } = await import(
+  "./product-agent-workflow.js"
+);
+
+// ---------------------------------------------------------------------------
+// Test Fixtures
+// ---------------------------------------------------------------------------
+
+const defaultInput: ProductAgentWorkflowInput = {
+  threadTs: "1234567890.123456",
+  channelId: "C0123456789",
+  initialMessage: "I need a dark mode feature",
+  userId: "U0123456789",
+  slackTeamId: "T0123456789",
+  linearTeamId: "team-123",
+};
+
+// ---------------------------------------------------------------------------
+// Setup
+// ---------------------------------------------------------------------------
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  capturedHandlers.clear();
+  activityCalls.length = 0;
+  mockSendSlackReplyActivity.mockResolvedValue({ success: true, ts: "ts_123" });
+  // Default: mockCondition resolves to true (no timeout) for allHandlersFinished
+  mockCondition.mockResolvedValue(true);
+});
+
+// ---------------------------------------------------------------------------
+// Tests: Conversation History Accumulation
+// ---------------------------------------------------------------------------
+
+describe("Conversation history accumulation", () => {
+  it("accumulates user messages and agent responses across turns", async () => {
+    let turnCount = 0;
+
+    // First turn: agent asks clarification
+    // Second turn: agent completes
+    mockRunProductAgentActivity.mockImplementation((input: unknown) => {
+      turnCount++;
+      const typedInput = input as { conversationHistory: unknown[] };
+
+      if (turnCount === 1) {
+        // First turn: no history yet (only initial message)
+        expect(typedInput.conversationHistory).toHaveLength(1);
+        return Promise.resolve({
+          response: "What kind of dark mode? <phase>clarifying</phase>",
+          phase: "awaiting_reply",
+        });
+      }
+      // Second turn: initial + response + new user message
+      expect(typedInput.conversationHistory).toHaveLength(3);
+      return Promise.resolve({
+        response: "Issue created. <phase>complete</phase>",
+        phase: "complete",
+        issueId: "uuid-123",
+        issueIdentifier: "ABC-42",
+      });
+    });
+
+    // Simulate condition: first call waits for reply (returns true = signal received),
+    // allHandlersFinished calls return true
+    mockCondition.mockImplementation(
+      (predicateOrFinished: unknown, _timeout?: unknown) => {
+        // When it's allHandlersFinished, just resolve
+        if (predicateOrFinished === mockAllHandlersFinished) {
+          return Promise.resolve(true);
+        }
+        // First condition: user reply signal (simulate user replying)
+        const handler = capturedHandlers.get("mockSignal_userReply");
+        if (handler) {
+          handler("Make it system-wide");
+        }
+        return Promise.resolve(true);
+      },
+    );
+
+    const result = await productAgentConversationWorkflow(defaultInput);
+
+    expect(result.phase).toBe("complete");
+    expect(turnCount).toBe(2);
+  });
+
+  it("passes full conversation history to activity on each turn", async () => {
+    const receivedHistories: unknown[] = [];
+
+    mockRunProductAgentActivity.mockImplementation((input: unknown) => {
+      const typedInput = input as {
+        conversationHistory: Array<{ role: string; content: string }>;
+      };
+      receivedHistories.push([...typedInput.conversationHistory]);
+
+      if (receivedHistories.length === 1) {
+        return Promise.resolve({
+          response: "Can you clarify? <phase>clarifying</phase>",
+          phase: "awaiting_reply",
+        });
+      }
+      return Promise.resolve({
+        response: "Done. <phase>complete</phase>",
+        phase: "complete",
+        issueId: "uuid-abc",
+        issueIdentifier: "XYZ-99",
+      });
+    });
+
+    mockCondition.mockImplementation(
+      (predicateOrFinished: unknown, _timeout?: unknown) => {
+        if (predicateOrFinished === mockAllHandlersFinished) {
+          return Promise.resolve(true);
+        }
+        // Simulate user reply signal
+        const handler = capturedHandlers.get("mockSignal_userReply");
+        if (handler) {
+          handler("Yes, I want it system-wide");
+        }
+        return Promise.resolve(true);
+      },
+    );
+
+    await productAgentConversationWorkflow(defaultInput);
+
+    // First turn: history has 1 entry (initial user message)
+    const firstHistory = receivedHistories[0] as Array<{
+      role: string;
+      content: string;
+    }>;
+    expect(firstHistory).toHaveLength(1);
+    expect(firstHistory[0]).toEqual({
+      role: "user",
+      content: "I need a dark mode feature",
+    });
+
+    // Second turn: history has 3 entries (user + assistant + new user)
+    const secondHistory = receivedHistories[1] as Array<{
+      role: string;
+      content: string;
+    }>;
+    expect(secondHistory).toHaveLength(3);
+    expect(secondHistory[0]).toEqual({
+      role: "user",
+      content: "I need a dark mode feature",
+    });
+    expect(secondHistory[1]).toEqual({
+      role: "assistant",
+      content: "Can you clarify? <phase>clarifying</phase>",
+    });
+    expect(secondHistory[2]).toEqual({
+      role: "user",
+      content: "Yes, I want it system-wide",
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: Agent Self-Messaging (Critical Behavioral Change)
+// ---------------------------------------------------------------------------
+
+describe("Agent handles its own messages", () => {
+  it("does NOT call sendSlackReplyActivity after agent activity returns", async () => {
+    mockRunProductAgentActivity.mockResolvedValue({
+      response: "I asked the user a question. <phase>clarifying</phase>",
+      phase: "awaiting_reply",
+    });
+
+    // Simulate user replying, then agent completes
+    let callNum = 0;
+    mockRunProductAgentActivity.mockImplementation(() => {
+      callNum++;
+      if (callNum === 1) {
+        return Promise.resolve({
+          response: "Asked question. <phase>clarifying</phase>",
+          phase: "awaiting_reply",
+        });
+      }
+      return Promise.resolve({
+        response: "Done. <phase>complete</phase>",
+        phase: "complete",
+        issueId: "uuid-1",
+        issueIdentifier: "ABC-1",
+      });
+    });
+
+    mockCondition.mockImplementation(
+      (predicateOrFinished: unknown, _timeout?: unknown) => {
+        if (predicateOrFinished === mockAllHandlersFinished) {
+          return Promise.resolve(true);
+        }
+        const handler = capturedHandlers.get("mockSignal_userReply");
+        if (handler) {
+          handler("Continue please");
+        }
+        return Promise.resolve(true);
+      },
+    );
+
+    await productAgentConversationWorkflow(defaultInput);
+
+    // sendSlackReplyActivity should NOT have been called after agent turns
+    const slackCalls = activityCalls.filter(
+      (c) => c.name === "sendSlackReplyActivity",
+    );
+    expect(slackCalls).toHaveLength(0);
+  });
+
+  it("agent response field is internal reasoning, not sent to Slack", async () => {
+    mockRunProductAgentActivity.mockResolvedValue({
+      response:
+        "Internal: The user wants dark mode. I should ask about scope. <phase>clarifying</phase>",
+      phase: "complete",
+      issueId: "uuid-test",
+      issueIdentifier: "TST-1",
+    });
+
+    mockCondition.mockResolvedValue(true);
+
+    const result = await productAgentConversationWorkflow(defaultInput);
+
+    // The workflow returns the response but does NOT send it to Slack
+    expect(result.phase).toBe("complete");
+
+    // No Slack reply calls
+    const slackCalls = activityCalls.filter(
+      (c) => c.name === "sendSlackReplyActivity",
+    );
+    expect(slackCalls).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: Phase-based Flow Control
+// ---------------------------------------------------------------------------
+
+describe("Phase-based flow control", () => {
+  it("completes workflow when activity returns phase 'complete' with issue info", async () => {
+    mockRunProductAgentActivity.mockResolvedValue({
+      response: "Created the issue. <phase>complete</phase>",
+      phase: "complete",
+      issueId: "issue-uuid",
+      issueIdentifier: "PROJ-42",
+    });
+
+    mockCondition.mockResolvedValue(true);
+
+    const result = await productAgentConversationWorkflow(defaultInput);
+
+    expect(result.success).toBe(true);
+    expect(result.phase).toBe("complete");
+    expect(result.issueId).toBe("issue-uuid");
+    expect(result.issueIdentifier).toBe("PROJ-42");
+  });
+
+  it("returns declined when activity returns phase 'declined'", async () => {
+    mockRunProductAgentActivity.mockResolvedValue({
+      response: "Not a feature request. <phase>declined</phase>",
+      phase: "declined",
+    });
+
+    mockCondition.mockResolvedValue(true);
+
+    const result = await productAgentConversationWorkflow(defaultInput);
+
+    expect(result.success).toBe(true); // Declined is successful outcome
+    expect(result.phase).toBe("declined");
+    expect(result.issueId).toBeUndefined();
+  });
+
+  it("waits for user reply when activity returns phase 'awaiting_reply'", async () => {
+    let turnCount = 0;
+    mockRunProductAgentActivity.mockImplementation(() => {
+      turnCount++;
+      if (turnCount === 1) {
+        return Promise.resolve({
+          response: "What do you mean? <phase>clarifying</phase>",
+          phase: "awaiting_reply",
+        });
+      }
+      return Promise.resolve({
+        response: "Done. <phase>complete</phase>",
+        phase: "complete",
+        issueId: "id-1",
+        issueIdentifier: "X-1",
+      });
+    });
+
+    mockCondition.mockImplementation(
+      (predicateOrFinished: unknown, _timeout?: unknown) => {
+        if (predicateOrFinished === mockAllHandlersFinished) {
+          return Promise.resolve(true);
+        }
+        const handler = capturedHandlers.get("mockSignal_userReply");
+        if (handler) {
+          handler("I mean system preferences");
+        }
+        return Promise.resolve(true);
+      },
+    );
+
+    const result = await productAgentConversationWorkflow(defaultInput);
+
+    // Workflow waited for reply then completed
+    expect(turnCount).toBe(2);
+    expect(result.phase).toBe("complete");
+  });
+
+  it("handles cancelled phase from activity", async () => {
+    // Simulate cancel signal before first iteration
+    mockRunProductAgentActivity.mockResolvedValue({
+      response: "Acknowledged. <phase>cancelled</phase>",
+      phase: "awaiting_reply",
+    });
+
+    // Cancel requested at the start of iteration
+    mockCondition.mockImplementation(
+      (predicateOrFinished: unknown, _timeout?: unknown) => {
+        if (predicateOrFinished === mockAllHandlersFinished) {
+          return Promise.resolve(true);
+        }
+        return Promise.resolve(true);
+      },
+    );
+
+    // Set cancel flag via signal handler before workflow runs
+    // The workflow checks cancelRequested at the start of each iteration
+    // We need to trigger it via the signal handler
+
+    // Mock condition to trigger cancel on second wait
+    mockCondition.mockImplementation(
+      (predicateOrFinished: unknown, _timeout?: unknown) => {
+        if (predicateOrFinished === mockAllHandlersFinished) {
+          return Promise.resolve(true);
+        }
+        // After first agent turn, simulate cancel signal
+        const cancelHandler = capturedHandlers.get(
+          "mockSignal_cancelConversation",
+        );
+        if (cancelHandler) {
+          cancelHandler();
+        }
+        return Promise.resolve(true);
+      },
+    );
+
+    // First turn returns awaiting_reply, then loop checks cancelRequested
+    mockRunProductAgentActivity.mockImplementation(() => {
+      return Promise.resolve({
+        response: "What scope? <phase>clarifying</phase>",
+        phase: "awaiting_reply",
+      });
+    });
+
+    const result = await productAgentConversationWorkflow(defaultInput);
+
+    expect(result.phase).toBe("cancelled");
+    expect(result.success).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: Timeout Handling
+// ---------------------------------------------------------------------------
+
+describe("Timeout handling", () => {
+  it("sends reminder after 24h of inactivity", async () => {
+    mockRunProductAgentActivity.mockResolvedValue({
+      response: "What do you need? <phase>clarifying</phase>",
+      phase: "awaiting_reply",
+    });
+
+    let conditionCalls = 0;
+    mockCondition.mockImplementation(
+      (predicateOrFinished: unknown, _timeout?: unknown) => {
+        if (predicateOrFinished === mockAllHandlersFinished) {
+          return Promise.resolve(true);
+        }
+        conditionCalls++;
+        // First wait (24h): no reply (timeout)
+        if (conditionCalls === 1) {
+          return Promise.resolve(false);
+        }
+        // Second wait (48h): also no reply (total timeout)
+        return Promise.resolve(false);
+      },
+    );
+
+    const result = await productAgentConversationWorkflow(defaultInput);
+
+    // Should have sent reminder via sendSlackReplyActivity
+    const slackCalls = activityCalls.filter(
+      (c) => c.name === "sendSlackReplyActivity",
+    );
+    // One call for reminder, one for timeout
+    expect(slackCalls.length).toBeGreaterThanOrEqual(1);
+    // Check the reminder message
+    const reminderCall = slackCalls.find((c) => {
+      const text = c.args[2] as string;
+      return text.includes("checking in");
+    });
+    expect(reminderCall).toBeDefined();
+
+    expect(result.phase).toBe("timeout");
+    expect(result.success).toBe(false);
+  });
+
+  it("times out after 72h total", async () => {
+    mockRunProductAgentActivity.mockResolvedValue({
+      response: "Can you clarify? <phase>clarifying</phase>",
+      phase: "awaiting_reply",
+    });
+
+    let conditionCalls = 0;
+    mockCondition.mockImplementation(
+      (predicateOrFinished: unknown, _timeout?: unknown) => {
+        conditionCalls++;
+        if (predicateOrFinished === mockAllHandlersFinished) {
+          return Promise.resolve(true);
+        }
+        // Both waits time out (24h + 48h = 72h total)
+        return Promise.resolve(false);
+      },
+    );
+
+    const result = await productAgentConversationWorkflow(defaultInput);
+
+    expect(result.success).toBe(false);
+    expect(result.phase).toBe("timeout");
+
+    // Should have sent timeout notification
+    const slackCalls = activityCalls.filter(
+      (c) => c.name === "sendSlackReplyActivity",
+    );
+    const timeoutCall = slackCalls.find((c) => {
+      const text = c.args[2] as string;
+      return text.includes("timed out");
+    });
+    expect(timeoutCall).toBeDefined();
+  });
+
+  it("handles max iterations", async () => {
+    // Agent always returns awaiting_reply, user always replies
+    mockRunProductAgentActivity.mockResolvedValue({
+      response: "Tell me more. <phase>clarifying</phase>",
+      phase: "awaiting_reply",
+    });
+
+    mockCondition.mockImplementation(
+      (predicateOrFinished: unknown, _timeout?: unknown) => {
+        if (predicateOrFinished === mockAllHandlersFinished) {
+          return Promise.resolve(true);
+        }
+        // Always simulate a user reply
+        const handler = capturedHandlers.get("mockSignal_userReply");
+        if (handler) {
+          handler("More info");
+        }
+        return Promise.resolve(true);
+      },
+    );
+
+    const result = await productAgentConversationWorkflow(defaultInput);
+
+    // After 20 iterations, workflow should timeout
+    expect(result.success).toBe(false);
+    expect(result.phase).toBe("timeout");
+
+    // Should have sent max iterations notification
+    const slackCalls = activityCalls.filter(
+      (c) => c.name === "sendSlackReplyActivity",
+    );
+    const maxIterCall = slackCalls.find((c) => {
+      const text = c.args[2] as string;
+      return text.includes("maximum length");
+    });
+    expect(maxIterCall).toBeDefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: Signal Handling
+// ---------------------------------------------------------------------------
+
+describe("Signal handling", () => {
+  it("processes userReplySignal to continue conversation", async () => {
+    let turnCount = 0;
+    mockRunProductAgentActivity.mockImplementation(() => {
+      turnCount++;
+      if (turnCount === 1) {
+        return Promise.resolve({
+          response: "What scope? <phase>clarifying</phase>",
+          phase: "awaiting_reply",
+        });
+      }
+      return Promise.resolve({
+        response: "Created. <phase>complete</phase>",
+        phase: "complete",
+        issueId: "uuid-signal",
+        issueIdentifier: "SIG-1",
+      });
+    });
+
+    mockCondition.mockImplementation(
+      (predicateOrFinished: unknown, _timeout?: unknown) => {
+        if (predicateOrFinished === mockAllHandlersFinished) {
+          return Promise.resolve(true);
+        }
+        // Simulate user reply via signal handler
+        const handler = capturedHandlers.get("mockSignal_userReply");
+        if (handler) {
+          handler("System-wide dark mode");
+        }
+        return Promise.resolve(true);
+      },
+    );
+
+    const result = await productAgentConversationWorkflow(defaultInput);
+
+    expect(turnCount).toBe(2);
+    expect(result.phase).toBe("complete");
+    expect(result.issueIdentifier).toBe("SIG-1");
+  });
+
+  it("processes cancelConversationSignal", async () => {
+    // Cancel before any agent turn
+    mockRunProductAgentActivity.mockResolvedValue({
+      response: "<phase>clarifying</phase>",
+      phase: "awaiting_reply",
+    });
+
+    mockCondition.mockImplementation(
+      (predicateOrFinished: unknown, _timeout?: unknown) => {
+        if (predicateOrFinished === mockAllHandlersFinished) {
+          return Promise.resolve(true);
+        }
+        // Trigger cancel signal
+        const cancelHandler = capturedHandlers.get(
+          "mockSignal_cancelConversation",
+        );
+        if (cancelHandler) {
+          cancelHandler();
+        }
+        return Promise.resolve(true);
+      },
+    );
+
+    const result = await productAgentConversationWorkflow(defaultInput);
+
+    expect(result.success).toBe(false);
+    expect(result.phase).toBe("cancelled");
+
+    // Should have sent cancellation acknowledgment
+    const slackCalls = activityCalls.filter(
+      (c) => c.name === "sendSlackReplyActivity",
+    );
+    const cancelCall = slackCalls.find((c) => {
+      const text = c.args[2] as string;
+      return text.includes("cancelled");
+    });
+    expect(cancelCall).toBeDefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: Query Handler
+// ---------------------------------------------------------------------------
+
+describe("Query handler", () => {
+  it("conversationStatusQuery returns current state", async () => {
+    mockRunProductAgentActivity.mockResolvedValue({
+      response: "Done. <phase>complete</phase>",
+      phase: "complete",
+      issueId: "q-uuid",
+      issueIdentifier: "Q-1",
+    });
+
+    mockCondition.mockResolvedValue(true);
+
+    await productAgentConversationWorkflow(defaultInput);
+
+    // Verify query handler was registered
+    const queryHandler = capturedHandlers.get("mockQuery_conversationStatus") as
+      | (() => unknown)
+      | undefined;
+    expect(queryHandler).toBeDefined();
+
+    if (queryHandler) {
+      const status = queryHandler();
+      expect(status).toEqual(
+        expect.objectContaining({
+          threadTs: "1234567890.123456",
+          phase: "complete",
+        }),
+      );
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: allHandlersFinished Protocol
+// ---------------------------------------------------------------------------
+
+describe("allHandlersFinished Protocol", () => {
+  it("is called before every workflow return path", async () => {
+    // Run a complete flow -- allHandlersFinished should be called
+    mockRunProductAgentActivity.mockResolvedValue({
+      response: "Done. <phase>complete</phase>",
+      phase: "complete",
+      issueId: "uuid-done",
+      issueIdentifier: "DONE-1",
+    });
+
+    mockCondition.mockResolvedValue(true);
+
+    await productAgentConversationWorkflow(defaultInput);
+
+    // Verify condition was called with allHandlersFinished at least once
+    const allHandlersCalls = mockCondition.mock.calls.filter(
+      (args: unknown[]) => args[0] === mockAllHandlersFinished,
+    );
+    expect(allHandlersCalls.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: Workflow Type Contracts
+// ---------------------------------------------------------------------------
+
+describe("Workflow type contracts", () => {
   describe("ProductAgentWorkflowInput", () => {
     it("defines required input fields", () => {
       const validInput: ProductAgentWorkflowInput = {
@@ -67,52 +727,28 @@ describe("Product Agent Workflow Types", () => {
 
   describe("ProductAgentWorkflowResult", () => {
     it("defines complete phase with issue info", () => {
-      const completeResult: ProductAgentWorkflowResult = {
+      const result: ProductAgentWorkflowResult = {
         success: true,
         phase: "complete",
         issueId: "issue_123",
         issueIdentifier: "ABC-123",
       };
-
-      expect(completeResult.success).toBe(true);
-      expect(completeResult.phase).toBe("complete");
-      expect(completeResult.issueId).toBe("issue_123");
+      expect(result.success).toBe(true);
+      expect(result.phase).toBe("complete");
     });
 
     it("defines declined phase without issue info", () => {
-      const declinedResult: ProductAgentWorkflowResult = {
+      const result: ProductAgentWorkflowResult = {
         success: true,
         phase: "declined",
       };
-
-      expect(declinedResult.success).toBe(true);
-      expect(declinedResult.phase).toBe("declined");
-      expect(declinedResult.issueId).toBeUndefined();
-    });
-
-    it("defines cancelled phase", () => {
-      const cancelledResult: ProductAgentWorkflowResult = {
-        success: false,
-        phase: "cancelled",
-      };
-
-      expect(cancelledResult.success).toBe(false);
-      expect(cancelledResult.phase).toBe("cancelled");
-    });
-
-    it("defines timeout phase", () => {
-      const timeoutResult: ProductAgentWorkflowResult = {
-        success: false,
-        phase: "timeout",
-      };
-
-      expect(timeoutResult.success).toBe(false);
-      expect(timeoutResult.phase).toBe("timeout");
+      expect(result.success).toBe(true);
+      expect(result.issueId).toBeUndefined();
     });
   });
 
   describe("ProductAgentWorkflowPhase", () => {
-    it("includes all expected phases", () => {
+    it("includes all 7 expected phases", () => {
       const phases: ProductAgentWorkflowPhase[] = [
         "pending",
         "running",
@@ -122,256 +758,14 @@ describe("Product Agent Workflow Types", () => {
         "cancelled",
         "timeout",
       ];
-
       expect(phases).toHaveLength(7);
     });
   });
 });
 
-describe("Workflow Signal Handling", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  describe("userReplySignal", () => {
-    it("should be defined as a Temporal signal", async () => {
-      const { userReplySignal } = await import("../signals.js");
-
-      // Signal should be defined (mocked as string in tests)
-      expect(userReplySignal).toBeDefined();
-    });
-
-    it("carries user reply message text", () => {
-      // This tests the signal type definition
-      // defineSignal<[string]>('userReply') means it takes a single string argument
-      const signalPayload = "User's reply message";
-      expect(typeof signalPayload).toBe("string");
-    });
-  });
-
-  describe("cancelConversationSignal", () => {
-    it("should be defined as a Temporal signal", async () => {
-      const { cancelConversationSignal } = await import("../signals.js");
-
-      expect(cancelConversationSignal).toBeDefined();
-    });
-
-    it("has no payload (void signal)", () => {
-      // cancelConversationSignal is defined without generic type args
-      // This is tested by the type definition
-      expect(true).toBe(true); // Placeholder - type-level test
-    });
-  });
-});
-
-describe("Workflow Phase Transitions", () => {
-  describe("complete phase", () => {
-    it("exits with success: true", () => {
-      const result: ProductAgentWorkflowResult = {
-        success: true,
-        phase: "complete",
-        issueId: "issue_123",
-        issueIdentifier: "ABC-123",
-      };
-
-      expect(result.success).toBe(true);
-      expect(result.phase).toBe("complete");
-    });
-
-    it("includes issue information when created", () => {
-      const result: ProductAgentWorkflowResult = {
-        success: true,
-        phase: "complete",
-        issueId: "issue_uuid_here",
-        issueIdentifier: "PROJ-42",
-      };
-
-      expect(result.issueId).toBe("issue_uuid_here");
-      expect(result.issueIdentifier).toBe("PROJ-42");
-    });
-  });
-
-  describe("declined phase", () => {
-    it("exits with success: true (not a failure)", () => {
-      // Declined is a successful outcome - the workflow correctly identified
-      // that the message was not actionable
-      const result: ProductAgentWorkflowResult = {
-        success: true,
-        phase: "declined",
-      };
-
-      expect(result.success).toBe(true);
-      expect(result.phase).toBe("declined");
-    });
-
-    it("does not include issue information", () => {
-      const result: ProductAgentWorkflowResult = {
-        success: true,
-        phase: "declined",
-      };
-
-      expect(result.issueId).toBeUndefined();
-      expect(result.issueIdentifier).toBeUndefined();
-    });
-  });
-
-  describe("cancelled phase", () => {
-    it("exits with success: false", () => {
-      const result: ProductAgentWorkflowResult = {
-        success: false,
-        phase: "cancelled",
-      };
-
-      expect(result.success).toBe(false);
-      expect(result.phase).toBe("cancelled");
-    });
-  });
-
-  describe("timeout phase", () => {
-    it("exits with success: false after 72h", () => {
-      const result: ProductAgentWorkflowResult = {
-        success: false,
-        phase: "timeout",
-      };
-
-      expect(result.success).toBe(false);
-      expect(result.phase).toBe("timeout");
-    });
-  });
-});
-
-describe("Workflow Conversation Loop", () => {
-  describe("iteration limits", () => {
-    it("enforces max iterations to prevent infinite loops", () => {
-      // The workflow has a maxIterations constant (20)
-      const maxIterations = 20;
-      expect(maxIterations).toBe(20);
-    });
-
-    it("returns timeout when max iterations exceeded", () => {
-      const result: ProductAgentWorkflowResult = {
-        success: false,
-        phase: "timeout",
-      };
-
-      // When max iterations is hit, workflow returns timeout
-      expect(result.phase).toBe("timeout");
-    });
-  });
-
-  describe("timeout configuration", () => {
-    it("uses 24h first reply timeout", () => {
-      const firstReplyTimeout = "24 hours";
-      expect(firstReplyTimeout).toBe("24 hours");
-    });
-
-    it("uses 48h reminder timeout (72h total)", () => {
-      const reminderTimeout = "48 hours";
-      expect(reminderTimeout).toBe("48 hours");
-      // Total = 24h + 48h = 72h
-    });
-  });
-});
-
-describe("Signal Wait Behavior (PROD-05 requirement)", () => {
-  describe("workflow waits for userReplySignal", () => {
-    it("uses wf.condition to wait for signal", () => {
-      // The workflow pattern:
-      // await wf.condition(() => state.userReply !== null || state.cancelRequested, timeout)
-      //
-      // This tests that the pattern is correct - condition is called with:
-      // 1. A predicate function that checks for signal arrival
-      // 2. A timeout duration
-
-      // The workflow implementation uses:
-      // const receivedFirstReply = await wf.condition(
-      //   () => state.userReply !== null || state.cancelRequested,
-      //   firstReplyTimeout,
-      // );
-
-      expect(true).toBe(true); // Pattern documented
-    });
-
-    it("resumes with reply text when signal received", () => {
-      // When userReplySignal is received, the signal handler sets state.userReply
-      // The condition predicate then returns true
-      // The workflow resumes and uses state.userReply as the next message
-
-      const state = {
-        userReply: null as string | null,
-        cancelRequested: false,
-      };
-
-      // Simulate signal handler being called
-      const signalHandler = (reply: string) => {
-        state.userReply = reply;
-      };
-
-      // Signal arrives with user's message
-      signalHandler("Thanks, I'd like to add that users should be able to...");
-
-      // State is now updated
-      expect(state.userReply).toBe(
-        "Thanks, I'd like to add that users should be able to...",
-      );
-
-      // Condition would now return true
-      const conditionResult = state.userReply !== null || state.cancelRequested;
-      expect(conditionResult).toBe(true);
-    });
-
-    it("state.userReply is set correctly after signal", () => {
-      const state = {
-        userReply: null as string | null,
-      };
-
-      // Simulate the signal handler logic
-      const userReplyText = "I want the feature to support multiple users";
-      state.userReply = userReplyText;
-
-      expect(state.userReply).toBe(userReplyText);
-      expect(state.userReply).not.toBeNull();
-    });
-  });
-
-  describe("cancellation via cancelConversationSignal", () => {
-    it("sets cancelRequested when signal received", () => {
-      const state = {
-        userReply: null as string | null,
-        cancelRequested: false,
-      };
-
-      // Simulate cancel signal handler
-      const cancelHandler = () => {
-        state.cancelRequested = true;
-      };
-
-      cancelHandler();
-
-      expect(state.cancelRequested).toBe(true);
-
-      // Condition would now return true (cancellation path)
-      const conditionResult = state.userReply !== null || state.cancelRequested;
-      expect(conditionResult).toBe(true);
-    });
-  });
-});
-
-describe("allHandlersFinished Protocol", () => {
-  it("is called before every workflow return", () => {
-    // The workflow pattern ensures all signal handlers complete before returning:
-    // await wf.condition(wf.allHandlersFinished);
-    // return { ... };
-    //
-    // This is important because:
-    // 1. Signal handlers may be in-flight when we decide to return
-    // 2. We need to ensure clean workflow termination
-    // 3. Pending signals should be processed before workflow ends
-
-    // The workflow has this pattern before each return statement
-    expect(true).toBe(true); // Pattern documented
-  });
-});
+// ---------------------------------------------------------------------------
+// Integration test TODOs
+// ---------------------------------------------------------------------------
 
 describe("Integration Test Notes", () => {
   it.todo("full workflow execution with TestWorkflowEnvironment");
