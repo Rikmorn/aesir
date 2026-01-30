@@ -57,7 +57,7 @@ Plans:
 **Plans**: 3 plans
 Plans:
 - [x] 29-01-PLAN.md -- Drizzle ORM schema, DB client, migration, and ID generators
-- [ ] 29-02-PLAN.md -- Trace recorder factory with buffered writes and callbacks
+- [x] 29-02-PLAN.md -- Trace recorder factory with buffered writes and callbacks
 - [ ] 29-03-PLAN.md -- Context manager and task store services
 
 ### Phase 30: Agent Tool Library

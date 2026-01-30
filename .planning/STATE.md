@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 29 (second of 9 in v2.2) - Database Schema & Context Management
-Plan: 1 of 3
+Plan: 2 of 3
 Status: In progress
-Last activity: 2026-01-30 -- Completed 29-01-PLAN.md (schema definitions, migration, DB client)
+Last activity: 2026-01-30 -- Completed 29-02-PLAN.md (trace recorder factory)
 
-Progress: ███░░░░░░░ 17% (3/18 plans)
+Progress: ████░░░░░░ 22% (4/18 plans)
 
 ## Milestone History
 
@@ -53,6 +53,9 @@ Phase 29 decisions:
 - Used text() with enum option for status/type columns -- ORM-level type safety without PostgreSQL enum types
 - Generated snapshot via drizzle-kit, adapted for hand-written migration -- readable SQL + valid drizzle-kit tracking
 - Alphabetized createId entries in ids.ts -- better scanability as list grows
+- Synchronous callbacks with explicit flush() -- prevents trace recording from blocking agent loop
+- Best-effort persistence -- DB errors during flush logged but not re-thrown
+- tool_result traces deferred -- Phase 28 lacks onToolResult callback; four types sufficient for v2.2
 
 ### Pending Todos
 
@@ -67,9 +70,9 @@ None blocking v2.2.
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 29-01-PLAN.md (schema, migration, DB client)
+Stopped at: Completed 29-02-PLAN.md (trace recorder factory)
 Resume file: None
-Next action: Execute 29-02-PLAN.md (context manager and task store services)
+Next action: Execute 29-03-PLAN.md (context manager and task store services)
 
 ---
-*Updated: 2026-01-30 -- Completed 29-01 (agents schema definitions, migration, DB client)*
+*Updated: 2026-01-30 -- Completed 29-02 (trace recorder factory with buffered writes)*
