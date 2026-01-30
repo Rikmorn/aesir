@@ -9,6 +9,8 @@
 export * from "./agent-loop/index.js";
 // Agent configuration
 export * from "./config/index.js";
+// Database client and schema
+export * from "./db/index.js";
 // Environment configuration
 export * from "./env/index.js";
 // MCP client for integration communication
