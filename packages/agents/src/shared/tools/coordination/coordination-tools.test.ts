@@ -67,6 +67,9 @@ function createMockTokenBudget() {
     total: 500_000,
     remaining: 500_000,
     isExhausted: vi.fn().mockReturnValue(false),
+    isWarning: vi.fn().mockReturnValue(false),
+    isReserveOnly: vi.fn().mockReturnValue(false),
+    warningFired: false,
     deduct: vi.fn(),
   };
 }
