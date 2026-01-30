@@ -43,8 +43,8 @@ const StartWorkflowInputSchema = z.object({
 
 const WORKFLOW_MAP = {
   "dev-agent": {
-    workflowName: "devAgentWorkflow",
-    taskQueue: "dev-agent",
+    workflowName: "orchestratorWorkflow",
+    taskQueue: "dev-agent-v2",
   },
   "product-agent": {
     workflowName: "productAgentConversationWorkflow",

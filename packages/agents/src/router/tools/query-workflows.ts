@@ -30,7 +30,7 @@ const QueryWorkflowsInputSchema = z.object({
     .string()
     .optional()
     .describe(
-      "Filter by workflow type (e.g., 'devAgentWorkflow', 'productAgentConversationWorkflow', 'orchestratorWorkflow')",
+      "Filter by workflow type (e.g., 'orchestratorWorkflow', 'productAgentConversationWorkflow')",
     ),
 });
 

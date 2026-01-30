@@ -5,7 +5,7 @@
  * Covers all intent types, confidence levels, edge cases, and error handling.
  */
 
-import type { ChatAnthropic } from "@langchain/anthropic";
+import type { ClassificationLLM } from "./approval.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type ApprovalClassification,
@@ -43,7 +43,7 @@ function createMockLLM(response: ApprovalClassification) {
     withStructuredOutput: vi.fn().mockReturnValue({
       invoke: vi.fn().mockResolvedValue(response),
     }),
-  } as unknown as ChatAnthropic;
+  } as unknown as ClassificationLLM;
 }
 
 /**
@@ -54,7 +54,7 @@ function createErrorMockLLM(error: Error) {
     withStructuredOutput: vi.fn().mockReturnValue({
       invoke: vi.fn().mockRejectedValue(error),
     }),
-  } as unknown as ChatAnthropic;
+  } as unknown as ClassificationLLM;
 }
 
 // ============================================================================
@@ -599,7 +599,7 @@ describe("classifyApprovalIntent", () => {
         withStructuredOutput: vi.fn().mockReturnValue({
           invoke: invokeMock,
         }),
-      } as unknown as ChatAnthropic;
+      } as unknown as ClassificationLLM;
 
       await classifyApprovalIntent({
         llm: mockLLM,

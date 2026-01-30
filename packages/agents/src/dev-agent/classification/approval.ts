@@ -14,7 +14,6 @@
  */
 
 import { createPinoLogger, type PinoLogger } from "@aesir/platform";
-import type { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
 
 const logger: PinoLogger = createPinoLogger({
@@ -176,11 +175,24 @@ Examples:
 Respond with the classification in the specified JSON format.`;
 
 /**
+ * LLM interface for structured output classification.
+ *
+ * @deprecated This module is legacy -- comment classification now routes
+ * through the smart router (Phase 34) via agentic loop. Retained for
+ * backward compatibility; will be removed in a future cleanup.
+ */
+export interface ClassificationLLM {
+  withStructuredOutput<T>(schema: z.ZodType<T>): {
+    invoke(messages: Array<{ role: string; content: string }>): Promise<T>;
+  };
+}
+
+/**
  * Options for approval classification
  */
 export interface ClassifyApprovalOptions {
   /** LLM instance for classification */
-  llm: ChatAnthropic;
+  llm: ClassificationLLM;
   /** The human's message to classify */
   message: string;
 }

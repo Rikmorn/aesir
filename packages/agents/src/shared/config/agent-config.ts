@@ -39,7 +39,7 @@ export const AgentConfigSchema = z.object({
     .int()
     .positive()
     .default(25)
-    .describe("LangGraph recursion limit (super-steps)"),
+    .describe("Agent loop iteration limit"),
   timeoutMs: z
     .number()
     .int()

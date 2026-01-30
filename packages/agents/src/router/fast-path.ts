@@ -15,7 +15,7 @@
  * 6. github-pr-closed -> prCompletion signal (merged: false)
  *
  * Start rules:
- * 7. linear-agent-session-created -> start devAgentWorkflow
+ * 7. linear-agent-session-created -> start orchestratorWorkflow
  *
  * Ignore rules:
  * 8. linear-issue-created -> ignore (handled by Linear webhooks directly)
@@ -190,8 +190,8 @@ export const DETERMINISTIC_RULES: RoutingRule[] = [
       const payload = event.payload as { issueId: string };
       return {
         type: "start",
-        workflowName: "devAgentWorkflow",
-        taskQueue: "dev-agent",
+        workflowName: "orchestratorWorkflow",
+        taskQueue: "dev-agent-v2",
         workflowId: `dev-agent-${payload.issueId}`,
         args: [],
         needsEnrichment: true,
@@ -366,7 +366,7 @@ export async function executeFastPath(
 
             const labelNames = issue.labels.map((l) => l.name);
 
-            // Build DevAgentWorkflowInput matching existing pattern
+            // Build OrchestratorWorkflowInput matching existing pattern
             workflowArgs = [
               {
                 taskId: issue.id,

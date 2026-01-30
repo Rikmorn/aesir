@@ -16,11 +16,9 @@
 
 import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import { type NormalizedEvent, NormalizedEventSchema } from "@aesir/types";
-import type { ChatAnthropic } from "@langchain/anthropic";
 import type { Client as TemporalClient } from "@temporalio/client";
 import { callMcpTool } from "../../shared/mcp/index.js";
-import type { DevAgentWorkflowInput } from "../../shared/temporal/types.js";
-import { classifyApprovalIntent } from "../classification/approval.js";
+import type { OrchestratorWorkflowInput } from "../../shared/temporal/types.js";
 import {
   sendApprovalSignal,
   sendCompletionSignal,
@@ -71,8 +69,6 @@ interface IssueDetails {
 export interface DevAgentEventsHandlerDeps {
   workflowClient: TemporalClient;
   slackChannel: string;
-  /** LLM for classifying Linear comments (optional - only needed for comment events) */
-  llm?: ChatAnthropic;
 }
 
 /**
@@ -114,17 +110,6 @@ interface GitHubPRClosedPayload {
 }
 
 /**
- * Linear comment event payload structure
- */
-interface LinearCommentPayload {
-  commentId: string;
-  commentBody: string;
-  issueId: string;
-  userId: string;
-  actorName: string;
-}
-
-/**
  * Request interface for events handler
  */
 export interface EventsRequest {
@@ -143,7 +128,7 @@ export interface EventsResponse {
  * Create dev-agent events handler
  */
 export function createDevAgentEventsHandler(deps: DevAgentEventsHandlerDeps) {
-  const { workflowClient, slackChannel, llm } = deps;
+  const { workflowClient, slackChannel } = deps;
 
   return async (req: EventsRequest, res: EventsResponse): Promise<void> => {
     const correlationId = req.headers["x-correlation-id"];
@@ -279,93 +264,21 @@ export function createDevAgentEventsHandler(deps: DevAgentEventsHandlerDeps) {
         return;
       }
 
-      // Handle Linear comment events (approval via Linear)
+      // Linear comment events are now routed through the smart router (Phase 34).
+      // The router's slow path handles comment classification via agentic loop.
       if (
         event.source === "linear" &&
         event.type === "linear.comment.created"
       ) {
-        const payload = event.payload as LinearCommentPayload;
-
-        if (!llm) {
-          handlerLogger.warn(
-            "LLM not configured, cannot classify Linear comment for approval",
-          );
-          res.status(200).json({
-            received: true,
-            eventId: event.id,
-            type: event.type,
-            skipped: true,
-            reason: "LLM not configured for comment classification",
-          });
-          return;
-        }
-
-        // Use classifyApprovalIntent to determine if this is an approval
-        const classification = await classifyApprovalIntent({
-          llm,
-          message: payload.commentBody,
-        });
-
-        if (
-          classification.intent === "approve" ||
-          classification.intent === "reject"
-        ) {
-          const signalResult = await sendApprovalSignal(
-            { workflowClient, logger: handlerLogger },
-            {
-              taskIdentifier: payload.issueId, // Linear issue ID
-              approved: classification.intent === "approve",
-              ...(classification.feedback
-                ? { feedback: classification.feedback }
-                : {}),
-              approverUserId: payload.userId,
-            },
-          );
-
-          res.status(200).json({
-            received: true,
-            eventId: event.id,
-            type: event.type,
-            signaled: signalResult.signaled,
-            classification: classification.intent,
-            workflowId: signalResult.workflowId,
-          });
-          return;
-        }
-
-        // Handle escalation guidance/abort
-        if (
-          classification.intent === "guidance" ||
-          classification.intent === "abort"
-        ) {
-          const signalResult = await sendEscalationResolvedSignal(
-            { workflowClient, logger: handlerLogger },
-            {
-              taskIdentifier: payload.issueId,
-              action: classification.intent === "abort" ? "abort" : "retry",
-              guidance: classification.feedback || payload.commentBody,
-              resolverUserId: payload.userId,
-              source: "linear",
-            },
-          );
-
-          res.status(200).json({
-            received: true,
-            eventId: event.id,
-            type: event.type,
-            signaled: signalResult.signaled,
-            classification: classification.intent,
-            workflowId: signalResult.workflowId,
-          });
-          return;
-        }
-
-        // Not an actionable intent - just acknowledge
+        handlerLogger.info(
+          "Linear comment events should be routed via smart router, skipping direct handling",
+        );
         res.status(200).json({
           received: true,
           eventId: event.id,
           type: event.type,
-          classification: classification.intent,
+          skipped: true,
+          reason: "Comment classification moved to smart router (Phase 34)",
         });
         return;
       }
@@ -486,7 +399,7 @@ async function handleAgentSessionCreated(
 
   const labelNames = issue.labels.map((l) => l.name);
 
-  const input: DevAgentWorkflowInput = {
+  const input: OrchestratorWorkflowInput = {
     taskId: issue.id,
     issueIdentifier: issue.identifier,
     issue: {
@@ -501,8 +414,8 @@ async function handleAgentSessionCreated(
   };
 
   try {
-    await workflowClient.workflow.start("devAgentWorkflow", {
-      taskQueue: "dev-agent",
+    await workflowClient.workflow.start("orchestratorWorkflow", {
+      taskQueue: "dev-agent-v2",
       workflowId,
       args: [input],
     });

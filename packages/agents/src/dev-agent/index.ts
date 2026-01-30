@@ -1,90 +1,26 @@
 /**
  * Dev Agent Module
  *
- * Two workflow modes:
- * 1. HITL Workflow (graph.ts): Linear issue -> Research -> Plan -> Execute -> PR
- *    Human-in-the-loop with Temporal for approval flows
- * 2. Code Workflow (code-workflow/): Simple LangGraph code generation
- *    Lightweight: pickup task -> generate code -> run tests -> commit PR
- *
- * Exports:
- * - State types and schemas for workflow data structures
- * - Graph creator for building the LangGraph workflow
- * - Prompts for testing/customization
- * - Node factories for testing and composition
- * - Code workflow for simple code generation tasks
+ * Agentic orchestrator that autonomously handles development tasks.
+ * Uses sub-agents (researcher, coder, tester) coordinated by an
+ * orchestrator loop, wrapped in Temporal for durability.
  */
 
-// Code Workflow - simple LangGraph code generation
-export * from "./code-workflow/index.js";
+// Orchestrator
+export {
+  ORCHESTRATOR_SYSTEM_PROMPT,
+  RESEARCHER_SYSTEM_PROMPT,
+  CODER_SYSTEM_PROMPT,
+  TESTER_SYSTEM_PROMPT,
+} from "./orchestrator/system-prompts.js";
 
-// Graph - workflow creation and types
 export {
-  createDevAgentGraph,
-  type DevAgentGraph,
-  type DevAgentGraphOptions,
-  type PhaseRoute,
-  routeByPhase,
-} from "./workflow/graph.js";
-// Nodes - for testing and custom composition
-export {
-  type CreatePRNodeDeps,
-  createEscalateNode,
-  createExecuteNode,
-  createHandleFeedbackNode,
-  createNotifyNode,
-  createPlanNode,
-  createPRNode,
-  createRequestApprovalNode,
-  createResearchNode,
-  createSetupContainerNode,
-  createVerifyNode,
-  type ExecuteNodeDeps,
-  type HandleFeedbackNodeDeps,
-  type PlanNodeDeps,
-  type RequestApprovalNodeDeps,
-  type ResearchNodeDeps,
-  receiveIssueNode,
-  type SetupContainerNodeDeps,
-  type VerifyNodeDeps,
-} from "./workflow/nodes/index.js";
+  type OrchestratorOptions,
+  runDevAgentOrchestrator,
+} from "./orchestrator/orchestrator.js";
 
-// Prompts - for testing and customization
+// Worker
 export {
-  buildFileWritePrompt,
-  buildPlanningPrompt,
-  buildPrFeedbackPrompt,
-  buildResearchPrompt,
-  buildTestFixPrompt,
-  FILE_WRITE_SYSTEM_PROMPT,
-  formatPlanAsMarkdown,
-  PLANNING_SYSTEM_PROMPT,
-  PR_FEEDBACK_SYSTEM_PROMPT,
-  RESEARCH_SYSTEM_PROMPT,
-  TEST_FIX_SYSTEM_PROMPT,
-} from "./workflow/prompts.js";
-// State - types, schemas, and utilities
-export {
-  createDevAgentInitialState,
-  type DevAgentPhase,
-  type DevAgentState,
-  DevAgentStateAnnotation,
-  DevAgentStateSchema,
-  type DevAgentStateUpdate,
-  type ExecutionPlan,
-  ExecutionPlanSchema,
-  type ExecutionStep,
-  ExecutionStepSchema,
-  type FileChange,
-  FileChangeSchema,
-  hasExceededTestLimit,
-  isActionablePhase,
-  isTerminalPhase,
-  type LinearIssueContext,
-  LinearIssueContextSchema,
-  MAX_TEST_ATTEMPTS,
-  type RelevantFile,
-  RelevantFileSchema,
-  type ResearchContext,
-  ResearchContextSchema,
-} from "./workflow/state.js";
+  createOrchestratorWorker,
+  type DevAgentWorkerOptions,
+} from "./worker.js";

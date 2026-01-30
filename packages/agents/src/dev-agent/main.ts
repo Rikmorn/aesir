@@ -34,7 +34,6 @@ import {
   type ServerResponse,
 } from "node:http";
 import { createPinoLogger } from "@aesir/platform";
-import { ChatAnthropic } from "@langchain/anthropic";
 import { Client, Connection } from "@temporalio/client";
 import {
   createDevAgentEventsHandler,
@@ -74,28 +73,12 @@ async function bootstrap(): Promise<void> {
 
   logger.info({}, "Connected to Temporal client");
 
-  // Create LLM for comment classification
-  const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
-  if (!anthropicApiKey) {
-    logger.warn(
-      {},
-      "ANTHROPIC_API_KEY not set - Linear comment classification will be disabled",
-    );
-  }
-
-  const llm = anthropicApiKey
-    ? new ChatAnthropic({
-        model: "claude-sonnet-4-20250514",
-        temperature: 0,
-        apiKey: anthropicApiKey,
-      })
-    : undefined;
-
   // Create events handler
+  // Note: LLM-based comment classification (legacy ChatAnthropic) removed in Phase 35.
+  // Linear comment events now route through the smart router (Phase 34) slow path.
   const eventsHandlerDeps: DevAgentEventsHandlerDeps = {
     workflowClient,
     slackChannel,
-    ...(llm ? { llm } : {}),
   };
   const eventsHandler = createDevAgentEventsHandler(eventsHandlerDeps);
 
