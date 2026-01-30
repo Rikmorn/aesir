@@ -20,7 +20,7 @@ Replace LangGraph state machine architecture with agentic tool-use loops where L
 - [x] **Phase 28: Agentic Loop Runtime** - Core `runAgentLoop()` function with Anthropic SDK native tool-use
 - [x] **Phase 29: Database Schema & Context Management** - Storage layer for context snapshots, task state, and execution traces
 - [x] **Phase 30: Agent Tool Library** - Codebase tools, MCP wrappers, git tools, spawn_agent, per-agent toolkits
-- [ ] **Phase 31: Dev Agent Orchestrator** - Orchestrator agentic loop with sub-agents (researcher, coder, tester)
+- [x] **Phase 31: Dev Agent Orchestrator** - Orchestrator agentic loop with sub-agents (researcher, coder, tester)
 - [ ] **Phase 32: Dev Agent Temporal Integration** - Temporal activities and simplified workflow wrapping the orchestrator
 - [ ] **Phase 33: Product Agent** - Single adaptive agentic loop replacing LangGraph conversation graph
 - [ ] **Phase 34: Smart Router** - Hybrid event classification (deterministic rules + LLM reasoning)
@@ -88,8 +88,8 @@ Plans:
   5. System prompt includes agent identity, issue details, project conventions, constraints, available tools, and sub-agent guidance
 **Plans**: 2 plans
 Plans:
-- [ ] 31-01-PLAN.md -- System prompts, orchestrator entry point, and toolkits update
-- [ ] 31-02-PLAN.md -- Behavioral tests for adaptive orchestrator decisions
+- [x] 31-01-PLAN.md -- System prompts, orchestrator entry point, and toolkits update
+- [x] 31-02-PLAN.md -- Behavioral tests for adaptive orchestrator decisions
 
 ### Phase 32: Dev Agent Temporal Integration
 **Goal**: The dev agent orchestrator runs inside Temporal's durability envelope with proper activity boundaries, approval gates, and feedback loops
@@ -159,7 +159,7 @@ Phases execute in numeric order: 28 -> 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35 ->
 | 28. Agentic Loop Runtime | 2/2 | Complete | 2026-01-29 |
 | 29. Database Schema & Context | 3/3 | Complete | 2026-01-30 |
 | 30. Agent Tool Library | 3/3 | Complete | 2026-01-30 |
-| 31. Dev Agent Orchestrator | 0/2 | Not started | - |
+| 31. Dev Agent Orchestrator | 2/2 | Complete | 2026-01-30 |
 | 32. Dev Agent Temporal Integration | 0/TBD | Not started | - |
 | 33. Product Agent | 0/TBD | Not started | - |
 | 34. Smart Router | 0/TBD | Not started | - |
