@@ -107,13 +107,19 @@ interface InfrastructureActivities {
 // Activity Proxies (separate configs per research recommendations)
 // ---------------------------------------------------------------------------
 
-/** Orchestrator: 45min timeout (agentic loops are expensive), 2 retries */
+/** Orchestrator: 45min timeout (agentic loops are expensive), 2 retries, heartbeat */
 const orchestratorActivities = proxyActivities<OrchestratorActivities>({
   startToCloseTimeout: "45 minutes",
+  heartbeatTimeout: "5 minutes",
   retry: {
     maximumAttempts: 2,
-    initialInterval: "10 seconds",
+    initialInterval: "30 seconds",
     backoffCoefficient: 2,
+    maximumInterval: "2 minutes",
+    nonRetryableErrorTypes: [
+      "TokenBudgetExhaustedError",
+      "AgentAbortedError",
+    ],
   },
 });
 
@@ -124,6 +130,7 @@ const infrastructureActivities = proxyActivities<InfrastructureActivities>({
     maximumAttempts: 3,
     initialInterval: "5 seconds",
     backoffCoefficient: 2,
+    maximumInterval: "30 seconds",
   },
 });
 

@@ -840,32 +840,47 @@ describe("allHandlersFinished Protocol", () => {
 // ---------------------------------------------------------------------------
 
 describe("Separate proxyActivities Configs", () => {
-  it("orchestrator activities use 45min timeout with 2 retries", () => {
+  it("orchestrator activities use 45min timeout with heartbeat and non-retryable errors", () => {
     const orchestratorConfig = {
       startToCloseTimeout: "45 minutes",
+      heartbeatTimeout: "5 minutes",
       retry: {
         maximumAttempts: 2,
-        initialInterval: "10 seconds",
+        initialInterval: "30 seconds",
         backoffCoefficient: 2,
+        maximumInterval: "2 minutes",
+        nonRetryableErrorTypes: [
+          "TokenBudgetExhaustedError",
+          "AgentAbortedError",
+        ],
       },
     };
 
     expect(orchestratorConfig.startToCloseTimeout).toBe("45 minutes");
+    expect(orchestratorConfig.heartbeatTimeout).toBe("5 minutes");
     expect(orchestratorConfig.retry.maximumAttempts).toBe(2);
+    expect(orchestratorConfig.retry.initialInterval).toBe("30 seconds");
+    expect(orchestratorConfig.retry.maximumInterval).toBe("2 minutes");
+    expect(orchestratorConfig.retry.nonRetryableErrorTypes).toEqual([
+      "TokenBudgetExhaustedError",
+      "AgentAbortedError",
+    ]);
   });
 
-  it("infrastructure activities use 5min timeout with 3 retries", () => {
+  it("infrastructure activities use 5min timeout with 3 retries and capped backoff", () => {
     const infraConfig = {
       startToCloseTimeout: "5 minutes",
       retry: {
         maximumAttempts: 3,
         initialInterval: "5 seconds",
         backoffCoefficient: 2,
+        maximumInterval: "30 seconds",
       },
     };
 
     expect(infraConfig.startToCloseTimeout).toBe("5 minutes");
     expect(infraConfig.retry.maximumAttempts).toBe(3);
+    expect(infraConfig.retry.maximumInterval).toBe("30 seconds");
   });
 });
 
