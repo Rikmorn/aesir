@@ -56,7 +56,7 @@ Plans:
   5. Token counts (input + output) and duration are tracked per trace step, enabling cost analysis per task
 **Plans**: 3 plans
 Plans:
-- [ ] 29-01-PLAN.md -- Drizzle ORM schema, DB client, migration, and ID generators
+- [x] 29-01-PLAN.md -- Drizzle ORM schema, DB client, migration, and ID generators
 - [ ] 29-02-PLAN.md -- Trace recorder factory with buffered writes and callbacks
 - [ ] 29-03-PLAN.md -- Context manager and task store services
 
@@ -150,7 +150,7 @@ Phases execute in numeric order: 28 -> 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35 ->
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 28. Agentic Loop Runtime | 2/2 | Complete | 2026-01-29 |
-| 29. Database Schema & Context | 0/3 | Not started | - |
+| 29. Database Schema & Context | 1/3 | In progress | - |
 | 30. Agent Tool Library | 0/TBD | Not started | - |
 | 31. Dev Agent Orchestrator | 0/TBD | Not started | - |
 | 32. Dev Agent Temporal Integration | 0/TBD | Not started | - |

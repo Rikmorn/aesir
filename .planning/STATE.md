@@ -6,16 +6,16 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-**Current focus:** v2.2 Agentic Architecture -- Phase 28: Agentic Loop Runtime (COMPLETE)
+**Current focus:** v2.2 Agentic Architecture -- Phase 29: Database Schema & Context Management
 
 ## Current Position
 
-Phase: 28 (first of 9 in v2.2) - Agentic Loop Runtime
-Plan: 2 of 2
-Status: Phase complete
-Last activity: 2026-01-29 -- Completed 28-02-PLAN.md (core runAgentLoop() implementation and tests)
+Phase: 29 (second of 9 in v2.2) - Database Schema & Context Management
+Plan: 1 of 3
+Status: In progress
+Last activity: 2026-01-30 -- Completed 29-01-PLAN.md (schema definitions, migration, DB client)
 
-Progress: ██░░░░░░░░ 11% (2/18 plans)
+Progress: ███░░░░░░░ 17% (3/18 plans)
 
 ## Milestone History
 
@@ -49,6 +49,11 @@ Phase 28 decisions:
 - Use ToolDefinition.description directly instead of converted result -- exactOptionalPropertyTypes compat
 - Build trace step as mutable then conditionally set stopReason -- exactOptionalPropertyTypes compat
 
+Phase 29 decisions:
+- Used text() with enum option for status/type columns -- ORM-level type safety without PostgreSQL enum types
+- Generated snapshot via drizzle-kit, adapted for hand-written migration -- readable SQL + valid drizzle-kit tracking
+- Alphabetized createId entries in ids.ts -- better scanability as list grows
+
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
@@ -61,10 +66,10 @@ None blocking v2.2.
 
 ## Session Continuity
 
-Last session: 2026-01-29
-Stopped at: Completed 28-02-PLAN.md (Phase 28 complete)
+Last session: 2026-01-30
+Stopped at: Completed 29-01-PLAN.md (schema, migration, DB client)
 Resume file: None
-Next action: Execute Phase 29 plans (next phase in v2.2 roadmap)
+Next action: Execute 29-02-PLAN.md (context manager and task store services)
 
 ---
-*Updated: 2026-01-29 -- Completed Phase 28 (Agentic Loop Runtime: SDK, types, budget, errors, runAgentLoop)*
+*Updated: 2026-01-30 -- Completed 29-01 (agents schema definitions, migration, DB client)*
