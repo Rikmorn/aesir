@@ -21,14 +21,14 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Agent Tool Library
 
-- [ ] **TOOL-01**: Codebase tools execute inside dev container via DevContainerManager: `read_file`, `write_file`, `search_codebase`, `list_directory`, `run_command`
-- [ ] **TOOL-02**: MCP integration tools wrap existing `callMcpTool()` as ToolDefinitions -- Linear (5 tools), GitHub (9 tools), Slack (5 tools) -- all 19 existing MCP tools available
-- [ ] **TOOL-03**: Git tools wrap GitHub MCP operations: `create_branch`, `create_commit`, `create_pull_request`, `get_pull_request`, `merge_pull_request`
-- [ ] **TOOL-04**: `spawn_agent` coordinator tool creates a nested agentic loop with focused context and restricted tool set -- returns agent result to orchestrator
-- [ ] **TOOL-05**: `request_human_input` tool signals Temporal workflow to wait for human response, returns when signal received
-- [ ] **TOOL-06**: Each tool has Zod input schema, description string, and async execute function returning `{ content: string, isError?: boolean }`
-- [ ] **TOOL-07**: Tool errors returned to LLM with `isError: true` -- LLM reasons about errors instead of tool throwing exceptions that break the loop
-- [ ] **TOOL-08**: Per-agent tool sets (toolkits): orchestrator gets coordination + lightweight codebase tools, researcher gets read-only codebase tools, coder gets read+write codebase tools, tester gets read+run tools
+- [x] **TOOL-01**: Codebase tools execute inside dev container via DevContainerManager: `read_file`, `write_file`, `search_codebase`, `list_directory`, `run_command`
+- [x] **TOOL-02**: MCP integration tools wrap existing `callMcpTool()` as ToolDefinitions -- Linear (5 tools), GitHub (9 tools), Slack (5 tools) -- all 19 existing MCP tools available
+- [x] **TOOL-03**: Git tools wrap GitHub MCP operations: `create_branch`, `create_commit`, `create_pull_request`, `get_pull_request`, `merge_pull_request`
+- [x] **TOOL-04**: `spawn_agent` coordinator tool creates a nested agentic loop with focused context and restricted tool set -- returns agent result to orchestrator
+- [x] **TOOL-05**: `request_human_input` tool signals Temporal workflow to wait for human response, returns when signal received
+- [x] **TOOL-06**: Each tool has Zod input schema, description string, and async execute function returning `{ content: string, isError?: boolean }`
+- [x] **TOOL-07**: Tool errors returned to LLM with `isError: true` -- LLM reasons about errors instead of tool throwing exceptions that break the loop
+- [x] **TOOL-08**: Per-agent tool sets (toolkits): orchestrator gets coordination + lightweight codebase tools, researcher gets read-only codebase tools, coder gets read+write codebase tools, tester gets read+run tools
 
 ### Dev Agent Orchestrator
 
@@ -167,14 +167,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LOOP-07 | Phase 28 | Complete |
 | LOOP-08 | Phase 28 | Complete |
 | LOOP-09 | Phase 28 | Complete |
-| TOOL-01 | Phase 30 | Pending |
-| TOOL-02 | Phase 30 | Pending |
-| TOOL-03 | Phase 30 | Pending |
-| TOOL-04 | Phase 30 | Pending |
-| TOOL-05 | Phase 30 | Pending |
-| TOOL-06 | Phase 30 | Pending |
-| TOOL-07 | Phase 30 | Pending |
-| TOOL-08 | Phase 30 | Pending |
+| TOOL-01 | Phase 30 | Complete |
+| TOOL-02 | Phase 30 | Complete |
+| TOOL-03 | Phase 30 | Complete |
+| TOOL-04 | Phase 30 | Complete |
+| TOOL-05 | Phase 30 | Complete |
+| TOOL-06 | Phase 30 | Complete |
+| TOOL-07 | Phase 30 | Complete |
+| TOOL-08 | Phase 30 | Complete |
 | DEVO-01 | Phase 31 | Pending |
 | DEVO-02 | Phase 31 | Pending |
 | DEVO-03 | Phase 31 | Pending |
