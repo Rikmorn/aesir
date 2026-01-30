@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 35 (eighth of 9 in v2.2) - Guardrails & Cleanup
-Plan: 3 of 5
+Plan: 4 of 5
 Status: In progress
-Last activity: 2026-01-30 -- Completed 35-02-PLAN.md (Temporal retry config & heartbeat wiring)
+Last activity: 2026-01-30 -- Completed 35-04-PLAN.md (remove @langchain/* packages)
 
-Progress: ██████████████████░░ 88% (7/9 phases complete, 25/27 plans)
+Progress: ██████████████████░░ 93% (7/9 phases complete, 27/29 plans)
 
 ## Milestone History
 
@@ -136,6 +136,10 @@ Phase 35 decisions:
 - initialInterval increased from 10s to 30s for orchestrator retries (transient API issue recovery)
 - NonRetryableErrorTypes: TokenBudgetExhaustedError (permanent), AgentAbortedError (user intent)
 - getHeartbeatFn() helper wraps Context.current().heartbeat() with try/catch for test safety
+- ClassificationLLM generic interface replaces ChatAnthropic type -- legacy approval.ts stays compilable
+- Comment classification disabled in events handler -- moved to smart router (Phase 34) slow path
+- Router fast-path unified from devAgentWorkflow/dev-agent to orchestratorWorkflow/dev-agent-v2
+- Events handler updated to start orchestratorWorkflow (consistent with worker removal)
 
 ### Pending Todos
 
@@ -150,9 +154,9 @@ None blocking v2.2.
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 35-02-PLAN.md (Temporal retry config & heartbeat wiring)
+Stopped at: Completed 35-04-PLAN.md (remove @langchain/* packages)
 Resume file: None
-Next action: Execute 35-04-PLAN.md (remove @langchain/* packages)
+Next action: Execute 35-05-PLAN.md (final cleanup)
 
 ---
-*Updated: 2026-01-30 -- Phase 35 Plan 02 complete (Temporal retry config, heartbeat wiring, non-retryable errors)*
+*Updated: 2026-01-30 -- Phase 35 Plan 04 complete (remove @langchain/* packages, update barrel exports, router unified to orchestratorWorkflow)*
