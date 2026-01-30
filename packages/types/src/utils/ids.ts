@@ -22,6 +22,9 @@ const nanoid = customAlphabet(
  * const id = createId.execution();  // "exec_def456..."
  */
 export const createId = {
+  /** Agent instance ID (for spawn_agent sub-agent tracking) */
+  agentInstance: () => `ainst_${nanoid()}`,
+
   /** Agent task ID (agents.tasks) */
   agentTask: () => `atask_${nanoid()}`,
 

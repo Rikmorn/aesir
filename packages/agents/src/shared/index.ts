@@ -19,5 +19,7 @@ export * from "./mcp/index.js";
 export * from "./state/index.js";
 // Temporal workflows and activities
 export * from "./temporal/index.js";
+// Tools for agent invocation
+export * from "./tools/index.js";
 // Tracing and observability
 export * from "./tracing/index.js";
