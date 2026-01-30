@@ -115,7 +115,12 @@ Plans:
   2. A clear request with all details (e.g., "Add a health check endpoint at /health that returns 200") creates a Linear issue in 1-2 tool calls without unnecessary clarification
   3. A vague request (e.g., "we need better error handling") triggers focused clarifying questions via Slack, with multi-turn conversation state maintained through Temporal signals
   4. The agent detects cancellation intent through LLM reasoning (no hardcoded phrase lists) and searches existing Linear issues for duplicates before creating new ones
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 33-01-PLAN.md -- Linear search_issues MCP tool + agent wrapper + product agent toolkit
+- [ ] 33-02-PLAN.md -- Product agent orchestrator entry point, system prompt, and activity rewrite
+- [ ] 33-03-PLAN.md -- Temporal workflow update, worker, LangGraph cleanup, barrel exports
+- [ ] 33-04-PLAN.md -- Activity and workflow tests
 
 ### Phase 34: Smart Router
 **Goal**: Events are routed to the correct agent workflow through a hybrid system -- deterministic rules for obvious events, LLM reasoning for ambiguous ones
@@ -165,7 +170,7 @@ Phases execute in numeric order: 28 -> 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35 ->
 | 30. Agent Tool Library | 3/3 | Complete | 2026-01-30 |
 | 31. Dev Agent Orchestrator | 2/2 | Complete | 2026-01-30 |
 | 32. Dev Agent Temporal Integration | 3/3 | Complete | 2026-01-30 |
-| 33. Product Agent | 0/TBD | Not started | - |
+| 33. Product Agent | 0/4 | Not started | - |
 | 34. Smart Router | 0/TBD | Not started | - |
 | 35. Guardrails & Cleanup | 0/TBD | Not started | - |
 | 36. End-to-End Validation | 0/TBD | Not started | - |
