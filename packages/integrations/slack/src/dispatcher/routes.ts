@@ -1,7 +1,10 @@
 /**
  * Slack Event Dispatch Routes
  *
- * Configuration for routing normalized Slack events to agent endpoints.
+ * Configuration for routing normalized Slack events to the smart router.
+ * All events are sent to a single router endpoint which classifies and
+ * routes them to the appropriate agent (dev-agent or product-agent).
+ *
  * Type-only matching for v2.1 (no payload field filters).
  */
 
@@ -17,30 +20,45 @@ export interface DispatchRoute {
 /**
  * Slack dispatch routes
  *
- * message.created: User sent a message, product-agent may engage
- * app_mention.created: User @mentioned the bot, product-agent should respond
- * block_actions.approved: User approved plan via button, dev-agent processes
- * block_actions.rejected: User rejected plan via button, dev-agent processes
+ * All events are routed to the smart router for classification.
+ * The router decides which agent (dev-agent or product-agent) handles each event.
+ *
+ * message.created: User sent a message, router classifies intent
+ * app_mention.created: User @mentioned the bot, router classifies intent
+ * block_actions.approved: User approved plan via button, router routes to dev-agent
+ * block_actions.rejected: User rejected plan via button, router routes to dev-agent
+ * block_actions.escalation_retry: User chose to retry after escalation, router routes to dev-agent
+ * block_actions.escalation_abort: User chose to abort after escalation, router routes to dev-agent
  */
 export const DISPATCH_ROUTES: DispatchRoute[] = [
   {
     eventType: "slack.message.created",
-    target: process.env.PRODUCT_AGENT_URL || "http://product-agent:3005/events",
-    mode: "async", // Product-agent queues for processing
+    target: process.env.ROUTER_URL || "http://router:3006/events",
+    mode: "async", // Router queues for classification
   },
   {
     eventType: "slack.app_mention.created",
-    target: process.env.PRODUCT_AGENT_URL || "http://product-agent:3005/events",
-    mode: "sync", // Product-agent should respond promptly
+    target: process.env.ROUTER_URL || "http://router:3006/events",
+    mode: "sync", // Router should classify and respond promptly
   },
   {
     eventType: "slack.block_actions.approved",
-    target: process.env.DEV_AGENT_URL || "http://dev-agent:3004/events",
-    mode: "sync", // Quick approval processing, dev-agent responds promptly
+    target: process.env.ROUTER_URL || "http://router:3006/events",
+    mode: "sync", // Quick approval processing via router fast-path
   },
   {
     eventType: "slack.block_actions.rejected",
-    target: process.env.DEV_AGENT_URL || "http://dev-agent:3004/events",
-    mode: "sync", // Quick rejection processing, dev-agent responds promptly
+    target: process.env.ROUTER_URL || "http://router:3006/events",
+    mode: "sync", // Quick rejection processing via router fast-path
+  },
+  {
+    eventType: "slack.block_actions.escalation_retry",
+    target: process.env.ROUTER_URL || "http://router:3006/events",
+    mode: "sync", // Escalation retry via router fast-path
+  },
+  {
+    eventType: "slack.block_actions.escalation_abort",
+    target: process.env.ROUTER_URL || "http://router:3006/events",
+    mode: "sync", // Escalation abort via router fast-path
   },
 ];

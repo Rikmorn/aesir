@@ -1,7 +1,10 @@
 /**
  * Linear Event Dispatch Routes
  *
- * Configuration for routing normalized Linear events to agent endpoints.
+ * Configuration for routing normalized Linear events to the smart router.
+ * All events are sent to a single router endpoint which classifies and
+ * routes them to the appropriate agent.
+ *
  * Type-only matching for v2.1 (no payload field filters).
  */
 
@@ -17,41 +20,40 @@ export interface DispatchRoute {
 /**
  * Linear dispatch routes
  *
- * issue.created: New issue created - dev-agent filters for agent-ready label
- * issue.updated: Issue updated - dev-agent filters for agent-ready label
- * agent_session.created: Agent assigned to a task, should start work
- * agent_session.prompted: Human sent a message, agent should respond
+ * All events are routed to the smart router for classification.
+ * The router decides which agent handles each event based on deterministic
+ * rules (fast-path) or LLM classification (slow-path).
+ *
+ * issue.created: New issue created, router classifies (may start dev-agent workflow)
+ * issue.updated: Issue updated, router classifies (may signal dev-agent)
+ * agent_session.created: Agent assigned to a task, router routes to dev-agent
+ * agent_session.prompted: Human sent a message, router routes to dev-agent
+ * comment.created: New comment, router classifies approval intent
  */
 export const DISPATCH_ROUTES: DispatchRoute[] = [
-  // Issue events for dev-agent
-  // Note: dev-agent handler filters for "agent-ready" label
-  // All issue events are dispatched; handler decides whether to act
   {
     eventType: "linear.issue.created",
-    target: process.env.DEV_AGENT_URL || "http://dev-agent:3004/events",
+    target: process.env.ROUTER_URL || "http://router:3006/events",
     mode: "async",
   },
   {
     eventType: "linear.issue.updated",
-    target: process.env.DEV_AGENT_URL || "http://dev-agent:3004/events",
+    target: process.env.ROUTER_URL || "http://router:3006/events",
     mode: "async",
   },
-  // Agent session events for dev-agent
   {
     eventType: "linear.agent_session.created",
-    target: process.env.DEV_AGENT_URL || "http://dev-agent:3004/events",
+    target: process.env.ROUTER_URL || "http://router:3006/events",
     mode: "async",
   },
   {
     eventType: "linear.agent_session.prompted",
-    target: process.env.DEV_AGENT_URL || "http://dev-agent:3004/events",
+    target: process.env.ROUTER_URL || "http://router:3006/events",
     mode: "sync",
   },
-  // Comment events for approval intent classification (HITL-03)
-  // Comment body is classified by dev-agent to determine approval/rejection
   {
     eventType: "linear.comment.created",
-    target: process.env.DEV_AGENT_URL || "http://dev-agent:3004/events",
+    target: process.env.ROUTER_URL || "http://router:3006/events",
     mode: "async",
   },
 ];
