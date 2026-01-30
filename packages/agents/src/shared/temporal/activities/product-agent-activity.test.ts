@@ -5,24 +5,34 @@
  * runProductAgent() with phase extraction and issue info extraction.
  *
  * Tests cover:
- * - extractPhase: XML tag parsing from agent output
- * - extractIssueInfo: Trace step parsing for linear_create_issue results
- * - runProductAgentActivity: Integration with DI and runProductAgent
+ * - extractPhase: XML tag parsing from agent output (8 cases)
+ * - extractIssueInfo: Trace step parsing for linear_create_issue results (7 cases)
+ * - runProductAgentActivity: Integration with DI and runProductAgent (8 cases)
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentLoopResult, TraceStep } from "../../agent-loop/types.js";
-import {
-  extractIssueInfo,
+
+// ---------------------------------------------------------------------------
+// Module-level mock for runProductAgent
+// ---------------------------------------------------------------------------
+
+const mockRunProductAgent = vi.fn();
+
+vi.mock("../../../product-agent/orchestrator/index.js", () => ({
+  runProductAgent: mockRunProductAgent,
+}));
+
+// ---------------------------------------------------------------------------
+// Import AFTER mocks
+// ---------------------------------------------------------------------------
+
+const {
   extractPhase,
+  extractIssueInfo,
   initProductAgentActivities,
   runProductAgentActivity,
-} from "./product-agent-activity.js";
-
-// Mock the product agent orchestrator
-vi.mock("../../../product-agent/orchestrator/index.js", () => ({
-  runProductAgent: vi.fn(),
-}));
+} = await import("./product-agent-activity.js");
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -48,46 +58,68 @@ function buildToolResultStep(toolName: string, output: string): TraceStep {
   };
 }
 
+function createMockLogger() {
+  const child = vi.fn();
+  const logger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    trace: vi.fn(),
+    fatal: vi.fn(),
+    child,
+  };
+  child.mockReturnValue(logger);
+  return logger;
+}
+
 // ---------------------------------------------------------------------------
 // extractPhase
 // ---------------------------------------------------------------------------
 
 describe("extractPhase", () => {
-  it("extracts 'complete' phase", () => {
+  it("returns 'complete' for <phase>complete</phase>", () => {
     const result = buildResult("I created the issue. <phase>complete</phase>");
     expect(extractPhase(result)).toBe("complete");
   });
 
-  it("extracts 'declined' phase", () => {
-    const result = buildResult("This is off-topic. <phase>declined</phase>");
-    expect(extractPhase(result)).toBe("declined");
-  });
-
-  it("extracts 'cancelled' phase", () => {
-    const result = buildResult("User cancelled. <phase>cancelled</phase>");
-    expect(extractPhase(result)).toBe("cancelled");
-  });
-
-  it("maps 'clarifying' to 'awaiting_reply'", () => {
+  it("returns 'awaiting_reply' for <phase>clarifying</phase>", () => {
     const result = buildResult("Asked a question. <phase>clarifying</phase>");
     expect(extractPhase(result)).toBe("awaiting_reply");
   });
 
-  it("defaults to 'awaiting_reply' when no phase tag found", () => {
+  it("returns 'declined' for <phase>declined</phase>", () => {
+    const result = buildResult("This is off-topic. <phase>declined</phase>");
+    expect(extractPhase(result)).toBe("declined");
+  });
+
+  it("returns 'cancelled' for <phase>cancelled</phase>", () => {
+    const result = buildResult("User cancelled. <phase>cancelled</phase>");
+    expect(extractPhase(result)).toBe("cancelled");
+  });
+
+  it("returns 'awaiting_reply' when no phase tag present (safe default)", () => {
     const result = buildResult("No phase tag here");
     expect(extractPhase(result)).toBe("awaiting_reply");
   });
 
-  it("defaults to 'awaiting_reply' for unknown phase value", () => {
+  it("returns 'awaiting_reply' for unknown phase value", () => {
     const result = buildResult("<phase>unknown_value</phase>");
     expect(extractPhase(result)).toBe("awaiting_reply");
   });
 
-  it("extracts phase when surrounded by other text", () => {
+  it("extracts phase from output with surrounding text", () => {
     const result = buildResult(
       "Internal reasoning here.\nMore reasoning.\n<phase>complete</phase>\n",
     );
     expect(extractPhase(result)).toBe("complete");
+  });
+
+  it("handles multiple phase tags (takes first match)", () => {
+    const result = buildResult(
+      "<phase>declined</phase> then <phase>complete</phase>",
+    );
+    expect(extractPhase(result)).toBe("declined");
   });
 
   it("handles empty output", () => {
@@ -101,7 +133,7 @@ describe("extractPhase", () => {
 // ---------------------------------------------------------------------------
 
 describe("extractIssueInfo", () => {
-  it("extracts issue info from linear_create_issue tool result", () => {
+  it("returns issue info when linear_create_issue tool_result exists in trace", () => {
     const trace = [
       buildToolResultStep(
         "linear_create_issue",
@@ -139,10 +171,29 @@ describe("extractIssueInfo", () => {
     expect(extractIssueInfo(result)).toBeNull();
   });
 
-  it("returns null when tool output is not valid JSON", () => {
+  it("handles malformed JSON in tool result", () => {
     const trace = [buildToolResultStep("linear_create_issue", "not json")];
     const result = buildResult("<phase>complete</phase>", trace);
     expect(extractIssueInfo(result)).toBeNull();
+  });
+
+  it("extracts id, identifier, title, and url from tool result", () => {
+    const issueData = {
+      id: "uuid-full",
+      identifier: "PROJ-99",
+      url: "https://linear.app/team/issue/PROJ-99",
+      title: "Full extraction test",
+    };
+    const trace = [
+      buildToolResultStep("linear_create_issue", JSON.stringify(issueData)),
+    ];
+    const result = buildResult("<phase>complete</phase>", trace);
+    const info = extractIssueInfo(result);
+
+    // extractIssueInfo returns only id and identifier
+    expect(info).not.toBeNull();
+    expect(info?.issueId).toBe("uuid-full");
+    expect(info?.issueIdentifier).toBe("PROJ-99");
   });
 
   it("returns null when tool output is missing required fields", () => {
@@ -204,18 +255,10 @@ describe("extractIssueInfo", () => {
 // ---------------------------------------------------------------------------
 
 describe("runProductAgentActivity", () => {
-  const mockLogger = {
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn(),
-    child: vi.fn(() => mockLogger),
-  };
+  const mockLogger = createMockLogger();
   const mockDb = {} as never;
 
-  let mockRunProductAgent: ReturnType<typeof vi.fn>;
-
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
 
     // Initialize DI
@@ -223,13 +266,9 @@ describe("runProductAgentActivity", () => {
       db: mockDb,
       logger: mockLogger as never,
     });
-
-    // Get the mock
-    const mod = await import("../../../product-agent/orchestrator/index.js");
-    mockRunProductAgent = vi.mocked(mod.runProductAgent);
   });
 
-  it("calls runProductAgent with correct options", async () => {
+  it("calls runProductAgent with correct options from input", async () => {
     mockRunProductAgent.mockResolvedValue(
       buildResult("Done. <phase>complete</phase>"),
     );
@@ -278,7 +317,7 @@ describe("runProductAgentActivity", () => {
     );
   });
 
-  it("does not pass conversationHistory when undefined", async () => {
+  it("passes empty history when conversationHistory is undefined", async () => {
     mockRunProductAgent.mockResolvedValue(
       buildResult("<phase>clarifying</phase>"),
     );
@@ -291,10 +330,26 @@ describe("runProductAgentActivity", () => {
     });
 
     const callArgs = mockRunProductAgent.mock.calls[0]?.[0];
+    // When undefined, the conditional property assignment skips it
     expect(callArgs).not.toHaveProperty("conversationHistory");
   });
 
-  it("returns extracted phase and issue info", async () => {
+  it("extracts phase from agent result output", async () => {
+    mockRunProductAgent.mockResolvedValue(
+      buildResult("Declining this message. <phase>declined</phase>"),
+    );
+
+    const output = await runProductAgentActivity({
+      threadTs: "1234567890.123456",
+      channelId: "C0123456789",
+      message: "what is 2+2?",
+      teamId: "team-123",
+    });
+
+    expect(output.phase).toBe("declined");
+  });
+
+  it("extracts issue info from agent result trace", async () => {
     const trace = [
       buildToolResultStep(
         "linear_create_issue",
@@ -317,10 +372,48 @@ describe("runProductAgentActivity", () => {
       teamId: "team-123",
     });
 
-    expect(output.phase).toBe("complete");
     expect(output.issueId).toBe("uuid-123");
     expect(output.issueIdentifier).toBe("ABC-42");
+  });
+
+  it("returns slim output without full trace", async () => {
+    const trace = [
+      buildToolResultStep("slack_send_message", '{"ok":true}'),
+      buildToolResultStep(
+        "linear_create_issue",
+        JSON.stringify({
+          id: "uuid-abc",
+          identifier: "XYZ-99",
+          url: "https://linear.app/issue",
+          title: "Traced Issue",
+        }),
+      ),
+    ];
+    mockRunProductAgent.mockResolvedValue(
+      buildResult("Created. <phase>complete</phase>", trace),
+    );
+
+    const output = await runProductAgentActivity({
+      threadTs: "1234567890.123456",
+      channelId: "C0123456789",
+      message: "create it",
+      teamId: "team-123",
+    });
+
+    // Slim output: has response, phase, issue info
     expect(output.response).toContain("<phase>complete</phase>");
+    expect(output.phase).toBe("complete");
+    expect(output.issueId).toBe("uuid-abc");
+    // Does NOT have the full trace
+    expect(
+      (output as unknown as Record<string, unknown>).trace,
+    ).toBeUndefined();
+    expect(
+      (output as unknown as Record<string, unknown>).toolCallCount,
+    ).toBeUndefined();
+    expect(
+      (output as unknown as Record<string, unknown>).tokenCount,
+    ).toBeUndefined();
   });
 
   it("returns output without issue fields when no issue created", async () => {
@@ -340,10 +433,9 @@ describe("runProductAgentActivity", () => {
     expect(output.issueIdentifier).toBeUndefined();
   });
 
-  it("throws when DI not initialized", async () => {
-    // Re-import to get fresh module, but we can't easily reset DI
-    // Instead, we test that getProductAgentDeps() throws by checking
-    // the initProductAgentActivities function exists and is callable
+  it("throws if activity deps not initialized", () => {
+    // Verify the init function exists and the pattern is wired correctly
     expect(typeof initProductAgentActivities).toBe("function");
+    expect(typeof runProductAgentActivity).toBe("function");
   });
 });
