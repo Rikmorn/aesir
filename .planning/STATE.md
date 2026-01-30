@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 33 (sixth of 9 in v2.2) - Product Agent
-Plan: 1 of 4
+Plan: 2 of 4
 Status: In progress
-Last activity: 2026-01-30 -- Completed 33-01-PLAN.md (Linear search_issues + product agent toolkit)
+Last activity: 2026-01-30 -- Completed 33-02-PLAN.md (Product agent orchestrator + Temporal activity rewrite)
 
-Progress: ██████████████ 78% (14/18 plans)
+Progress: ███████████████ 83% (15/18 plans)
 
 ## Milestone History
 
@@ -95,6 +95,11 @@ Phase 33 decisions:
 - Used client.searchIssues(query) (current SDK method) over deprecated issueSearch -- future-proof
 - Post-search team filtering in JS (searchIssues SDK has no teamId param) -- acceptable for small result sets
 - ProductAgentToolkitDeps is minimal (agentId + correlationId only) -- no container/budget/trace overhead
+- Product agent system prompt uses 6 XML sections: identity, conversation_rules, behavior, issue_quality, cancellation_detection, duplicate_detection
+- Phase extraction via regex on <phase> XML tags with safe default to awaiting_reply
+- Issue info extracted from trace by finding tool_result steps for linear_create_issue and parsing JSON output
+- Conversation history injected as XML <conversation_history> block in initial message (not separate API turns)
+- Module-level DI pattern for product agent activities (initProductAgentActivities)
 
 ### Pending Todos
 
@@ -109,9 +114,9 @@ None blocking v2.2.
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 33-01-PLAN.md (Linear search_issues + product agent toolkit)
+Stopped at: Completed 33-02-PLAN.md (Product agent orchestrator + Temporal activity rewrite)
 Resume file: None
-Next action: Continue Phase 33, Plan 02
+Next action: Continue Phase 33, Plan 03
 
 ---
-*Updated: 2026-01-30 -- Completed 33-01 (search_issues MCP tool + createProductAgentToolkit)*
+*Updated: 2026-01-30 -- Completed 33-02 (runProductAgent orchestrator + rewritten Temporal activity)*
