@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 32 (fifth of 9 in v2.2) - Dev Agent Temporal Integration
-Plan: 2 of 3
-Status: In progress
-Last activity: 2026-01-30 -- Completed 32-02-PLAN.md (simplified orchestrator workflow)
+Plan: 3 of 3
+Status: Phase complete
+Last activity: 2026-01-30 -- Completed 32-03-PLAN.md (activity and workflow tests)
 
-Progress: ████████████ 67% (12/18 plans)
+Progress: █████████████ 72% (13/18 plans)
 
 ## Milestone History
 
@@ -88,6 +88,8 @@ Phase 32 decisions:
 - Separate proxyActivities configs: orchestrator (45min/2 retries) vs infrastructure (5min/3 retries)
 - dev-agent-v2 task queue for orchestrator worker during transition period
 - Activity interfaces redeclared in workflow file -- Temporal determinism constraint
+- Module-level vi.mock with dynamic await import for activity tests -- ensures correct mock wiring
+- State machine simulation pattern for workflow tests -- full TestWorkflowEnvironment deferred to integration tests
 
 ### Pending Todos
 
@@ -102,9 +104,9 @@ None blocking v2.2.
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 32-02-PLAN.md (simplified orchestrator workflow)
+Stopped at: Completed 32-03-PLAN.md (activity and workflow tests) -- Phase 32 complete
 Resume file: None
-Next action: Continue Phase 32 with 32-03-PLAN.md (activity and workflow tests)
+Next action: Continue to Phase 33 (event router and webhook handlers)
 
 ---
-*Updated: 2026-01-30 -- Completed 32-02 (orchestrator workflow, types, worker registration, barrel exports)*
+*Updated: 2026-01-30 -- Completed 32-03 (79 test cases for activities and workflow) -- Phase 32 complete*
