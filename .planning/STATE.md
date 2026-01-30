@@ -125,7 +125,12 @@ Phase 34 decisions:
 
 Phase 35 decisions:
 - Pre-commit hook bypassed (--no-verify) for pre-existing tsc -b failures in integration packages
-- merge_pull_request MCP tool definition preserved (valid MCP tool, removed from agent toolkits separately)
+- Two-tier budget checks: isExhausted() is hard stop (zero tokens), isReserveOnly() triggers graceful wrap-up (one final LLM call)
+- Warning threshold at 20% remaining, reserve buffer at 5K tokens (exported constants for testability)
+- warningFired flag on TokenBudget interface (mutable by loop, visible to callers)
+- maxRetries:0 on Anthropic SDK client to let Temporal handle retry logic
+- merge_pull_request removed from toolkit filter only, tool definition kept in github-tools.ts for MCP (defense-in-depth)
+- Callback-based heartbeat (onHeartbeat) keeps agent loop framework-agnostic
 - Deletion-first cleanup: remove all dead code files before updating imports or removing packages
 
 ### Pending Todos
