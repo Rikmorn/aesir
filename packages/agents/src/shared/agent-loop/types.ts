@@ -154,6 +154,14 @@ export interface AgentLoopOptions {
   onToolCall?: (call: ToolCallInfo) => void;
   /** Called on every LLM response (for tracing/observability) */
   onResponse?: (response: LLMResponse) => void;
+  /** Called once when token budget drops below warning threshold (20% remaining) */
+  onBudgetWarning?: (info: {
+    total: number;
+    remaining: number;
+    usedPercent: number;
+  }) => void;
+  /** Called after each LLM response (for Temporal activity heartbeats) */
+  onHeartbeat?: () => void;
   /** AbortSignal for clean cancellation of the loop and in-flight API calls */
   abortSignal?: AbortSignal;
   /** Optional pino logger for warnings and debug info */

@@ -24,6 +24,7 @@ import type { AgentLoopOptions, ToolDefinition, ToolResult } from "./types.js";
 // ---------------------------------------------------------------------------
 
 const mockCreate = vi.fn();
+const mockConstructorArgs = vi.fn();
 
 vi.mock("@anthropic-ai/sdk", () => {
   // Provide the APIError class for instanceof checks
@@ -49,6 +50,9 @@ vi.mock("@anthropic-ai/sdk", () => {
     // biome-ignore lint/style/useNamingConvention: Must match Anthropic SDK's exported name
     static APIError = APIError;
     messages = { create: mockCreate };
+    constructor(opts?: Record<string, unknown>) {
+      mockConstructorArgs(opts);
+    }
   }
 
   return { default: MockAnthropic, APIError };
@@ -220,6 +224,7 @@ function baseOptions(overrides?: Partial<AgentLoopOptions>): AgentLoopOptions {
 describe("runAgentLoop", () => {
   beforeEach(() => {
     mockCreate.mockReset();
+    mockConstructorArgs.mockReset();
   });
 
   // -------------------------------------------------------------------------
@@ -944,6 +949,234 @@ describe("runAgentLoop", () => {
     expect(result.status).toBe("error");
     expect(result.output).toContain("Agent loop error");
     expect(result.output).toContain("Network failure");
+  });
+
+  // -------------------------------------------------------------------------
+  // GUAR-03: Budget warning callback fires exactly once
+  // -------------------------------------------------------------------------
+
+  it("fires onBudgetWarning exactly once when budget crosses threshold", async () => {
+    const tool = createTestTool("warn_tool");
+    // Use a large budget so 20% threshold (20000) is well above the 5000 reserve buffer.
+    // Budget: 100_000. Warning at <= 20_000. Reserve at <= 5_000.
+    // Each iteration uses 10_000 tokens.
+    const budget = createTokenBudget(100_000);
+    const onBudgetWarning = vi.fn();
+
+    mockCreate
+      // Iter 1: 100000 - 10000 = 90000 (90%, no warning)
+      .mockResolvedValueOnce(
+        mockToolUseResponse(
+          [{ name: "warn_tool", input: { value: "1" }, id: "c1" }],
+          5000,
+          5000,
+        ),
+      )
+      // Iter 2: 90000 - 10000 = 80000 (80%, no warning)
+      .mockResolvedValueOnce(
+        mockToolUseResponse(
+          [{ name: "warn_tool", input: { value: "2" }, id: "c2" }],
+          5000,
+          5000,
+        ),
+      )
+      // Iter 3: 80000 - 10000 = 70000 (70%, no warning)
+      .mockResolvedValueOnce(
+        mockToolUseResponse(
+          [{ name: "warn_tool", input: { value: "3" }, id: "c3" }],
+          5000,
+          5000,
+        ),
+      )
+      // Iter 4: 70000 - 10000 = 60000 (60%, no warning)
+      .mockResolvedValueOnce(
+        mockToolUseResponse(
+          [{ name: "warn_tool", input: { value: "4" }, id: "c4" }],
+          5000,
+          5000,
+        ),
+      )
+      // Iter 5: 60000 - 10000 = 50000 (50%, no warning)
+      .mockResolvedValueOnce(
+        mockToolUseResponse(
+          [{ name: "warn_tool", input: { value: "5" }, id: "c5" }],
+          5000,
+          5000,
+        ),
+      )
+      // Iter 6: 50000 - 10000 = 40000 (40%, no warning)
+      .mockResolvedValueOnce(
+        mockToolUseResponse(
+          [{ name: "warn_tool", input: { value: "6" }, id: "c6" }],
+          5000,
+          5000,
+        ),
+      )
+      // Iter 7: 40000 - 10000 = 30000 (30%, no warning)
+      .mockResolvedValueOnce(
+        mockToolUseResponse(
+          [{ name: "warn_tool", input: { value: "7" }, id: "c7" }],
+          5000,
+          5000,
+        ),
+      )
+      // Iter 8: 30000 - 10000 = 20000 (20%, WARNING FIRES -- exactly at threshold)
+      .mockResolvedValueOnce(
+        mockToolUseResponse(
+          [{ name: "warn_tool", input: { value: "8" }, id: "c8" }],
+          5000,
+          5000,
+        ),
+      )
+      // Iter 9: 20000 - 10000 = 10000 (10%, warning already fired -- no duplicate)
+      .mockResolvedValueOnce(
+        mockToolUseResponse(
+          [{ name: "warn_tool", input: { value: "9" }, id: "c9" }],
+          5000,
+          5000,
+        ),
+      )
+      // Iter 10: end turn (remaining 10000 - 500 = 9500)
+      .mockResolvedValueOnce(mockTextResponse("Done", 300, 200));
+
+    const result = await runAgentLoop(
+      baseOptions({
+        tools: [tool],
+        tokenBudget: budget,
+        onBudgetWarning,
+      }),
+    );
+
+    expect(result.status).toBe("completed");
+    // Warning fires exactly once
+    expect(onBudgetWarning).toHaveBeenCalledTimes(1);
+    expect(onBudgetWarning).toHaveBeenCalledWith(
+      expect.objectContaining({
+        total: 100_000,
+        remaining: expect.any(Number),
+        usedPercent: expect.any(Number),
+      }),
+    );
+    // warningFired flag is set
+    expect(budget.warningFired).toBe(true);
+  });
+
+  it("does not fire onBudgetWarning when budget stays above threshold", async () => {
+    const onBudgetWarning = vi.fn();
+    const budget = createTokenBudget(100_000);
+
+    // Single text response using 150 tokens -- well above 20%
+    mockCreate.mockResolvedValueOnce(mockTextResponse("Done", 100, 50));
+
+    await runAgentLoop(baseOptions({ tokenBudget: budget, onBudgetWarning }));
+
+    expect(onBudgetWarning).not.toHaveBeenCalled();
+    expect(budget.warningFired).toBe(false);
+  });
+
+  // -------------------------------------------------------------------------
+  // GUAR-05: Graceful exhaustion with reserve buffer
+  // -------------------------------------------------------------------------
+
+  it("triggers graceful wrap-up when reserve-only threshold reached", async () => {
+    const tool = createTestTool("reserve_tool");
+    // Budget of 6000: reserve is 5000, so after first iteration uses ~150,
+    // remaining = 5850, not reserve. After many more it hits reserve.
+    // Simpler: budget = 5200, first call uses 300 -> remaining 4900 (below 5000 = reserve)
+    const budget = createTokenBudget(5200);
+
+    // Iteration 1: uses 300 tokens -> remaining 4900 -> tool_use continues
+    mockCreate
+      .mockResolvedValueOnce(
+        mockToolUseResponse(
+          [{ name: "reserve_tool", input: { value: "x" }, id: "c1" }],
+          200,
+          100,
+        ),
+      )
+      // At top of iteration 2: remaining = 4900, isReserveOnly = true, iterationCount = 1
+      // -> graceful wrap-up: makes final LLM call
+      .mockResolvedValueOnce(
+        mockTextResponse("Summary of work done so far", 100, 50),
+      );
+
+    const result = await runAgentLoop(
+      baseOptions({ tools: [tool], tokenBudget: budget }),
+    );
+
+    expect(result.status).toBe("max_tokens");
+    expect(result.output).toBe("Summary of work done so far");
+    // Second call should have the wrap-up system message
+    const messages = getMessagesFromCall(1);
+    const lastMsg = messages[messages.length - 1];
+    expect(lastMsg?.role).toBe("user");
+    expect(lastMsg?.content).toContain("Token budget nearly exhausted");
+  });
+
+  it("hard-stops on isExhausted without wrap-up call", async () => {
+    const tool = createTestTool("exhaust_tool");
+    // Budget of 100, first call uses 150 -> remaining -50 -> exhausted
+    const budget = createTokenBudget(100);
+
+    mockCreate.mockResolvedValueOnce(
+      mockToolUseResponse(
+        [{ name: "exhaust_tool", input: { value: "x" }, id: "c1" }],
+        100,
+        50,
+      ),
+    );
+
+    const result = await runAgentLoop(
+      baseOptions({ tools: [tool], tokenBudget: budget }),
+    );
+
+    expect(result.status).toBe("max_tokens");
+    // Only 1 LLM call made (no wrap-up call since isExhausted is true)
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+  });
+
+  // -------------------------------------------------------------------------
+  // Heartbeat callback
+  // -------------------------------------------------------------------------
+
+  it("fires onHeartbeat after each LLM response", async () => {
+    const tool = createTestTool("hb_tool");
+    const onHeartbeat = vi.fn();
+
+    mockCreate
+      .mockResolvedValueOnce(
+        mockToolUseResponse([
+          { name: "hb_tool", input: { value: "x" }, id: "c1" },
+        ]),
+      )
+      .mockResolvedValueOnce(mockTextResponse("Done"));
+
+    await runAgentLoop(baseOptions({ tools: [tool], onHeartbeat }));
+
+    // 2 LLM responses -> 2 heartbeats
+    expect(onHeartbeat).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not fire onHeartbeat when not provided", async () => {
+    mockCreate.mockResolvedValueOnce(mockTextResponse("Done"));
+
+    // Should not throw even though onHeartbeat is undefined
+    const result = await runAgentLoop(baseOptions());
+
+    expect(result.status).toBe("completed");
+  });
+
+  // -------------------------------------------------------------------------
+  // maxRetries: 0 on Anthropic constructor
+  // -------------------------------------------------------------------------
+
+  it("creates Anthropic client with maxRetries: 0", async () => {
+    mockCreate.mockResolvedValueOnce(mockTextResponse("Done"));
+
+    await runAgentLoop(baseOptions());
+
+    // Verify the Anthropic constructor was called with maxRetries: 0
+    expect(mockConstructorArgs).toHaveBeenCalledWith({ maxRetries: 0 });
   });
 
   // -------------------------------------------------------------------------

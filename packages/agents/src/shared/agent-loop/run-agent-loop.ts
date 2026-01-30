@@ -186,6 +186,8 @@ export async function runAgentLoop(
     abortSignal,
     onToolCall,
     onResponse,
+    onBudgetWarning,
+    onHeartbeat,
   } = options;
 
   // Apply defaults
@@ -194,7 +196,8 @@ export async function runAgentLoop(
   const maxTokensPerResponse = options.maxTokensPerResponse ?? 16384;
 
   // Create Anthropic client (reads ANTHROPIC_API_KEY from env)
-  const client = new Anthropic();
+  // maxRetries: 0 disables SDK built-in retries -- let Temporal handle retries
+  const client = new Anthropic({ maxRetries: 0 });
 
   // Convert tools to Anthropic API format
   const anthropicTools = tools.map(toAnthropicTool);
@@ -232,6 +235,7 @@ export async function runAgentLoop(
     }
 
     // LOOP-05: Check token budget before making an LLM call
+    // (1) HARD STOP: absolute zero tokens left -- no further LLM calls
     if (tokenBudget?.isExhausted()) {
       return buildResult({
         status: "max_tokens",
@@ -241,6 +245,71 @@ export async function runAgentLoop(
         totalOutputTokens,
         trace,
       });
+    }
+
+    // (2) RESERVE GATE: only reserve buffer remains -- graceful wrap-up
+    // Make one final LLM call with a wrap-up instruction, then stop.
+    // Skip on first iteration (iterationCount === 0) to allow at least one normal call.
+    if (tokenBudget?.isReserveOnly() && iterationCount > 0) {
+      conversationMessages.push({
+        role: "user",
+        content:
+          "[SYSTEM] Token budget nearly exhausted. Provide a brief summary of progress so far and what remains to be done, so work can be resumed later.",
+      });
+
+      try {
+        const finalResponse = await client.messages.create(
+          {
+            model,
+            max_tokens: maxTokensPerResponse,
+            system: systemPrompt,
+            messages: conversationMessages,
+          },
+          { signal: abortSignal },
+        );
+
+        // Deduct tokens from the final response
+        totalInputTokens += finalResponse.usage.input_tokens;
+        totalOutputTokens += finalResponse.usage.output_tokens;
+        tokenBudget.deduct(
+          finalResponse.usage.input_tokens,
+          finalResponse.usage.output_tokens,
+        );
+
+        // Record final trace step
+        const finalTraceStep: TraceStep = {
+          type: "llm_response",
+          timestamp: new Date().toISOString(),
+          tokenCount: {
+            input: finalResponse.usage.input_tokens,
+            output: finalResponse.usage.output_tokens,
+          },
+        };
+        if (finalResponse.stop_reason) {
+          finalTraceStep.stopReason = finalResponse.stop_reason;
+        }
+        trace.push(finalTraceStep);
+
+        const wrapUpText = extractTextOutput(finalResponse.content);
+        return buildResult({
+          status: "max_tokens",
+          output: wrapUpText || lastTextOutput,
+          toolCallCount,
+          totalInputTokens,
+          totalOutputTokens,
+          trace,
+        });
+      } catch {
+        // If the wrap-up call fails, return with what we have
+        return buildResult({
+          status: "max_tokens",
+          output: lastTextOutput,
+          toolCallCount,
+          totalInputTokens,
+          totalOutputTokens,
+          trace,
+        });
+      }
     }
 
     // LOOP-02: Call the LLM
@@ -316,6 +385,19 @@ export async function runAgentLoop(
       response.usage.output_tokens,
     );
 
+    // GUAR-03: Check warning threshold (fires once)
+    if (tokenBudget?.isWarning() && !tokenBudget.warningFired) {
+      tokenBudget.warningFired = true;
+      onBudgetWarning?.({
+        total: tokenBudget.total,
+        remaining: tokenBudget.remaining,
+        usedPercent: Math.round(
+          ((tokenBudget.total - tokenBudget.remaining) / tokenBudget.total) *
+            100,
+        ),
+      });
+    }
+
     // Record LLM response trace step
     const llmTraceStep: TraceStep = {
       type: "llm_response",
@@ -333,6 +415,9 @@ export async function runAgentLoop(
 
     // LOOP-07: Fire onResponse callback
     onResponse?.(response);
+
+    // Fire heartbeat callback after each LLM response (for Temporal activity heartbeats)
+    onHeartbeat?.();
 
     // LOOP-09: Handle non-tool-use stop reasons (terminal)
     if (response.stop_reason !== "tool_use") {
