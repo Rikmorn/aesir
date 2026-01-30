@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 34 (seventh of 9 in v2.2) - Smart Router
-Plan: 1 of 5
+Plan: 2 of 5
 Status: In progress
-Last activity: 2026-01-30 -- Completed 34-01-PLAN.md (router types, fast-path, system prompt)
+Last activity: 2026-01-30 -- Completed 34-02-PLAN.md (router tools, slow-path agentic loop)
 
-Progress: █████████████████░ 95% (18/22 plans)
+Progress: ██████████████████░ 95% (19/22 plans)
 
 ## Milestone History
 
@@ -117,6 +117,9 @@ Phase 34 decisions:
 - agentId 'router' for MCP calls (own identity for permission control)
 - Router system prompt absorbs all 6 intent types from APPROVAL_CLASSIFICATION_PROMPT
 - Questions treated as soft rejections with question text as feedback
+- Router tools use factory pattern taking RouterDeps, returning ToolDefinition
+- Signal workflow uses signalDef.name string form to avoid union narrowing issues
+- Haiku model (claude-haiku-4-5-20251016) for slow-path routing -- fast and cheap
 
 ### Blockers/Concerns
 
@@ -125,9 +128,9 @@ None blocking v2.2.
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 34-01-PLAN.md
+Stopped at: Completed 34-02-PLAN.md
 Resume file: None
-Next action: Execute 34-02-PLAN.md (slow-path LLM classifier)
+Next action: Execute 34-03-PLAN.md (top-level router entry point)
 
 ---
-*Updated: 2026-01-30 -- Completed 34-01-PLAN.md (router types, fast-path, system prompt)*
+*Updated: 2026-01-30 -- Completed 34-02-PLAN.md (router tools, slow-path agentic loop)*
