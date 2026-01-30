@@ -70,7 +70,11 @@ Plans:
   3. The `spawn_agent` tool creates a nested `runAgentLoop()` invocation with focused context and restricted tool set, returning the sub-agent's result to the calling orchestrator
   4. Tool errors are returned to the LLM with `isError: true` rather than throwing exceptions -- the LLM reasons about what went wrong instead of the loop crashing
   5. Per-agent toolkits are defined: orchestrator gets coordination + lightweight tools, researcher gets read-only, coder gets read+write, tester gets read+run
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 30-01-PLAN.md -- Codebase tools (read_file, write_file, search_codebase, list_directory, run_command)
+- [ ] 30-02-PLAN.md -- MCP integration tool wrappers (19 tools: Linear 5, GitHub 9, Slack 5)
+- [ ] 30-03-PLAN.md -- Coordination tools (spawn_agent, request_human_input) and per-agent toolkits
 
 ### Phase 31: Dev Agent Orchestrator
 **Goal**: The dev agent reasons about tasks using sub-agents instead of following a fixed 13-node graph -- it decides what to research, how detailed to plan, whether to test, and how to recover from errors
@@ -151,7 +155,7 @@ Phases execute in numeric order: 28 -> 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35 ->
 |-------|----------------|--------|-----------|
 | 28. Agentic Loop Runtime | 2/2 | Complete | 2026-01-29 |
 | 29. Database Schema & Context | 3/3 | Complete | 2026-01-30 |
-| 30. Agent Tool Library | 0/TBD | Not started | - |
+| 30. Agent Tool Library | 0/3 | Not started | - |
 | 31. Dev Agent Orchestrator | 0/TBD | Not started | - |
 | 32. Dev Agent Temporal Integration | 0/TBD | Not started | - |
 | 33. Product Agent | 0/TBD | Not started | - |
