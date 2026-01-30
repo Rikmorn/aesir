@@ -35,7 +35,9 @@ const { DETERMINISTIC_RULES, executeFastPath, matchFastPath } = await import(
 // Test Helpers
 // ---------------------------------------------------------------------------
 
-function createTestEvent(overrides: Partial<NormalizedEvent> = {}): NormalizedEvent {
+function createTestEvent(
+  overrides: Partial<NormalizedEvent> = {},
+): NormalizedEvent {
   return {
     id: "evt_test123",
     type: "slack.block_actions.approved",
@@ -93,8 +95,8 @@ describe("matchFastPath", () => {
 
     const action = matchFastPath(event);
     expect(action).not.toBeNull();
-    expect(action!.type).toBe("signal");
-    if (action!.type === "signal") {
+    expect(action?.type).toBe("signal");
+    if (action?.type === "signal") {
       expect(action.workflowId).toBe("dev-agent-TASK-42");
       expect(action.signal).toBe("planApproval");
       expect(action.payload).toEqual({ approved: true, source: "slack" });
@@ -110,8 +112,8 @@ describe("matchFastPath", () => {
 
     const action = matchFastPath(event);
     expect(action).not.toBeNull();
-    expect(action!.type).toBe("signal");
-    if (action!.type === "signal") {
+    expect(action?.type).toBe("signal");
+    if (action?.type === "signal") {
       expect(action.workflowId).toBe("dev-agent-TASK-42");
       expect(action.signal).toBe("planApproval");
       expect(action.payload).toEqual({
@@ -133,8 +135,8 @@ describe("matchFastPath", () => {
 
     const action = matchFastPath(event);
     expect(action).not.toBeNull();
-    expect(action!.type).toBe("signal");
-    if (action!.type === "signal") {
+    expect(action?.type).toBe("signal");
+    if (action?.type === "signal") {
       expect(action.workflowId).toBe("dev-agent-TASK-99");
       expect(action.signal).toBe("escalationResolved");
       expect(action.payload).toEqual({ action: "retry" });
@@ -150,8 +152,8 @@ describe("matchFastPath", () => {
 
     const action = matchFastPath(event);
     expect(action).not.toBeNull();
-    expect(action!.type).toBe("signal");
-    if (action!.type === "signal") {
+    expect(action?.type).toBe("signal");
+    if (action?.type === "signal") {
       expect(action.workflowId).toBe("dev-agent-TASK-99");
       expect(action.signal).toBe("escalationResolved");
       expect(action.payload).toEqual({ action: "abort" });
@@ -169,8 +171,8 @@ describe("matchFastPath", () => {
 
     const action = matchFastPath(event);
     expect(action).not.toBeNull();
-    expect(action!.type).toBe("signal");
-    if (action!.type === "signal") {
+    expect(action?.type).toBe("signal");
+    if (action?.type === "signal") {
       expect(action.workflowId).toBe("dev-agent-ABC-123");
       expect(action.signal).toBe("prCompletion");
       expect(action.payload).toEqual({ merged: true, prNumber: 42 });
@@ -186,8 +188,8 @@ describe("matchFastPath", () => {
 
     const action = matchFastPath(event);
     expect(action).not.toBeNull();
-    expect(action!.type).toBe("signal");
-    if (action!.type === "signal") {
+    expect(action?.type).toBe("signal");
+    if (action?.type === "signal") {
       expect(action.workflowId).toBe("dev-agent-DEF-456");
       expect(action.signal).toBe("prCompletion");
       expect(action.payload).toEqual({ merged: false, prNumber: 99 });
@@ -205,8 +207,8 @@ describe("matchFastPath", () => {
 
     const action = matchFastPath(event);
     expect(action).not.toBeNull();
-    expect(action!.type).toBe("start");
-    if (action!.type === "start") {
+    expect(action?.type).toBe("start");
+    if (action?.type === "start") {
       expect(action.workflowName).toBe("devAgentWorkflow");
       expect(action.taskQueue).toBe("dev-agent");
       expect(action.workflowId).toBe("dev-agent-issue-uuid-abc");
@@ -226,8 +228,8 @@ describe("matchFastPath", () => {
 
     const action = matchFastPath(event);
     expect(action).not.toBeNull();
-    expect(action!.type).toBe("ignore");
-    if (action!.type === "ignore") {
+    expect(action?.type).toBe("ignore");
+    if (action?.type === "ignore") {
       expect(action.reason).toContain("Linear webhooks");
     }
   });
@@ -241,8 +243,8 @@ describe("matchFastPath", () => {
 
     const action = matchFastPath(event);
     expect(action).not.toBeNull();
-    expect(action!.type).toBe("ignore");
-    if (action!.type === "ignore") {
+    expect(action?.type).toBe("ignore");
+    if (action?.type === "ignore") {
       expect(action.reason).toContain("Linear webhooks");
     }
   });
@@ -299,8 +301,8 @@ describe("matchFastPath", () => {
 
     const action = matchFastPath(event);
     expect(action).not.toBeNull();
-    expect(action!.type).toBe("ignore");
-    if (action!.type === "ignore") {
+    expect(action?.type).toBe("ignore");
+    if (action?.type === "ignore") {
       expect(action.reason).toContain("Cannot extract task ID");
       expect(action.reason).toContain("main");
     }
@@ -315,8 +317,8 @@ describe("matchFastPath", () => {
 
     const action = matchFastPath(event);
     expect(action).not.toBeNull();
-    expect(action!.type).toBe("ignore");
-    if (action!.type === "ignore") {
+    expect(action?.type).toBe("ignore");
+    if (action?.type === "ignore") {
       expect(action.reason).toContain("Cannot extract task ID");
     }
   });
@@ -330,8 +332,8 @@ describe("matchFastPath", () => {
 
     const action = matchFastPath(event);
     expect(action).not.toBeNull();
-    expect(action!.type).toBe("signal");
-    if (action!.type === "signal") {
+    expect(action?.type).toBe("signal");
+    if (action?.type === "signal") {
       expect(action.workflowId).toBe("dev-agent-XYZ-789");
     }
   });
@@ -415,7 +417,9 @@ describe("executeFastPath", () => {
 
   it("returns failed status when workflow not found (message includes 'not found')", async () => {
     const mockHandle = {
-      signal: vi.fn().mockRejectedValue(new Error("Workflow not found in namespace")),
+      signal: vi
+        .fn()
+        .mockRejectedValue(new Error("Workflow not found in namespace")),
     };
     (
       deps.workflowClient as unknown as {
@@ -519,7 +523,9 @@ describe("executeFastPath", () => {
       deps.workflowClient as unknown as {
         workflow: { start: ReturnType<typeof vi.fn> };
       }
-    ).workflow.start = vi.fn().mockRejectedValue(new Error("Connection refused"));
+    ).workflow.start = vi
+      .fn()
+      .mockRejectedValue(new Error("Connection refused"));
 
     const result = await executeFastPath(
       {
@@ -595,9 +601,7 @@ describe("DETERMINISTIC_RULES", () => {
   });
 
   it("all rules have unique names", () => {
-    const names = DETERMINISTIC_RULES.map(
-      (r: { name: string }) => r.name,
-    );
+    const names = DETERMINISTIC_RULES.map((r: { name: string }) => r.name);
     const uniqueNames = new Set(names);
     expect(uniqueNames.size).toBe(names.length);
   });
@@ -611,9 +615,7 @@ describe("DETERMINISTIC_RULES", () => {
   });
 
   it("rule names match expected set", () => {
-    const names = DETERMINISTIC_RULES.map(
-      (r: { name: string }) => r.name,
-    );
+    const names = DETERMINISTIC_RULES.map((r: { name: string }) => r.name);
     expect(names).toEqual([
       "slack-approval-button",
       "slack-rejection-button",
