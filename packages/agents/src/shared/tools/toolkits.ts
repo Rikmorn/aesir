@@ -7,6 +7,10 @@
  * Principle: Sub-agents (researcher, coder, tester) get only codebase tools.
  * The orchestrator gets full access: codebase + integration + coordination.
  *
+ * Sub-agent system prompts are imported from the dev-agent orchestrator module
+ * (packages/agents/src/dev-agent/orchestrator/system-prompts.ts) which defines
+ * production-quality prompts with structured XML sections.
+ *
  * Tool counts:
  * - Researcher: 4 (read_file, search_codebase, list_directory, run_command)
  * - Coder: 4 (read_file, write_file, search_codebase, run_command)
@@ -15,6 +19,11 @@
  */
 
 import type { DevContainerManager, PinoLogger } from "@aesir/platform";
+import {
+  CODER_SYSTEM_PROMPT,
+  RESEARCHER_SYSTEM_PROMPT,
+  TESTER_SYSTEM_PROMPT,
+} from "../../dev-agent/orchestrator/system-prompts.js";
 import type { TokenBudget } from "../agent-loop/token-budget.js";
 import type { ToolDefinition } from "../agent-loop/types.js";
 import type { TraceRecorderCallbacks } from "../db/trace-recorder.js";
@@ -37,16 +46,6 @@ import {
   createSlackTools,
 } from "./integration/index.js";
 import type { CodebaseToolDeps } from "./types.js";
-
-// ---------------------------------------------------------------------------
-// Sub-Agent System Prompts (placeholders for Phase 31)
-// ---------------------------------------------------------------------------
-
-const RESEARCHER_SYSTEM_PROMPT = `You are a code researcher. Your job is to explore the codebase, understand architecture, and gather information needed for implementation. Use read_file, search_codebase, and list_directory to explore. Use run_command for research commands like grep, find, or wc. Report your findings clearly and concisely.`;
-
-const CODER_SYSTEM_PROMPT = `You are a code implementer. Your job is to write and modify code according to the plan provided. Use read_file and search_codebase to understand existing code. Use write_file to create or modify files. Use run_command to build and test your changes. Make focused, correct changes.`;
-
-const TESTER_SYSTEM_PROMPT = `You are a test runner and diagnostician. Your job is to run tests, analyze failures, and diagnose root causes. Use run_command to execute test suites. Use read_file and search_codebase to investigate failures. Report test results and failure diagnoses clearly.`;
 
 // ---------------------------------------------------------------------------
 // Types
