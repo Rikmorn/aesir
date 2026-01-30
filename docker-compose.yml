@@ -25,6 +25,7 @@
 #   - http://localhost/linear/*   → Linear integration (webhooks, OAuth, MCP)
 #   - http://localhost/github/*   → GitHub integration (webhooks, OAuth, MCP)
 #   - http://localhost/slack/*    → Slack integration (events, OAuth, MCP)
+#   - http://localhost/router/*   → Router (event classification)
 #   - http://localhost/agent/*    → Dev agent
 #   - http://localhost/health     → Nginx health check
 #
@@ -35,6 +36,7 @@
 #   - Linear Integration: http://localhost:3001
 #   - GitHub Integration: http://localhost:3002
 #   - Slack Integration: http://localhost:3003
+#   - Router: http://localhost:3006
 #   - Dev Agent: http://localhost:3004
 #
 # Webhook URLs (configure in each service):
@@ -112,7 +114,7 @@ services:
       - aesir-network
 
   # Nginx Reverse Proxy - unified entry point for all services
-  # Routes: /linear/*, /github/*, /slack/*, /agent/*
+  # Routes: /linear/*, /github/*, /slack/*, /router/*, /agent/*
   nginx:
     image: nginx:1.25-alpine
     container_name: aesir-nginx
@@ -126,6 +128,8 @@ services:
       github-integration:
         condition: service_healthy
       slack-integration:
+        condition: service_healthy
+      router:
         condition: service_healthy
       dev-agent:
         condition: service_healthy
@@ -141,6 +145,7 @@ services:
     restart: unless-stopped
 
   # Linear Integration - handles Linear webhooks and MCP tools
+  # Dispatches normalized events to router for classification
   linear-integration:
     build:
       context: .
@@ -163,6 +168,8 @@ services:
       - LINEAR_CLIENT_ID=${LINEAR_CLIENT_ID}
       - LINEAR_CLIENT_SECRET=${LINEAR_CLIENT_SECRET}
       - LINEAR_OAUTH_CALLBACK_URL=${LINEAR_OAUTH_CALLBACK_URL:-}
+      # Event dispatch (Docker network)
+      - ROUTER_URL=http://router:3006/events
       # Server configuration
       - PORT=3001
       - NODE_ENV=${NODE_ENV:-production}
@@ -187,7 +194,7 @@ services:
           path: ./packages/types/src
 
   # GitHub Integration - handles GitHub webhooks and MCP tools
-  # Dispatches PR events to dev-agent for completion signals
+  # Dispatches normalized events to router for classification
   github-integration:
     build:
       context: .
@@ -211,7 +218,7 @@ services:
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
       - GITHUB_OAUTH_CALLBACK_URL=${GITHUB_OAUTH_CALLBACK_URL:-}
       # Event dispatch (Docker network)
-      - DEV_AGENT_URL=http://dev-agent:3004/events
+      - ROUTER_URL=http://router:3006/events
       # Server configuration
       - PORT=3002
       - NODE_ENV=${NODE_ENV:-production}
@@ -265,8 +272,7 @@ services:
       - SLACK_MODE=${SLACK_MODE:-socket}
       - SLACK_OAUTH_CALLBACK_URL=${SLACK_OAUTH_CALLBACK_URL:-}
       # Event dispatch (Docker network)
-      - PRODUCT_AGENT_URL=http://product-agent:3005/events
-      - DEV_AGENT_URL=http://dev-agent:3004/events
+      - ROUTER_URL=http://router:3006/events
       # Server configuration
       - PORT=3003
       - NODE_ENV=${NODE_ENV:-production}
@@ -290,8 +296,55 @@ services:
         - action: rebuild
           path: ./packages/types/src
 
+  # Smart Router - unified event classification and routing
+  # All integration dispatchers send events here instead of directly to agents.
+  # Deterministic rules handle obvious events; LLM reasons about ambiguous ones.
+  router:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aesir-router
+    depends_on:
+      temporal:
+        condition: service_started
+    environment:
+      # Temporal (internal Docker network)
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_NAMESPACE=default
+      # LLM (for slow-path routing)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      # MCP URLs (for send_message tool and agent session enrichment)
+      - LINEAR_MCP_URL=http://linear-integration:3001
+      - SLACK_MCP_URL=http://slack-integration:3003
+      # Router configuration
+      - ROUTER_PORT=3006
+      - ROUTER_ALERTS_CHANNEL=${ROUTER_ALERTS_CHANNEL:-}
+      - NODE_ENV=${NODE_ENV:-production}
+    ports:
+      - "3006:3006"
+    command: ["node", "dist/router/main.js"]
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3006/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - aesir-network
+    restart: unless-stopped
+    develop:
+      watch:
+        - action: rebuild
+          path: ./packages/agents/src
+        - action: rebuild
+          path: ./packages/agents/package.json
+        - action: rebuild
+          path: ./packages/types/src
+        - action: rebuild
+          path: ./packages/platform/src
+
   # Dev Agent - handles Linear task automation via MCP
-  # HTTP service for receiving events from Linear dispatcher
+  # HTTP service for receiving events from router
   dev-agent:
     build:
       context: .
