@@ -13,7 +13,7 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 Phase: 35 (eighth of 9 in v2.2) - Guardrails & Cleanup
 Plan: 3 of 5
 Status: In progress
-Last activity: 2026-01-30 -- Completed 35-03-PLAN.md (delete LangGraph code files)
+Last activity: 2026-01-30 -- Completed 35-02-PLAN.md (Temporal retry config & heartbeat wiring)
 
 Progress: ██████████████████░░ 88% (7/9 phases complete, 25/27 plans)
 
@@ -132,6 +132,10 @@ Phase 35 decisions:
 - merge_pull_request removed from toolkit filter only, tool definition kept in github-tools.ts for MCP (defense-in-depth)
 - Callback-based heartbeat (onHeartbeat) keeps agent loop framework-agnostic
 - Deletion-first cleanup: remove all dead code files before updating imports or removing packages
+- heartbeatTimeout: 5 minutes for orchestrator activities (fires after each LLM response ~5-10s)
+- initialInterval increased from 10s to 30s for orchestrator retries (transient API issue recovery)
+- NonRetryableErrorTypes: TokenBudgetExhaustedError (permanent), AgentAbortedError (user intent)
+- getHeartbeatFn() helper wraps Context.current().heartbeat() with try/catch for test safety
 
 ### Pending Todos
 
@@ -146,9 +150,9 @@ None blocking v2.2.
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 35-03-PLAN.md (delete LangGraph code files)
+Stopped at: Completed 35-02-PLAN.md (Temporal retry config & heartbeat wiring)
 Resume file: None
 Next action: Execute 35-04-PLAN.md (remove @langchain/* packages)
 
 ---
-*Updated: 2026-01-30 -- Phase 35 Plan 03 complete (LangGraph code deletion -- 51 files removed)*
+*Updated: 2026-01-30 -- Phase 35 Plan 02 complete (Temporal retry config, heartbeat wiring, non-retryable errors)*
