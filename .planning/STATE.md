@@ -6,16 +6,16 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-**Current focus:** v2.2 Agentic Architecture -- Phase 29: Database Schema & Context Management
+**Current focus:** v2.2 Agentic Architecture -- Phase 29 complete, ready for Phase 30
 
 ## Current Position
 
 Phase: 29 (second of 9 in v2.2) - Database Schema & Context Management
-Plan: 2 of 3
-Status: In progress
-Last activity: 2026-01-30 -- Completed 29-02-PLAN.md (trace recorder factory)
+Plan: 3 of 3
+Status: Phase complete
+Last activity: 2026-01-30 -- Completed 29-03-PLAN.md (context manager and task store services)
 
-Progress: ████░░░░░░ 22% (4/18 plans)
+Progress: ████░░░░░░ 28% (5/18 plans)
 
 ## Milestone History
 
@@ -56,6 +56,9 @@ Phase 29 decisions:
 - Synchronous callbacks with explicit flush() -- prevents trace recording from blocking agent loop
 - Best-effort persistence -- DB errors during flush logged but not re-thrown
 - tool_result traces deferred -- Phase 28 lacks onToolResult callback; four types sufficient for v2.2
+- Context snapshots written at activity end, read at next activity start -- Temporal continuity
+- camelCase-to-snake_case mapping helper for Drizzle ORM task updates
+- CTXM-05 (sub-agent briefing) deferred to Phase 30/31 -- in-memory only per research decision
 
 ### Pending Todos
 
@@ -70,9 +73,9 @@ None blocking v2.2.
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 29-02-PLAN.md (trace recorder factory)
+Stopped at: Completed 29-03-PLAN.md (context manager and task store services)
 Resume file: None
-Next action: Execute 29-03-PLAN.md (context manager and task store services)
+Next action: Begin Phase 30 (agent tool library)
 
 ---
-*Updated: 2026-01-30 -- Completed 29-02 (trace recorder factory with buffered writes)*
+*Updated: 2026-01-30 -- Completed Phase 29 (database schema & context management -- all 3 plans)*
