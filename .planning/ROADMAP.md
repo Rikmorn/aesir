@@ -86,7 +86,10 @@ Plans:
   3. The orchestrator adapts to task complexity: a README edit skips research and detailed planning, while a feature implementation spawns researcher, plans in detail, spawns coder, then tester
   4. When tests fail, the agent reads error output, diagnoses the cause (wrong command, missing dependency, code bug), and tries a different approach -- not identical retries. After 3 distinct failed approaches, it escalates
   5. System prompt includes agent identity, issue details, project conventions, constraints, available tools, and sub-agent guidance
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 31-01-PLAN.md -- System prompts, orchestrator entry point, and toolkits update
+- [ ] 31-02-PLAN.md -- Behavioral tests for adaptive orchestrator decisions
 
 ### Phase 32: Dev Agent Temporal Integration
 **Goal**: The dev agent orchestrator runs inside Temporal's durability envelope with proper activity boundaries, approval gates, and feedback loops
@@ -156,7 +159,7 @@ Phases execute in numeric order: 28 -> 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35 ->
 | 28. Agentic Loop Runtime | 2/2 | Complete | 2026-01-29 |
 | 29. Database Schema & Context | 3/3 | Complete | 2026-01-30 |
 | 30. Agent Tool Library | 3/3 | Complete | 2026-01-30 |
-| 31. Dev Agent Orchestrator | 0/TBD | Not started | - |
+| 31. Dev Agent Orchestrator | 0/2 | Not started | - |
 | 32. Dev Agent Temporal Integration | 0/TBD | Not started | - |
 | 33. Product Agent | 0/TBD | Not started | - |
 | 34. Smart Router | 0/TBD | Not started | - |
