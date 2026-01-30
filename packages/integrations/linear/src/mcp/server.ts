@@ -16,6 +16,7 @@ import {
   handleGetIssue,
   handleListLabels,
   handleListTeams,
+  handleSearchIssues,
   handleUpdateIssueStatus,
   type IssueToolDeps,
   type TeamToolDeps,
@@ -146,6 +147,30 @@ export function createLinearMCPServer(options: LinearMCPServerOptions): Server {
             required: ["teamId"],
           },
         },
+        {
+          name: "search_issues",
+          description:
+            "Search Linear issues by text query. Returns matching issues with titles, identifiers, and status. Use this to find existing issues before creating duplicates.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              query: {
+                type: "string",
+                description: "Text query to search for in issues",
+              },
+              teamId: {
+                type: "string",
+                description: "Optional team ID to scope search results",
+              },
+              limit: {
+                type: "number",
+                description:
+                  "Maximum number of results to return (default: 10)",
+              },
+            },
+            required: ["query"],
+          },
+        },
       ],
     };
   });
@@ -187,6 +212,10 @@ export function createLinearMCPServer(options: LinearMCPServerOptions): Server {
         result = await handleListLabels(context, args, teamToolDeps);
         break;
 
+      case "search_issues":
+        result = await handleSearchIssues(context, args, issueToolDeps);
+        break;
+
       default:
         logger.warn({ toolName }, "Unknown tool requested");
         result = {
@@ -210,7 +239,7 @@ export function createLinearMCPServer(options: LinearMCPServerOptions): Server {
     };
   });
 
-  logger.info("Linear MCP server created with 5 tools");
+  logger.info("Linear MCP server created with 6 tools");
 
   return server;
 }

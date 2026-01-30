@@ -6,6 +6,7 @@ export {
   handleCreateComment,
   handleCreateIssue,
   handleGetIssue,
+  handleSearchIssues,
   handleUpdateIssueStatus,
   type IssueToolDeps,
 } from "./issues.js";

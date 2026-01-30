@@ -196,6 +196,50 @@ export const ListLabelsOutputSchema = z.object({
 export type ListLabelsOutput = z.infer<typeof ListLabelsOutputSchema>;
 
 // ===============================================
+// SEARCH ISSUES
+// ===============================================
+
+/**
+ * Input schema for search_issues tool
+ */
+export const SearchIssuesInputSchema = z.object({
+  /** Text query to search for in issues */
+  query: z.string().min(1, "Search query is required"),
+  /** Optional team ID to scope search results */
+  teamId: z.string().optional(),
+  /** Maximum number of results to return (default: 10) */
+  limit: z.number().optional(),
+});
+
+export type SearchIssuesInput = z.infer<typeof SearchIssuesInputSchema>;
+
+/**
+ * Single search result issue schema
+ */
+export const SearchIssueResultSchema = z.object({
+  id: z.string(),
+  identifier: z.string(),
+  title: z.string(),
+  description: z.string().nullable(),
+  url: z.string(),
+  state: z.object({
+    name: z.string(),
+    type: z.string(),
+  }),
+});
+
+/**
+ * Output schema for search_issues tool
+ */
+export const SearchIssuesOutputSchema = z.object({
+  issues: z.array(SearchIssueResultSchema),
+  count: z.number(),
+  query: z.string(),
+});
+
+export type SearchIssuesOutput = z.infer<typeof SearchIssuesOutputSchema>;
+
+// ===============================================
 // CREATE COMMENT
 // ===============================================
 

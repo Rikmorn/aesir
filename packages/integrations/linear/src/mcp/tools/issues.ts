@@ -20,6 +20,8 @@ import {
   type CreateIssueOutput,
   GetIssueInputSchema,
   type IssueOutput,
+  SearchIssuesInputSchema,
+  type SearchIssuesOutput,
   UpdateIssueStatusInputSchema,
   type UpdateIssueStatusOutput,
 } from "../schemas.js";
@@ -348,6 +350,118 @@ export async function handleUpdateIssueStatus(
     return createErrorResult(
       context,
       `Failed to update issue status: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+/**
+ * Handle search_issues tool call
+ */
+export async function handleSearchIssues(
+  context: MCPToolContext,
+  args: unknown,
+  deps: IssueToolDeps,
+): Promise<MCPToolResult<SearchIssuesOutput>> {
+  const { db, logger: _logger, workspaceId } = deps;
+
+  // Check permission
+  const hasPermission = await checkLinearToolPermission(
+    { db, logger: context.logger },
+    { agentId: context.agentId, toolName: "search_issues" },
+  );
+
+  if (!hasPermission) {
+    context.logger.warn(
+      { agentId: context.agentId, tool: "search_issues" },
+      "Permission denied",
+    );
+    return createErrorResult(
+      context,
+      "Permission denied: search_issues not allowed for this agent",
+    );
+  }
+
+  // Validate input
+  const parseResult = SearchIssuesInputSchema.safeParse(args);
+  if (!parseResult.success) {
+    context.logger.warn(
+      { errors: parseResult.error.errors },
+      "Invalid input for search_issues",
+    );
+    return createErrorResult(
+      context,
+      `Invalid input: ${parseResult.error.errors.map((e) => e.message).join(", ")}`,
+    );
+  }
+
+  const { query, teamId, limit = 10 } = parseResult.data;
+
+  try {
+    // Create Linear client
+    const client: LinearClient =
+      await createLinearClientFromDatabase(workspaceId);
+
+    // Search issues using the SDK
+    const searchResult = await client.searchIssues(query);
+    let issues = searchResult.nodes;
+
+    // Filter by team if teamId is provided
+    if (teamId !== undefined) {
+      const filtered = [];
+      for (const issue of issues) {
+        const team = await issue.team;
+        if (team?.id === teamId) {
+          filtered.push(issue);
+        }
+      }
+      issues = filtered;
+    }
+
+    // Limit results
+    const limitedIssues = issues.slice(0, limit);
+
+    // Map to output format
+    const mappedIssues = [];
+    for (const issue of limitedIssues) {
+      const state = await issue.state;
+      mappedIssues.push({
+        id: issue.id,
+        identifier: issue.identifier,
+        title: issue.title,
+        description: issue.description ?? null,
+        url: issue.url,
+        state: {
+          name: state?.name || "Unknown",
+          type: state?.type || "unknown",
+        },
+      });
+    }
+
+    const output: SearchIssuesOutput = {
+      issues: mappedIssues,
+      count: mappedIssues.length,
+      query,
+    };
+
+    context.logger.info(
+      { query, count: mappedIssues.length },
+      "Issue search completed",
+    );
+
+    const issueList = mappedIssues
+      .map((i) => `- ${i.identifier}: ${i.title} [${i.state.name}]`)
+      .join("\n");
+
+    return createToolResult(
+      context,
+      `Found ${mappedIssues.length} issues matching '${query}':\n${issueList}`,
+      output,
+    );
+  } catch (error) {
+    context.logger.error({ err: error, query }, "Failed to search issues");
+    return createErrorResult(
+      context,
+      `Failed to search issues: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 }
