@@ -6,16 +6,16 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-**Current focus:** v2.2 Agentic Architecture -- Phase 32 in progress
+**Current focus:** v2.2 Agentic Architecture -- Phase 33 in progress
 
 ## Current Position
 
-Phase: 32 (fifth of 9 in v2.2) - Dev Agent Temporal Integration
-Plan: 3 of 3
-Status: Phase complete
-Last activity: 2026-01-30 -- Completed 32-03-PLAN.md (activity and workflow tests)
+Phase: 33 (sixth of 9 in v2.2) - Product Agent
+Plan: 1 of 4
+Status: In progress
+Last activity: 2026-01-30 -- Completed 33-01-PLAN.md (Linear search_issues + product agent toolkit)
 
-Progress: █████████████ 72% (13/18 plans)
+Progress: ██████████████ 78% (14/18 plans)
 
 ## Milestone History
 
@@ -91,6 +91,11 @@ Phase 32 decisions:
 - Module-level vi.mock with dynamic await import for activity tests -- ensures correct mock wiring
 - State machine simulation pattern for workflow tests -- full TestWorkflowEnvironment deferred to integration tests
 
+Phase 33 decisions:
+- Used client.searchIssues(query) (current SDK method) over deprecated issueSearch -- future-proof
+- Post-search team filtering in JS (searchIssues SDK has no teamId param) -- acceptable for small result sets
+- ProductAgentToolkitDeps is minimal (agentId + correlationId only) -- no container/budget/trace overhead
+
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
@@ -104,9 +109,9 @@ None blocking v2.2.
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 32-03-PLAN.md (activity and workflow tests) -- Phase 32 complete
+Stopped at: Completed 33-01-PLAN.md (Linear search_issues + product agent toolkit)
 Resume file: None
-Next action: Begin Phase 33 (Product Agent)
+Next action: Continue Phase 33, Plan 02
 
 ---
-*Updated: 2026-01-30 -- Completed 32-03 (79 test cases for activities and workflow) -- Phase 32 complete*
+*Updated: 2026-01-30 -- Completed 33-01 (search_issues MCP tool + createProductAgentToolkit)*
