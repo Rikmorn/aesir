@@ -112,3 +112,66 @@ export interface DevAgentWorkflowResult {
   /** Error message if failed/escalated */
   errorMessage?: string | undefined;
 }
+
+// === Orchestrator Workflow Types (v2.2) ===
+
+/**
+ * Input for starting an orchestrator workflow (v2.2).
+ *
+ * The orchestrator workflow wraps the agentic orchestrator loop
+ * in Temporal's durability envelope for signal-based flow control.
+ */
+export interface OrchestratorWorkflowInput {
+  /** Task ID (Linear issue ID) */
+  taskId: string;
+  /** Linear issue identifier (e.g., "ABC-123") */
+  issueIdentifier: string;
+  /** Linear issue data */
+  issue: {
+    id: string;
+    identifier: string;
+    title: string;
+    description: string | null;
+    priority: number | null;
+    labels: string[];
+  };
+  /** Slack channel for notifications */
+  slackChannel: string;
+}
+
+/**
+ * Workflow-level phase tracking for the orchestrator (v2.2).
+ *
+ * Dramatically simpler than DevAgentWorkflowPhase: the orchestrator
+ * handles all sub-phases (research, planning, execution) internally
+ * via its agentic loop. The workflow only tracks major flow states.
+ */
+export type OrchestratorWorkflowPhase =
+  | "pending" // Workflow started
+  | "setup" // Container being set up
+  | "pre_approval" // Running research + planning
+  | "awaiting_approval" // Waiting for human approval signal
+  | "post_approval" // Running execution + testing + PR
+  | "awaiting_pr" // PR created, waiting for merge/feedback
+  | "addressing_feedback" // Handling PR review comments
+  | "complete" // Successfully completed (PR merged)
+  | "failed" // Unrecoverable error
+  | "timeout"; // Workflow timed out
+
+/**
+ * Result of an orchestrator workflow (v2.2).
+ */
+export interface OrchestratorWorkflowResult {
+  /** Whether the workflow completed successfully */
+  success: boolean;
+  /** Terminal phase of the workflow */
+  phase: OrchestratorWorkflowPhase;
+  /** GitHub PR number if created */
+  prNumber?: number | undefined;
+  /** GitHub PR URL if created */
+  prUrl?: string | undefined;
+  /** Error message if failed */
+  errorMessage?: string | undefined;
+  /** Aggregate token usage across all activities */
+  totalTokenCount?: { input: number; output: number } | undefined;
+}
