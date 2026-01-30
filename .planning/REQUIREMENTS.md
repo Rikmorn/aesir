@@ -50,13 +50,13 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Product Agent
 
-- [ ] **PROD-01**: Single agentic loop replaces the 6-node LangGraph graph (classify->analyze->clarify->confirm->create->notify)
-- [ ] **PROD-02**: Adapts to input clarity -- clear request with all details creates issue immediately (1-2 tool calls), vague request asks focused clarifying questions
-- [ ] **PROD-03**: Multi-turn conversation via Temporal `userReplySignal` waits between turns
-- [ ] **PROD-04**: Cancellation intent recognition via LLM reasoning (no hardcoded phrase list like "nevermind", "cancel", "nvm")
-- [ ] **PROD-05**: Duplicate detection -- searches existing Linear issues before creating, suggests updating existing if similar found
-- [ ] **PROD-06**: System prompt includes agent identity, full thread history, issue quality guidelines, clarification guidelines
-- [ ] **PROD-07**: Same timeout handling as current (24h reminder, 72h total)
+- [x] **PROD-01**: Single agentic loop replaces the 6-node LangGraph graph (classify->analyze->clarify->confirm->create->notify)
+- [x] **PROD-02**: Adapts to input clarity -- clear request with all details creates issue immediately (1-2 tool calls), vague request asks focused clarifying questions
+- [x] **PROD-03**: Multi-turn conversation via Temporal `userReplySignal` waits between turns
+- [x] **PROD-04**: Cancellation intent recognition via LLM reasoning (no hardcoded phrase list like "nevermind", "cancel", "nvm")
+- [x] **PROD-05**: Duplicate detection -- searches existing Linear issues before creating, suggests updating existing if similar found
+- [x] **PROD-06**: System prompt includes agent identity, full thread history, issue quality guidelines, clarification guidelines
+- [x] **PROD-07**: Same timeout handling as current (24h reminder, 72h total)
 
 ### Smart Router
 
@@ -190,13 +190,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEVO-13 | Phase 31 | Pending |
 | DEVO-14 | Phase 31 | Pending |
 | DEVO-15 | Phase 32 | Complete |
-| PROD-01 | Phase 33 | Pending |
-| PROD-02 | Phase 33 | Pending |
-| PROD-03 | Phase 33 | Pending |
-| PROD-04 | Phase 33 | Pending |
-| PROD-05 | Phase 33 | Pending |
-| PROD-06 | Phase 33 | Pending |
-| PROD-07 | Phase 33 | Pending |
+| PROD-01 | Phase 33 | Complete |
+| PROD-02 | Phase 33 | Complete |
+| PROD-03 | Phase 33 | Complete |
+| PROD-04 | Phase 33 | Complete |
+| PROD-05 | Phase 33 | Complete |
+| PROD-06 | Phase 33 | Complete |
+| PROD-07 | Phase 33 | Complete |
 | ROUT-01 | Phase 34 | Pending |
 | ROUT-02 | Phase 34 | Pending |
 | ROUT-03 | Phase 34 | Pending |
