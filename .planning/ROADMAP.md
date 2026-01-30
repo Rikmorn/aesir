@@ -132,7 +132,13 @@ Plans:
   3. The approval intent classifier from `dev-agent/classification/approval.ts` is absorbed into the LLM reasoning path -- no separate classification module
   4. All current v2.1 event types route correctly: `slack.app_mention.created`, `linear.comment.created`, `slack.block_actions.*`, `github.pull_request.*`, `slack.message.created` in thread
   5. If LLM routing fails or times out, the event is logged and an alert is sent -- events are never silently dropped
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 34-01-PLAN.md -- Router types, fast-path deterministic rules, and system prompt
+- [ ] 34-02-PLAN.md -- Router tools (query/start/signal workflows, send message) and slow-path agentic loop
+- [ ] 34-03-PLAN.md -- HTTP service entry point, core routing logic, and barrel exports
+- [ ] 34-04-PLAN.md -- Integration dispatcher rewiring and Docker/nginx configuration
+- [ ] 34-05-PLAN.md -- Fast-path, slow-path, and router integration tests
 
 ### Phase 35: Guardrails & Cleanup
 **Goal**: Safety guardrails are enforced across all agents and all LangGraph code is removed from the codebase
@@ -171,7 +177,7 @@ Phases execute in numeric order: 28 -> 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35 ->
 | 31. Dev Agent Orchestrator | 2/2 | Complete | 2026-01-30 |
 | 32. Dev Agent Temporal Integration | 3/3 | Complete | 2026-01-30 |
 | 33. Product Agent | 4/4 | Complete | 2026-01-30 |
-| 34. Smart Router | 0/TBD | Not started | - |
+| 34. Smart Router | 0/5 | Not started | - |
 | 35. Guardrails & Cleanup | 0/TBD | Not started | - |
 | 36. End-to-End Validation | 0/TBD | Not started | - |
 
