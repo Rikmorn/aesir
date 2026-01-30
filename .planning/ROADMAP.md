@@ -100,7 +100,11 @@ Plans:
   2. `runOrchestratorPostApproval` Temporal activity runs execution + testing + PR creation via the orchestrator agentic loop, resuming from the context snapshot written by pre-approval
   3. `handleOrchestratorFeedback` Temporal activity addresses PR review comments by reading feedback, diagnosing issues, and making targeted fixes
   4. The simplified Temporal workflow follows: setup -> pre-approval loop -> approval wait -> post-approval loop -> PR wait -> feedback loop -> complete
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 32-01-PLAN.md -- Orchestrator activities (3 orchestrator + 3 infrastructure) with sentinel parsing and context snapshot handoff
+- [ ] 32-02-PLAN.md -- Simplified orchestrator workflow, types, worker registration, barrel exports
+- [ ] 32-03-PLAN.md -- Activity and workflow tests (sentinel parsing, approval loop, timeouts, feedback loop)
 
 ### Phase 33: Product Agent
 **Goal**: The product agent adapts its conversation strategy based on input clarity instead of following a fixed classify-analyze-clarify-confirm-create graph
@@ -160,7 +164,7 @@ Phases execute in numeric order: 28 -> 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35 ->
 | 29. Database Schema & Context | 3/3 | Complete | 2026-01-30 |
 | 30. Agent Tool Library | 3/3 | Complete | 2026-01-30 |
 | 31. Dev Agent Orchestrator | 2/2 | Complete | 2026-01-30 |
-| 32. Dev Agent Temporal Integration | 0/TBD | Not started | - |
+| 32. Dev Agent Temporal Integration | 0/3 | Not started | - |
 | 33. Product Agent | 0/TBD | Not started | - |
 | 34. Smart Router | 0/TBD | Not started | - |
 | 35. Guardrails & Cleanup | 0/TBD | Not started | - |
