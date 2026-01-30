@@ -18,7 +18,7 @@ Replace LangGraph state machine architecture with agentic tool-use loops where L
 - Decimal phases (28.1, 28.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 28: Agentic Loop Runtime** - Core `runAgentLoop()` function with Anthropic SDK native tool-use
-- [ ] **Phase 29: Database Schema & Context Management** - Storage layer for context snapshots, task state, and execution traces
+- [x] **Phase 29: Database Schema & Context Management** - Storage layer for context snapshots, task state, and execution traces
 - [ ] **Phase 30: Agent Tool Library** - Codebase tools, MCP wrappers, git tools, spawn_agent, per-agent toolkits
 - [ ] **Phase 31: Dev Agent Orchestrator** - Orchestrator agentic loop with sub-agents (researcher, coder, tester)
 - [ ] **Phase 32: Dev Agent Temporal Integration** - Temporal activities and simplified workflow wrapping the orchestrator
@@ -58,7 +58,7 @@ Plans:
 Plans:
 - [x] 29-01-PLAN.md -- Drizzle ORM schema, DB client, migration, and ID generators
 - [x] 29-02-PLAN.md -- Trace recorder factory with buffered writes and callbacks
-- [ ] 29-03-PLAN.md -- Context manager and task store services
+- [x] 29-03-PLAN.md -- Context manager and task store services
 
 ### Phase 30: Agent Tool Library
 **Goal**: A complete library of typed tool definitions that agents can use to interact with codebases, integrations, git, and each other
@@ -150,7 +150,7 @@ Phases execute in numeric order: 28 -> 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35 ->
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 28. Agentic Loop Runtime | 2/2 | Complete | 2026-01-29 |
-| 29. Database Schema & Context | 1/3 | In progress | - |
+| 29. Database Schema & Context | 3/3 | Complete | 2026-01-30 |
 | 30. Agent Tool Library | 0/TBD | Not started | - |
 | 31. Dev Agent Orchestrator | 0/TBD | Not started | - |
 | 32. Dev Agent Temporal Integration | 0/TBD | Not started | - |
