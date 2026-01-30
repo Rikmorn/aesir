@@ -34,6 +34,9 @@ import {
 } from "./github-activities.js";
 import { updateLinearStatusActivity } from "./linear-activities.js";
 import {
+  extractPhase,
+  initProductAgentActivities,
+  type ProductAgentActivityDeps,
   type RunProductAgentActivityInput,
   type RunProductAgentActivityOutput,
   runProductAgentActivity,
@@ -55,6 +58,7 @@ export type {
   MergePRInput,
   MergePROutput,
   MessageResult,
+  ProductAgentActivityDeps,
   RunDevAgentGraphInput,
   RunDevAgentGraphOutput,
   RunProductAgentActivityInput,
@@ -112,7 +116,7 @@ export function makeActivities(deps: ActivityDependencies) {
     updateLinearStatusActivity,
 
     /**
-     * Run product agent - uses MCP and checkpointer
+     * Run product agent - agentic tool-use loop via MCP
      */
     runProductAgentActivity,
 
@@ -152,10 +156,12 @@ export {
   completeTaskActivity,
   continueAfterApprovalActivity,
   executeDevWorkflow,
+  extractPhase,
   handlePRClosedActivity,
   handlePRFeedbackActivity,
   handleRePlanActivity,
   initDevAgentActivities,
+  initProductAgentActivities,
   mergePRActivity,
   runDevAgentGraphActivity,
   runProductAgentActivity,

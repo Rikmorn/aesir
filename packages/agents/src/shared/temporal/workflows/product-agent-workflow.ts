@@ -10,9 +10,12 @@
  * - Times out after 72h total
  * - Handles cancellation signals gracefully
  * - Persists conversation state through process restarts
+ * - Tracks conversation history for multi-turn context injection
  *
- * The workflow invokes LangGraph for AI reasoning and uses MCP for
- * integration communication (Slack replies, Linear issue creation).
+ * The workflow invokes the agentic tool-use loop for AI reasoning.
+ * The agent sends its own Slack messages via tools during its turn.
+ * The workflow only sends system-level messages (reminders, timeouts,
+ * cancellation acknowledgments).
  */
 
 import * as wf from "@temporalio/workflow";
@@ -27,13 +30,20 @@ import type {
 
 /**
  * Activity types for this workflow.
- * Activities are bound at worker startup via makeActivities().
+ *
+ * Redeclared here to satisfy Temporal's determinism constraint --
+ * workflow code must not import from non-workflow modules.
  */
 interface ProductAgentActivities {
   runProductAgentActivity: (input: {
     threadTs: string;
     message: string;
     teamId: string;
+    channelId: string;
+    conversationHistory?: Array<{
+      role: "user" | "assistant";
+      content: string;
+    }>;
   }) => Promise<{
     response: string;
     phase: string;
@@ -41,6 +51,18 @@ interface ProductAgentActivities {
     issueIdentifier?: string;
   }>;
 
+  /**
+   * Send a message to a Slack thread.
+   *
+   * Still used for workflow-level system messages:
+   * - Cancellation acknowledgment
+   * - 24h inactivity reminder
+   * - 72h timeout notification
+   * - Max iterations notification
+   *
+   * NOT used after agent turns -- the agent sends its own messages
+   * via the slack_send_message tool during its agentic loop.
+   */
   sendSlackReplyActivity: (
     channelId: string,
     threadTs: string,
@@ -54,7 +76,7 @@ interface ProductAgentActivities {
 // Configure activities with appropriate timeouts
 const { runProductAgentActivity, sendSlackReplyActivity } =
   proxyActivities<ProductAgentActivities>({
-    startToCloseTimeout: "5 minutes", // LLM reasoning can take time
+    startToCloseTimeout: "5 minutes", // Agentic loop reasoning can take time
     retry: {
       maximumAttempts: 3,
       initialInterval: "1 second",
@@ -88,8 +110,8 @@ export const conversationStatusQuery =
  * and signal-based user reply processing.
  *
  * Flow:
- * 1. Process initial message via LangGraph
- * 2. Send AI response to Slack thread
+ * 1. Process message via agentic tool-use loop (agent sends its own Slack replies)
+ * 2. Check agent phase for terminal states (complete, declined)
  * 3. Wait for user reply signal (24h timeout)
  * 4. If no reply in 24h, send reminder and wait 48h more
  * 5. Repeat until:
@@ -98,6 +120,10 @@ export const conversationStatusQuery =
  *    - User cancels (cancelled)
  *    - 72h timeout (timeout)
  *    - Max iterations reached
+ *
+ * The agent communicates with the user directly via slack_send_message tool
+ * during its agentic loop. The workflow only sends system-level messages
+ * (reminders, timeouts, cancellation acknowledgments).
  *
  * @param input - Workflow input with thread context and initial message
  * @returns Workflow result with terminal phase and optional issue info
@@ -151,6 +177,14 @@ export async function productAgentConversationWorkflow(
     }),
   );
 
+  // Conversation history for multi-turn context injection.
+  // Each turn appends the user message and agent response so the
+  // agentic loop has full context across Temporal activity boundaries.
+  const conversationHistory: Array<{
+    role: "user" | "assistant";
+    content: string;
+  }> = [];
+
   // Process initial message
   let currentMessage = initialMessage;
 
@@ -181,20 +215,25 @@ export async function productAgentConversationWorkflow(
       };
     }
 
-    // Run LangGraph agent
+    // Run agentic tool-use loop
     state.phase = "running";
     wf.log.info(`Running product agent (iteration ${state.iterations})`, {
       threadTs,
       messageLength: currentMessage.length,
+      historyLength: conversationHistory.length,
     });
+
+    // Track the user message in conversation history
+    conversationHistory.push({ role: "user", content: currentMessage });
 
     let agentResult: Awaited<ReturnType<typeof runProductAgentActivity>>;
     try {
-      // Use linearTeamId from workflow input (passed at workflow start)
       agentResult = await runProductAgentActivity({
         threadTs,
         message: currentMessage,
         teamId: input.linearTeamId,
+        channelId,
+        conversationHistory,
       });
     } catch (error) {
       wf.log.error("Product agent activity failed", { error, threadTs });
@@ -207,21 +246,26 @@ export async function productAgentConversationWorkflow(
       };
     }
 
-    // Send agent response to Slack
-    wf.log.info("Sending response to Slack", {
-      threadTs,
-      responseLength: agentResult.response.length,
-      agentPhase: agentResult.phase,
-    });
-
-    try {
-      await sendSlackReplyActivity(channelId, threadTs, agentResult.response);
-    } catch (error) {
-      wf.log.warn("Failed to send Slack response", { error, threadTs });
-      // Continue - response failure shouldn't fail the workflow
+    // Track agent response in conversation history (if non-empty).
+    // The response contains internal reasoning + phase tag, but we
+    // track it for context continuity across turns.
+    if (agentResult.response.length > 0) {
+      conversationHistory.push({
+        role: "assistant",
+        content: agentResult.response,
+      });
     }
 
-    // Check terminal states from LangGraph
+    // The agent sends its own Slack messages via the slack_send_message
+    // tool during its agentic loop. The response field is internal
+    // reasoning + phase tag -- do NOT send it to Slack.
+    wf.log.info("Agent turn complete", {
+      threadTs,
+      agentPhase: agentResult.phase,
+      responseLength: agentResult.response.length,
+    });
+
+    // Check terminal states from agent phase
     if (agentResult.phase === "complete") {
       wf.log.info("Issue created successfully", {
         threadTs,

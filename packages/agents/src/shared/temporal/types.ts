@@ -40,12 +40,13 @@ export interface ProductAgentWorkflowResult {
 /**
  * Workflow-level conversation phase tracking
  *
- * Note: This is separate from LangGraph's ProductAgentPhase which tracks
- * within-graph state. This tracks the Temporal workflow's overall state.
+ * Tracks the Temporal workflow's overall state. The agentic tool-use loop
+ * communicates its phase via XML tags in the response, which the workflow
+ * maps to these phases for flow control.
  */
 export type ProductAgentWorkflowPhase =
   | "pending" // Workflow started, not yet processed
-  | "running" // LangGraph is processing
+  | "running" // Agentic loop is processing
   | "awaiting_reply" // Waiting for user reply signal
   | "complete" // Issue created successfully
   | "declined" // Non-actionable message (question/off-topic)
@@ -78,8 +79,7 @@ export interface DevAgentWorkflowInput {
 /**
  * Workflow-level phase tracking for dev-agent
  *
- * Maps to LangGraph DevAgentPhase but tracked at Temporal level
- * for durability and signal-based flow control.
+ * Tracked at Temporal level for durability and signal-based flow control.
  */
 export type DevAgentWorkflowPhase =
   | "pending" // Workflow started, not yet processed
