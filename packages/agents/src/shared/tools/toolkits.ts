@@ -16,7 +16,7 @@
  * - Researcher: 4 (read_file, search_codebase, list_directory, run_command)
  * - Coder: 4 (read_file, write_file, search_codebase, run_command)
  * - Tester: 3 (read_file, search_codebase, run_command)
- * - Orchestrator: 14 (3 codebase + 2 coordination + 9 integration)
+ * - Orchestrator: 13 (3 codebase + 2 coordination + 8 integration)
  * - Product Agent: 5 (4 Linear + 1 Slack)
  */
 
@@ -153,13 +153,16 @@ export function createTesterToolkit(deps: ToolkitDeps): ToolDefinition[] {
 /**
  * Create the orchestrator toolkit.
  *
- * 14 tools total:
+ * 13 tools total:
  * - 3 codebase: read_file, search_codebase, list_directory (NO write_file, NO run_command)
  * - 2 coordination: spawn_agent, request_human_input
  * - 2 Linear: linear_get_issue, linear_update_issue_status
- * - 5 GitHub: github_create_branch, github_create_commit, github_create_pull_request,
- *             github_get_pull_request, github_merge_pull_request
+ * - 4 GitHub: github_create_branch, github_create_commit, github_create_pull_request,
+ *             github_get_pull_request
  * - 2 Slack: slack_send_message, slack_send_approval_request
+ *
+ * Note: merge_pull_request is intentionally excluded -- humans review and merge PRs.
+ * The tool definition exists in github-tools.ts for MCP (defense-in-depth).
  *
  * The orchestrator delegates write and run operations to sub-agents via spawn_agent.
  */
@@ -223,7 +226,6 @@ export function createOrchestratorToolkit(deps: ToolkitDeps): ToolDefinition[] {
       "github_create_commit",
       "github_create_pull_request",
       "github_get_pull_request",
-      "github_merge_pull_request",
     ].includes(t.name),
   );
   const orchestratorSlack = allSlack.filter((t) =>

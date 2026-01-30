@@ -190,9 +190,9 @@ describe("createOrchestratorToolkit", () => {
     deps = createMockToolkitDeps();
   });
 
-  it("returns exactly 14 tools", () => {
+  it("returns exactly 13 tools", () => {
     const tools = createOrchestratorToolkit(deps);
-    expect(tools).toHaveLength(14);
+    expect(tools).toHaveLength(13);
   });
 
   it("includes spawn_agent and request_human_input", () => {
@@ -228,14 +228,15 @@ describe("createOrchestratorToolkit", () => {
     expect(names).not.toContain("linear_list_labels");
   });
 
-  it("includes correct GitHub tool subset", () => {
+  it("includes correct GitHub tool subset (no merge)", () => {
     const tools = createOrchestratorToolkit(deps);
     const names = tools.map((t) => t.name);
     expect(names).toContain("github_create_branch");
     expect(names).toContain("github_create_commit");
     expect(names).toContain("github_create_pull_request");
     expect(names).toContain("github_get_pull_request");
-    expect(names).toContain("github_merge_pull_request");
+    // merge_pull_request intentionally excluded -- humans merge PRs
+    expect(names).not.toContain("github_merge_pull_request");
     // Should NOT include other GitHub tools
     expect(names).not.toContain("github_get_repository");
     expect(names).not.toContain("github_list_pull_requests");
