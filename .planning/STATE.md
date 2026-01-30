@@ -6,16 +6,16 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-**Current focus:** v2.2 Agentic Architecture -- Phase 29 complete, ready for Phase 30
+**Current focus:** v2.2 Agentic Architecture -- Phase 30 in progress
 
 ## Current Position
 
-Phase: 29 (second of 9 in v2.2) - Database Schema & Context Management
-Plan: 3 of 3
-Status: Phase complete
-Last activity: 2026-01-30 -- Completed 29-03-PLAN.md (context manager and task store services)
+Phase: 30 (third of 9 in v2.2) - Agent Tool Library
+Plan: 1 of 3
+Status: In progress
+Last activity: 2026-01-30 -- Completed 30-01-PLAN.md (codebase tools)
 
-Progress: ████░░░░░░ 28% (5/18 plans)
+Progress: █████░░░░░ 33% (6/18 plans)
 
 ## Milestone History
 
@@ -60,6 +60,11 @@ Phase 29 decisions:
 - camelCase-to-snake_case mapping helper for Drizzle ORM task updates
 - CTXM-05 (sub-agent briefing) deferred to Phase 30/31 -- in-memory only per research decision
 
+Phase 30 decisions:
+- MAX_STDERR_BYTES (50KB) added alongside MAX_OUTPUT_BYTES (100KB) -- run_command truncates stdout/stderr separately
+- Conditional property assignment for isError to respect exactOptionalPropertyTypes
+- Biome enforces type imports before value imports in combined import statements
+
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
@@ -73,9 +78,9 @@ None blocking v2.2.
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 29-03-PLAN.md (context manager and task store services)
+Stopped at: Completed 30-01-PLAN.md (codebase tools)
 Resume file: None
-Next action: Begin Phase 30 (agent tool library)
+Next action: Continue Phase 30 Plan 02 (MCP integration tool wrappers)
 
 ---
-*Updated: 2026-01-30 -- Completed Phase 29 (database schema & context management -- all 3 plans)*
+*Updated: 2026-01-30 -- Completed 30-01 (codebase tools -- 5 tool factories with 44 tests)*
