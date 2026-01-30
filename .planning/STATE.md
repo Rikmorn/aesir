@@ -6,16 +6,16 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-**Current focus:** v2.2 Agentic Architecture -- Phase 30 complete
+**Current focus:** v2.2 Agentic Architecture -- Phase 31 in progress
 
 ## Current Position
 
-Phase: 30 (third of 9 in v2.2) - Agent Tool Library
-Plan: 3 of 3
-Status: Phase complete
-Last activity: 2026-01-30 -- Completed 30-03-PLAN.md (coordination tools & toolkit assembly)
+Phase: 31 (fourth of 9 in v2.2) - Dev Agent Orchestrator
+Plan: 1 of 2
+Status: In progress
+Last activity: 2026-01-30 -- Completed 31-01-PLAN.md (orchestrator prompts & entry point)
 
-Progress: ████████░░ 44% (8/18 plans)
+Progress: █████████░ 50% (9/18 plans)
 
 ## Milestone History
 
@@ -72,6 +72,11 @@ Phase 30 decisions:
 - Integration tool filtering by name for orchestrator subset -- avoids duplicating tool configs
 - Placeholder sub-agent system prompts in toolkits.ts -- detailed prompts deferred to Phase 31
 
+Phase 31 decisions:
+- XML-tagged prompt sections for structured LLM guidance (identity, constraints, workflow_guidance, sub_agent_delegation, error_recovery, available_tools)
+- 3-tier complexity model in orchestrator prompt: simple/moderate/complex with adaptive behavior
+- Cross-boundary import (shared/tools -> dev-agent/orchestrator) acceptable for agent-specific content
+
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
@@ -85,9 +90,9 @@ None blocking v2.2.
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 30-03-PLAN.md (coordination tools & toolkit assembly)
+Stopped at: Completed 31-01-PLAN.md (orchestrator prompts & entry point)
 Resume file: None
-Next action: Begin Phase 31 (Dev Agent Orchestrator)
+Next action: Continue Phase 31 with 31-02-PLAN.md (integration wiring)
 
 ---
-*Updated: 2026-01-30 -- Completed Phase 30 (agent tool library -- 25 tool factories, 4 toolkits, 98 tests)*
+*Updated: 2026-01-30 -- Completed 31-01 (4 system prompts, orchestrator entry point, production prompt imports)*
