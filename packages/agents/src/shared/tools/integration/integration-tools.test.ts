@@ -173,9 +173,9 @@ describe("createLinearTools", () => {
     mockCallMcpTool.mockReset();
   });
 
-  it("returns exactly 5 tools", () => {
+  it("returns exactly 6 tools", () => {
     const tools = createLinearTools(createDeps());
-    expect(tools).toHaveLength(5);
+    expect(tools).toHaveLength(6);
   });
 
   it("returns tools with correct names", () => {
@@ -188,6 +188,7 @@ describe("createLinearTools", () => {
       "linear_update_issue_status",
       "linear_list_teams",
       "linear_list_labels",
+      "linear_search_issues",
     ]);
   });
 

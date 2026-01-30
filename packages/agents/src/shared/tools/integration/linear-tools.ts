@@ -1,7 +1,7 @@
 /**
  * Linear Integration Tools
  *
- * ToolDefinition factories for the 5 Linear MCP tools.
+ * ToolDefinition factories for the 6 Linear MCP tools.
  * All Zod schemas are defined locally -- no imports from @aesir/integration-linear.
  *
  * Tools are prefixed with "linear_" to avoid name collisions with other
@@ -50,6 +50,20 @@ const listLabelsSchema = z.object({
   teamId: z.string().describe("Linear team ID to list labels for"),
 });
 
+const searchIssuesSchema = z.object({
+  query: z
+    .string()
+    .describe("Search query text to find matching Linear issues"),
+  teamId: z
+    .string()
+    .optional()
+    .describe("Optional team ID to scope search results"),
+  limit: z
+    .number()
+    .optional()
+    .describe("Maximum results to return (default: 10)"),
+});
+
 // ---------------------------------------------------------------------------
 // Factory
 // ---------------------------------------------------------------------------
@@ -57,11 +71,11 @@ const listLabelsSchema = z.object({
 /**
  * Create all Linear MCP tool definitions.
  *
- * Returns 5 tools for interacting with Linear via the MCP layer:
- * get_issue, create_issue, update_issue_status, list_teams, list_labels.
+ * Returns 6 tools for interacting with Linear via the MCP layer:
+ * get_issue, create_issue, update_issue_status, list_teams, list_labels, search_issues.
  *
  * @param deps - Agent ID and correlation ID for MCP calls
- * @returns Array of 5 ToolDefinition objects
+ * @returns Array of 6 ToolDefinition objects
  */
 export function createLinearTools(deps: McpToolDeps): ToolDefinition[] {
   return [
@@ -121,6 +135,18 @@ export function createLinearTools(deps: McpToolDeps): ToolDefinition[] {
         description:
           "List all labels available for a specific Linear team. Returns label names and IDs. Use this to find appropriate labels before creating or updating issues, ensuring correct categorization.",
         inputSchema: listLabelsSchema,
+      },
+      deps,
+    ),
+
+    createMcpToolWrapper(
+      {
+        integration: "linear",
+        toolName: "search_issues",
+        displayName: "linear_search_issues",
+        description:
+          "Search Linear issues by text query. Returns matching issues with titles, identifiers, and status. Use this BEFORE creating a new issue to check for duplicates. If similar issues exist, suggest updating them instead of creating duplicates.",
+        inputSchema: searchIssuesSchema,
       },
       deps,
     ),

@@ -6,6 +6,7 @@
  *
  * Principle: Sub-agents (researcher, coder, tester) get only codebase tools.
  * The orchestrator gets full access: codebase + integration + coordination.
+ * The product agent gets a minimal integration-only tool set (no codebase tools).
  *
  * Sub-agent system prompts are imported from the dev-agent orchestrator module
  * (packages/agents/src/dev-agent/orchestrator/system-prompts.ts) which defines
@@ -16,6 +17,7 @@
  * - Coder: 4 (read_file, write_file, search_codebase, run_command)
  * - Tester: 3 (read_file, search_codebase, run_command)
  * - Orchestrator: 14 (3 codebase + 2 coordination + 9 integration)
+ * - Product Agent: 5 (4 Linear + 1 Slack)
  */
 
 import type { DevContainerManager, PinoLogger } from "@aesir/platform";
@@ -235,4 +237,54 @@ export function createOrchestratorToolkit(deps: ToolkitDeps): ToolDefinition[] {
     ...orchestratorGitHub,
     ...orchestratorSlack,
   ];
+}
+
+// ---------------------------------------------------------------------------
+// Product Agent Toolkit
+// ---------------------------------------------------------------------------
+
+/**
+ * Dependencies for the product agent toolkit.
+ * Simpler than ToolkitDeps since the product agent does not need codebase tools,
+ * coordination tools, container management, token budgets, or trace recording.
+ */
+export interface ProductAgentToolkitDeps {
+  /** Agent identifier for MCP permission checks */
+  agentId: string;
+  /** Correlation ID for distributed tracing */
+  correlationId: string;
+}
+
+/**
+ * Create the product agent toolkit.
+ *
+ * 5 tools total:
+ * - 4 Linear: linear_create_issue, linear_get_issue, linear_list_labels, linear_search_issues
+ * - 1 Slack: slack_send_message
+ *
+ * The product agent communicates via Slack and creates Linear issues -- no codebase
+ * tools, GitHub tools, or coordination tools (spawn_agent, request_human_input).
+ */
+export function createProductAgentToolkit(
+  deps: ProductAgentToolkitDeps,
+): ToolDefinition[] {
+  const mcpDeps: McpToolDeps = {
+    agentId: deps.agentId,
+    correlationId: deps.correlationId,
+  };
+
+  const linearTools = createLinearTools(mcpDeps).filter((t) =>
+    [
+      "linear_create_issue",
+      "linear_get_issue",
+      "linear_list_labels",
+      "linear_search_issues",
+    ].includes(t.name),
+  );
+
+  const slackTools = createSlackTools(mcpDeps).filter((t) =>
+    ["slack_send_message"].includes(t.name),
+  );
+
+  return [...linearTools, ...slackTools];
 }
