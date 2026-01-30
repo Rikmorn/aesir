@@ -6,16 +6,16 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-**Current focus:** v2.2 Agentic Architecture -- Phase 35 in progress
+**Current focus:** v2.2 Agentic Architecture -- Phase 35 complete, Phase 36 next
 
 ## Current Position
 
 Phase: 35 (eighth of 9 in v2.2) - Guardrails & Cleanup
-Plan: 4 of 5
-Status: In progress
-Last activity: 2026-01-30 -- Completed 35-04-PLAN.md (remove @langchain/* packages)
+Plan: 5 of 5
+Status: Phase complete
+Last activity: 2026-01-30 -- Completed 35-05-PLAN.md (cost tracking & final verification)
 
-Progress: ██████████████████░░ 93% (7/9 phases complete, 27/29 plans)
+Progress: ██████████████████░░ 96% (8/9 phases complete, 29/29 plans in Phase 35)
 
 ## Milestone History
 
@@ -140,6 +140,8 @@ Phase 35 decisions:
 - Comment classification disabled in events handler -- moved to smart router (Phase 34) slow path
 - Router fast-path unified from devAgentWorkflow/dev-agent to orchestratorWorkflow/dev-agent-v2
 - Events handler updated to start orchestratorWorkflow (consistent with worker removal)
+- Query-time SQL aggregation for token cost tracking (no materialized views at current scale)
+- NodePgDatabase type for cost-tracking utility (matches trace-recorder.ts codebase pattern)
 
 ### Pending Todos
 
@@ -154,9 +156,9 @@ None blocking v2.2.
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 35-04-PLAN.md (remove @langchain/* packages)
+Stopped at: Completed 35-05-PLAN.md (cost tracking & final verification) -- Phase 35 complete
 Resume file: None
-Next action: Execute 35-05-PLAN.md (final cleanup)
+Next action: Begin Phase 36
 
 ---
-*Updated: 2026-01-30 -- Phase 35 Plan 04 complete (remove @langchain/* packages, update barrel exports, router unified to orchestratorWorkflow)*
+*Updated: 2026-01-30 -- Phase 35 complete (all 5 plans executed, all 9 GUAR requirements verified PASS)*
