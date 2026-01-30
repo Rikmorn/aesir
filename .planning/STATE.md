@@ -6,16 +6,16 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-**Current focus:** v2.2 Agentic Architecture -- Phase 31 in progress
+**Current focus:** v2.2 Agentic Architecture -- Phase 32 in progress
 
 ## Current Position
 
-Phase: 31 (fourth of 9 in v2.2) - Dev Agent Orchestrator
-Plan: 2 of 2
-Status: Phase complete
-Last activity: 2026-01-30 -- Completed 31-02-PLAN.md (orchestrator behavioral tests)
+Phase: 32 (fifth of 9 in v2.2) - Dev Agent Temporal Integration
+Plan: 1 of 3
+Status: In progress
+Last activity: 2026-01-30 -- Completed 32-01-PLAN.md (orchestrator + infrastructure activities)
 
-Progress: ██████████ 56% (10/18 plans)
+Progress: ███████████ 61% (11/18 plans)
 
 ## Milestone History
 
@@ -79,6 +79,12 @@ Phase 31 decisions:
 - SDK mocking over runAgentLoop mocking for behavioral tests -- enables full integration path testing
 - Trace recorder onToolCall callback for assertion extraction -- cleaner than parsing mock results
 
+Phase 32 decisions:
+- Shared deps via exported getOrchestratorDeps() -- avoids duplicate DI while keeping files separate for different retry configs
+- Rejection feedback stored in task store (not injected into initialMessage) -- follows self-sufficient agents principle
+- Separate infrastructure-activities.ts file for different Temporal retry characteristics
+- Branch creation deferred to orchestrator (infrastructure vs reasoning separation)
+
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
@@ -92,9 +98,9 @@ None blocking v2.2.
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 31-02-PLAN.md (orchestrator behavioral tests)
+Stopped at: Completed 32-01-PLAN.md (orchestrator + infrastructure activities)
 Resume file: None
-Next action: Begin Phase 32 (Temporal Activities)
+Next action: Continue Phase 32 with 32-02-PLAN.md (simplified orchestrator workflow)
 
 ---
-*Updated: 2026-01-30 -- Completed 31-02 (14 behavioral tests for orchestrator adaptive decisions)*
+*Updated: 2026-01-30 -- Completed 32-01 (6 Temporal activities: 3 orchestrator + 3 infrastructure)*
