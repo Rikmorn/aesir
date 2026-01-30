@@ -6,16 +6,16 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-**Current focus:** v2.2 Agentic Architecture -- Phase 33 complete
+**Current focus:** v2.2 Agentic Architecture -- Phase 34 planned
 
 ## Current Position
 
-Phase: 33 (sixth of 9 in v2.2) - Product Agent
-Plan: 4 of 4
-Status: Phase complete
-Last activity: 2026-01-30 -- Completed 33-04-PLAN.md (Activity and workflow tests)
+Phase: 34 (seventh of 9 in v2.2) - Smart Router
+Plan: 1 of 5
+Status: In progress
+Last activity: 2026-01-30 -- Completed 34-01-PLAN.md (router types, fast-path, system prompt)
 
-Progress: █████████████████ 94% (17/18 plans)
+Progress: █████████████████░ 95% (18/22 plans)
 
 ## Milestone History
 
@@ -110,6 +110,14 @@ Phase 33 decisions:
 2. **Run dev-agent container as non-root** (infrastructure)
 3. **11 tests skipped pending infrastructure** (testing)
 
+Phase 34 decisions:
+- FastPathAction as discriminated union with signal|start|ignore variants -- exhaustive switch/case handling
+- 9 deterministic rules covering all unambiguous events (7 actionable + 2 ignore)
+- agent_session.created uses needsEnrichment flag for deferred MCP fetch at execution time
+- agentId 'router' for MCP calls (own identity for permission control)
+- Router system prompt absorbs all 6 intent types from APPROVAL_CLASSIFICATION_PROMPT
+- Questions treated as soft rejections with question text as feedback
+
 ### Blockers/Concerns
 
 None blocking v2.2.
@@ -117,9 +125,9 @@ None blocking v2.2.
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 33-04-PLAN.md (Activity and workflow tests)
+Stopped at: Completed 34-01-PLAN.md
 Resume file: None
-Next action: Phase 34 (Smart Router)
+Next action: Execute 34-02-PLAN.md (slow-path LLM classifier)
 
 ---
-*Updated: 2026-01-30 -- Completed 33-04 (44 test cases for product agent activity and workflow)*
+*Updated: 2026-01-30 -- Completed 34-01-PLAN.md (router types, fast-path, system prompt)*
