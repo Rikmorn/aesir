@@ -48,6 +48,20 @@ vi.mock("../../tools/coordination/request-human-input.js", () => ({
 }));
 
 // ---------------------------------------------------------------------------
+// Mock @temporalio/activity
+// ---------------------------------------------------------------------------
+
+const mockHeartbeat = vi.fn();
+
+vi.mock("@temporalio/activity", () => ({
+  Context: {
+    current: vi.fn(() => ({
+      heartbeat: mockHeartbeat,
+    })),
+  },
+}));
+
+// ---------------------------------------------------------------------------
 // Import AFTER mocks
 // ---------------------------------------------------------------------------
 
@@ -945,5 +959,102 @@ describe("completeTaskActivity", () => {
     expect(mockTaskStore.updateTask).toHaveBeenCalledWith("task_123", {
       status: "failed",
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: Heartbeat Wiring
+// ---------------------------------------------------------------------------
+
+describe("Heartbeat wiring via getHeartbeatFn", () => {
+  it("passes onHeartbeat to runDevAgentOrchestrator in pre-approval", async () => {
+    mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
+
+    await runOrchestratorPreApproval({
+      taskId: "task_123",
+      issue: testIssue,
+      slackChannel: "C_test",
+      workflowId: "wf_abc",
+    });
+
+    // Verify onHeartbeat was passed as a function
+    const callArgs = mockRunDevAgentOrchestrator.mock.calls[0]?.[0];
+    expect(callArgs).toHaveProperty("onHeartbeat");
+    expect(typeof callArgs.onHeartbeat).toBe("function");
+  });
+
+  it("passes onHeartbeat to runDevAgentOrchestrator in post-approval", async () => {
+    mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
+    vi.mocked(mockTaskStore.getTask).mockResolvedValue(null);
+
+    await runOrchestratorPostApproval({
+      taskId: "task_123",
+      issue: testIssue,
+      slackChannel: "C_test",
+      workflowId: "wf_abc",
+    });
+
+    const callArgs = mockRunDevAgentOrchestrator.mock.calls[0]?.[0];
+    expect(callArgs).toHaveProperty("onHeartbeat");
+    expect(typeof callArgs.onHeartbeat).toBe("function");
+  });
+
+  it("passes onHeartbeat to runDevAgentOrchestrator in feedback", async () => {
+    mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
+
+    await handleOrchestratorFeedback({
+      taskId: "task_123",
+      issue: testIssue,
+      slackChannel: "C_test",
+      workflowId: "wf_abc",
+      feedback: "Fix the edge case",
+    });
+
+    const callArgs = mockRunDevAgentOrchestrator.mock.calls[0]?.[0];
+    expect(callArgs).toHaveProperty("onHeartbeat");
+    expect(typeof callArgs.onHeartbeat).toBe("function");
+  });
+
+  it("onHeartbeat callback calls Context.current().heartbeat()", async () => {
+    mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
+    mockHeartbeat.mockClear();
+
+    await runOrchestratorPreApproval({
+      taskId: "task_123",
+      issue: testIssue,
+      slackChannel: "C_test",
+      workflowId: "wf_abc",
+    });
+
+    // Extract the onHeartbeat callback and invoke it
+    const callArgs = mockRunDevAgentOrchestrator.mock.calls[0]?.[0];
+    const heartbeatFn = callArgs.onHeartbeat as () => void;
+    heartbeatFn();
+
+    expect(mockHeartbeat).toHaveBeenCalledTimes(1);
+  });
+
+  it("getHeartbeatFn returns undefined when Context.current() throws", async () => {
+    // Import Context mock and make it throw
+    const { Context } = await import("@temporalio/activity");
+    vi.mocked(Context.current).mockImplementationOnce(() => {
+      throw new Error("No activity context");
+    });
+
+    // Re-import to test getHeartbeatFn behavior
+    // Since getHeartbeatFn is called inside the activity, we test indirectly
+    // by verifying it handles the error gracefully (returns undefined -> passed as undefined)
+    mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
+
+    await runOrchestratorPreApproval({
+      taskId: "task_123",
+      issue: testIssue,
+      slackChannel: "C_test",
+      workflowId: "wf_abc",
+    });
+
+    const callArgs = mockRunDevAgentOrchestrator.mock.calls[0]?.[0];
+    // When Context.current() throws, onHeartbeat should be undefined
+    expect(callArgs.onHeartbeat).toBeUndefined();
   });
 });

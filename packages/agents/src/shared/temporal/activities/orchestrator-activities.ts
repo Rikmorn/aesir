@@ -22,6 +22,7 @@ import type {
   DevContainerManager,
   PinoLogger,
 } from "@aesir/platform";
+import { Context } from "@temporalio/activity";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { runDevAgentOrchestrator } from "../../../dev-agent/orchestrator/orchestrator.js";
 import type {
@@ -32,6 +33,30 @@ import type { ContextManager } from "../../db/context-manager.js";
 import type * as agentsSchemaModule from "../../db/schema.js";
 import type { TaskStore } from "../../db/task-store.js";
 import { HUMAN_INPUT_MARKER } from "../../tools/coordination/request-human-input.js";
+
+// ---------------------------------------------------------------------------
+// Heartbeat Helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Create a heartbeat callback bound to the current Temporal activity context.
+ *
+ * Returns a function that calls `Context.current().heartbeat()` when running
+ * inside a Temporal activity, or `undefined` when no activity context is
+ * available (e.g., in unit tests).
+ *
+ * This keeps `runAgentLoop()` framework-agnostic -- it receives a plain
+ * callback, not a Temporal-specific API.
+ */
+function getHeartbeatFn(): (() => void) | undefined {
+  try {
+    const ctx = Context.current();
+    return () => ctx.heartbeat();
+  } catch {
+    // Not running inside a Temporal activity (e.g., in tests)
+    return undefined;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Dependency Injection
@@ -303,6 +328,9 @@ export async function runOrchestratorPreApproval(
     );
   }
 
+  // Wire Temporal heartbeat into the agent loop (fires after each LLM response)
+  const onHeartbeat = getHeartbeatFn();
+
   // Run the orchestrator loop
   const result = await runDevAgentOrchestrator({
     issueId: input.issue.identifier,
@@ -315,6 +343,7 @@ export async function runOrchestratorPreApproval(
     db: activeDeps.db,
     logger: activeDeps.logger,
     maxIterations: 100,
+    onHeartbeat,
   });
 
   // Parse sentinel for human input request
@@ -393,6 +422,9 @@ export async function runOrchestratorPostApproval(
     status: "executing",
   });
 
+  // Wire Temporal heartbeat into the agent loop (fires after each LLM response)
+  const onHeartbeat = getHeartbeatFn();
+
   // Run the orchestrator loop -- it reads context snapshot via tools
   const result = await runDevAgentOrchestrator({
     issueId: input.issue.identifier,
@@ -405,6 +437,7 @@ export async function runOrchestratorPostApproval(
     db: activeDeps.db,
     logger: activeDeps.logger,
     maxIterations: 100,
+    onHeartbeat,
   });
 
   // Extract PR info from the task store (orchestrator writes via tools)
@@ -486,6 +519,9 @@ export async function handleOrchestratorFeedback(
     approvalFeedback: input.feedback,
   });
 
+  // Wire Temporal heartbeat into the agent loop (fires after each LLM response)
+  const onHeartbeat = getHeartbeatFn();
+
   // Run the orchestrator loop -- it reads task state with feedback via tools
   const result = await runDevAgentOrchestrator({
     issueId: input.issue.identifier,
@@ -498,6 +534,7 @@ export async function handleOrchestratorFeedback(
     db: activeDeps.db,
     logger: activeDeps.logger,
     maxIterations: 100,
+    onHeartbeat,
   });
 
   // Determine if fixes were applied based on status

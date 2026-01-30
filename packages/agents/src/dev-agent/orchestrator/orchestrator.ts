@@ -75,6 +75,8 @@ export interface OrchestratorOptions {
   model?: string;
   /** Abort signal for clean cancellation */
   abortSignal?: AbortSignal;
+  /** Called after each LLM response for Temporal activity heartbeats */
+  onHeartbeat?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -169,6 +171,9 @@ export async function runDevAgentOrchestrator(
   }
   if (options.abortSignal !== undefined) {
     loopOptions.abortSignal = options.abortSignal;
+  }
+  if (options.onHeartbeat !== undefined) {
+    loopOptions.onHeartbeat = options.onHeartbeat;
   }
 
   // 7. Run the agent loop
