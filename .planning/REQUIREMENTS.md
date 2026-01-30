@@ -60,13 +60,13 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Smart Router
 
-- [ ] **ROUT-01**: Hybrid routing -- deterministic rules for unambiguous events (PR merged, button clicked, etc.), LLM reasoning only for ambiguous events (Slack messages, Linear comments with unclear intent)
-- [ ] **ROUT-02**: Replaces hardcoded event switches in `dev-agent/api/events.ts` and `product-agent/api/events.ts`
-- [ ] **ROUT-03**: Absorbs approval intent classifier from `dev-agent/classification/approval.ts` into LLM reasoning path
-- [ ] **ROUT-04**: Router tools: `query_running_workflows`, `start_workflow`, `signal_workflow`, `send_message` (for clarification)
-- [ ] **ROUT-05**: All current event types route correctly: `slack.app_mention.created`, `linear.comment.created`, `slack.block_actions.*`, `github.pull_request.*`, `slack.message.created` in thread
-- [ ] **ROUT-06**: Fallback: if LLM routing fails or times out, log the event and alert -- do not silently drop events
-- [ ] **ROUT-07**: Router iteration limit: 10 (should decide quickly)
+- [x] **ROUT-01**: Hybrid routing -- deterministic rules for unambiguous events (PR merged, button clicked, etc.), LLM reasoning only for ambiguous events (Slack messages, Linear comments with unclear intent)
+- [x] **ROUT-02**: Replaces hardcoded event switches in `dev-agent/api/events.ts` and `product-agent/api/events.ts`
+- [x] **ROUT-03**: Absorbs approval intent classifier from `dev-agent/classification/approval.ts` into LLM reasoning path
+- [x] **ROUT-04**: Router tools: `query_running_workflows`, `start_workflow`, `signal_workflow`, `send_message` (for clarification)
+- [x] **ROUT-05**: All current event types route correctly: `slack.app_mention.created`, `linear.comment.created`, `slack.block_actions.*`, `github.pull_request.*`, `slack.message.created` in thread
+- [x] **ROUT-06**: Fallback: if LLM routing fails or times out, log the event and alert -- do not silently drop events
+- [x] **ROUT-07**: Router iteration limit: 10 (should decide quickly)
 
 ### Context Management
 
@@ -197,13 +197,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROD-05 | Phase 33 | Complete |
 | PROD-06 | Phase 33 | Complete |
 | PROD-07 | Phase 33 | Complete |
-| ROUT-01 | Phase 34 | Pending |
-| ROUT-02 | Phase 34 | Pending |
-| ROUT-03 | Phase 34 | Pending |
-| ROUT-04 | Phase 34 | Pending |
-| ROUT-05 | Phase 34 | Pending |
-| ROUT-06 | Phase 34 | Pending |
-| ROUT-07 | Phase 34 | Pending |
+| ROUT-01 | Phase 34 | Complete |
+| ROUT-02 | Phase 34 | Complete |
+| ROUT-03 | Phase 34 | Complete |
+| ROUT-04 | Phase 34 | Complete |
+| ROUT-05 | Phase 34 | Complete |
+| ROUT-06 | Phase 34 | Complete |
+| ROUT-07 | Phase 34 | Complete |
 | CTXM-01 | Phase 29 | Complete |
 | CTXM-02 | Phase 29 | Complete |
 | CTXM-03 | Phase 29 | Complete |

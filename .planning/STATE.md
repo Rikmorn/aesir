@@ -6,16 +6,16 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-**Current focus:** v2.2 Agentic Architecture -- Phase 34 planned
+**Current focus:** v2.2 Agentic Architecture -- Phase 34 complete, Phase 35 next
 
 ## Current Position
 
 Phase: 34 (seventh of 9 in v2.2) - Smart Router
 Plan: 5 of 5
-Status: Phase complete
-Last activity: 2026-01-30 -- Completed 34-05-PLAN.md (router tests)
+Status: Complete (verified)
+Last activity: 2026-01-30 -- Executed Phase 34 (5 plans, 4 waves, verified)
 
-Progress: ████████████████████ 100% (22/22 plans)
+Progress: ██████████████████░░ 86% (7/9 phases complete, 22/22+ plans)
 
 ## Milestone History
 
@@ -104,12 +104,6 @@ Phase 33 decisions:
 - Conversation history tracked in workflow state, passed to activity each turn
 - Worker uses agents shared db/client (pool-based) instead of creating new connection
 
-### Pending Todos
-
-1. **Fix 4 pre-existing test failures** (code quality)
-2. **Run dev-agent container as non-root** (infrastructure)
-3. **11 tests skipped pending infrastructure** (testing)
-
 Phase 34 decisions:
 - FastPathAction as discriminated union with signal|start|ignore variants -- exhaustive switch/case handling
 - 9 deterministic rules covering all unambiguous events (7 actionable + 2 ignore)
@@ -129,6 +123,12 @@ Phase 34 decisions:
 - Optional chaining (?.) over non-null assertions (!) per Biome lint rules in test files
 - Dynamic await import() after vi.mock() for ESM mock compatibility in Vitest
 
+### Pending Todos
+
+1. **Fix 4 pre-existing test failures** (code quality)
+2. **Run dev-agent container as non-root** (infrastructure)
+3. **11 tests skipped pending infrastructure** (testing)
+
 ### Blockers/Concerns
 
 None blocking v2.2.
@@ -136,9 +136,9 @@ None blocking v2.2.
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 34-05-PLAN.md (Phase 34 complete)
+Stopped at: Phase 34 complete (5 plans, 4 waves, verified)
 Resume file: None
-Next action: Phase 34 complete -- all 5 plans executed
+Next action: Plan Phase 35 (Guardrails & Cleanup)
 
 ---
-*Updated: 2026-01-30 -- Completed 34-05-PLAN.md (router tests -- Phase 34 complete)*
+*Updated: 2026-01-30 -- Phase 34 complete (Smart Router -- 5 plans, verified)*

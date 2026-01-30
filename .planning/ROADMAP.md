@@ -23,7 +23,7 @@ Replace LangGraph state machine architecture with agentic tool-use loops where L
 - [x] **Phase 31: Dev Agent Orchestrator** - Orchestrator agentic loop with sub-agents (researcher, coder, tester)
 - [x] **Phase 32: Dev Agent Temporal Integration** - Temporal activities and simplified workflow wrapping the orchestrator
 - [x] **Phase 33: Product Agent** - Single adaptive agentic loop replacing LangGraph conversation graph
-- [ ] **Phase 34: Smart Router** - Hybrid event classification (deterministic rules + LLM reasoning)
+- [x] **Phase 34: Smart Router** - Hybrid event classification (deterministic rules + LLM reasoning)
 - [ ] **Phase 35: Guardrails & Cleanup** - LangGraph removal, cost budgets, token enforcement, hardening
 - [ ] **Phase 36: End-to-End Validation** - Full flow testing proving agentic architecture works
 
@@ -134,11 +134,11 @@ Plans:
   5. If LLM routing fails or times out, the event is logged and an alert is sent -- events are never silently dropped
 **Plans**: 5 plans
 Plans:
-- [ ] 34-01-PLAN.md -- Router types, fast-path deterministic rules, and system prompt
-- [ ] 34-02-PLAN.md -- Router tools (query/start/signal workflows, send message) and slow-path agentic loop
-- [ ] 34-03-PLAN.md -- HTTP service entry point, core routing logic, and barrel exports
-- [ ] 34-04-PLAN.md -- Integration dispatcher rewiring and Docker/nginx configuration
-- [ ] 34-05-PLAN.md -- Fast-path, slow-path, and router integration tests
+- [x] 34-01-PLAN.md -- Router types, fast-path deterministic rules, and system prompt
+- [x] 34-02-PLAN.md -- Router tools (query/start/signal workflows, send message) and slow-path agentic loop
+- [x] 34-03-PLAN.md -- HTTP service entry point, core routing logic, and barrel exports
+- [x] 34-04-PLAN.md -- Integration dispatcher rewiring and Docker/nginx configuration
+- [x] 34-05-PLAN.md -- Fast-path, slow-path, and router integration tests
 
 ### Phase 35: Guardrails & Cleanup
 **Goal**: Safety guardrails are enforced across all agents and all LangGraph code is removed from the codebase
@@ -177,7 +177,7 @@ Phases execute in numeric order: 28 -> 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35 ->
 | 31. Dev Agent Orchestrator | 2/2 | Complete | 2026-01-30 |
 | 32. Dev Agent Temporal Integration | 3/3 | Complete | 2026-01-30 |
 | 33. Product Agent | 4/4 | Complete | 2026-01-30 |
-| 34. Smart Router | 0/5 | Not started | - |
+| 34. Smart Router | 5/5 | Complete | 2026-01-30 |
 | 35. Guardrails & Cleanup | 0/TBD | Not started | - |
 | 36. End-to-End Validation | 0/TBD | Not started | - |
 
