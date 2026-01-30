@@ -54,7 +54,11 @@ Plans:
   3. Execution traces are recorded automatically via the `runAgentLoop()` tracing callbacks -- every tool call, tool result, LLM response, agent spawn, and agent completion is logged without manual instrumentation
   4. Traces support parent/child agent correlation via `parent_agent_instance_id`, enabling queries like "show me everything the coder sub-agent did for task X"
   5. Token counts (input + output) and duration are tracked per trace step, enabling cost analysis per task
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 29-01-PLAN.md -- Drizzle ORM schema, DB client, migration, and ID generators
+- [ ] 29-02-PLAN.md -- Trace recorder factory with buffered writes and callbacks
+- [ ] 29-03-PLAN.md -- Context manager and task store services
 
 ### Phase 30: Agent Tool Library
 **Goal**: A complete library of typed tool definitions that agents can use to interact with codebases, integrations, git, and each other
@@ -146,7 +150,7 @@ Phases execute in numeric order: 28 -> 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35 ->
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 28. Agentic Loop Runtime | 2/2 | Complete | 2026-01-29 |
-| 29. Database Schema & Context | 0/TBD | Not started | - |
+| 29. Database Schema & Context | 0/3 | Not started | - |
 | 30. Agent Tool Library | 0/TBD | Not started | - |
 | 31. Dev Agent Orchestrator | 0/TBD | Not started | - |
 | 32. Dev Agent Temporal Integration | 0/TBD | Not started | - |
