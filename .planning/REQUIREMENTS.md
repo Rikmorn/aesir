@@ -37,16 +37,16 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [ ] **DEVO-03**: Researcher sub-agent explores codebase with read-only tools, returns structured findings (relevant files, patterns, conventions)
 - [ ] **DEVO-04**: Coder sub-agent implements changes with read+write tools, receives plan + relevant file contents + conventions as context
 - [ ] **DEVO-05**: Tester sub-agent runs and diagnoses tests with read+run tools, receives changed files and project info (package manager, test runner)
-- [ ] **DEVO-06**: New Temporal activity `runOrchestratorPreApproval` -- research + plan -> returns plan for approval
-- [ ] **DEVO-07**: New Temporal activity `runOrchestratorPostApproval` -- execute + test + PR -> returns PR details
-- [ ] **DEVO-08**: New Temporal activity `handleOrchestratorFeedback` -- address PR review comments -> returns updated files
+- [x] **DEVO-06**: New Temporal activity `runOrchestratorPreApproval` -- research + plan -> returns plan for approval
+- [x] **DEVO-07**: New Temporal activity `runOrchestratorPostApproval` -- execute + test + PR -> returns PR details
+- [x] **DEVO-08**: New Temporal activity `handleOrchestratorFeedback` -- address PR review comments -> returns updated files
 - [ ] **DEVO-09**: Orchestrator decides whether research is needed based on task complexity (README edit -> skip, feature -> research)
 - [ ] **DEVO-10**: Orchestrator decides plan granularity (trivial change -> brief plan, complex -> detailed breakdown)
 - [ ] **DEVO-11**: LLM-diagnosed error recovery -- when tests fail, agent reads error output, diagnoses cause, and fixes (not blind retry)
 - [ ] **DEVO-12**: Orchestrator decides test approach based on task (docs-only -> no tests, feature -> unit tests, API change -> integration tests)
 - [ ] **DEVO-13**: Escalation after 3 distinct approaches fail (LLM must try different approach each time, not identical retries)
 - [ ] **DEVO-14**: System prompt includes agent identity, issue details, project conventions, constraints, available tools, sub-agent guidance
-- [ ] **DEVO-15**: Simplified Temporal workflow: setup -> pre-approval loop -> approval wait -> post-approval loop -> PR wait -> feedback loop -> complete
+- [x] **DEVO-15**: Simplified Temporal workflow: setup -> pre-approval loop -> approval wait -> post-approval loop -> PR wait -> feedback loop -> complete
 
 ### Product Agent
 
@@ -180,16 +180,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEVO-03 | Phase 31 | Pending |
 | DEVO-04 | Phase 31 | Pending |
 | DEVO-05 | Phase 31 | Pending |
-| DEVO-06 | Phase 32 | Pending |
-| DEVO-07 | Phase 32 | Pending |
-| DEVO-08 | Phase 32 | Pending |
+| DEVO-06 | Phase 32 | Complete |
+| DEVO-07 | Phase 32 | Complete |
+| DEVO-08 | Phase 32 | Complete |
 | DEVO-09 | Phase 31 | Pending |
 | DEVO-10 | Phase 31 | Pending |
 | DEVO-11 | Phase 31 | Pending |
 | DEVO-12 | Phase 31 | Pending |
 | DEVO-13 | Phase 31 | Pending |
 | DEVO-14 | Phase 31 | Pending |
-| DEVO-15 | Phase 32 | Pending |
+| DEVO-15 | Phase 32 | Complete |
 | PROD-01 | Phase 33 | Pending |
 | PROD-02 | Phase 33 | Pending |
 | PROD-03 | Phase 33 | Pending |
