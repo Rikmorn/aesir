@@ -168,7 +168,11 @@ Plans:
   3. Error recovery is intelligent: when tests fail, the agent reads the error, diagnoses the cause, and fixes it -- not blind retry. Context survives Temporal boundaries (approval waits, crash recovery)
   4. All tool calls are queryable in `agents.execution_traces` with parent/child correlation, and all guardrails are enforced (iteration limits, sandbox-only commands, cost tracking)
   5. No `@langchain/*` dependencies remain in the agents package
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 36-01-PLAN.md -- Static verification of E2EV-06 through E2EV-11 (code inspection + existing tests)
+- [ ] 36-02-PLAN.md -- Behavioral tests for E2EV-02 (README edit efficiency), E2EV-04 (error recovery), E2EV-05 (product agent adaptiveness)
+- [ ] 36-03-PLAN.md -- Structural verification of E2EV-01/E2EV-03 and final VERIFICATION.md assembly
 
 ## Progress
 
@@ -185,7 +189,7 @@ Phases execute in numeric order: 28 -> 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35 ->
 | 33. Product Agent | 4/4 | Complete | 2026-01-30 |
 | 34. Smart Router | 5/5 | Complete | 2026-01-30 |
 | 35. Guardrails & Cleanup | 5/5 | Complete | 2026-01-30 |
-| 36. End-to-End Validation | 0/TBD | Not started | - |
+| 36. End-to-End Validation | 0/3 | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
