@@ -103,7 +103,7 @@ Plans:
 **Plans**: 3 plans
 Plans:
 - [x] 32-01-PLAN.md -- Orchestrator activities (3 orchestrator + 3 infrastructure) with sentinel parsing and context snapshot handoff
-- [ ] 32-02-PLAN.md -- Simplified orchestrator workflow, types, worker registration, barrel exports
+- [x] 32-02-PLAN.md -- Simplified orchestrator workflow, types, worker registration, barrel exports
 - [ ] 32-03-PLAN.md -- Activity and workflow tests (sentinel parsing, approval loop, timeouts, feedback loop)
 
 ### Phase 33: Product Agent
@@ -164,7 +164,7 @@ Phases execute in numeric order: 28 -> 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35 ->
 | 29. Database Schema & Context | 3/3 | Complete | 2026-01-30 |
 | 30. Agent Tool Library | 3/3 | Complete | 2026-01-30 |
 | 31. Dev Agent Orchestrator | 2/2 | Complete | 2026-01-30 |
-| 32. Dev Agent Temporal Integration | 1/3 | In progress | - |
+| 32. Dev Agent Temporal Integration | 2/3 | In progress | - |
 | 33. Product Agent | 0/TBD | Not started | - |
 | 34. Smart Router | 0/TBD | Not started | - |
 | 35. Guardrails & Cleanup | 0/TBD | Not started | - |
