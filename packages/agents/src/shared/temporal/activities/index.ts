@@ -168,3 +168,62 @@ export {
   updateLinearStatusActivity,
   updateSlackApprovalActivity,
 };
+
+// === Orchestrator Activities (v2.2) ===
+
+// Alias infrastructure activities to avoid name collision with legacy
+import {
+  completeTaskActivity as orchestratorCompleteTaskActivity,
+  stopContainerActivity as orchestratorStopContainerActivity,
+  setupContainerActivity,
+} from "./infrastructure-activities.js";
+import type {
+  FeedbackInput,
+  FeedbackOutput,
+  HumanInputRequest,
+  OrchestratorActivitiesDeps,
+  OrchestratorIssueContext,
+  PostApprovalInput,
+  PostApprovalOutput,
+  PreApprovalInput,
+  PreApprovalOutput,
+} from "./orchestrator-activities.js";
+import {
+  getOrchestratorDeps,
+  handleOrchestratorFeedback,
+  initOrchestratorActivities,
+  parseHumanInputMarker,
+  runOrchestratorPostApproval,
+  runOrchestratorPreApproval,
+} from "./orchestrator-activities.js";
+
+// Re-export orchestrator types
+export type {
+  CompleteTaskInput as OrchestratorCompleteTaskInput,
+  SetupContainerInput,
+  SetupContainerOutput,
+} from "./infrastructure-activities.js";
+export type {
+  FeedbackInput,
+  FeedbackOutput,
+  HumanInputRequest,
+  OrchestratorActivitiesDeps,
+  OrchestratorIssueContext,
+  PostApprovalInput,
+  PostApprovalOutput,
+  PreApprovalInput,
+  PreApprovalOutput,
+};
+
+// Re-export orchestrator activities
+export {
+  getOrchestratorDeps,
+  handleOrchestratorFeedback,
+  initOrchestratorActivities,
+  orchestratorCompleteTaskActivity,
+  orchestratorStopContainerActivity,
+  parseHumanInputMarker,
+  runOrchestratorPostApproval,
+  runOrchestratorPreApproval,
+  setupContainerActivity,
+};

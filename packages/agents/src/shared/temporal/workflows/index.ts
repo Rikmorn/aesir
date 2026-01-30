@@ -12,6 +12,12 @@ export {
 } from "./dev-agent-workflow.js";
 
 export {
+  type OrchestratorQueryStatus,
+  orchestratorStatusQuery,
+  orchestratorWorkflow,
+} from "./orchestrator-workflow.js";
+
+export {
   type ConversationQueryStatus,
   conversationStatusQuery,
   productAgentConversationWorkflow,

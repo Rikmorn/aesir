@@ -27,6 +27,8 @@ import {
   Worker,
   type WorkerOptions,
 } from "@temporalio/worker";
+import { createContextManager } from "../shared/db/context-manager.js";
+import { createTaskStore } from "../shared/db/task-store.js";
 import {
   completeTaskActivity,
   continueAfterApprovalActivity,
@@ -40,6 +42,18 @@ import {
   syncApprovalToLinearActivity,
   updateSlackApprovalActivity,
 } from "../shared/temporal/activities/dev-agent-activities.js";
+import {
+  completeTaskActivity as orchestratorCompleteTaskActivity,
+  stopContainerActivity as orchestratorStopContainerActivity,
+  setupContainerActivity,
+} from "../shared/temporal/activities/infrastructure-activities.js";
+import type { OrchestratorActivitiesDeps } from "../shared/temporal/activities/orchestrator-activities.js";
+import {
+  handleOrchestratorFeedback,
+  initOrchestratorActivities,
+  runOrchestratorPostApproval,
+  runOrchestratorPreApproval,
+} from "../shared/temporal/activities/orchestrator-activities.js";
 
 const logger: PinoLogger = createPinoLogger({
   component: "agents:dev-agent:worker",
@@ -197,6 +211,144 @@ export async function createDevAgentWorker(
   logger.info(
     { taskQueue: "dev-agent" },
     "Dev-agent worker created, ready to poll",
+  );
+
+  return worker;
+}
+
+/**
+ * Create and configure the orchestrator Temporal worker (v2.2).
+ *
+ * Registers the simplified orchestrator workflow and its activities
+ * on the 'dev-agent-v2' task queue. Uses separate proxyActivities
+ * configs in the workflow for different retry characteristics.
+ *
+ * Does NOT modify the legacy worker -- both can coexist during
+ * the transition period (Phase 35 removes the legacy).
+ *
+ * @param options - Worker configuration options
+ * @returns Configured Worker instance ready to run
+ *
+ * @example
+ * ```typescript
+ * const worker = await createOrchestratorWorker({
+ *   address: 'localhost:7233',
+ *   namespace: 'default',
+ * });
+ * await worker.run();
+ * ```
+ */
+export async function createOrchestratorWorker(
+  options: DevAgentWorkerOptions = {},
+): Promise<Worker> {
+  const address =
+    options.address ?? process.env.TEMPORAL_ADDRESS ?? "localhost:7233";
+  const namespace =
+    options.namespace ?? process.env.TEMPORAL_NAMESPACE ?? "default";
+
+  const workerLogger: PinoLogger = createPinoLogger({
+    component: "agents:dev-agent:orchestrator-worker",
+  });
+
+  workerLogger.info({ address, namespace }, "Creating orchestrator worker");
+
+  // Create platform dependencies
+  const manager = createDevContainerManager({
+    db: db as unknown as Parameters<typeof createDevContainerManager>[0]["db"],
+    logger: workerLogger,
+  });
+  const cleanup = createDevContainerCleanup({
+    db: db as unknown as Parameters<typeof createDevContainerCleanup>[0]["db"],
+    logger: workerLogger,
+  });
+  const git = createDevContainerGit({ manager, logger: workerLogger });
+
+  // Create agents-specific dependencies (Phase 29)
+  const contextManager = createContextManager({
+    db: db as unknown as Parameters<typeof createContextManager>[0]["db"],
+    logger: workerLogger,
+  });
+  const taskStore = createTaskStore({
+    db: db as unknown as Parameters<typeof createTaskStore>[0]["db"],
+    logger: workerLogger,
+  });
+
+  // Get config from environment
+  const repoUrl = process.env.GITHUB_REPO_URL;
+  const githubToken = process.env.GITHUB_TOKEN;
+  const owner = process.env.GITHUB_OWNER;
+  const repo = process.env.GITHUB_REPO;
+  const baseBranch = process.env.GITHUB_BASE_BRANCH || "main";
+  const slackChannel = process.env.DEV_AGENT_SLACK_CHANNEL;
+
+  if (!repoUrl || !githubToken || !owner || !repo || !slackChannel) {
+    workerLogger.error(
+      {
+        repoUrl: !!repoUrl,
+        githubToken: !!githubToken,
+        owner,
+        repo,
+        slackChannel,
+      },
+      "Missing required environment variables",
+    );
+    throw new Error(
+      "Missing required environment variables: GITHUB_REPO_URL, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, DEV_AGENT_SLACK_CHANNEL",
+    );
+  }
+
+  workerLogger.info(
+    { owner, repo, baseBranch, slackChannel },
+    "Configuration loaded",
+  );
+
+  // Initialize orchestrator activities with all dependencies
+  initOrchestratorActivities({
+    containerManager: manager,
+    cleanup,
+    git,
+    contextManager,
+    taskStore,
+    db: db as unknown as OrchestratorActivitiesDeps["db"],
+    logger: workerLogger,
+    repoUrl,
+    githubToken,
+    owner,
+    repo,
+    baseBranch,
+    slackChannel,
+  });
+
+  workerLogger.info("Orchestrator activities initialized");
+
+  // Connect to Temporal
+  const connection = await NativeConnection.connect({ address });
+  workerLogger.info({ address }, "Connected to Temporal");
+
+  // Create worker on dev-agent-v2 task queue (separate from legacy)
+  const worker = await Worker.create({
+    connection,
+    namespace,
+    taskQueue: "dev-agent-v2",
+    workflowsPath: new URL(
+      "../shared/temporal/workflows/orchestrator-workflow.js",
+      import.meta.url,
+    ).pathname,
+    activities: {
+      // Orchestrator activities (45min timeout, 2 retries in workflow proxy)
+      runOrchestratorPreApproval,
+      runOrchestratorPostApproval,
+      handleOrchestratorFeedback,
+      // Infrastructure activities (5min timeout, 3 retries in workflow proxy)
+      setupContainerActivity,
+      stopContainerActivity: orchestratorStopContainerActivity,
+      completeTaskActivity: orchestratorCompleteTaskActivity,
+    },
+  });
+
+  workerLogger.info(
+    { taskQueue: "dev-agent-v2" },
+    "Orchestrator worker created, ready to poll",
   );
 
   return worker;
