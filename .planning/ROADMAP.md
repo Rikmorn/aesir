@@ -150,7 +150,13 @@ Plans:
   3. All four `@langchain/*` dependencies are removed from `@aesir/agents` package.json and all LangGraph code is deleted: graph definitions, node implementations, state schemas, phase enums, `routeByPhase()`, `code-workflow/` directory
   4. Temporal activity retry config is designed for agentic loops with appropriate retry count and backoff for LLM-heavy activities
   5. `PostgresSaver` checkpointer is removed -- context persistence fully handled by `agents.context_snapshots`
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 35-01-PLAN.md -- Token budget enforcement (warning, reserve, graceful exhaustion) and merge protection
+- [ ] 35-02-PLAN.md -- Temporal retry config (heartbeat, non-retryable errors, tuned backoff)
+- [ ] 35-03-PLAN.md -- LangGraph NUCLEAR deletion (directories and legacy files)
+- [ ] 35-04-PLAN.md -- LangGraph cleanup (barrel exports, worker, package.json, migration)
+- [ ] 35-05-PLAN.md -- Cost tracking utility and comprehensive Phase 35 verification
 
 ### Phase 36: End-to-End Validation
 **Goal**: The complete v2.2 agentic architecture works end-to-end, proving agents reason about their actions instead of following fixed graphs
@@ -178,7 +184,7 @@ Phases execute in numeric order: 28 -> 29 -> 30 -> 31 -> 32 -> 33 -> 34 -> 35 ->
 | 32. Dev Agent Temporal Integration | 3/3 | Complete | 2026-01-30 |
 | 33. Product Agent | 4/4 | Complete | 2026-01-30 |
 | 34. Smart Router | 5/5 | Complete | 2026-01-30 |
-| 35. Guardrails & Cleanup | 0/TBD | Not started | - |
+| 35. Guardrails & Cleanup | 0/5 | Not started | - |
 | 36. End-to-End Validation | 0/TBD | Not started | - |
 
 ---
