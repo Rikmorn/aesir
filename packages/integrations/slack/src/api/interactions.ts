@@ -9,7 +9,7 @@
  * - Slack sends interactive payloads as application/x-www-form-urlencoded
  * - The "payload" field contains a JSON string that must be parsed
  * - Response must be sent within 3 seconds (Slack timeout)
- * - Dispatch to dev-agent is fire-and-forget (async)
+ * - Dispatch to router is fire-and-forget (async)
  */
 
 import type { PinoLogger } from "@aesir/platform";
@@ -23,7 +23,7 @@ import { Router } from "express";
 export interface InteractionsRouterDeps {
   /** Logger instance */
   logger: PinoLogger;
-  /** URL to dispatch events to (dev-agent /events endpoint) */
+  /** URL to dispatch events to (router /events endpoint) */
   dispatchUrl: string;
 }
 
@@ -165,7 +165,7 @@ export function createInteractionsRouter(deps: InteractionsRouterDeps): Router {
 
       const { isApproval, taskIdentifier } = parsedAction;
 
-      // Step 5: Normalize to event format for dev-agent
+      // Step 5: Normalize to event format for router
       const eventId = createId.event();
       const normalizedEvent: NormalizedEvent = {
         id: eventId,
@@ -194,10 +194,10 @@ export function createInteractionsRouter(deps: InteractionsRouterDeps): Router {
           taskIdentifier,
           isApproval,
         },
-        "Dispatching approval event to dev-agent",
+        "Dispatching approval event to router",
       );
 
-      // Step 6: Dispatch to dev-agent (fire-and-forget)
+      // Step 6: Dispatch to router (fire-and-forget)
       // Don't await - Slack requires response within 3 seconds
       fetch(dispatchUrl, {
         method: "POST",
@@ -213,7 +213,7 @@ export function createInteractionsRouter(deps: InteractionsRouterDeps): Router {
           if (!response.ok) {
             childLogger.warn(
               { eventId, status: response.status },
-              "Dev-agent dispatch received non-OK response",
+              "Router dispatch received non-OK response",
             );
           } else {
             childLogger.info(
@@ -225,7 +225,7 @@ export function createInteractionsRouter(deps: InteractionsRouterDeps): Router {
         .catch((err) => {
           childLogger.error(
             { err, eventId },
-            "Failed to dispatch approval event to dev-agent",
+            "Failed to dispatch approval event to router",
           );
         });
 

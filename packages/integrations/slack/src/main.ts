@@ -180,7 +180,7 @@ export async function startServer(): Promise<void> {
         const planMatch = actionId.match(/^approve_plan_(.+)_pr$/);
         const taskIdentifier = planMatch?.[1] ?? value;
 
-        // Normalize to event format compatible with dev-agent /events
+        // Normalize to event format for router
         const { createId } = await import("@aesir/types");
         const eventId = createId.event();
         const normalizedEvent = {
@@ -202,18 +202,18 @@ export async function startServer(): Promise<void> {
           },
         };
 
-        // Dispatch to dev-agent (fire-and-forget)
-        const devAgentUrl =
-          process.env.DEV_AGENT_URL || "http://dev-agent:3004/events";
+        // Dispatch to router (fire-and-forget)
+        const routerUrl =
+          process.env.ROUTER_URL || "http://router:3006/events";
         try {
-          const response = await fetch(devAgentUrl, {
+          const response = await fetch(routerUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(normalizedEvent),
           });
           logger.info(
             { eventId, taskIdentifier, isApproval, status: response.status },
-            "Button click dispatched to dev-agent",
+            "Button click dispatched to router",
           );
         } catch (err) {
           logger.error({ err, eventId }, "Failed to dispatch button click");
@@ -269,11 +269,11 @@ export async function startServer(): Promise<void> {
         },
       };
 
-      // Dispatch to dev-agent (fire-and-forget)
-      const devAgentUrl =
-        process.env.DEV_AGENT_URL || "http://dev-agent:3004/events";
+      // Dispatch to router (fire-and-forget)
+      const routerUrl =
+        process.env.ROUTER_URL || "http://router:3006/events";
       try {
-        const response = await fetch(devAgentUrl, {
+        const response = await fetch(routerUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(normalizedEvent),
@@ -285,7 +285,7 @@ export async function startServer(): Promise<void> {
             escalationAction,
             status: response.status,
           },
-          "Escalation button click dispatched to dev-agent",
+          "Escalation button click dispatched to router",
         );
       } catch (err) {
         logger.error(
@@ -355,11 +355,11 @@ export async function startServer(): Promise<void> {
 
     // Mount interactions router (Slack button clicks)
     // Note: Must be before MCP routes to avoid path conflicts
-    const devAgentUrl =
-      process.env.DEV_AGENT_URL || "http://dev-agent:3004/events";
+    const routerUrl =
+      process.env.ROUTER_URL || "http://router:3006/events";
     const interactionsRouter = createInteractionsRouter({
       logger: logger.child({ component: "interactions" }),
-      dispatchUrl: devAgentUrl,
+      dispatchUrl: routerUrl,
     });
     healthApp.use("/slack", interactionsRouter);
 
@@ -409,7 +409,7 @@ export async function startServer(): Promise<void> {
     const healthServer = healthApp.listen(port, () => {
       logger.info({ port }, "Health check server started for Socket Mode");
       logger.info(
-        { interactivityUrl: "/slack/interactions", devAgentUrl },
+        { interactivityUrl: "/slack/interactions", routerUrl },
         "Slack interactions endpoint configured for HITL approvals",
       );
     });
@@ -437,11 +437,11 @@ export async function startServer(): Promise<void> {
 
     // Mount interactions router (Slack button clicks)
     // Must be before other Slack routes for correct path handling
-    const devAgentUrl =
-      process.env.DEV_AGENT_URL || "http://dev-agent:3004/events";
+    const httpRouterUrl =
+      process.env.ROUTER_URL || "http://router:3006/events";
     const interactionsRouter = createInteractionsRouter({
       logger: logger.child({ component: "interactions" }),
-      dispatchUrl: devAgentUrl,
+      dispatchUrl: httpRouterUrl,
     });
     app.use("/slack", interactionsRouter);
 
@@ -477,7 +477,7 @@ export async function startServer(): Promise<void> {
         "Slack service started in HTTP mode",
       );
       logger.info(
-        { interactivityUrl: "/slack/interactions", devAgentUrl },
+        { interactivityUrl: "/slack/interactions", routerUrl: httpRouterUrl },
         "Slack interactions endpoint configured for HITL approvals",
       );
     });
