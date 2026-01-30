@@ -14,7 +14,7 @@
 
 import type { NormalizedEvent } from "@aesir/types";
 import { callMcpTool } from "../shared/mcp/index.js";
-import { matchFastPath, executeFastPath } from "./fast-path.js";
+import { executeFastPath, matchFastPath } from "./fast-path.js";
 import { routeViaAgentLoop } from "./slow-path.js";
 import type { RouteResult, RouterDeps } from "./types.js";
 

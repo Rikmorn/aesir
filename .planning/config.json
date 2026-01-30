@@ -12,7 +12,7 @@
     "plan_level": true,
     "task_level": true,
     "skip_checkpoints": true,
-    "max_concurrent_agents": 1,
+    "max_concurrent_agents": 2,
     "min_plans_for_parallel": 2
   },
   "gates": {

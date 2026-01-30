@@ -88,15 +88,15 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Guardrails & Hardening
 
-- [ ] **GUAR-01**: All `run_command` tool calls execute inside DevContainerManager sandbox -- no host access
-- [ ] **GUAR-02**: Agents cannot call `merge_pull_request` -- human merges only
-- [ ] **GUAR-03**: Configurable guardrail values via AgentConfig (iteration limits, token budgets, model selection)
-- [ ] **GUAR-04**: Temporal activity retry config designed for agentic loops -- appropriate retry count and backoff for LLM-heavy activities
-- [ ] **GUAR-05**: Token budget enforcement -- loop checks remaining budget before each LLM call, terminates gracefully if exhausted
-- [ ] **GUAR-06**: Cost tracking per task -- total tokens (input + output) aggregated across orchestrator and all sub-agents
-- [ ] **GUAR-07**: All `@langchain/*` dependencies removed from `@aesir/agents`: `@langchain/anthropic`, `@langchain/core`, `@langchain/langgraph`, `@langchain/langgraph-checkpoint-postgres`
-- [ ] **GUAR-08**: LangGraph code deleted: graph definitions, node implementations, state schemas, phase enums, `routeByPhase()`, `code-workflow/` directory
-- [ ] **GUAR-09**: `PostgresSaver` checkpointer removed -- replaced by agents.context_snapshots
+- [x] **GUAR-01**: All `run_command` tool calls execute inside DevContainerManager sandbox -- no host access
+- [x] **GUAR-02**: Agents cannot call `merge_pull_request` -- human merges only
+- [x] **GUAR-03**: Configurable guardrail values via AgentConfig (iteration limits, token budgets, model selection)
+- [x] **GUAR-04**: Temporal activity retry config designed for agentic loops -- appropriate retry count and backoff for LLM-heavy activities
+- [x] **GUAR-05**: Token budget enforcement -- loop checks remaining budget before each LLM call, terminates gracefully if exhausted
+- [x] **GUAR-06**: Cost tracking per task -- total tokens (input + output) aggregated across orchestrator and all sub-agents
+- [x] **GUAR-07**: All `@langchain/*` dependencies removed from `@aesir/agents`: `@langchain/anthropic`, `@langchain/core`, `@langchain/langgraph`, `@langchain/langgraph-checkpoint-postgres`
+- [x] **GUAR-08**: LangGraph code deleted: graph definitions, node implementations, state schemas, phase enums, `routeByPhase()`, `code-workflow/` directory
+- [x] **GUAR-09**: `PostgresSaver` checkpointer removed -- replaced by agents.context_snapshots
 
 ### End-to-End Validation
 
@@ -216,15 +216,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TRAC-03 | Phase 29 | Complete |
 | TRAC-04 | Phase 29 | Complete |
 | TRAC-05 | Phase 29 | Complete |
-| GUAR-01 | Phase 35 | Pending |
-| GUAR-02 | Phase 35 | Pending |
-| GUAR-03 | Phase 35 | Pending |
-| GUAR-04 | Phase 35 | Pending |
-| GUAR-05 | Phase 35 | Pending |
-| GUAR-06 | Phase 35 | Pending |
-| GUAR-07 | Phase 35 | Pending |
-| GUAR-08 | Phase 35 | Pending |
-| GUAR-09 | Phase 35 | Pending |
+| GUAR-01 | Phase 35 | Complete |
+| GUAR-02 | Phase 35 | Complete |
+| GUAR-03 | Phase 35 | Complete |
+| GUAR-04 | Phase 35 | Complete |
+| GUAR-05 | Phase 35 | Complete |
+| GUAR-06 | Phase 35 | Complete |
+| GUAR-07 | Phase 35 | Complete |
+| GUAR-08 | Phase 35 | Complete |
+| GUAR-09 | Phase 35 | Complete |
 | E2EV-01 | Phase 36 | Pending |
 | E2EV-02 | Phase 36 | Pending |
 | E2EV-03 | Phase 36 | Pending |
@@ -244,4 +244,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-01-29*
-*Last updated: 2026-01-29 after roadmap creation (all 78 requirements mapped)*
+*Last updated: 2026-01-30 after Phase 35 completion (GUAR-01 through GUAR-09 complete)*
