@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 33 (sixth of 9 in v2.2) - Product Agent
-Plan: 2 of 4
+Plan: 3 of 4
 Status: In progress
-Last activity: 2026-01-30 -- Completed 33-02-PLAN.md (Product agent orchestrator + Temporal activity rewrite)
+Last activity: 2026-01-30 -- Completed 33-03-PLAN.md (Temporal workflow, worker, LangGraph cleanup)
 
-Progress: ███████████████ 83% (15/18 plans)
+Progress: ████████████████ 89% (16/18 plans)
 
 ## Milestone History
 
@@ -100,6 +100,9 @@ Phase 33 decisions:
 - Issue info extracted from trace by finding tool_result steps for linear_create_issue and parsing JSON output
 - Conversation history injected as XML <conversation_history> block in initial message (not separate API turns)
 - Module-level DI pattern for product agent activities (initProductAgentActivities)
+- Agent sends its own Slack messages -- workflow only sends system messages (reminders, timeouts, cancellation)
+- Conversation history tracked in workflow state, passed to activity each turn
+- Worker uses agents shared db/client (pool-based) instead of creating new connection
 
 ### Pending Todos
 
@@ -114,9 +117,9 @@ None blocking v2.2.
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 33-02-PLAN.md (Product agent orchestrator + Temporal activity rewrite)
+Stopped at: Completed 33-03-PLAN.md (Temporal workflow, worker, LangGraph cleanup)
 Resume file: None
-Next action: Continue Phase 33, Plan 03
+Next action: Continue Phase 33, Plan 04
 
 ---
-*Updated: 2026-01-30 -- Completed 33-02 (runProductAgent orchestrator + rewritten Temporal activity)*
+*Updated: 2026-01-30 -- Completed 33-03 (Temporal workflow + worker update, 22 LangGraph files deleted)*
