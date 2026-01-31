@@ -20,8 +20,8 @@ export interface ApprovalNotification {
   type: "approval_needed";
   /** Linear task identifier (e.g., ABC-123) */
   taskId: string;
-  /** GitHub PR URL (empty string if not applicable, e.g., plan approval) */
-  prUrl: string;
+  /** GitHub PR URL (omit or empty for plan approval) */
+  prUrl?: string;
   /** PR or task title */
   title: string;
   /** Brief description of changes */
@@ -119,9 +119,9 @@ export interface ReplyToEventOptions {
 export interface ApprovalBlockOptions {
   /** Linear task identifier (e.g., ABC-123) */
   taskId: string;
-  /** GitHub PR URL */
-  prUrl: string;
-  /** PR or task title */
+  /** GitHub PR URL (omit for plan approval) */
+  prUrl?: string;
+  /** Title of the item needing approval */
   title: string;
   /** Brief description of changes */
   summary: string;

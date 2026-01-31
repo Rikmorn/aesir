@@ -28,12 +28,12 @@ export function buildApprovalBlocks(
 ): (Block | KnownBlock)[] {
   const { taskId, prUrl, title, summary, actionPrefix = "approve" } = options;
 
-  return [
+  const blocks: (Block | KnownBlock)[] = [
     {
       type: "section",
       text: {
         type: "mrkdwn",
-        text: `*PR Ready for Review*\n${title}`,
+        text: `*${title}*`,
       },
     },
     {
@@ -43,13 +43,20 @@ export function buildApprovalBlocks(
         text: summary,
       },
     },
-    {
+  ];
+
+  // Only include PR link when a URL is provided
+  if (prUrl) {
+    blocks.push({
       type: "section",
       text: {
         type: "mrkdwn",
         text: `<${prUrl}|View Pull Request>`,
       },
-    },
+    });
+  }
+
+  blocks.push(
     {
       type: "actions",
       block_id: `${actionPrefix}_${taskId}`,
@@ -87,7 +94,9 @@ export function buildApprovalBlocks(
         },
       ],
     },
-  ];
+  );
+
+  return blocks;
 }
 
 /**
@@ -295,7 +304,7 @@ export function getFallbackText(
   status?: "started" | "completed" | "failed",
 ): string {
   if (type === "approval_needed" && title) {
-    return `PR Ready for Review: ${title}`;
+    return `Approval needed: ${title}`;
   }
 
   if (type === "status_update" && status) {

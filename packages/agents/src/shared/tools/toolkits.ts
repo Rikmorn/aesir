@@ -183,16 +183,19 @@ export function createOrchestratorToolkit(deps: ToolkitDeps): ToolDefinition[] {
       systemPrompt: RESEARCHER_SYSTEM_PROMPT,
       tools: createResearcherToolkit(deps),
       maxIterations: 30,
+      model: "claude-haiku-4-5-20251001",
     },
     coder: {
       systemPrompt: CODER_SYSTEM_PROMPT,
       tools: createCoderToolkit(deps),
       maxIterations: 40,
+      model: "claude-haiku-4-5-20251001",
     },
     tester: {
       systemPrompt: TESTER_SYSTEM_PROMPT,
       tools: createTesterToolkit(deps),
       maxIterations: 20,
+      model: "claude-haiku-4-5-20251001",
     },
   };
 

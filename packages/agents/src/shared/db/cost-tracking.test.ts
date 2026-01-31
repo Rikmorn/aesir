@@ -6,10 +6,7 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
-import {
-  getTaskTokenUsage,
-  type TaskTokenUsage,
-} from "./cost-tracking.js";
+import { getTaskTokenUsage, type TaskTokenUsage } from "./cost-tracking.js";
 
 // ---------------------------------------------------------------------------
 // Mock Factories

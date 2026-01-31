@@ -53,7 +53,7 @@ describe("sendApprovalRequestActivity", () => {
         title: "Add new feature",
         summary: "This PR implements a new feature",
       },
-      agentId: "temporal-worker",
+      agentId: "dev-agent",
       correlationId: "slack-approval-TASK-123",
     });
   });
@@ -126,7 +126,7 @@ describe("sendStatusUpdateActivity", () => {
         channel: "C98765432",
         text: "*Task TASK-456*: completed\nPR merged successfully",
       },
-      agentId: "temporal-worker",
+      agentId: "dev-agent",
       correlationId: "slack-status-TASK-456",
     });
   });

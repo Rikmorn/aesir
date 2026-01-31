@@ -18,7 +18,7 @@ const logger: PinoLogger = createPinoLogger({
 export interface ApprovalNotification {
   type: "approval_needed";
   taskId: string;
-  prUrl: string;
+  prUrl?: string;
   title: string;
   summary: string;
 }
@@ -57,18 +57,23 @@ export async function sendApprovalRequestActivity(
     `Sending approval request for task ${notification.taskId}`,
   );
 
+  // Build MCP params with conditional prUrl (omit for plan approvals)
+  const params: Record<string, string> = {
+    channel,
+    taskId: notification.taskId,
+    title: notification.title,
+    summary: notification.summary,
+  };
+  if (notification.prUrl) {
+    params.prUrl = notification.prUrl;
+  }
+
   // Call Slack integration service via MCP
   const result = await callMcpTool<MessageResult>({
     integration: "slack",
     tool: "send_approval_request",
-    params: {
-      channel,
-      taskId: notification.taskId,
-      prUrl: notification.prUrl,
-      title: notification.title,
-      summary: notification.summary,
-    },
-    agentId: "temporal-worker",
+    params,
+    agentId: "dev-agent",
     correlationId: `slack-approval-${notification.taskId}`,
   });
 
@@ -99,7 +104,7 @@ export async function sendStatusUpdateActivity(
       channel,
       text: `*Task ${notification.taskId}*: ${notification.status}\n${notification.message}`,
     },
-    agentId: "temporal-worker",
+    agentId: "dev-agent",
     correlationId: `slack-status-${notification.taskId}`,
   });
 

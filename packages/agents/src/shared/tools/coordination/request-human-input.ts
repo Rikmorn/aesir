@@ -52,8 +52,9 @@ export function createRequestHumanInputTool(): ToolDefinition {
   return {
     name: "request_human_input",
     description:
-      "Request input from a human via Slack. Sends a message to the specified channel and pauses execution " +
-      "until the human responds. IMPORTANT: After calling this tool, you MUST immediately end your turn " +
+      "Pause execution and wait for human input. This tool does NOT send any Slack message -- you must " +
+      "send the notification FIRST using slack_send_approval_request or slack_send_message, then call " +
+      "this tool to pause. IMPORTANT: After calling this tool, you MUST immediately end your turn " +
       "and provide a summary of your current state. Do NOT call any other tools after request_human_input.",
     inputSchema: requestHumanInputSchema,
     async execute(input: unknown): Promise<ToolResult> {

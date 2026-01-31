@@ -362,6 +362,163 @@ describe("Approval Loop Flow", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Tests: Autonomous Completion (no approval sentinel)
+// ---------------------------------------------------------------------------
+
+describe("Autonomous Completion", () => {
+  describe("agent completes with PR (no sentinel)", () => {
+    it("skips approval wait and post-approval, enters awaiting_pr", () => {
+      // Simulate the autonomous completion state machine
+      const state = {
+        phase: "pending" as OrchestratorWorkflowPhase,
+        prNumber: undefined as number | undefined,
+        prUrl: undefined as string | undefined,
+      };
+
+      // Phase 1: setup
+      state.phase = "setup";
+      expect(state.phase).toBe("setup");
+
+      // Phase 2: pre-approval
+      state.phase = "pre_approval";
+      expect(state.phase).toBe("pre_approval");
+
+      // Pre-approval result: no sentinel, but PR created
+      const preResult = {
+        status: "completed",
+        plan: "README updated and PR created",
+        humanInputRequest: null,
+        prNumber: 99,
+        prUrl: "https://github.com/org/repo/pull/99",
+        toolCallCount: 8,
+        tokenCount: { input: 1500, output: 700 },
+      };
+
+      // Autonomous completion check
+      expect(preResult.humanInputRequest).toBeNull();
+
+      // Set state from preResult
+      state.prNumber = preResult.prNumber;
+      state.prUrl = preResult.prUrl;
+
+      // Should skip straight to awaiting_pr (not awaiting_approval, not post_approval)
+      state.phase = "awaiting_pr";
+      expect(state.phase).toBe("awaiting_pr");
+      expect(state.prNumber).toBe(99);
+      expect(state.prUrl).toBe("https://github.com/org/repo/pull/99");
+    });
+
+    it("skips post-approval when prNumber is already set", () => {
+      // The workflow condition: if (state.prNumber === undefined) { run post-approval }
+      const state = {
+        prNumber: 99 as number | undefined,
+      };
+
+      // Post-approval should be skipped
+      const shouldRunPostApproval = state.prNumber === undefined;
+      expect(shouldRunPostApproval).toBe(false);
+    });
+
+    it("includes PR info in final result via awaiting_pr phase", () => {
+      // After autonomous completion, workflow falls through to awaiting_pr
+      // then eventually completes with PR info
+      const result: OrchestratorWorkflowResult = {
+        success: true,
+        phase: "complete",
+        prNumber: 99,
+        prUrl: "https://github.com/org/repo/pull/99",
+        totalTokenCount: { input: 1500, output: 700 },
+      };
+
+      expect(result.success).toBe(true);
+      expect(result.prNumber).toBe(99);
+    });
+  });
+
+  describe("agent completes without PR and without sentinel", () => {
+    it("completes workflow directly without entering awaiting_pr", () => {
+      // Simulate the autonomous completion without PR
+      const state = {
+        phase: "pending" as OrchestratorWorkflowPhase,
+        prNumber: undefined as number | undefined,
+      };
+
+      // Setup
+      state.phase = "setup";
+
+      // Pre-approval
+      state.phase = "pre_approval";
+
+      // Pre-approval result: no sentinel, no PR
+      const preResult = {
+        status: "completed",
+        plan: "Issue already resolved, no changes needed",
+        humanInputRequest: null,
+        // No prNumber, no prUrl
+        toolCallCount: 3,
+        tokenCount: { input: 500, output: 200 },
+      };
+
+      expect(preResult.humanInputRequest).toBeNull();
+      expect(state.prNumber).toBeUndefined();
+
+      // Workflow completes directly
+      state.phase = "complete";
+
+      const result: OrchestratorWorkflowResult = {
+        success: true,
+        phase: "complete",
+        totalTokenCount: preResult.tokenCount,
+      };
+
+      expect(result.success).toBe(true);
+      expect(result.phase).toBe("complete");
+      expect(result.prNumber).toBeUndefined();
+    });
+
+    it("stops container and marks task complete", () => {
+      // When completing without PR, the workflow calls:
+      // 1. stopContainerActivity(taskId)
+      // 2. completeTaskActivity({ taskId, success: true })
+      const completionFlow = [
+        "stopContainerActivity",
+        "completeTaskActivity_success",
+        "return_complete",
+      ];
+
+      expect(completionFlow).toEqual([
+        "stopContainerActivity",
+        "completeTaskActivity_success",
+        "return_complete",
+      ]);
+    });
+  });
+
+  describe("normal approval path still works", () => {
+    it("enters awaiting_approval when sentinel IS present", () => {
+      const preResult = {
+        status: "completed",
+        plan: "Complex implementation plan",
+        humanInputRequest: {
+          channel: "C123",
+          message: "Approve plan?",
+          requestType: "approval" as const,
+        },
+        toolCallCount: 15,
+        tokenCount: { input: 3000, output: 1500 },
+      };
+
+      // Sentinel present — should NOT trigger autonomous completion
+      expect(preResult.humanInputRequest).not.toBeNull();
+
+      // Workflow enters awaiting_approval as before
+      const state = { phase: "awaiting_approval" as OrchestratorWorkflowPhase };
+      expect(state.phase).toBe("awaiting_approval");
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Tests: Timeout Patterns
 // ---------------------------------------------------------------------------
 

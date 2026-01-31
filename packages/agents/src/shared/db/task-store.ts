@@ -151,6 +151,27 @@ export function createTaskStore(options: TaskStoreOptions): TaskStore {
           slack_channel: params.slackChannel,
           slack_message_ts: params.slackMessageTs,
         })
+        .onConflictDoUpdate({
+          target: tasks.task_id,
+          set: {
+            agent_type: params.agentType,
+            issue_id: params.issueId ?? null,
+            issue_identifier: params.issueIdentifier ?? null,
+            workflow_id: params.workflowId ?? null,
+            slack_channel: params.slackChannel ?? null,
+            slack_message_ts: params.slackMessageTs ?? null,
+            status: "pending",
+            container_id: null,
+            branch_name: null,
+            pr_number: null,
+            pr_url: null,
+            approval_status: "pending",
+            approval_feedback: null,
+            error: null,
+            escalation_reason: null,
+            updated_at: new Date(),
+          },
+        })
         .returning({ id: tasks.id });
 
       const row = rows[0];

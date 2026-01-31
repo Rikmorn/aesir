@@ -21,6 +21,9 @@ const PERMISSIONS = [
   { agentId: "dev-agent", toolName: "create_comment", allowed: true },
   { agentId: "dev-agent", toolName: "search_issues", allowed: true },
 
+  // router: Read-only access for event enrichment
+  { agentId: "router", toolName: "get_issue", allowed: true },
+
   // product-agent: Full access (creates issues, manages workflow)
   { agentId: "product-agent", toolName: "get_issue", allowed: true },
   { agentId: "product-agent", toolName: "create_issue", allowed: true },

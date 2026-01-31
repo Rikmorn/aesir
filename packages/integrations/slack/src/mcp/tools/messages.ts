@@ -204,9 +204,11 @@ export function registerMessageTools(deps: RegisterMessageToolsDeps): void {
             taskId: input.taskId,
             title: input.title,
             summary: input.summary,
-            prUrl: input.prUrl || "",
             actionPrefix: input.actionPrefix,
           };
+          if (input.prUrl) {
+            notification.prUrl = input.prUrl;
+          }
 
           const result = await sendApprovalRequest(
             client,

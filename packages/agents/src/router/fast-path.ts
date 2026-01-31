@@ -406,7 +406,7 @@ export async function executeFastPath(
               correlationId: action.workflowId,
             });
 
-            const labelNames = issue.labels.map((l) => l.name);
+            const labelNames = (issue.labels ?? []).map((l) => l.name);
 
             // Build OrchestratorWorkflowInput matching existing pattern
             workflowArgs = [

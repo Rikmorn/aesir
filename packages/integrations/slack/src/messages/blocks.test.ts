@@ -145,6 +145,27 @@ describe("buildApprovalBlocks", () => {
       ],
     });
   });
+
+  it("omits PR link section when prUrl is not provided", () => {
+    const blocks = buildApprovalBlocks({
+      taskId: "ABC-123",
+      title: "Plan approval: Add auth",
+      summary: "Proposed plan for implementing authentication",
+    });
+
+    // Without prUrl: title, summary, actions, context (4 blocks, no PR link)
+    expect(blocks).toHaveLength(4);
+    expect(blocks[0]).toMatchObject({
+      type: "section",
+      text: { text: "*Plan approval: Add auth*" },
+    });
+    expect(blocks[1]).toMatchObject({
+      type: "section",
+      text: { text: "Proposed plan for implementing authentication" },
+    });
+    expect(blocks[2]).toMatchObject({ type: "actions" });
+    expect(blocks[3]).toMatchObject({ type: "context" });
+  });
 });
 
 describe("buildStatusBlocks", () => {
@@ -370,7 +391,7 @@ describe("getFallbackText", () => {
       "Add authentication feature",
     );
 
-    expect(text).toBe("PR Ready for Review: Add authentication feature");
+    expect(text).toBe("Approval needed: Add authentication feature");
   });
 
   it("returns status fallback for started", () => {

@@ -322,9 +322,55 @@ export async function runAgentLoop(
         createParams.tools = anthropicTools;
       }
 
-      response = await client.messages.create(createParams, {
-        signal: abortSignal,
-      });
+      // Retry loop for rate limits (429) — avoids wasting work from prior
+      // iterations by retrying in-place instead of failing to Temporal.
+      const RATE_LIMIT_MAX_RETRIES = 3;
+      const RATE_LIMIT_BASE_DELAY_MS = 30_000; // 30s base, doubles each retry
+      let rateLimitAttempt = 0;
+
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        try {
+          response = await client.messages.create(createParams, {
+            signal: abortSignal,
+          });
+          break; // Success — exit retry loop
+        } catch (retryError: unknown) {
+          // Only retry on rate limit (429), rethrow everything else
+          const isRateLimit =
+            retryError instanceof Anthropic.APIError &&
+            retryError.status === 429;
+
+          if (!isRateLimit || rateLimitAttempt >= RATE_LIMIT_MAX_RETRIES) {
+            throw retryError;
+          }
+
+          rateLimitAttempt++;
+
+          // Use retry-after header if available, otherwise exponential backoff
+          const retryAfterHeader =
+            retryError instanceof Anthropic.APIError
+              ? (retryError.headers?.["retry-after"] as string | undefined)
+              : undefined;
+          const delayMs = retryAfterHeader
+            ? Number.parseInt(retryAfterHeader, 10) * 1000
+            : RATE_LIMIT_BASE_DELAY_MS * 2 ** (rateLimitAttempt - 1);
+          const effectiveDelayMs = Number.isNaN(delayMs)
+            ? RATE_LIMIT_BASE_DELAY_MS * 2 ** (rateLimitAttempt - 1)
+            : delayMs;
+
+          logger?.warn(
+            {
+              attempt: rateLimitAttempt,
+              maxRetries: RATE_LIMIT_MAX_RETRIES,
+              delayMs: effectiveDelayMs,
+            },
+            "Rate limited by Anthropic API, retrying after backoff",
+          );
+
+          await new Promise((resolve) => setTimeout(resolve, effectiveDelayMs));
+        }
+      }
     } catch (error: unknown) {
       // Handle abort via AbortSignal
       if (error instanceof Error && error.name === "AbortError") {
@@ -338,7 +384,7 @@ export async function runAgentLoop(
         });
       }
 
-      // Handle Anthropic API errors
+      // Handle Anthropic API errors (non-429, or 429 after max retries)
       if (error instanceof Anthropic.APIError) {
         const errorMessage = `Anthropic API error: ${error.message}`;
         logger?.error({ err: error, status: error.status }, errorMessage);

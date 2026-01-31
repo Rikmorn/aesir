@@ -54,6 +54,8 @@ interface OrchestratorActivities {
       message: string;
       requestType: "approval" | "clarification" | "escalation";
     } | null;
+    prNumber?: number;
+    prUrl?: string;
     toolCallCount: number;
     tokenCount: { input: number; output: number };
   }>;
@@ -116,10 +118,7 @@ const orchestratorActivities = proxyActivities<OrchestratorActivities>({
     initialInterval: "30 seconds",
     backoffCoefficient: 2,
     maximumInterval: "2 minutes",
-    nonRetryableErrorTypes: [
-      "TokenBudgetExhaustedError",
-      "AgentAbortedError",
-    ],
+    nonRetryableErrorTypes: ["TokenBudgetExhaustedError", "AgentAbortedError"],
   },
 });
 
@@ -352,7 +351,55 @@ export async function orchestratorWorkflow(
     }
 
     // ---------------------------------------------------------------------------
+    // Autonomous completion check
+    //
+    // When humanInputRequest is null, the agent completed the task without
+    // requesting approval (e.g., simple README updates, typo fixes). The
+    // system prompt tells the agent that simple tasks can skip approval —
+    // the PR itself is the gate. Skip approval wait and post-approval phases.
+    // ---------------------------------------------------------------------------
+    if (preResult.humanInputRequest === null) {
+      wf.log.info("Agent completed autonomously (no approval sentinel)", {
+        taskId,
+        hasPr: preResult.prNumber !== undefined,
+      });
+
+      if (preResult.prNumber !== undefined) {
+        state.prNumber = preResult.prNumber;
+      }
+      if (preResult.prUrl !== undefined) {
+        state.prUrl = preResult.prUrl;
+      }
+
+      if (state.prNumber !== undefined) {
+        // PR created autonomously — skip to awaiting_pr phase
+        approved = true;
+        break;
+      }
+
+      // No PR and no sentinel — agent completed without creating a PR
+      // (unusual but possible, e.g., issue already resolved). Complete workflow.
+      state.phase = "complete";
+      await infrastructureActivities.stopContainerActivity(taskId);
+      await infrastructureActivities.completeTaskActivity({
+        taskId,
+        success: true,
+      });
+      await wf.condition(wf.allHandlersFinished);
+      return {
+        success: true,
+        phase: "complete",
+        totalTokenCount: state.totalTokens,
+      };
+    }
+
+    // ---------------------------------------------------------------------------
     // Phase 3: Approval wait (24h reminder + 72h total)
+    //
+    // NOTE: The Slack approval message is sent by the AGENT during pre-approval
+    // via its slack_send_approval_request tool. The workflow only handles the
+    // infrastructure concern of waiting for the signal. Do NOT add deterministic
+    // Slack calls here — see v2.2 Agent-First principles in CLAUDE.md.
     // ---------------------------------------------------------------------------
     state.phase = "awaiting_approval";
 
@@ -408,48 +455,55 @@ export async function orchestratorWorkflow(
 
   // ---------------------------------------------------------------------------
   // Phase 4: Post-approval execution
+  //
+  // Skipped when agent completed autonomously (prNumber already set from
+  // pre-approval output and approved = true via break).
   // ---------------------------------------------------------------------------
-  state.phase = "post_approval";
+  if (state.prNumber === undefined) {
+    state.phase = "post_approval";
 
-  const postResult = await orchestratorActivities.runOrchestratorPostApproval({
-    taskId,
-    issue,
-    slackChannel,
-    workflowId,
-  });
+    const postResult = await orchestratorActivities.runOrchestratorPostApproval(
+      {
+        taskId,
+        issue,
+        slackChannel,
+        workflowId,
+      },
+    );
 
-  addTokens(postResult.tokenCount);
+    addTokens(postResult.tokenCount);
 
-  if (postResult.prNumber !== undefined) {
-    state.prNumber = postResult.prNumber;
-  }
-  if (postResult.prUrl !== undefined) {
-    state.prUrl = postResult.prUrl;
-  }
-
-  if (postResult.status === "error") {
-    state.phase = "failed";
-    state.errorMessage =
-      postResult.errorMessage ?? "Post-approval execution failed";
-    await infrastructureActivities.stopContainerActivity(taskId);
-    await infrastructureActivities.completeTaskActivity({
-      taskId,
-      success: false,
-    });
-    await wf.condition(wf.allHandlersFinished);
-    const result: OrchestratorWorkflowResult = {
-      success: false,
-      phase: "failed",
-      errorMessage: state.errorMessage,
-      totalTokenCount: state.totalTokens,
-    };
-    if (state.prNumber !== undefined) {
-      result.prNumber = state.prNumber;
+    if (postResult.prNumber !== undefined) {
+      state.prNumber = postResult.prNumber;
     }
-    if (state.prUrl !== undefined) {
-      result.prUrl = state.prUrl;
+    if (postResult.prUrl !== undefined) {
+      state.prUrl = postResult.prUrl;
     }
-    return result;
+
+    if (postResult.status === "error") {
+      state.phase = "failed";
+      state.errorMessage =
+        postResult.errorMessage ?? "Post-approval execution failed";
+      await infrastructureActivities.stopContainerActivity(taskId);
+      await infrastructureActivities.completeTaskActivity({
+        taskId,
+        success: false,
+      });
+      await wf.condition(wf.allHandlersFinished);
+      const result: OrchestratorWorkflowResult = {
+        success: false,
+        phase: "failed",
+        errorMessage: state.errorMessage,
+        totalTokenCount: state.totalTokens,
+      };
+      if (state.prNumber !== undefined) {
+        result.prNumber = state.prNumber;
+      }
+      if (state.prUrl !== undefined) {
+        result.prUrl = state.prUrl;
+      }
+      return result;
+    }
   }
 
   // ---------------------------------------------------------------------------

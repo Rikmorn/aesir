@@ -222,6 +222,13 @@ export function createDevContainerGit(
 
       logger.info({ taskId, repoUrl, branch }, "Cloning repository");
 
+      // Remove existing repo directory if container is being reused
+      await manager.execute(taskId, {
+        command: ["rm", "-rf", REPO_PATH],
+        workdir: "/workspace",
+        timeoutMs: GIT_TIMEOUT,
+      });
+
       // Build clone command
       const cloneArgs = ["clone"];
       if (branch) {

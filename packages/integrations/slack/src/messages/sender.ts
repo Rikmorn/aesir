@@ -157,13 +157,15 @@ export async function postNotification(
   let text: string;
 
   if (notification.type === "approval_needed") {
-    // Build approval block options with conditional actionPrefix
+    // Build approval block options with conditional optional fields
     const approvalOptions: Parameters<typeof buildApprovalBlocks>[0] = {
       taskId: notification.taskId,
-      prUrl: notification.prUrl,
       title: notification.title,
       summary: notification.summary,
     };
+    if (notification.prUrl) {
+      approvalOptions.prUrl = notification.prUrl;
+    }
     if (notification.actionPrefix) {
       approvalOptions.actionPrefix = notification.actionPrefix;
     }

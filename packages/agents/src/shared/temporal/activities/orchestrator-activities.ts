@@ -177,6 +177,55 @@ export function parseHumanInputMarker(
 }
 
 // ---------------------------------------------------------------------------
+// PR Info Trace Parsing
+// ---------------------------------------------------------------------------
+
+/**
+ * Parsed PR info from a github_create_pull_request tool result in the trace.
+ */
+export interface PrInfo {
+  /** GitHub PR number */
+  number: number;
+  /** GitHub PR URL */
+  url: string;
+}
+
+/**
+ * Parse PR info from a github_create_pull_request tool result in the trace.
+ *
+ * Scans the trace for successful github_create_pull_request tool results
+ * and extracts the PR number and URL. Returns the LAST match (the most
+ * recent PR creation in case of retries).
+ *
+ * @param result - Agent loop result containing the execution trace
+ * @returns Parsed PR info, or null if no PR was created
+ */
+export function parsePrInfoFromTrace(result: AgentLoopResult): PrInfo | null {
+  let lastPr: PrInfo | null = null;
+
+  for (const step of result.trace) {
+    if (
+      step.type === "tool_result" &&
+      step.toolName === "github_create_pull_request"
+    ) {
+      try {
+        const parsed = JSON.parse(step.output as string);
+        if (
+          typeof parsed.number === "number" &&
+          typeof parsed.url === "string"
+        ) {
+          lastPr = { number: parsed.number, url: parsed.url };
+        }
+      } catch {
+        // Not valid JSON or missing fields, skip
+      }
+    }
+  }
+
+  return lastPr;
+}
+
+// ---------------------------------------------------------------------------
 // Activity Input/Output Types
 // ---------------------------------------------------------------------------
 
@@ -214,6 +263,10 @@ export interface PreApprovalOutput {
   plan: string;
   /** Parsed human input request if orchestrator called request_human_input */
   humanInputRequest: HumanInputRequest | null;
+  /** PR number if agent created a PR during pre-approval (autonomous completion) */
+  prNumber?: number;
+  /** PR URL if agent created a PR during pre-approval (autonomous completion) */
+  prUrl?: string;
   /** Tool call count for observability */
   toolCallCount: number;
   /** Token usage for cost tracking */
@@ -367,23 +420,61 @@ export async function runOrchestratorPreApproval(
     tokenCount: result.tokenCount,
   });
 
+  // When agent completed autonomously (no sentinel), check if it created a PR.
+  // Parse the trace for github_create_pull_request results (primary source).
+  // Falls back to task store query in case PR info was written there by other means.
+  let prNumber: number | undefined;
+  let prUrl: string | undefined;
+
+  if (!humanInputRequest) {
+    // Primary: parse trace for PR creation tool results
+    const prInfo = parsePrInfoFromTrace(result);
+    if (prInfo) {
+      prNumber = prInfo.number;
+      prUrl = prInfo.url;
+
+      // Write PR info to task store for other consumers (workflow queries, webhooks)
+      await activeDeps.taskStore.updateTask(input.taskId, {
+        prNumber: prInfo.number,
+        prUrl: prInfo.url,
+      });
+    } else {
+      // Fallback: check task store (in case agent wrote via a tool we don't know about)
+      const task = await activeDeps.taskStore.getTask(input.taskId);
+      if (task?.pr_number !== null && task?.pr_number !== undefined) {
+        prNumber = task.pr_number;
+      }
+      if (task?.pr_url !== null && task?.pr_url !== undefined) {
+        prUrl = task.pr_url;
+      }
+    }
+  }
+
   activityLogger.info(
     {
       status: result.status,
       toolCallCount: result.toolCallCount,
       hasSentinel: humanInputRequest !== null,
+      autonomousPr: prNumber,
     },
     "Pre-approval orchestrator run complete",
   );
 
   // Return slim result (no full trace -- Temporal gRPC limit)
-  return {
+  const output: PreApprovalOutput = {
     status: result.status,
     plan: result.output,
     humanInputRequest,
     toolCallCount: result.toolCallCount,
     tokenCount: result.tokenCount,
   };
+  if (prNumber !== undefined) {
+    output.prNumber = prNumber;
+  }
+  if (prUrl !== undefined) {
+    output.prUrl = prUrl;
+  }
+  return output;
 }
 
 // ---------------------------------------------------------------------------
@@ -440,8 +531,15 @@ export async function runOrchestratorPostApproval(
     onHeartbeat,
   });
 
-  // Extract PR info from the task store (orchestrator writes via tools)
-  const task = await activeDeps.taskStore.getTask(input.taskId);
+  // Extract PR info: trace is primary source, task store is fallback
+  const prInfo = parsePrInfoFromTrace(result);
+  if (prInfo) {
+    // Write PR info to task store for other consumers
+    await activeDeps.taskStore.updateTask(input.taskId, {
+      prNumber: prInfo.number,
+      prUrl: prInfo.url,
+    });
+  }
 
   // Build output with conditional property assignment for exactOptionalPropertyTypes
   const output: PostApprovalOutput = {
@@ -449,11 +547,19 @@ export async function runOrchestratorPostApproval(
     toolCallCount: result.toolCallCount,
     tokenCount: result.tokenCount,
   };
-  if (task?.pr_number !== null && task?.pr_number !== undefined) {
-    output.prNumber = task.pr_number;
-  }
-  if (task?.pr_url !== null && task?.pr_url !== undefined) {
-    output.prUrl = task.pr_url;
+
+  if (prInfo) {
+    output.prNumber = prInfo.number;
+    output.prUrl = prInfo.url;
+  } else {
+    // Fallback: check task store (pre-approval may have written it)
+    const task = await activeDeps.taskStore.getTask(input.taskId);
+    if (task?.pr_number !== null && task?.pr_number !== undefined) {
+      output.prNumber = task.pr_number;
+    }
+    if (task?.pr_url !== null && task?.pr_url !== undefined) {
+      output.prUrl = task.pr_url;
+    }
   }
   if (result.status === "error") {
     output.errorMessage = result.output;

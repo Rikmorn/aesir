@@ -18,9 +18,15 @@ import {
 // ---------------------------------------------------------------------------
 
 function createMockDb() {
-  // insert().values().returning()
+  // insert().values().onConflictDoUpdate().returning()
   const returningFn = vi.fn().mockResolvedValue([{ id: "at_test123" }]);
-  const valuesFn = vi.fn().mockReturnValue({ returning: returningFn });
+  const onConflictDoUpdateFn = vi
+    .fn()
+    .mockReturnValue({ returning: returningFn });
+  const valuesFn = vi.fn().mockReturnValue({
+    onConflictDoUpdate: onConflictDoUpdateFn,
+    returning: returningFn,
+  });
   const insertFn = vi.fn().mockReturnValue({ values: valuesFn });
 
   // select().from().where().limit()

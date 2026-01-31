@@ -67,6 +67,7 @@ vi.mock("@temporalio/activity", () => ({
 
 const {
   parseHumanInputMarker,
+  parsePrInfoFromTrace,
   initOrchestratorActivities,
   getOrchestratorDeps,
   runOrchestratorPreApproval,
@@ -347,6 +348,127 @@ describe("parseHumanInputMarker", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Tests: parsePrInfoFromTrace
+// ---------------------------------------------------------------------------
+
+describe("parsePrInfoFromTrace", () => {
+  it("returns null when trace has no github_create_pull_request results", () => {
+    const result = createAgentLoopResult({
+      trace: [
+        {
+          type: "tool_result",
+          timestamp: new Date().toISOString(),
+          toolName: "github_create_branch",
+          output: JSON.stringify({ branch: "feature/fix" }),
+        },
+      ],
+    });
+
+    expect(parsePrInfoFromTrace(result)).toBeNull();
+  });
+
+  it("extracts PR number and URL from successful create_pull_request result", () => {
+    const result = createAgentLoopResult({
+      trace: [
+        {
+          type: "tool_result",
+          timestamp: new Date().toISOString(),
+          toolName: "github_create_pull_request",
+          output: JSON.stringify({
+            number: 52,
+            title: "Fix README",
+            body: "Remove deprecated warning",
+            state: "open",
+            headBranch: "fix/readme",
+            baseBranch: "main",
+            url: "https://github.com/org/repo/pull/52",
+          }),
+        },
+      ],
+    });
+
+    const prInfo = parsePrInfoFromTrace(result);
+    expect(prInfo).toEqual({
+      number: 52,
+      url: "https://github.com/org/repo/pull/52",
+    });
+  });
+
+  it("returns last PR if multiple exist in trace (retry scenario)", () => {
+    const result = createAgentLoopResult({
+      trace: [
+        {
+          type: "tool_result",
+          timestamp: new Date().toISOString(),
+          toolName: "github_create_pull_request",
+          output: JSON.stringify({
+            number: 50,
+            url: "https://github.com/org/repo/pull/50",
+          }),
+        },
+        {
+          type: "tool_result",
+          timestamp: new Date().toISOString(),
+          toolName: "github_create_pull_request",
+          output: JSON.stringify({
+            number: 52,
+            url: "https://github.com/org/repo/pull/52",
+          }),
+        },
+      ],
+    });
+
+    const prInfo = parsePrInfoFromTrace(result);
+    expect(prInfo?.number).toBe(52);
+  });
+
+  it("returns null when tool result is not valid JSON", () => {
+    const result = createAgentLoopResult({
+      trace: [
+        {
+          type: "tool_result",
+          timestamp: new Date().toISOString(),
+          toolName: "github_create_pull_request",
+          output: "github_create_pull_request error: rate limited",
+        },
+      ],
+    });
+
+    expect(parsePrInfoFromTrace(result)).toBeNull();
+  });
+
+  it("returns null when JSON lacks required fields", () => {
+    const result = createAgentLoopResult({
+      trace: [
+        {
+          type: "tool_result",
+          timestamp: new Date().toISOString(),
+          toolName: "github_create_pull_request",
+          output: JSON.stringify({ title: "Some PR" }),
+        },
+      ],
+    });
+
+    expect(parsePrInfoFromTrace(result)).toBeNull();
+  });
+
+  it("ignores tool_call steps (only processes tool_result)", () => {
+    const result = createAgentLoopResult({
+      trace: [
+        {
+          type: "tool_call",
+          timestamp: new Date().toISOString(),
+          toolName: "github_create_pull_request",
+          input: { title: "Fix README" },
+        },
+      ],
+    });
+
+    expect(parsePrInfoFromTrace(result)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Tests: DI (initOrchestratorActivities / getOrchestratorDeps)
 // ---------------------------------------------------------------------------
 
@@ -525,6 +647,116 @@ describe("runOrchestratorPreApproval", () => {
     expect(
       (result as unknown as Record<string, unknown>).trace,
     ).toBeUndefined();
+  });
+
+  it("includes PR info from trace when agent completed autonomously (no sentinel)", async () => {
+    const agentResult = createAgentLoopResult({
+      output: "PR created for README update",
+      trace: [
+        {
+          type: "tool_result",
+          timestamp: new Date().toISOString(),
+          toolName: "github_create_pull_request",
+          output: JSON.stringify({
+            number: 99,
+            title: "Fix README",
+            url: "https://github.com/test-org/test-repo/pull/99",
+          }),
+        },
+      ],
+    });
+    mockRunDevAgentOrchestrator.mockResolvedValue(agentResult);
+
+    const result = await runOrchestratorPreApproval({
+      taskId: "task_123",
+      issue: testIssue,
+      slackChannel: "C_test",
+      workflowId: "wf_abc",
+    });
+
+    expect(result.humanInputRequest).toBeNull();
+    expect(result.prNumber).toBe(99);
+    expect(result.prUrl).toBe("https://github.com/test-org/test-repo/pull/99");
+    // PR info should be written to task store as side-effect
+    expect(mockTaskStore.updateTask).toHaveBeenCalledWith("task_123", {
+      prNumber: 99,
+      prUrl: "https://github.com/test-org/test-repo/pull/99",
+    });
+  });
+
+  it("omits PR info when agent completed autonomously but no PR in trace or store", async () => {
+    const agentResult = createAgentLoopResult({
+      output: "Issue already resolved",
+      trace: [], // No PR creation, no sentinel
+    });
+    mockRunDevAgentOrchestrator.mockResolvedValue(agentResult);
+
+    // Task store also has no PR info
+    vi.mocked(mockTaskStore.getTask).mockResolvedValue({
+      id: "atsk_123",
+      task_id: "task_123",
+      agent_type: "dev",
+      status: "researching",
+      pr_number: null,
+      pr_url: null,
+      container_id: "container_abc",
+      issue_id: null,
+      issue_identifier: null,
+      workflow_id: "wf_abc",
+      branch_name: null,
+      approval_status: null,
+      approval_feedback: null,
+      error: null,
+      escalation_reason: null,
+      slack_channel: "C_test",
+      slack_message_ts: null,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    const result = await runOrchestratorPreApproval({
+      taskId: "task_123",
+      issue: testIssue,
+      slackChannel: "C_test",
+      workflowId: "wf_abc",
+    });
+
+    expect(result.humanInputRequest).toBeNull();
+    expect(result.prNumber).toBeUndefined();
+    expect(result.prUrl).toBeUndefined();
+  });
+
+  it("does not query task store for PR info when sentinel is present", async () => {
+    const agentResult = createAgentLoopResult({
+      output: "Plan ready for approval",
+      trace: [
+        {
+          type: "tool_result",
+          timestamp: new Date().toISOString(),
+          toolName: "request_human_input",
+          output: JSON.stringify({
+            type: "human_input_requested",
+            channel: "C_test",
+            message: "Approve plan?",
+            requestType: "approval",
+          }),
+        },
+      ],
+    });
+    mockRunDevAgentOrchestrator.mockResolvedValue(agentResult);
+
+    const result = await runOrchestratorPreApproval({
+      taskId: "task_123",
+      issue: testIssue,
+      slackChannel: "C_test",
+      workflowId: "wf_abc",
+    });
+
+    expect(result.humanInputRequest).not.toBeNull();
+    expect(result.prNumber).toBeUndefined();
+    expect(result.prUrl).toBeUndefined();
+    // Task store should NOT be queried for PR info when sentinel exists
+    expect(mockTaskStore.getTask).not.toHaveBeenCalled();
   });
 
   it("stores rejection feedback in task store for re-planning", async () => {
@@ -785,6 +1017,14 @@ describe("setupContainerActivity", () => {
       workflowId: "wf_abc",
     });
 
+    // 0. Task record created
+    expect(mockTaskStore.createTask).toHaveBeenCalledWith({
+      taskId: "task_123",
+      agentType: "dev",
+      issueIdentifier: "AES-42",
+      workflowId: "wf_abc",
+    });
+
     // 1. Container spawned
     expect(mockContainerManager.spawn).toHaveBeenCalledWith({
       taskId: "task_123",
@@ -810,6 +1050,22 @@ describe("setupContainerActivity", () => {
     });
 
     // Returns container ID
+    expect(result.containerId).toBe("container_abc123def456");
+  });
+
+  it("handles duplicate task record on activity retry", async () => {
+    // Simulate unique constraint violation (activity was retried by Temporal)
+    vi.mocked(mockTaskStore.createTask).mockRejectedValueOnce(
+      new Error("duplicate key value violates unique constraint"),
+    );
+
+    const result = await setupContainerActivity({
+      taskId: "task_123",
+      issue: { identifier: "AES-42", title: "Fix auth" },
+      workflowId: "wf_abc",
+    });
+
+    // Should succeed despite createTask failing with duplicate
     expect(result.containerId).toBe("container_abc123def456");
   });
 

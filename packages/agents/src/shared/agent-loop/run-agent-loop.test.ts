@@ -778,6 +778,75 @@ describe("runAgentLoop", () => {
   });
 
   // -------------------------------------------------------------------------
+  // Rate limit (429) retry with backoff
+  // -------------------------------------------------------------------------
+
+  it("retries on rate limit (429) and succeeds", async () => {
+    const { APIError } = await import("@anthropic-ai/sdk");
+    const rateLimitError = new (
+      APIError as unknown as new (
+        s: number,
+        e: unknown,
+        m: string,
+        h: undefined,
+      ) => Error
+    )(429, { message: "Rate limited" }, "Rate limited", undefined);
+
+    // First call: rate limited. Second call: success.
+    mockCreate
+      .mockRejectedValueOnce(rateLimitError)
+      .mockResolvedValueOnce(mockTextResponse("Done after retry"));
+
+    // Use fake timers to avoid waiting 30s in tests
+    vi.useFakeTimers();
+    const resultPromise = runAgentLoop(baseOptions());
+
+    // Advance past the backoff delay
+    await vi.advanceTimersByTimeAsync(35_000);
+
+    const result = await resultPromise;
+    vi.useRealTimers();
+
+    expect(result.status).toBe("completed");
+    expect(result.output).toBe("Done after retry");
+    expect(mockCreate).toHaveBeenCalledTimes(2);
+  });
+
+  it("fails after exhausting rate limit retries", async () => {
+    const { APIError } = await import("@anthropic-ai/sdk");
+    const makeRateLimitError = () =>
+      new (
+        APIError as unknown as new (
+          s: number,
+          e: unknown,
+          m: string,
+          h: undefined,
+        ) => Error
+      )(429, { message: "Rate limited" }, "Rate limited", undefined);
+
+    // All 4 calls (1 initial + 3 retries) fail with 429
+    mockCreate
+      .mockRejectedValueOnce(makeRateLimitError())
+      .mockRejectedValueOnce(makeRateLimitError())
+      .mockRejectedValueOnce(makeRateLimitError())
+      .mockRejectedValueOnce(makeRateLimitError());
+
+    vi.useFakeTimers();
+    const resultPromise = runAgentLoop(baseOptions());
+
+    // Advance through all 3 retry delays (30s + 60s + 120s)
+    await vi.advanceTimersByTimeAsync(250_000);
+
+    const result = await resultPromise;
+    vi.useRealTimers();
+
+    expect(result.status).toBe("error");
+    expect(result.output).toContain("Anthropic API error");
+    // 1 initial + 3 retries = 4 total calls
+    expect(mockCreate).toHaveBeenCalledTimes(4);
+  });
+
+  // -------------------------------------------------------------------------
   // Additional: AbortError during API call
   // -------------------------------------------------------------------------
 

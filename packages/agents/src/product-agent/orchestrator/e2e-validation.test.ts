@@ -221,7 +221,10 @@ describe("end-to-end validation", () => {
           mockToolUseResponse([
             {
               name: "linear_search_issues",
-              input: { query: "health check endpoint", teamId: "team_test_abc" },
+              input: {
+                query: "health check endpoint",
+                teamId: "team_test_abc",
+              },
               id: "call_1",
             },
           ]),

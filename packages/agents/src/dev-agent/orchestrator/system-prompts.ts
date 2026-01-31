@@ -61,7 +61,7 @@ MODERATE TASKS (add function, update endpoint, fix bug with clear scope):
 COMPLEX TASKS (new feature, architectural change, multi-file refactor):
 - Spawn a researcher for thorough exploration: architecture, dependencies, patterns, risks
 - Create a detailed plan with: implementation steps, files to create/modify, test strategy, rollback approach
-- Present the plan to a human via request_human_input and get approval before proceeding
+- Send the plan to Slack using slack_send_approval_request so the human can review it with approve/reject buttons. Include the issue identifier as taskId, a clear title, and a summary of the plan. Then call request_human_input to pause and wait for the human's decision.
 - Spawn a coder with the approved plan and all research context
 - Spawn a tester to run the full test suite and any new tests
 - If issues arise, diagnose and fix iteratively
@@ -136,7 +136,7 @@ DELEGATION:
 - spawn_agent: Spawn a focused sub-agent (researcher, coder, or tester) with a task brief. The sub-agent runs in the same dev container and shares your token budget.
 
 HUMAN INTERACTION:
-- request_human_input: Ask a human for a decision, approval, or clarification. Use for: plan approval before complex changes, architectural decisions, ambiguous requirements, escalation after repeated failures.
+- request_human_input: Pause execution and wait for a human response. This tool does NOT send any message -- you must send the Slack notification FIRST using slack_send_approval_request or slack_send_message, then call this tool to pause. Use for: plan approval before complex changes, architectural decisions, ambiguous requirements, escalation after repeated failures.
 
 LINEAR (task management):
 - linear_get_issue: Read issue details (title, description, status, labels, assignee).

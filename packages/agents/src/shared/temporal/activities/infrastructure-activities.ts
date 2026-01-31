@@ -89,6 +89,29 @@ export async function setupContainerActivity(
     "Setting up dev container",
   );
 
+  // 0. Create task record (idempotent — ignores duplicate on activity retry)
+  try {
+    await deps.taskStore.createTask({
+      taskId: input.taskId,
+      agentType: "dev",
+      issueIdentifier: input.issue.identifier,
+      workflowId: input.workflowId,
+    });
+    activityLogger.info("Task record created");
+  } catch (error) {
+    // Unique constraint violation on task_id — task already exists (activity retry)
+    const isDuplicate =
+      error instanceof Error &&
+      (error.message.includes("unique") ||
+        error.message.includes("duplicate") ||
+        error.message.includes("23505"));
+    if (isDuplicate) {
+      activityLogger.info("Task record already exists (activity retry)");
+    } else {
+      throw error;
+    }
+  }
+
   // 1. Spawn container
   const containerId = await deps.containerManager.spawn({
     taskId: input.taskId,

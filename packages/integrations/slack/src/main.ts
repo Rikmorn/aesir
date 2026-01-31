@@ -203,8 +203,7 @@ export async function startServer(): Promise<void> {
         };
 
         // Dispatch to router (fire-and-forget)
-        const routerUrl =
-          process.env.ROUTER_URL || "http://router:3006/events";
+        const routerUrl = process.env.ROUTER_URL || "http://router:3006/events";
         try {
           const response = await fetch(routerUrl, {
             method: "POST",
@@ -270,8 +269,7 @@ export async function startServer(): Promise<void> {
       };
 
       // Dispatch to router (fire-and-forget)
-      const routerUrl =
-        process.env.ROUTER_URL || "http://router:3006/events";
+      const routerUrl = process.env.ROUTER_URL || "http://router:3006/events";
       try {
         const response = await fetch(routerUrl, {
           method: "POST",
@@ -355,8 +353,7 @@ export async function startServer(): Promise<void> {
 
     // Mount interactions router (Slack button clicks)
     // Note: Must be before MCP routes to avoid path conflicts
-    const routerUrl =
-      process.env.ROUTER_URL || "http://router:3006/events";
+    const routerUrl = process.env.ROUTER_URL || "http://router:3006/events";
     const interactionsRouter = createInteractionsRouter({
       logger: logger.child({ component: "interactions" }),
       dispatchUrl: routerUrl,
@@ -437,8 +434,7 @@ export async function startServer(): Promise<void> {
 
     // Mount interactions router (Slack button clicks)
     // Must be before other Slack routes for correct path handling
-    const httpRouterUrl =
-      process.env.ROUTER_URL || "http://router:3006/events";
+    const httpRouterUrl = process.env.ROUTER_URL || "http://router:3006/events";
     const interactionsRouter = createInteractionsRouter({
       logger: logger.child({ component: "interactions" }),
       dispatchUrl: httpRouterUrl,

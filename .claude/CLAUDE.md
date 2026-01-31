@@ -2,6 +2,22 @@
 
 Agentic development platform that automates software workflows - from feature request to shipped code. Agents collaborate using existing business tools (Linear, GitHub, Slack) and operate like coworkers within those tools.
 
+## MANDATORY: Agent-First Decision Checklist (v2.2)
+
+Before modifying ANY file in `packages/agents/src/shared/temporal/` or `packages/agents/src/*/orchestrator/`, apply these checks:
+
+1. **Is this agent behavior or infrastructure?**
+   - Agent behavior (HOW to communicate, WHAT to decide, WHEN to act) → Fix via **prompt or tool changes**, NOT workflow/activity code
+   - Infrastructure (timeouts, retries, signal handling, container lifecycle) → OK as workflow/activity code
+
+2. **Am I pattern-matching on agent output to add behavior?**
+   - If your code inspects agent results to decide what to do next (e.g., `if (result.field)` → call Slack/Linear/GitHub), that's an anti-pattern. The AGENT should make that decision via its tools during its loop.
+
+3. **Could this logic live in the system prompt instead?**
+   - If the agent has the tools to do it and just isn't doing it, the fix is a prompt change, not a code change. Prompt fixes are cheaper, more flexible, and let the agent adapt to context.
+
+Violations create brittle systems where the wrapper code fights the agent for control. See "v2.2 Design Principles" for full rationale.
+
 ## Architecture
 
 ### 3-Layer Structure
@@ -854,6 +870,14 @@ When an agent makes a wrong decision, fix the agent — don't add deterministic 
 - **Fast-path routing**: Events that are genuinely unambiguous (e.g., `slack.app_mention.created` always starts product-agent, `linear.agent_session.created` always starts dev-agent). The test: "would every reasonable person route this the same way?"
 - **Infrastructure concerns**: Timeouts, max iteration limits, signal handling, workflow lifecycle — these are Temporal's domain, not the agent's
 - **Data validation**: Schema validation at system boundaries (Zod), not semantic validation of agent decisions
+
+### Concrete Example
+
+**Bug**: Agent doesn't send a Slack message before requesting approval.
+
+**Wrong fix** (anti-pattern): Add `if (preResult.humanInputRequest) { await sendSlackMessage(...) }` in the Temporal workflow. This is deterministic code pattern-matching on agent output.
+
+**Right fix**: Update the system prompt to tell the agent to call `slack_send_approval_request` before calling `request_human_input`. The agent has the tools — it just needs clearer instructions.
 
 ### Prompt Engineering over Code Engineering
 
