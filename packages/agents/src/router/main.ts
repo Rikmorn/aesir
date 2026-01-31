@@ -82,11 +82,26 @@ async function bootstrap(): Promise<void> {
     );
   }
 
+  // Linear team ID for product-agent workflow starts
+  const linearTeamId = process.env.LINEAR_TEAM_ID;
+  if (linearTeamId) {
+    logger.info(
+      { linearTeamId },
+      "LINEAR_TEAM_ID configured for product-agent routing",
+    );
+  } else {
+    logger.warn(
+      {},
+      "LINEAR_TEAM_ID not set - product-agent workflows will start without a Linear team ID",
+    );
+  }
+
   // Create router dependencies
   const routerDeps: RouterDeps = {
     workflowClient,
     logger,
     ...(alertsChannel ? { alertsChannel } : {}),
+    ...(linearTeamId ? { linearTeamId } : {}),
   };
 
   // Start HTTP server

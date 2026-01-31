@@ -76,6 +76,7 @@ function createMockDeps(): RouterDeps {
       }),
     } as unknown as PinoLogger,
     alertsChannel: "C-alerts",
+    linearTeamId: "team-linear-123",
   };
 }
 
@@ -249,6 +250,62 @@ describe("matchFastPath", () => {
     }
   });
 
+  // === Slack App Mention (Product Agent) ===
+
+  it("matches slack.app_mention.created -> start productAgentConversationWorkflow", () => {
+    const event = createTestEvent({
+      source: "slack",
+      type: "slack.app_mention.created",
+      payload: {
+        channel: "C123",
+        user: "U456",
+        text: "<@BOT> create a feature for dark mode",
+        ts: "1706700000.000100",
+        teamId: "T789",
+      },
+    });
+
+    const action = matchFastPath(event);
+    expect(action).not.toBeNull();
+    expect(action?.type).toBe("start");
+    if (action?.type === "start") {
+      expect(action.workflowName).toBe("productAgentConversationWorkflow");
+      expect(action.taskQueue).toBe("product-agent");
+      expect(action.workflowId).toBe("product-agent-1706700000.000100");
+      expect(action.needsEnrichment).toBe(true);
+      expect(action.enrichmentContext).toEqual({ type: "product-agent" });
+      const input = action.args[0] as Record<string, unknown>;
+      expect(input.threadTs).toBe("1706700000.000100");
+      expect(input.channelId).toBe("C123");
+      expect(input.initialMessage).toBe(
+        "<@BOT> create a feature for dark mode",
+      );
+      expect(input.userId).toBe("U456");
+      expect(input.slackTeamId).toBe("T789");
+    }
+  });
+
+  it("uses threadTs from payload when app_mention is in an existing thread", () => {
+    const event = createTestEvent({
+      source: "slack",
+      type: "slack.app_mention.created",
+      payload: {
+        channel: "C123",
+        user: "U456",
+        text: "<@BOT> help",
+        ts: "1706700001.000200",
+        threadTs: "1706700000.000100",
+        teamId: "T789",
+      },
+    });
+
+    const action = matchFastPath(event);
+    expect(action?.type).toBe("start");
+    if (action?.type === "start") {
+      expect(action.workflowId).toBe("product-agent-1706700000.000100");
+    }
+  });
+
   // === Edge Cases: No Match (slow-path candidates) ===
 
   it("returns null for unknown event types", () => {
@@ -265,6 +322,16 @@ describe("matchFastPath", () => {
       source: "slack",
       type: "slack.message.created",
       payload: { text: "hello world" },
+    });
+
+    expect(matchFastPath(event)).toBeNull();
+  });
+
+  it("returns null for slack.message.created with threadTs (slow-path LLM classification)", () => {
+    const event = createTestEvent({
+      source: "slack",
+      type: "slack.message.created",
+      payload: { text: "looks good", threadTs: "1706700000.000100" },
     });
 
     expect(matchFastPath(event)).toBeNull();
@@ -574,9 +641,9 @@ describe("executeFastPath", () => {
     const client = deps.workflowClient as unknown as {
       workflow: { start: ReturnType<typeof vi.fn> };
     };
-    const startCall = client.workflow.start.mock.calls[0]!;
-    expect(startCall[1].args).toHaveLength(1);
-    expect(startCall[1].args[0]).toMatchObject({
+    const startCall = client.workflow.start.mock.calls[0];
+    expect(startCall?.[1].args).toHaveLength(1);
+    expect(startCall?.[1].args[0]).toMatchObject({
       taskId: "issue-123",
       issueIdentifier: "ABC-123",
       issue: {
@@ -589,6 +656,45 @@ describe("executeFastPath", () => {
       },
     });
   });
+
+  it("injects linearTeamId for product-agent enrichment", async () => {
+    const result = await executeFastPath(
+      {
+        type: "start",
+        workflowName: "productAgentConversationWorkflow",
+        taskQueue: "product-agent",
+        workflowId: "product-agent-1706700000.000100",
+        args: [
+          {
+            threadTs: "1706700000.000100",
+            channelId: "C123",
+            initialMessage: "create a feature",
+            userId: "U456",
+            slackTeamId: "T789",
+          },
+        ],
+        needsEnrichment: true,
+        enrichmentContext: { type: "product-agent" },
+      },
+      deps,
+    );
+
+    expect(result.status).toBe("routed");
+
+    const client = deps.workflowClient as unknown as {
+      workflow: { start: ReturnType<typeof vi.fn> };
+    };
+    const startCall = client.workflow.start.mock.calls[0];
+    expect(startCall?.[1].args).toHaveLength(1);
+    expect(startCall?.[1].args[0]).toMatchObject({
+      threadTs: "1706700000.000100",
+      channelId: "C123",
+      initialMessage: "create a feature",
+      userId: "U456",
+      slackTeamId: "T789",
+      linearTeamId: "team-linear-123",
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -596,8 +702,8 @@ describe("executeFastPath", () => {
 // ---------------------------------------------------------------------------
 
 describe("DETERMINISTIC_RULES", () => {
-  it("has exactly 9 rules", () => {
-    expect(DETERMINISTIC_RULES).toHaveLength(9);
+  it("has exactly 10 rules", () => {
+    expect(DETERMINISTIC_RULES).toHaveLength(10);
   });
 
   it("all rules have unique names", () => {
@@ -623,6 +729,7 @@ describe("DETERMINISTIC_RULES", () => {
       "slack-escalation-abort",
       "github-pr-merged",
       "github-pr-closed",
+      "slack-app-mention",
       "linear-agent-session-created",
       "linear-issue-created",
       "linear-issue-updated",

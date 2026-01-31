@@ -32,6 +32,8 @@ export interface RouterDeps {
   logger: PinoLogger;
   /** Slack channel ID for ROUT-06 fallback alerts (optional) */
   alertsChannel?: string | undefined;
+  /** Linear team ID for product-agent workflow starts (optional) */
+  linearTeamId?: string | undefined;
 }
 
 // ---------------------------------------------------------------------------

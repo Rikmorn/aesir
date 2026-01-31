@@ -319,6 +319,7 @@ services:
       # Router configuration
       - ROUTER_PORT=3006
       - ROUTER_ALERTS_CHANNEL=${ROUTER_ALERTS_CHANNEL:-}
+      - LINEAR_TEAM_ID=${LINEAR_TEAM_ID}
       - NODE_ENV=${NODE_ENV:-production}
     ports:
       - "3006:3006"

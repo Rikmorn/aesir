@@ -74,6 +74,9 @@ importers:
       fetch-retry-ts:
         specifier: ^1.3.1
         version: 1.3.1
+      nanoid:
+        specifier: ^5.1.6
+        version: 5.1.6
       neverthrow:
         specifier: ^8.2.0
         version: 8.2.0
@@ -86,6 +89,9 @@ importers:
       zod:
         specifier: 3.25.67
         version: 3.25.67
+      zod-to-json-schema:
+        specifier: ^3.24.5
+        version: 3.25.1(zod@3.25.67)
     devDependencies:
       '@slack/types':
         specifier: ^2.19.0

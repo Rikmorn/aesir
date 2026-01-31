@@ -94,7 +94,7 @@ describe("routeViaAgentLoop", () => {
     vi.clearAllMocks();
   });
 
-  it("calls runAgentLoop with model claude-haiku-4-5-20251016", async () => {
+  it("calls runAgentLoop with model claude-haiku-4-5-20251001", async () => {
     mockRunAgentLoop.mockResolvedValue(createMockResult());
     const event = createTestEvent();
 
@@ -102,7 +102,7 @@ describe("routeViaAgentLoop", () => {
 
     expect(mockRunAgentLoop).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: "claude-haiku-4-5-20251016",
+        model: "claude-haiku-4-5-20251001",
       }),
     );
   });
@@ -126,7 +126,7 @@ describe("routeViaAgentLoop", () => {
 
     await routeViaAgentLoop(event, deps);
 
-    const callArgs = mockRunAgentLoop.mock.calls[0]![0];
+    const callArgs = mockRunAgentLoop.mock.calls[0]?.[0];
     expect(callArgs.systemPrompt).toContain("Aesir Smart Router");
     expect(callArgs.systemPrompt).toContain("routing classifier");
   });
@@ -137,7 +137,7 @@ describe("routeViaAgentLoop", () => {
 
     await routeViaAgentLoop(event, deps);
 
-    const callArgs = mockRunAgentLoop.mock.calls[0]![0];
+    const callArgs = mockRunAgentLoop.mock.calls[0]?.[0];
     expect(callArgs.tools).toHaveLength(4);
     const toolNames = callArgs.tools.map((t: { name: string }) => t.name);
     expect(toolNames).toContain("query_running_workflows");
@@ -228,7 +228,7 @@ describe("routeViaAgentLoop", () => {
 
     await routeViaAgentLoop(event, deps);
 
-    const callArgs = mockRunAgentLoop.mock.calls[0]![0];
+    const callArgs = mockRunAgentLoop.mock.calls[0]?.[0];
     expect(callArgs.initialMessage).toContain("evt_formatted");
     expect(callArgs.initialMessage).toContain("linear.comment.created");
     expect(callArgs.initialMessage).toContain("linear");

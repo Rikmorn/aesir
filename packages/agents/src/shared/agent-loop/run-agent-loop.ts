@@ -7,7 +7,7 @@
  * Replaces LangGraph state machine graphs with a custom Anthropic SDK
  * tool-use loop providing:
  * - Native Anthropic tool-use (no LangChain)
- * - betaZodTool() for Zod-to-JSON-Schema conversion
+ * - zod-to-json-schema for Zod-to-JSON-Schema conversion
  * - Configurable iteration limit and token budget
  * - AbortSignal for clean cancellation
  * - onToolCall / onResponse callbacks for tracing
@@ -15,7 +15,7 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
-import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
 import type {
   AgentLoopOptions,
   AgentLoopResult,
@@ -32,27 +32,20 @@ import type {
 /**
  * Convert a ToolDefinition (Zod-based) to an Anthropic API Tool object.
  *
- * Uses betaZodTool() from the SDK to convert the Zod schema to JSON Schema,
- * then extracts the fields needed for the non-beta messages.create() API.
- * The dummy `run` function is required by betaZodTool but never called --
- * we execute tools manually in our custom loop.
+ * Uses zod-to-json-schema to convert Zod 3 schemas to JSON Schema.
+ * The Anthropic SDK's betaZodTool() requires z.toJSONSchema() which only
+ * exists in Zod 4, not in the Zod 3 API exported by zod@3.25.x.
  */
 function toAnthropicTool(tool: ToolDefinition): Anthropic.Tool {
-  // betaZodTool() always returns type: "custom" with name, description,
-  // input_schema, run, and parse. The TypeScript union type for
-  // BetaRunnableTool is too broad (includes non-custom tool types), so
-  // we cast the result to access the known properties.
-  const converted = betaZodTool({
-    name: tool.name,
-    description: tool.description,
-    inputSchema: tool.inputSchema,
-    run: async () => "",
-  }) as unknown as Anthropic.Tool;
+  const jsonSchema = zodToJsonSchema(tool.inputSchema, {
+    // biome-ignore lint/style/useNamingConvention: library API parameter
+    $refStrategy: "none",
+  });
 
   return {
-    name: converted.name,
+    name: tool.name,
     description: tool.description,
-    input_schema: converted.input_schema,
+    input_schema: jsonSchema as Anthropic.Tool.InputSchema,
   };
 }
 

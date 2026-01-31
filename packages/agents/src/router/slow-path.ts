@@ -96,7 +96,7 @@ export async function routeViaAgentLoop(
     systemPrompt: ROUTER_SYSTEM_PROMPT,
     tools: routerTools,
     initialMessage: formattedEvent,
-    model: "claude-haiku-4-5-20251016",
+    model: "claude-haiku-4-5-20251001",
     maxIterations: 10,
     logger,
     onToolCall: (call) =>

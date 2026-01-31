@@ -4,7 +4,7 @@
  * Deterministic rule table for unambiguous events that need zero-latency routing.
  * Events matching a rule bypass the LLM slow path entirely.
  *
- * Covers 7 actionable event types (signal or start workflows) plus 2 ignore rules:
+ * Covers 8 actionable event types (signal or start workflows) plus 2 ignore rules:
  *
  * Signal rules:
  * 1. slack-approval-button -> planApproval signal (approved: true)
@@ -15,11 +15,12 @@
  * 6. github-pr-closed -> prCompletion signal (merged: false)
  *
  * Start rules:
- * 7. linear-agent-session-created -> start orchestratorWorkflow
+ * 7. slack-app-mention -> start productAgentConversationWorkflow
+ * 8. linear-agent-session-created -> start orchestratorWorkflow
  *
  * Ignore rules:
- * 8. linear-issue-created -> ignore (handled by Linear webhooks directly)
- * 9. linear-issue-updated -> ignore (handled by Linear webhooks directly)
+ * 9. linear-issue-created -> ignore (handled by Linear webhooks directly)
+ * 10. linear-issue-updated -> ignore (handled by Linear webhooks directly)
  */
 
 import type { NormalizedEvent } from "@aesir/types";
@@ -175,6 +176,43 @@ export const DETERMINISTIC_RULES: RoutingRule[] = [
         workflowId: `dev-agent-${branchMatch[1]}`,
         signal: prCompletionSignal.name,
         payload: { merged: false, prNumber: payload.prNumber },
+      };
+    },
+  },
+
+  // === Slack App Mention (Product Agent) ===
+
+  {
+    name: "slack-app-mention",
+    match: (event) =>
+      event.source === "slack" && event.type === "slack.app_mention.created",
+    action: (event) => {
+      const payload = event.payload as {
+        channel: string;
+        user: string;
+        text: string;
+        ts: string;
+        threadTs?: string;
+        teamId: string;
+      };
+      // Use threadTs if this mention was in a thread, otherwise use ts (new thread root)
+      const threadTs = payload.threadTs || payload.ts;
+      return {
+        type: "start",
+        workflowName: "productAgentConversationWorkflow",
+        taskQueue: "product-agent",
+        workflowId: `product-agent-${threadTs}`,
+        args: [
+          {
+            threadTs,
+            channelId: payload.channel,
+            initialMessage: payload.text,
+            userId: payload.user,
+            slackTeamId: payload.teamId,
+          },
+        ],
+        needsEnrichment: true,
+        enrichmentContext: { type: "product-agent" },
       };
     },
   },
@@ -347,13 +385,17 @@ export async function executeFastPath(
       try {
         let workflowArgs = action.args;
 
-        // Enrich via MCP if needed (e.g., fetch full issue details for agent_session)
+        // Enrich if needed (MCP fetch for dev-agent, config injection for product-agent)
         if (action.needsEnrichment && action.enrichmentContext) {
+          const enrichmentType = action.enrichmentContext.type as
+            | string
+            | undefined;
           const issueId = action.enrichmentContext.issueId as
             | string
             | undefined;
 
           if (issueId) {
+            // Dev-agent: fetch issue details via MCP
             startLogger.info({ issueId }, "Enriching with issue details");
 
             const issue = await callMcpTool<IssueDetails>({
@@ -382,6 +424,16 @@ export async function executeFastPath(
                 slackChannel: deps.alertsChannel || "",
               },
             ];
+          } else if (enrichmentType === "product-agent") {
+            // Product-agent: inject linearTeamId from router config
+            const inputArg = workflowArgs[0] as
+              | Record<string, unknown>
+              | undefined;
+            if (inputArg) {
+              workflowArgs = [
+                { ...inputArg, linearTeamId: deps.linearTeamId || "" },
+              ];
+            }
           }
         }
 
