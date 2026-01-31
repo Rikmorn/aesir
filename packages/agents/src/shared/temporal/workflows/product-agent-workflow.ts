@@ -301,6 +301,19 @@ export async function productAgentConversationWorkflow(
       };
     }
 
+    if (agentResult.phase === "cancelled") {
+      wf.log.info("Conversation cancelled by agent", { threadTs });
+      state.phase = "cancelled";
+
+      // The agent already sent its own Slack acknowledgment via slack_send_message
+      // during its agentic loop — no need to send another message here.
+      await wf.condition(wf.allHandlersFinished);
+      return {
+        success: false,
+        phase: "cancelled",
+      };
+    }
+
     // Wait for user reply with timeout
     state.phase = "awaiting_reply";
     state.userReply = null; // Reset for this iteration

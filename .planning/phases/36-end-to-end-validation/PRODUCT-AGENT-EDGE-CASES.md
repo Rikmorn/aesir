@@ -23,12 +23,12 @@ Identified during E2E validation (2026-01-31). Tracked for resolution now or in 
 ## Medium Priority
 
 ### 3. Router-level cancellation bypasses agent reasoning
-- **Status:** [ ] Open
-- **Component:** Slack event handler / router
-- **Trigger:** Router has `isCancellationMessage()` that pattern-matches before the message reaches the agent. "wait, I want to cancel this approach but keep the feature" triggers workflow cancellation at infrastructure level.
-- **Impact:** Bypasses the agent's nuanced `<cancellation_detection>` reasoning. Anti-v2.2 pattern -- semantic classification belongs to the agent, not a regex.
-- **Fix:** Remove `isCancellationMessage()` from router. Let all thread replies flow to the agent. The agent already handles cancellation detection via prompt.
-- **Files:** Slack event handler (check `isCancellationMessage` function location in router/events code)
+- **Status:** [x] Done
+- **Component:** Slack event handler / router / workflow
+- **Trigger:** `events.ts` had `isCancellationMessage()` that pattern-matched before the message reached the agent. "wait, I want to cancel this approach but keep the feature" triggered workflow cancellation at infrastructure level.
+- **Impact:** Bypassed the agent's nuanced `<cancellation_detection>` reasoning. Anti-v2.2 pattern -- semantic classification belongs to the agent, not a regex.
+- **Resolution:** Removed `isCancellationMessage()` from `events.ts`. All thread replies now flow to the agent as `userReplySignal`. Also fixed a latent bug: the workflow did not handle `agentResult.phase === "cancelled"` as a terminal state (it fell through to `awaiting_reply`). Added the cancelled phase check in the workflow so agent-initiated cancellation works end-to-end. Updated router system prompt to clarify that `cancelConversation` signal is for infrastructure use only, not for Slack thread replies.
+- **Files:** `packages/agents/src/product-agent/api/events.ts` (removed isCancellationMessage), `packages/agents/src/shared/temporal/workflows/product-agent-workflow.ts` (added cancelled phase handling), `packages/agents/src/shared/temporal/workflows/product-agent-workflow.test.ts` (split test into agent-initiated and signal-based), `packages/agents/src/router/system-prompt.ts` (clarified cancelConversation usage)
 
 ### 4. Thread reply before workflow fully started
 - **Status:** [ ] Open

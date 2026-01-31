@@ -8,14 +8,17 @@
  * - Only handles Slack events (source === 'slack')
  * - Checks channel allowlist before processing
  * - New @mentions start productAgentConversationWorkflow
- * - Thread replies signal existing workflows (userReply or cancel)
+ * - Thread replies signal existing workflows via userReply
+ *
+ * Cancellation detection is handled by the agent via its
+ * <cancellation_detection> prompt — NOT by phrase matching in the router.
+ * All thread replies are forwarded to the agent as userReplySignal.
  */
 
 import { createPinoLogger, type PinoLogger } from "@aesir/platform";
 import { type NormalizedEvent, NormalizedEventSchema } from "@aesir/types";
 import type { Client as TemporalClient } from "@temporalio/client";
 import {
-  cancelConversationSignal,
   type ProductAgentWorkflowInput,
   userReplySignal,
 } from "../../shared/temporal/index.js";
@@ -273,24 +276,18 @@ async function handleSlackEvent(
       }
     }
   } else if (isThreadReply) {
-    // Thread reply - signal existing workflow
-    const isCancel = isCancellationMessage(text);
-
+    // Thread reply — forward to agent via userReplySignal.
+    // Cancellation detection is the agent's job (via <cancellation_detection> prompt),
+    // not the router's. All replies go through the same path.
     eventLogger.info(
-      { workflowId, channel, user, isCancel },
+      { workflowId, channel, user },
       "Signaling existing workflow with user reply",
     );
 
     try {
       const handle = workflowClient.workflow.getHandle(workflowId);
-
-      if (isCancel) {
-        await handle.signal(cancelConversationSignal);
-        eventLogger.info({ workflowId }, "Sent cancel signal");
-      } else {
-        await handle.signal(userReplySignal, text);
-        eventLogger.info({ workflowId }, "Sent user reply signal");
-      }
+      await handle.signal(userReplySignal, text);
+      eventLogger.info({ workflowId }, "Sent user reply signal");
     } catch (error) {
       // Workflow may not exist (already completed or never started)
       if (
@@ -317,27 +314,4 @@ async function handleSlackEvent(
       "Unhandled event type/context",
     );
   }
-}
-
-/**
- * Check if message text indicates user wants to cancel
- */
-function isCancellationMessage(text: string): boolean {
-  const cancelPhrases = [
-    "nevermind",
-    "never mind",
-    "cancel",
-    "stop",
-    "forget it",
-    "forget about it",
-    "nvm",
-  ];
-
-  const lowerText = text.toLowerCase().trim();
-  return cancelPhrases.some(
-    (phrase) =>
-      lowerText === phrase ||
-      lowerText.startsWith(`${phrase} `) ||
-      lowerText.endsWith(` ${phrase}`),
-  );
 }

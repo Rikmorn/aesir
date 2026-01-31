@@ -383,34 +383,45 @@ describe("Phase-based flow control", () => {
     expect(result.phase).toBe("complete");
   });
 
-  it("handles cancelled phase from activity", async () => {
-    // Simulate cancel signal before first iteration
+  it("handles cancelled phase from agent (agent-initiated cancellation)", async () => {
+    // Agent detects cancellation in user message, sends Slack acknowledgment,
+    // and returns phase "cancelled". Workflow treats it as terminal.
     mockRunProductAgentActivity.mockResolvedValue({
-      response: "Acknowledged. <phase>cancelled</phase>",
-      phase: "awaiting_reply",
+      response: "User wants to cancel. <phase>cancelled</phase>",
+      phase: "cancelled",
     });
 
-    // Cancel requested at the start of iteration
-    mockCondition.mockImplementation(
-      (predicateOrFinished: unknown, _timeout?: unknown) => {
-        if (predicateOrFinished === mockAllHandlersFinished) {
-          return Promise.resolve(true);
-        }
-        return Promise.resolve(true);
-      },
+    mockCondition.mockResolvedValue(true);
+
+    const result = await productAgentConversationWorkflow(defaultInput);
+
+    expect(result.phase).toBe("cancelled");
+    expect(result.success).toBe(false);
+
+    // Agent handles its own Slack messaging — workflow should NOT send
+    // a separate cancellation message via sendSlackReplyActivity
+    const slackCalls = activityCalls.filter(
+      (c) => c.name === "sendSlackReplyActivity",
     );
+    expect(slackCalls).toHaveLength(0);
+  });
 
-    // Set cancel flag via signal handler before workflow runs
-    // The workflow checks cancelRequested at the start of each iteration
-    // We need to trigger it via the signal handler
+  it("handles signal-based cancellation (cancelConversationSignal)", async () => {
+    // Cancel signal arrives while workflow is waiting for user reply.
+    // This path is triggered by the router or external systems.
+    mockRunProductAgentActivity.mockImplementation(() => {
+      return Promise.resolve({
+        response: "What scope? <phase>clarifying</phase>",
+        phase: "awaiting_reply",
+      });
+    });
 
-    // Mock condition to trigger cancel on second wait
     mockCondition.mockImplementation(
       (predicateOrFinished: unknown, _timeout?: unknown) => {
         if (predicateOrFinished === mockAllHandlersFinished) {
           return Promise.resolve(true);
         }
-        // After first agent turn, simulate cancel signal
+        // Simulate cancel signal during the wait-for-reply phase
         const cancelHandler = capturedHandlers.get(
           "mockSignal_cancelConversation",
         );
@@ -420,14 +431,6 @@ describe("Phase-based flow control", () => {
         return Promise.resolve(true);
       },
     );
-
-    // First turn returns awaiting_reply, then loop checks cancelRequested
-    mockRunProductAgentActivity.mockImplementation(() => {
-      return Promise.resolve({
-        response: "What scope? <phase>clarifying</phase>",
-        phase: "awaiting_reply",
-      });
-    });
 
     const result = await productAgentConversationWorkflow(defaultInput);
 
@@ -488,10 +491,8 @@ describe("Timeout handling", () => {
       phase: "awaiting_reply",
     });
 
-    let conditionCalls = 0;
     mockCondition.mockImplementation(
       (predicateOrFinished: unknown, _timeout?: unknown) => {
-        conditionCalls++;
         if (predicateOrFinished === mockAllHandlersFinished) {
           return Promise.resolve(true);
         }

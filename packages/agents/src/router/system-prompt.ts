@@ -99,8 +99,9 @@ Sent to product-agent workflows when a user replies in a Slack thread.
 Payload: string (the reply text)
 
 ### cancelConversation
-Sent to product-agent workflows when a user wants to cancel.
+Infrastructure-level cancellation for product-agent workflows.
 Payload: (none)
+NOTE: For Slack thread replies, always use userReply — the product agent detects cancellation intent itself. Only use cancelConversation for non-conversational cancellation (e.g., admin action).
 </routing_rules>
 
 <slack_thread_reply_routing>
