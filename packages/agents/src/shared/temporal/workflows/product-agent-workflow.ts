@@ -237,12 +237,23 @@ export async function productAgentConversationWorkflow(
       });
     } catch (error) {
       wf.log.error("Product agent activity failed", { error, threadTs });
-      state.phase = "timeout"; // Treat activity failure as timeout
+      state.phase = "error";
+
+      // Notify user that something went wrong
+      try {
+        await sendSlackReplyActivity(
+          channelId,
+          threadTs,
+          "Sorry, I ran into a technical issue processing your message. Please try again or start a new conversation.",
+        );
+      } catch {
+        wf.log.warn("Failed to send error notification", { threadTs });
+      }
 
       await wf.condition(wf.allHandlersFinished);
       return {
         success: false,
-        phase: "timeout",
+        phase: "error",
       };
     }
 

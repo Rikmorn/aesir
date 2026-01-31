@@ -307,6 +307,21 @@ export async function runProductAgentActivity(
   // Extract issue info from trace (if agent created an issue)
   const issueInfo = extractIssueInfo(result);
 
+  // Warn if linear_create_issue was called but issue info couldn't be parsed.
+  // This could indicate a changed MCP response format and risks duplicate creation.
+  if (issueInfo === null) {
+    const calledCreateIssue = result.trace.some(
+      (step) =>
+        step.type === "tool_result" && step.toolName === "linear_create_issue",
+    );
+    if (calledCreateIssue) {
+      activityLogger.warn(
+        { threadTs: input.threadTs },
+        "linear_create_issue was called but issue info could not be extracted from tool result",
+      );
+    }
+  }
+
   // Build slim output (no full trace -- Temporal gRPC limit)
   const output: RunProductAgentActivityOutput = {
     response: result.output,

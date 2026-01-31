@@ -749,7 +749,7 @@ describe("Workflow type contracts", () => {
   });
 
   describe("ProductAgentWorkflowPhase", () => {
-    it("includes all 7 expected phases", () => {
+    it("includes all 8 expected phases", () => {
       const phases: ProductAgentWorkflowPhase[] = [
         "pending",
         "running",
@@ -758,8 +758,9 @@ describe("Workflow type contracts", () => {
         "declined",
         "cancelled",
         "timeout",
+        "error",
       ];
-      expect(phases).toHaveLength(7);
+      expect(phases).toHaveLength(8);
     });
   });
 });

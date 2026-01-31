@@ -30,7 +30,7 @@ export interface ProductAgentWorkflowResult {
   /** Whether the workflow completed successfully */
   success: boolean;
   /** Terminal phase of the workflow */
-  phase: "complete" | "declined" | "cancelled" | "timeout";
+  phase: "complete" | "declined" | "cancelled" | "timeout" | "error";
   /** Linear issue ID if created */
   issueId?: string;
   /** Linear issue identifier (e.g., "ABC-123") */
@@ -51,7 +51,8 @@ export type ProductAgentWorkflowPhase =
   | "complete" // Issue created successfully
   | "declined" // Non-actionable message (question/off-topic)
   | "cancelled" // User cancelled the conversation
-  | "timeout"; // Conversation timed out after 72h
+  | "timeout" // Conversation timed out after 72h
+  | "error"; // Activity failed (infrastructure error, not timeout)
 
 // === Dev Agent Workflow Types ===
 

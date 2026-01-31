@@ -57,25 +57,25 @@ Identified during E2E validation (2026-01-31). Tracked for resolution now or in 
 - **Files:** `packages/agents/src/shared/temporal/activities/product-agent-activity.ts` (extractPhase, inferPhaseFromTrace), `product-agent-activity.test.ts` (+4 fallback tests)
 
 ### 7. Malformed issue JSON from Linear MCP
-- **Status:** [ ] Open
+- **Status:** [x] Done
 - **Component:** Activity (`product-agent-activity.ts`)
 - **Trigger:** `linear_create_issue` MCP response format changes or returns unexpected structure.
 - **Impact:** `extractIssueInfo()` returns null. Workflow thinks creation failed even though issue exists in Linear. Could cause duplicate creation on retry.
-- **Fix:** Add schema validation of Linear tool results. Log warnings when expected fields are missing.
-- **Files:** `packages/agents/src/shared/temporal/activities/product-agent-activity.ts` (lines 178-219)
+- **Resolution:** Added warning log when `linear_create_issue` was called but issue info could not be extracted from the tool result. This provides observability for MCP response format changes. The agent's `<duplicate_detection>` prompt also provides a safety net against duplicate creation. Note: edge case #6's fallback inference also helps — if the issue was created and the phase tag is missing, the trace check catches it.
+- **Files:** `packages/agents/src/shared/temporal/activities/product-agent-activity.ts` (warning log after extractIssueInfo)
 
 ### 8. Token budget exhaustion mid-tool-call
-- **Status:** [ ] Open
+- **Status:** [x] Mitigated (no code change needed)
 - **Component:** Agent loop (`run-agent-loop.ts`)
 - **Trigger:** LLM response consumes remaining budget. Next iteration detects exhaustion and terminates.
 - **Impact:** If issue creation was in-flight, results are undefined. Agent may have called `linear_create_issue` but never sent Slack confirmation.
-- **Fix:** Ensure wrap-up logic checks for in-flight tool results before terminating.
-- **Files:** `packages/agents/src/shared/agent-loop/run-agent-loop.ts` (lines 231-240)
+- **Analysis:** Partially mitigated by edge case #6's fallback inference. If the agent created an issue but budget exhaustion prevented the phase tag from being emitted, `inferPhaseFromTrace()` detects the successful issue creation and returns "complete". The user misses the Slack confirmation, but the workflow correctly returns with issueId/issueIdentifier. Full fix (sending a fallback Slack message from the workflow) is a future improvement.
+- **Files:** N/A (mitigated by edge case #6)
 
 ### 9. Activity failure misreported as timeout
-- **Status:** [ ] Open
+- **Status:** [x] Done
 - **Component:** Workflow (`product-agent-workflow.ts`)
 - **Trigger:** `runProductAgentActivity` throws (DB unavailable, MCP service down, etc.)
-- **Impact:** Catch block at line 238 sets phase to "timeout". Real cause (infrastructure failure) is masked.
-- **Fix:** Distinguish between activity timeout and activity error. Return different phase or include error context in result.
-- **Files:** `packages/agents/src/shared/temporal/workflows/product-agent-workflow.ts` (lines 238-247)
+- **Impact:** Catch block set phase to "timeout". Real cause (infrastructure failure) was masked.
+- **Resolution:** Added "error" phase to `ProductAgentWorkflowPhase` and `ProductAgentWorkflowResult`. Activity failures now return `phase: "error"` instead of `phase: "timeout"`. Also added a Slack notification to the user when an error occurs ("Sorry, I ran into a technical issue..."). Updated type contract tests for the new 8-phase type.
+- **Files:** `packages/agents/src/shared/temporal/types.ts` (added "error" phase), `packages/agents/src/shared/temporal/workflows/product-agent-workflow.ts` (catch block), `packages/agents/src/shared/temporal/workflows/product-agent-workflow.test.ts` (type contract test)
