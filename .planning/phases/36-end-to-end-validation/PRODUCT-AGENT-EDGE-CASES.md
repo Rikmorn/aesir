@@ -31,20 +31,20 @@ Identified during E2E validation (2026-01-31). Tracked for resolution now or in 
 - **Files:** `packages/agents/src/product-agent/api/events.ts` (removed isCancellationMessage), `packages/agents/src/shared/temporal/workflows/product-agent-workflow.ts` (added cancelled phase handling), `packages/agents/src/shared/temporal/workflows/product-agent-workflow.test.ts` (split test into agent-initiated and signal-based), `packages/agents/src/router/system-prompt.ts` (clarified cancelConversation usage)
 
 ### 4. Thread reply before workflow fully started
-- **Status:** [ ] Open
-- **Component:** Slack event handler / router
-- **Trigger:** Slack delivers a thread reply before `workflow.start()` completes. Router tries to signal a non-existent workflow.
+- **Status:** [x] Done
+- **Component:** Slack event handler (`events.ts`)
+- **Trigger:** Slack delivers a thread reply before `workflow.start()` completes. Signal hits "workflow not found" and is silently dropped.
 - **Impact:** Signal is silently lost. User sees no response.
-- **Fix:** Add retry-with-backoff on "workflow not found" when signaling replies, or queue the signal.
-- **Files:** Slack event handler (workflow signal code)
+- **Resolution:** Added `signalWorkflowWithRetry()` helper that retries the signal up to 2 times with 500ms → 1000ms backoff delays on "not found" errors. Total retry window is 1.5s, which covers the typical `workflow.start()` latency (<500ms). Non-"not found" errors are thrown immediately. If the workflow is still not found after retries, it's logged and treated as a completed conversation.
+- **Files:** `packages/agents/src/product-agent/api/events.ts` (signalWorkflowWithRetry)
 
 ### 5. Cancel signal races with completion
-- **Status:** [ ] Open
+- **Status:** [x] Mitigated (no code change needed)
 - **Component:** Workflow (`product-agent-workflow.ts`)
-- **Trigger:** Agent creates an issue (phase = "complete") but cancel signal arrives simultaneously. Workflow checks `cancelRequested` (line 196) BEFORE checking agent phase (line 269).
-- **Impact:** Workflow returns "cancelled" even though issue exists in Linear. External systems don't know the issue was created.
-- **Fix:** Check agent phase result before cancel flag, or add "complete takes precedence over cancel" rule.
-- **Files:** `packages/agents/src/shared/temporal/workflows/product-agent-workflow.ts` (lines 196, 269)
+- **Trigger:** Agent creates an issue (phase = "complete") but cancel signal arrives simultaneously.
+- **Impact:** Originally concerned that workflow would return "cancelled" even though issue exists in Linear.
+- **Analysis:** After review, this race is not possible in the current code flow. The `cancelRequested` check (line 196) only runs at the TOP of the next iteration. After an activity returns, the workflow checks `agentResult.phase` synchronously — if "complete", it returns immediately before any cancel check. Additionally, after edge case #3, `cancelConversationSignal` only comes from infrastructure actions (admin), not from thread replies, making the race window even narrower.
+- **Files:** N/A (no change required)
 
 ## Lower Priority
 

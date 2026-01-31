@@ -284,28 +284,20 @@ async function handleSlackEvent(
       "Signaling existing workflow with user reply",
     );
 
-    try {
-      const handle = workflowClient.workflow.getHandle(workflowId);
-      await handle.signal(userReplySignal, text);
+    const sent = await signalWorkflowWithRetry(
+      workflowClient,
+      workflowId,
+      text,
+      eventLogger,
+    );
+
+    if (sent) {
       eventLogger.info({ workflowId }, "Sent user reply signal");
-    } catch (error) {
-      // Workflow may not exist (already completed or never started)
-      if (
-        error instanceof Error &&
-        (error.message.includes("not found") ||
-          error.message.includes("not exist"))
-      ) {
-        eventLogger.info(
-          { workflowId },
-          "Workflow not found - conversation may have completed",
-        );
-      } else {
-        eventLogger.error(
-          { err: error, workflowId },
-          "Failed to signal workflow",
-        );
-        throw error;
-      }
+    } else {
+      eventLogger.info(
+        { workflowId },
+        "Workflow not found after retries - conversation may have completed",
+      );
     }
   } else {
     // app_mention in a thread (not the first message) - signal
@@ -314,4 +306,69 @@ async function handleSlackEvent(
       "Unhandled event type/context",
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// Retry helper for workflow signals
+// ---------------------------------------------------------------------------
+
+/** Delay between retry attempts (500ms, 1000ms) */
+const SIGNAL_RETRY_DELAYS_MS = [500, 1000];
+
+/**
+ * Check if an error indicates the workflow was not found in Temporal.
+ */
+function isWorkflowNotFoundError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.message.includes("not found") || error.message.includes("not exist"))
+  );
+}
+
+/**
+ * Signal a workflow with retry on "not found" errors.
+ *
+ * Handles the race condition where a Slack thread reply arrives before
+ * workflow.start() has fully registered the workflow in Temporal. Retries
+ * up to 2 times with 500ms → 1000ms delays (1.5s total window).
+ *
+ * Non-"not found" errors are thrown immediately. If the workflow is still
+ * not found after retries, returns false (conversation likely completed).
+ *
+ * @returns true if signal was sent, false if workflow not found after retries
+ */
+async function signalWorkflowWithRetry(
+  workflowClient: TemporalClient,
+  workflowId: string,
+  text: string,
+  eventLogger: PinoLogger,
+): Promise<boolean> {
+  for (let attempt = 0; attempt <= SIGNAL_RETRY_DELAYS_MS.length; attempt++) {
+    try {
+      const handle = workflowClient.workflow.getHandle(workflowId);
+      await handle.signal(userReplySignal, text);
+      return true;
+    } catch (error) {
+      if (!isWorkflowNotFoundError(error)) {
+        eventLogger.error(
+          { err: error, workflowId },
+          "Failed to signal workflow",
+        );
+        throw error;
+      }
+
+      // Last attempt — give up
+      if (attempt >= SIGNAL_RETRY_DELAYS_MS.length) {
+        return false;
+      }
+
+      const delayMs = SIGNAL_RETRY_DELAYS_MS[attempt];
+      eventLogger.info(
+        { workflowId, attempt: attempt + 1, delayMs },
+        "Workflow not found, retrying signal after delay",
+      );
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+  return false;
 }
