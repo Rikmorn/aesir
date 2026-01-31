@@ -21,6 +21,7 @@ import {
   handleGetIssue,
   handleListLabels,
   handleListTeams,
+  handleSearchIssues,
   handleUpdateIssueStatus,
   type IssueToolDeps,
   type TeamToolDeps,
@@ -140,6 +141,29 @@ const TOOL_DEFINITIONS = [
         },
       },
       required: ["issueId", "body"],
+    },
+  },
+  {
+    name: "search_issues",
+    description:
+      "Search Linear issues by text query. Returns matching issues with titles, identifiers, and status. Use this to find existing issues before creating duplicates.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Text query to search for in issues",
+        },
+        teamId: {
+          type: "string",
+          description: "Optional team ID to scope search results",
+        },
+        limit: {
+          type: "number",
+          description: "Maximum number of results to return (default: 10)",
+        },
+      },
+      required: ["query"],
     },
   },
 ];
@@ -296,6 +320,10 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
 
           case "create_comment":
             result = await handleCreateComment(context, args, issueToolDeps);
+            break;
+
+          case "search_issues":
+            result = await handleSearchIssues(context, args, issueToolDeps);
             break;
 
           default:
