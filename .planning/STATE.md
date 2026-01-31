@@ -6,16 +6,16 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-**Current focus:** v2.2 Agentic Architecture -- Phase 35 complete, Phase 36 next
+**Current focus:** v2.2 Agentic Architecture -- Phase 36 in progress
 
 ## Current Position
 
-Phase: 35 (eighth of 9 in v2.2) - Guardrails & Cleanup
-Plan: 5 of 5
-Status: Phase complete
-Last activity: 2026-01-30 -- Completed 35-05-PLAN.md (cost tracking & final verification)
+Phase: 36 (ninth of 9 in v2.2) - End-to-End Validation
+Plan: 1 of 3
+Status: In progress
+Last activity: 2026-01-31 -- Completed 36-01-PLAN.md (static verification of E2EV-06 through E2EV-11)
 
-Progress: ██████████████████░░ 96% (8/9 phases complete, 29/29 plans in Phase 35)
+Progress: ██████████████████░░ 97% (8/9 phases complete, 1/3 plans in Phase 36)
 
 ## Milestone History
 
@@ -143,6 +143,11 @@ Phase 35 decisions:
 - Query-time SQL aggregation for token cost tracking (no materialized views at current scale)
 - NodePgDatabase type for cost-tracking utility (matches trace-recorder.ts codebase pattern)
 
+Phase 36 decisions:
+- Stale tsbuildinfo caused false test resolution failures; deleted and rebuilt to get accurate baseline
+- orchestrator.test.ts tool count assertion (14 vs 13) documented as pre-existing from Phase 35 merge_pull_request removal
+- All 6 E2EV requirements (E2EV-06 through E2EV-11) verified PASS via code inspection + existing test execution
+
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
@@ -155,10 +160,10 @@ None blocking v2.2.
 
 ## Session Continuity
 
-Last session: 2026-01-30
-Stopped at: Completed 35-05-PLAN.md (cost tracking & final verification) -- Phase 35 complete
+Last session: 2026-01-31
+Stopped at: Completed 36-01-PLAN.md (static verification of E2EV-06 through E2EV-11)
 Resume file: None
-Next action: Begin Phase 36
+Next action: Execute 36-02-PLAN.md (behavioral tests for E2EV-02, E2EV-04, E2EV-05)
 
 ---
-*Updated: 2026-01-30 -- Phase 35 complete (all 5 plans executed, all 9 GUAR requirements verified PASS)*
+*Updated: 2026-01-31 -- Phase 36 plan 01 complete (E2EV-06 through E2EV-11 verified PASS)*
