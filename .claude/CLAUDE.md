@@ -502,6 +502,8 @@ Linear:
 - `update_issue_status` - Change issue workflow state
 - `list_teams` - List all teams
 - `list_labels` - List labels (optionally by team)
+- `search_issues` - Search issues by text query
+- `create_comment` - Create comment on an issue
 
 GitHub:
 - `get_repository` - Get repository info
@@ -828,6 +830,38 @@ Phases 16-18 establish the pattern for extracting integrations into independent 
 - MCP tool layer for all integrations (complete)
 - Testing infrastructure with testcontainers (complete)
 - Docker Compose local development (complete)
+
+## v2.2 Design Principles
+
+v2.2 replaces hardcoded control flow with LLM-driven agentic loops. This is a fundamental architectural shift that must be respected in all agent-related work.
+
+### Agent-First Problem Solving
+
+When an agent makes a wrong decision, fix the agent — don't add deterministic overrides.
+
+**The principle:** Agents reason about their environment through tools and context. When something goes wrong, the fix should be:
+1. **Better prompts** — give the agent clearer instructions for the scenario
+2. **Better tools** — give the agent the ability to detect and handle the situation
+3. **Better context** — give the agent more information to make good decisions
+
+**Anti-patterns to avoid:**
+- Adding `if/else` logic in workflows that overrides the agent's phase/decision
+- Hardcoding error recovery paths that the agent should handle via reasoning
+- Pattern-matching on agent output to "correct" it in orchestration code
+- Moving classification logic out of the LLM into deterministic rules (unless the event is genuinely unambiguous — see fast-path criteria below)
+
+**When deterministic logic IS appropriate:**
+- **Fast-path routing**: Events that are genuinely unambiguous (e.g., `slack.app_mention.created` always starts product-agent, `linear.agent_session.created` always starts dev-agent). The test: "would every reasonable person route this the same way?"
+- **Infrastructure concerns**: Timeouts, max iteration limits, signal handling, workflow lifecycle — these are Temporal's domain, not the agent's
+- **Data validation**: Schema validation at system boundaries (Zod), not semantic validation of agent decisions
+
+### Prompt Engineering over Code Engineering
+
+System prompts are the primary control surface for agent behavior. Treat them as first-class code:
+- Test prompt changes against real scenarios
+- Be specific about tool failure handling and phase tag conditions
+- Include examples of edge cases the agent might encounter
+- When adding new behavior, add it to the prompt — not to wrapper code around the agent
 
 ## v2.1 Codebase Cleanup
 
