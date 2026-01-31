@@ -5,12 +5,12 @@ Identified during E2E validation (2026-01-31). Tracked for resolution now or in 
 ## High Priority
 
 ### 1. Conversation history grows unbounded
-- **Status:** [ ] Open
-- **Component:** Workflow (`product-agent-workflow.ts`) + Orchestrator (`orchestrator.ts`)
+- **Status:** [x] Done
+- **Component:** Orchestrator (`orchestrator.ts`)
 - **Trigger:** Each workflow iteration appends user + agent messages to `conversationHistory`. After 10+ turns, history becomes a massive blob injected as the first user message.
 - **Impact:** Agent's 50K token budget consumed by history alone. Later turns can't do meaningful work. With `maxIterations = 20`, this is realistic for complex clarification flows.
-- **Fix:** Truncate to last N turns (6-8), or implement sliding window with summary of earlier turns.
-- **Files:** `packages/agents/src/shared/temporal/workflows/product-agent-workflow.ts` (lines 183-186, 227, 253-257), `packages/agents/src/product-agent/orchestrator/orchestrator.ts` (lines 133-142)
+- **Resolution:** Implemented LLM-based compaction strategy in `compactConversationHistory()`. When history exceeds 16 messages, older messages are summarized by a fast model (haiku) into a `<conversation_summary>` block. Last 12 messages kept verbatim. Falls back to dropping older messages if the summary call fails. Full history preserved in Temporal workflow state for audit.
+- **Files:** `packages/agents/src/product-agent/orchestrator/orchestrator.ts` (compactConversationHistory), `orchestrator.test.ts` (11 unit tests)
 
 ### 2. Unescaped XML in conversation history
 - **Status:** [ ] Open

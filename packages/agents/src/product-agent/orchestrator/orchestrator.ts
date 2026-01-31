@@ -29,6 +29,7 @@
 
 import type { PinoLogger } from "@aesir/platform";
 import { createId } from "@aesir/types";
+import Anthropic from "@anthropic-ai/sdk";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { runAgentLoop } from "../../shared/agent-loop/run-agent-loop.js";
 import { createTokenBudget } from "../../shared/agent-loop/token-budget.js";
@@ -75,6 +76,144 @@ export interface ProductAgentOptions {
   maxIterations?: number;
   /** Maximum token budget for this turn (default: 50_000) */
   maxTokenBudget?: number;
+}
+
+// ---------------------------------------------------------------------------
+// Conversation History Compaction
+// ---------------------------------------------------------------------------
+
+/** Message type used throughout history management */
+type HistoryMessage = { role: "user" | "assistant"; content: string };
+
+/**
+ * Number of recent messages to keep verbatim.
+ * 12 messages ≈ 6 user/agent exchanges — enough for the agent to follow
+ * the current thread of conversation without needing the summary.
+ */
+const RECENT_MESSAGES_TO_KEEP = 12;
+
+/**
+ * Threshold at which compaction kicks in.
+ * Below this, history is passed through as-is. At or above, older
+ * messages are summarized and only recent ones kept verbatim.
+ */
+const COMPACTION_THRESHOLD = 16;
+
+/**
+ * Model used for summarization. Haiku is fast (~1-2s) and cheap,
+ * suitable for a utility summarization call.
+ */
+const COMPACTION_MODEL = "claude-haiku-4-20250514";
+
+/**
+ * Prompt sent to the compaction model to summarize older conversation turns.
+ */
+const COMPACTION_SYSTEM_PROMPT = `You are a conversation summarizer. Given a conversation between a user and an agent about creating Linear issues, produce a concise summary capturing:
+
+- What the user requested (feature, bug, etc.)
+- Key decisions made (priority, scope, labels discussed)
+- Information gathered (acceptance criteria, context provided)
+- Any issues found (duplicates, blockers, tool errors)
+- Current status (waiting for confirmation, clarifying details, etc.)
+
+Output ONLY the summary as a bulleted list. No preamble, no commentary. Keep it under 500 words.`;
+
+/**
+ * Compact conversation history to stay within token budget.
+ *
+ * When history exceeds COMPACTION_THRESHOLD messages, splits into:
+ * - Older messages → summarized by a fast LLM call
+ * - Recent messages → kept verbatim (last RECENT_MESSAGES_TO_KEEP)
+ *
+ * Returns a formatted string ready for injection into the initial message.
+ * Falls back to keeping only recent messages if the summary call fails.
+ *
+ * The full history is preserved in the Temporal workflow state for
+ * audit and debugging. Compaction only affects what the LLM sees.
+ *
+ * @param history - Full conversation history from the workflow
+ * @param logger - Logger for diagnostics
+ * @param anthropicClient - Optional Anthropic client (for testing). Created if not provided.
+ * @returns Formatted history string and whether compaction was applied
+ */
+export async function compactConversationHistory(
+  history: HistoryMessage[],
+  logger: PinoLogger,
+  anthropicClient?: Anthropic,
+): Promise<{ formatted: string; compacted: boolean }> {
+  // Below threshold — pass through as-is
+  if (history.length < COMPACTION_THRESHOLD) {
+    const formatted = history
+      .map((m) => `${m.role === "user" ? "User" : "Agent"}: ${m.content}`)
+      .join("\n\n");
+    return { formatted, compacted: false };
+  }
+
+  // Split into old (to summarize) and recent (to keep verbatim)
+  const splitIndex = history.length - RECENT_MESSAGES_TO_KEEP;
+  const olderMessages = history.slice(0, splitIndex);
+  const recentMessages = history.slice(splitIndex);
+
+  logger.info(
+    {
+      totalMessages: history.length,
+      summarizing: olderMessages.length,
+      keepingVerbatim: recentMessages.length,
+    },
+    "Compacting conversation history",
+  );
+
+  // Summarize older messages
+  let summary: string;
+  try {
+    const client = anthropicClient ?? new Anthropic({ maxRetries: 2 });
+    const olderText = olderMessages
+      .map((m) => `${m.role === "user" ? "User" : "Agent"}: ${m.content}`)
+      .join("\n\n");
+
+    const response = await client.messages.create({
+      model: COMPACTION_MODEL,
+      max_tokens: 1024,
+      system: COMPACTION_SYSTEM_PROMPT,
+      messages: [{ role: "user", content: olderText }],
+    });
+
+    const textBlock = response.content.find((b) => b.type === "text");
+    summary = textBlock?.text ?? "";
+
+    if (!summary) {
+      throw new Error("Compaction model returned no text content");
+    }
+
+    logger.info(
+      { summaryLength: summary.length, model: COMPACTION_MODEL },
+      "Conversation history compacted successfully",
+    );
+  } catch (error) {
+    // Fallback: drop older messages instead of blocking the conversation
+    logger.warn(
+      { error },
+      "Conversation history compaction failed, falling back to recent messages only",
+    );
+
+    const recentFormatted = recentMessages
+      .map((m) => `${m.role === "user" ? "User" : "Agent"}: ${m.content}`)
+      .join("\n\n");
+
+    return {
+      formatted: `[${olderMessages.length} earlier messages could not be summarized and were omitted]\n\n${recentFormatted}`,
+      compacted: true,
+    };
+  }
+
+  // Combine summary + recent verbatim messages
+  const recentFormatted = recentMessages
+    .map((m) => `${m.role === "user" ? "User" : "Agent"}: ${m.content}`)
+    .join("\n\n");
+
+  const formatted = `<conversation_summary>\nSummary of ${olderMessages.length} earlier messages:\n${summary}\n</conversation_summary>\n\nRecent messages:\n${recentFormatted}`;
+
+  return { formatted, compacted: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -133,10 +272,16 @@ export async function runProductAgent(
   // 5. Build initial message with optional conversation history
   let initialMessage: string;
   if (conversationHistory !== undefined && conversationHistory.length > 0) {
-    const history = conversationHistory
-      .map((m) => `${m.role === "user" ? "User" : "Agent"}: ${m.content}`)
-      .join("\n\n");
-    initialMessage = `<conversation_history>\n${history}\n</conversation_history>\n\nNew message from user:\n${message}`;
+    const { formatted, compacted } = await compactConversationHistory(
+      conversationHistory,
+      logger,
+    );
+
+    if (compacted) {
+      logger.info("Using compacted conversation history for agent turn");
+    }
+
+    initialMessage = `<conversation_history>\n${formatted}\n</conversation_history>\n\nNew message from user:\n${message}`;
   } else {
     initialMessage = message;
   }
