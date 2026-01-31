@@ -121,8 +121,10 @@ export interface RunProductAgentActivityOutput {
  * - "cancelled"  -> "cancelled"
  * - "clarifying" -> "awaiting_reply"
  *
- * Defaults to "awaiting_reply" if no phase tag found (safe default --
- * continues the conversation rather than terminating prematurely).
+ * When no phase tag is found (truncated output, budget exhaustion), falls
+ * back to inference from the execution trace:
+ * - If linear_create_issue was called successfully → "complete"
+ * - Otherwise → "awaiting_reply" (safe default)
  *
  * @param result - Agent loop result containing text output with phase tag
  * @returns Extracted workflow phase
@@ -131,23 +133,45 @@ export function extractPhase(
   result: AgentLoopResult,
 ): ProductAgentWorkflowPhase {
   const phaseMatch = result.output.match(/<phase>(.*?)<\/phase>/);
-  if (!phaseMatch) {
-    return "awaiting_reply";
+  if (phaseMatch) {
+    const phase = phaseMatch[1];
+    switch (phase) {
+      case "complete":
+        return "complete";
+      case "declined":
+        return "declined";
+      case "cancelled":
+        return "cancelled";
+      case "clarifying":
+        return "awaiting_reply";
+      default:
+        return "awaiting_reply";
+    }
   }
 
-  const phase = phaseMatch[1];
-  switch (phase) {
-    case "complete":
-      return "complete";
-    case "declined":
-      return "declined";
-    case "cancelled":
-      return "cancelled";
-    case "clarifying":
-      return "awaiting_reply";
-    default:
-      return "awaiting_reply";
+  // No phase tag — infer from execution trace.
+  // This handles budget exhaustion, truncated output, or agent bugs.
+  return inferPhaseFromTrace(result);
+}
+
+/**
+ * Infer the conversation phase from the agent's execution trace
+ * when no explicit phase tag was emitted.
+ *
+ * Priority:
+ * 1. If linear_create_issue returned valid issue data → "complete"
+ * 2. Otherwise → "awaiting_reply" (safe default, keeps conversation alive)
+ */
+function inferPhaseFromTrace(
+  result: AgentLoopResult,
+): ProductAgentWorkflowPhase {
+  // If the agent created an issue, treat as complete even without a phase tag.
+  // extractIssueInfo parses tool result JSON — returns non-null only on success.
+  if (extractIssueInfo(result) !== null) {
+    return "complete";
   }
+
+  return "awaiting_reply";
 }
 
 // ---------------------------------------------------------------------------

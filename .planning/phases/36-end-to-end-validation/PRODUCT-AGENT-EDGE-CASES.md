@@ -49,12 +49,12 @@ Identified during E2E validation (2026-01-31). Tracked for resolution now or in 
 ## Lower Priority
 
 ### 6. Missing or unexpected phase tag
-- **Status:** [ ] Open
+- **Status:** [x] Done
 - **Component:** Activity (`product-agent-activity.ts`)
 - **Trigger:** Agent doesn't emit `<phase>...</phase>` tag (truncated output, budget exhaustion) or emits unexpected value.
 - **Impact:** Defaults to `awaiting_reply`. Workflow waits for user reply that may never come. Conversation stalls.
-- **Fix:** Add fallback reasoning -- if no phase tag and agent called `linear_create_issue` successfully, infer "complete". If no tools called, infer based on last Slack message content.
-- **Files:** `packages/agents/src/shared/temporal/activities/product-agent-activity.ts` (lines 130-151)
+- **Resolution:** Added `inferPhaseFromTrace()` fallback in `extractPhase()`. When no phase tag is found, checks the execution trace: if `linear_create_issue` returned valid issue data (parseable JSON with id/identifier), infers "complete". Otherwise falls back to "awaiting_reply" (safe default). Uses the existing `extractIssueInfo()` function to determine success vs failure.
+- **Files:** `packages/agents/src/shared/temporal/activities/product-agent-activity.ts` (extractPhase, inferPhaseFromTrace), `product-agent-activity.test.ts` (+4 fallback tests)
 
 ### 7. Malformed issue JSON from Linear MCP
 - **Status:** [ ] Open

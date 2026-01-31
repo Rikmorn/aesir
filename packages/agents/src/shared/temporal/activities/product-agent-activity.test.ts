@@ -126,6 +126,50 @@ describe("extractPhase", () => {
     const result = buildResult("");
     expect(extractPhase(result)).toBe("awaiting_reply");
   });
+
+  describe("fallback inference from trace (no phase tag)", () => {
+    it("infers 'complete' when linear_create_issue succeeded", () => {
+      const trace = [
+        buildToolResultStep(
+          "linear_create_issue",
+          JSON.stringify({
+            id: "uuid-abc",
+            identifier: "XYZ-99",
+            url: "https://linear.app/team/issue/XYZ-99",
+            title: "New feature",
+          }),
+        ),
+      ];
+      // No phase tag in output — but issue was created
+      const result = buildResult("I created the issue.", trace);
+      expect(extractPhase(result)).toBe("complete");
+    });
+
+    it("returns 'awaiting_reply' when linear_create_issue failed", () => {
+      const trace = [
+        buildToolResultStep(
+          "linear_create_issue",
+          "Tool execution error: 500 Internal Server Error",
+        ),
+      ];
+      const result = buildResult("Something went wrong.", trace);
+      expect(extractPhase(result)).toBe("awaiting_reply");
+    });
+
+    it("returns 'awaiting_reply' when no tools were called", () => {
+      const result = buildResult("Truncated output with no phase tag");
+      expect(extractPhase(result)).toBe("awaiting_reply");
+    });
+
+    it("returns 'awaiting_reply' when only non-issue tools were called", () => {
+      const trace = [
+        buildToolResultStep("slack_send_message", '{"ok":true}'),
+        buildToolResultStep("linear_search_issues", "[]"),
+      ];
+      const result = buildResult("Asked the user a question.", trace);
+      expect(extractPhase(result)).toBe("awaiting_reply");
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
