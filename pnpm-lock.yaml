@@ -50,6 +50,9 @@ importers:
       '@slack/web-api':
         specifier: ^7.13.0
         version: 7.13.0
+      '@temporalio/activity':
+        specifier: ^1.14.1
+        version: 1.14.1
       '@temporalio/client':
         specifier: ^1.14.1
         version: 1.14.1

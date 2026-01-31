@@ -5,7 +5,10 @@ WORKDIR /app
 
 # Copy workspace files
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
-COPY packages/common/package.json ./packages/common/
+COPY packages/types/package.json ./packages/types/
+COPY packages/platform/package.json ./packages/platform/
+# test-utils is a devDependency but pnpm deploy validates all workspace refs before filtering
+COPY packages/test-utils/package.json ./packages/test-utils/
 COPY packages/integrations/github/package.json ./packages/integrations/github/
 
 # Install pnpm and dependencies
@@ -14,11 +17,13 @@ RUN pnpm install --frozen-lockfile
 
 # Copy source
 COPY tsconfig.base.json ./
-COPY packages/common/ ./packages/common/
+COPY packages/types/ ./packages/types/
+COPY packages/platform/ ./packages/platform/
 COPY packages/integrations/github/ ./packages/integrations/github/
 
 # Build
-RUN pnpm --filter @aesir/common build
+RUN pnpm --filter @aesir/types build
+RUN pnpm --filter @aesir/platform build
 RUN pnpm --filter @aesir/integration-github build
 
 # Deploy creates a standalone package with all dependencies resolved (no symlinks)

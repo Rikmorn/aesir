@@ -76,7 +76,7 @@ export interface OrchestratorOptions {
   /** Abort signal for clean cancellation */
   abortSignal?: AbortSignal;
   /** Called after each LLM response for Temporal activity heartbeats */
-  onHeartbeat?: () => void;
+  onHeartbeat?: (() => void) | undefined;
 }
 
 // ---------------------------------------------------------------------------

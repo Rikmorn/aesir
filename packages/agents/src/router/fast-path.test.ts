@@ -574,7 +574,7 @@ describe("executeFastPath", () => {
     const client = deps.workflowClient as unknown as {
       workflow: { start: ReturnType<typeof vi.fn> };
     };
-    const startCall = client.workflow.start.mock.calls[0];
+    const startCall = client.workflow.start.mock.calls[0]!;
     expect(startCall[1].args).toHaveLength(1);
     expect(startCall[1].args[0]).toMatchObject({
       taskId: "issue-123",

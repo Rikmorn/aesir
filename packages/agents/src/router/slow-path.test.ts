@@ -126,7 +126,7 @@ describe("routeViaAgentLoop", () => {
 
     await routeViaAgentLoop(event, deps);
 
-    const callArgs = mockRunAgentLoop.mock.calls[0][0];
+    const callArgs = mockRunAgentLoop.mock.calls[0]![0];
     expect(callArgs.systemPrompt).toContain("Aesir Smart Router");
     expect(callArgs.systemPrompt).toContain("routing classifier");
   });
@@ -137,7 +137,7 @@ describe("routeViaAgentLoop", () => {
 
     await routeViaAgentLoop(event, deps);
 
-    const callArgs = mockRunAgentLoop.mock.calls[0][0];
+    const callArgs = mockRunAgentLoop.mock.calls[0]![0];
     expect(callArgs.tools).toHaveLength(4);
     const toolNames = callArgs.tools.map((t: { name: string }) => t.name);
     expect(toolNames).toContain("query_running_workflows");
@@ -228,7 +228,7 @@ describe("routeViaAgentLoop", () => {
 
     await routeViaAgentLoop(event, deps);
 
-    const callArgs = mockRunAgentLoop.mock.calls[0][0];
+    const callArgs = mockRunAgentLoop.mock.calls[0]![0];
     expect(callArgs.initialMessage).toContain("evt_formatted");
     expect(callArgs.initialMessage).toContain("linear.comment.created");
     expect(callArgs.initialMessage).toContain("linear");

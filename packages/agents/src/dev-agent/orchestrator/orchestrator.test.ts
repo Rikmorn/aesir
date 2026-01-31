@@ -304,14 +304,14 @@ describe("runDevAgentOrchestrator", () => {
       // through the code path completing successfully.
     });
 
-    it("passes 14 orchestrator tools to the agent loop", async () => {
+    it("passes 13 orchestrator tools to the agent loop", async () => {
       mockCreate.mockResolvedValueOnce(mockTextResponse("Done."));
 
       await runDevAgentOrchestrator(createTestOptions());
 
       const firstCall = mockCreate.mock.calls[0] as [Record<string, unknown>];
       const tools = firstCall[0].tools as Array<{ name: string }>;
-      expect(tools).toHaveLength(14);
+      expect(tools).toHaveLength(13);
 
       // Verify key tools are present
       const toolNames = tools.map((t) => t.name);
