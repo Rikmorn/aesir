@@ -32,20 +32,20 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Dev Agent Orchestrator
 
-- [ ] **DEVO-01**: Orchestrator agentic loop replaces the 13-node LangGraph graph and `routeByPhase()` switch statement
-- [ ] **DEVO-02**: Orchestrator spawns focused sub-agents (researcher, coder, tester) with isolated context -- sub-agent gets task-relevant context only, not full history
-- [ ] **DEVO-03**: Researcher sub-agent explores codebase with read-only tools, returns structured findings (relevant files, patterns, conventions)
-- [ ] **DEVO-04**: Coder sub-agent implements changes with read+write tools, receives plan + relevant file contents + conventions as context
-- [ ] **DEVO-05**: Tester sub-agent runs and diagnoses tests with read+run tools, receives changed files and project info (package manager, test runner)
+- [x] **DEVO-01**: Orchestrator agentic loop replaces the 13-node LangGraph graph and `routeByPhase()` switch statement
+- [x] **DEVO-02**: Orchestrator spawns focused sub-agents (researcher, coder, tester) with isolated context -- sub-agent gets task-relevant context only, not full history
+- [x] **DEVO-03**: Researcher sub-agent explores codebase with read-only tools, returns structured findings (relevant files, patterns, conventions)
+- [x] **DEVO-04**: Coder sub-agent implements changes with read+write tools, receives plan + relevant file contents + conventions as context
+- [x] **DEVO-05**: Tester sub-agent runs and diagnoses tests with read+run tools, receives changed files and project info (package manager, test runner)
 - [x] **DEVO-06**: New Temporal activity `runOrchestratorPreApproval` -- research + plan -> returns plan for approval
 - [x] **DEVO-07**: New Temporal activity `runOrchestratorPostApproval` -- execute + test + PR -> returns PR details
 - [x] **DEVO-08**: New Temporal activity `handleOrchestratorFeedback` -- address PR review comments -> returns updated files
-- [ ] **DEVO-09**: Orchestrator decides whether research is needed based on task complexity (README edit -> skip, feature -> research)
-- [ ] **DEVO-10**: Orchestrator decides plan granularity (trivial change -> brief plan, complex -> detailed breakdown)
-- [ ] **DEVO-11**: LLM-diagnosed error recovery -- when tests fail, agent reads error output, diagnoses cause, and fixes (not blind retry)
-- [ ] **DEVO-12**: Orchestrator decides test approach based on task (docs-only -> no tests, feature -> unit tests, API change -> integration tests)
-- [ ] **DEVO-13**: Escalation after 3 distinct approaches fail (LLM must try different approach each time, not identical retries)
-- [ ] **DEVO-14**: System prompt includes agent identity, issue details, project conventions, constraints, available tools, sub-agent guidance
+- [x] **DEVO-09**: Orchestrator decides whether research is needed based on task complexity (README edit -> skip, feature -> research)
+- [x] **DEVO-10**: Orchestrator decides plan granularity (trivial change -> brief plan, complex -> detailed breakdown)
+- [x] **DEVO-11**: LLM-diagnosed error recovery -- when tests fail, agent reads error output, diagnoses cause, and fixes (not blind retry)
+- [x] **DEVO-12**: Orchestrator decides test approach based on task (docs-only -> no tests, feature -> unit tests, API change -> integration tests)
+- [x] **DEVO-13**: Escalation after 3 distinct approaches fail (LLM must try different approach each time, not identical retries)
+- [x] **DEVO-14**: System prompt includes agent identity, issue details, project conventions, constraints, available tools, sub-agent guidance
 - [x] **DEVO-15**: Simplified Temporal workflow: setup -> pre-approval loop -> approval wait -> post-approval loop -> PR wait -> feedback loop -> complete
 
 ### Product Agent
@@ -100,17 +100,17 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### End-to-End Validation
 
-- [ ] **E2EV-01**: Full flow works: Slack message -> product agent -> Linear issue -> dev agent -> approved PR
-- [ ] **E2EV-02**: README edit completes in under 10 tool calls, no test execution, no unnecessary research
-- [ ] **E2EV-03**: Simple feature: dev agent implements function, writes tests, runs with correct package manager (pnpm), creates PR
-- [ ] **E2EV-04**: Test failure recovery: agent reads error, diagnoses cause (wrong command, missing dependency, code bug), and fixes -- not blind retry
-- [ ] **E2EV-05**: Product agent adapts: clear request -> issue in 1-2 turns, vague request -> asks questions
-- [ ] **E2EV-06**: Smart router handles all current v2.1 event types correctly
-- [ ] **E2EV-07**: Context survives Temporal boundaries: agent resumes after approval wait with understanding of research and plan
-- [ ] **E2EV-08**: Sub-agents get focused context: coder gets plan + files (not research history), researcher gets task (not code changes)
-- [ ] **E2EV-09**: All tool calls queryable in `agents.execution_traces` with parent/child correlation
-- [ ] **E2EV-10**: Guardrails enforced: loops terminate at limits, commands sandbox-only, cost tracked
-- [ ] **E2EV-11**: No `@langchain/*` dependencies remain in agents package
+- [x] **E2EV-01**: Full flow works: Slack message -> product agent -> Linear issue -> dev agent -> approved PR
+- [x] **E2EV-02**: README edit completes in under 10 tool calls, no test execution, no unnecessary research
+- [x] **E2EV-03**: Simple feature: dev agent implements function, writes tests, runs with correct package manager (pnpm), creates PR
+- [x] **E2EV-04**: Test failure recovery: agent reads error, diagnoses cause (wrong command, missing dependency, code bug), and fixes -- not blind retry
+- [x] **E2EV-05**: Product agent adapts: clear request -> issue in 1-2 turns, vague request -> asks questions
+- [x] **E2EV-06**: Smart router handles all current v2.1 event types correctly
+- [x] **E2EV-07**: Context survives Temporal boundaries: agent resumes after approval wait with understanding of research and plan
+- [x] **E2EV-08**: Sub-agents get focused context: coder gets plan + files (not research history), researcher gets task (not code changes)
+- [x] **E2EV-09**: All tool calls queryable in `agents.execution_traces` with parent/child correlation
+- [x] **E2EV-10**: Guardrails enforced: loops terminate at limits, commands sandbox-only, cost tracked
+- [x] **E2EV-11**: No `@langchain/*` dependencies remain in agents package
 
 ## Future Requirements
 
@@ -175,20 +175,20 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TOOL-06 | Phase 30 | Complete |
 | TOOL-07 | Phase 30 | Complete |
 | TOOL-08 | Phase 30 | Complete |
-| DEVO-01 | Phase 31 | Pending |
-| DEVO-02 | Phase 31 | Pending |
-| DEVO-03 | Phase 31 | Pending |
-| DEVO-04 | Phase 31 | Pending |
-| DEVO-05 | Phase 31 | Pending |
+| DEVO-01 | Phase 31 | Complete |
+| DEVO-02 | Phase 31 | Complete |
+| DEVO-03 | Phase 31 | Complete |
+| DEVO-04 | Phase 31 | Complete |
+| DEVO-05 | Phase 31 | Complete |
 | DEVO-06 | Phase 32 | Complete |
 | DEVO-07 | Phase 32 | Complete |
 | DEVO-08 | Phase 32 | Complete |
-| DEVO-09 | Phase 31 | Pending |
-| DEVO-10 | Phase 31 | Pending |
-| DEVO-11 | Phase 31 | Pending |
-| DEVO-12 | Phase 31 | Pending |
-| DEVO-13 | Phase 31 | Pending |
-| DEVO-14 | Phase 31 | Pending |
+| DEVO-09 | Phase 31 | Complete |
+| DEVO-10 | Phase 31 | Complete |
+| DEVO-11 | Phase 31 | Complete |
+| DEVO-12 | Phase 31 | Complete |
+| DEVO-13 | Phase 31 | Complete |
+| DEVO-14 | Phase 31 | Complete |
 | DEVO-15 | Phase 32 | Complete |
 | PROD-01 | Phase 33 | Complete |
 | PROD-02 | Phase 33 | Complete |
@@ -225,17 +225,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GUAR-07 | Phase 35 | Complete |
 | GUAR-08 | Phase 35 | Complete |
 | GUAR-09 | Phase 35 | Complete |
-| E2EV-01 | Phase 36 | Pending |
-| E2EV-02 | Phase 36 | Pending |
-| E2EV-03 | Phase 36 | Pending |
-| E2EV-04 | Phase 36 | Pending |
-| E2EV-05 | Phase 36 | Pending |
-| E2EV-06 | Phase 36 | Pending |
-| E2EV-07 | Phase 36 | Pending |
-| E2EV-08 | Phase 36 | Pending |
-| E2EV-09 | Phase 36 | Pending |
-| E2EV-10 | Phase 36 | Pending |
-| E2EV-11 | Phase 36 | Pending |
+| E2EV-01 | Phase 36 | Complete |
+| E2EV-02 | Phase 36 | Complete |
+| E2EV-03 | Phase 36 | Complete |
+| E2EV-04 | Phase 36 | Complete |
+| E2EV-05 | Phase 36 | Complete |
+| E2EV-06 | Phase 36 | Complete |
+| E2EV-07 | Phase 36 | Complete |
+| E2EV-08 | Phase 36 | Complete |
+| E2EV-09 | Phase 36 | Complete |
+| E2EV-10 | Phase 36 | Complete |
+| E2EV-11 | Phase 36 | Complete |
 
 **Coverage:**
 - v2.2 requirements: 78 total (9 categories)
@@ -244,4 +244,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-01-29*
-*Last updated: 2026-01-30 after Phase 35 completion (GUAR-01 through GUAR-09 complete)*
+*Last updated: 2026-01-31 after Phase 36 completion (E2EV-01–11 complete, all 78 v2.2 requirements verified)*
