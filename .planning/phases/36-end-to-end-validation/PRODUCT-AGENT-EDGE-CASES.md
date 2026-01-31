@@ -13,12 +13,12 @@ Identified during E2E validation (2026-01-31). Tracked for resolution now or in 
 - **Files:** `packages/agents/src/product-agent/orchestrator/orchestrator.ts` (compactConversationHistory), `orchestrator.test.ts` (11 unit tests)
 
 ### 2. Unescaped XML in conversation history
-- **Status:** [ ] Open
+- **Status:** [x] Done
 - **Component:** Orchestrator (`orchestrator.ts`)
 - **Trigger:** History injected inside `<conversation_history>` tags without escaping. User message like "I need a `<button>` component" breaks XML structure.
 - **Impact:** Agent misparses history or treats user content as system instructions. Could cause unpredictable behavior.
-- **Fix:** Escape XML entities in history content, or switch to a non-XML delimiter (e.g., markdown headers, `---` separators).
-- **Files:** `packages/agents/src/product-agent/orchestrator/orchestrator.ts` (line 139)
+- **Resolution:** Added `escapeXml()` helper that escapes `&`, `<`, `>` in message content. Applied via `formatMessage()` at all 5 history formatting sites (passthrough, compaction input, compaction fallback, compaction success, and the success path). Also escapes old agent phase tags in history so they aren't misinterpreted as current directives.
+- **Files:** `packages/agents/src/product-agent/orchestrator/orchestrator.ts` (escapeXml, formatMessage), `orchestrator.test.ts` (6 escapeXml tests + 5 integration tests)
 
 ## Medium Priority
 

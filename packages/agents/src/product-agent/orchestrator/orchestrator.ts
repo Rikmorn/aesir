@@ -86,6 +86,28 @@ export interface ProductAgentOptions {
 type HistoryMessage = { role: "user" | "assistant"; content: string };
 
 /**
+ * Escape XML-special characters in user/agent message content.
+ *
+ * History is injected inside XML-tagged sections (<conversation_history>,
+ * <conversation_summary>). Without escaping, user messages containing XML
+ * (e.g., "<button>", "</conversation_history>", "<phase>complete</phase>")
+ * could break the tag structure or be misinterpreted as system directives.
+ */
+export function escapeXml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/**
+ * Format a history message with role label and escaped content.
+ */
+function formatMessage(m: HistoryMessage): string {
+  return `${m.role === "user" ? "User" : "Agent"}: ${escapeXml(m.content)}`;
+}
+
+/**
  * Number of recent messages to keep verbatim.
  * 12 messages ≈ 6 user/agent exchanges — enough for the agent to follow
  * the current thread of conversation without needing the summary.
@@ -143,9 +165,7 @@ export async function compactConversationHistory(
 ): Promise<{ formatted: string; compacted: boolean }> {
   // Below threshold — pass through as-is
   if (history.length < COMPACTION_THRESHOLD) {
-    const formatted = history
-      .map((m) => `${m.role === "user" ? "User" : "Agent"}: ${m.content}`)
-      .join("\n\n");
+    const formatted = history.map(formatMessage).join("\n\n");
     return { formatted, compacted: false };
   }
 
@@ -167,9 +187,7 @@ export async function compactConversationHistory(
   let summary: string;
   try {
     const client = anthropicClient ?? new Anthropic({ maxRetries: 2 });
-    const olderText = olderMessages
-      .map((m) => `${m.role === "user" ? "User" : "Agent"}: ${m.content}`)
-      .join("\n\n");
+    const olderText = olderMessages.map(formatMessage).join("\n\n");
 
     const response = await client.messages.create({
       model: COMPACTION_MODEL,
@@ -196,9 +214,7 @@ export async function compactConversationHistory(
       "Conversation history compaction failed, falling back to recent messages only",
     );
 
-    const recentFormatted = recentMessages
-      .map((m) => `${m.role === "user" ? "User" : "Agent"}: ${m.content}`)
-      .join("\n\n");
+    const recentFormatted = recentMessages.map(formatMessage).join("\n\n");
 
     return {
       formatted: `[${olderMessages.length} earlier messages could not be summarized and were omitted]\n\n${recentFormatted}`,
@@ -207,9 +223,7 @@ export async function compactConversationHistory(
   }
 
   // Combine summary + recent verbatim messages
-  const recentFormatted = recentMessages
-    .map((m) => `${m.role === "user" ? "User" : "Agent"}: ${m.content}`)
-    .join("\n\n");
+  const recentFormatted = recentMessages.map(formatMessage).join("\n\n");
 
   const formatted = `<conversation_summary>\nSummary of ${olderMessages.length} earlier messages:\n${summary}\n</conversation_summary>\n\nRecent messages:\n${recentFormatted}`;
 

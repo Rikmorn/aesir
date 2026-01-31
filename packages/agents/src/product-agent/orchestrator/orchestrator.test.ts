@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
-import { compactConversationHistory } from "./orchestrator.js";
+import { compactConversationHistory, escapeXml } from "./orchestrator.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -229,5 +229,121 @@ describe("compactConversationHistory", () => {
       expect(compacted).toBe(true);
       expect(formatted).toContain("could not be summarized");
     });
+  });
+
+  describe("XML escaping in formatted output", () => {
+    it("escapes XML in user messages below threshold", async () => {
+      const history: HistoryMessage[] = [
+        { role: "user", content: "I need a <button> component" },
+        { role: "assistant", content: "Sure, I can help with that" },
+      ];
+      const { formatted } = await compactConversationHistory(
+        history,
+        mockLogger,
+      );
+
+      expect(formatted).toContain("&lt;button&gt;");
+      expect(formatted).not.toContain("<button>");
+    });
+
+    it("escapes closing XML tags that could break structure", async () => {
+      const history: HistoryMessage[] = [
+        {
+          role: "user",
+          content: "Use </conversation_history> in the template",
+        },
+        { role: "assistant", content: "Noted" },
+      ];
+      const { formatted } = await compactConversationHistory(
+        history,
+        mockLogger,
+      );
+
+      expect(formatted).toContain("&lt;/conversation_history&gt;");
+      expect(formatted).not.toContain("</conversation_history>");
+    });
+
+    it("escapes phase tags in history to prevent misinterpretation", async () => {
+      const history: HistoryMessage[] = [
+        { role: "user", content: "test" },
+        {
+          role: "assistant",
+          content: "reasoning here <phase>complete</phase>",
+        },
+      ];
+      const { formatted } = await compactConversationHistory(
+        history,
+        mockLogger,
+      );
+
+      expect(formatted).toContain("&lt;phase&gt;complete&lt;/phase&gt;");
+      expect(formatted).not.toContain("<phase>");
+    });
+
+    it("escapes ampersands to prevent double-escaping issues", async () => {
+      const history: HistoryMessage[] = [
+        { role: "user", content: "Tom & Jerry use <div>" },
+        { role: "assistant", content: "Got it" },
+      ];
+      const { formatted } = await compactConversationHistory(
+        history,
+        mockLogger,
+      );
+
+      expect(formatted).toContain("Tom &amp; Jerry use &lt;div&gt;");
+    });
+
+    it("escapes XML in recent messages after compaction", async () => {
+      const history = createHistory(9); // 18 messages, over threshold
+      // Replace the last user message with XML content
+      history[history.length - 2] = {
+        role: "user",
+        content: "Add <input type='text' /> to the form",
+      };
+      const mockClient = createMockAnthropicClient();
+      const { formatted } = await compactConversationHistory(
+        history,
+        mockLogger,
+        mockClient,
+      );
+
+      // Angle brackets must be escaped (single quotes are safe in XML context)
+      expect(formatted).not.toMatch(/<input/);
+      expect(formatted).toContain("&lt;input type='text' /&gt;");
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// escapeXml unit tests
+// ---------------------------------------------------------------------------
+
+describe("escapeXml", () => {
+  it("escapes angle brackets", () => {
+    expect(escapeXml("<div>hello</div>")).toBe("&lt;div&gt;hello&lt;/div&gt;");
+  });
+
+  it("escapes ampersands", () => {
+    expect(escapeXml("Tom & Jerry")).toBe("Tom &amp; Jerry");
+  });
+
+  it("escapes ampersands before angle brackets (order matters)", () => {
+    expect(escapeXml("&lt;already escaped&gt;")).toBe(
+      "&amp;lt;already escaped&amp;gt;",
+    );
+  });
+
+  it("leaves plain text unchanged", () => {
+    expect(escapeXml("hello world 123")).toBe("hello world 123");
+  });
+
+  it("handles empty string", () => {
+    expect(escapeXml("")).toBe("");
+  });
+
+  it("escapes mixed content", () => {
+    expect(escapeXml("if (a < b && c > d) {}")).toBe(
+      "if (a &lt; b &amp;&amp; c &gt; d) {}",
+    );
   });
 });
