@@ -515,21 +515,21 @@ describe("end-to-end validation", () => {
       // E2EV-04: A tester was spawned AFTER the second coder
       // (verifying the fix, not just blind retry of same code)
 
-      // Get the ordered list of all spawn_agent calls
-      const allSpawnCallInputs = mockOnToolCall.mock.calls
-        .filter(
-          (call: [{ name: string; input: unknown }]) =>
-            call[0].name === "spawn_agent",
-        )
-        .map((call: [{ name: string; input: { agentType: string } }]) => ({
-          agentType: call[0].input.agentType,
+      // Get the ordered list of all spawn_agent calls from the trace callback
+      const rawCalls = mockOnToolCall.mock.calls as Array<
+        [{ name: string; input: unknown; id: string }]
+      >;
+      const allSpawnCallInputs = rawCalls
+        .filter((call) => call[0].name === "spawn_agent")
+        .map((call) => ({
+          agentType: (call[0].input as { agentType: string }).agentType,
         }));
 
       // Find the index of the second coder spawn and verify a tester follows
       let secondCoderIdx = -1;
       let coderCount = 0;
       for (let i = 0; i < allSpawnCallInputs.length; i++) {
-        if (allSpawnCallInputs[i].agentType === "coder") {
+        if (allSpawnCallInputs[i]?.agentType === "coder") {
           coderCount++;
           if (coderCount === 2) {
             secondCoderIdx = i;
