@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 38 of 47 (Agent and Tool Registries)
-Plan: 1 of 4 in current phase
+Plan: 2 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-01 — Completed 38-01-PLAN.md (Framework types + ToolRegistry)
+Last activity: 2026-02-01 — Completed 38-02-PLAN.md (Agent definition extraction)
 
-Progress: [████░░░░░░] ~13% (4/~30 estimated plans)
+Progress: [████░░░░░░] ~17% (5/~30 estimated plans)
 
 ## Milestone History
 
@@ -28,16 +28,16 @@ Progress: [████░░░░░░] ~13% (4/~30 estimated plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4 (v2.3)
-- Average duration: 6m15s
-- Total execution time: 25m
+- Total plans completed: 5 (v2.3)
+- Average duration: 6m30s
+- Total execution time: 32m31s
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 37 | 3/3 | 20m09s | 6m43s |
-| 38 | 1/4 | 4m50s | 4m50s |
+| 38 | 2/4 | 12m21s | 6m11s |
 
 *Updated after each plan completion*
 
@@ -60,6 +60,8 @@ v2.3 decisions:
 - ToolContext uses optional DevContainerManager and taskId -- not all agents need containers
 - ToolRegistry reports ALL missing refs on resolve failure -- better developer experience than failing on first
 - AgentDefinitionYamlSchema version is z.string() -- avoids YAML numeric coercion issues
+- Agent definitions store unescaped prompt text in prompt.md -- files contain actual LLM-visible text, not TypeScript encoding
+- Sub-agent tokenBudget set to standalone values (100k) -- v2.3 executor overrides with parent shared budget when spawning
 
 ### Pending Todos
 
@@ -77,9 +79,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: Completed 38-01-PLAN.md (Framework types + ToolRegistry implementation + 14 unit tests)
+Stopped at: Completed 38-02-PLAN.md (Agent definition extraction -- 5 agents, 10 files)
 Resume file: None
-Next action: Execute 38-02-PLAN.md (AgentRegistry implementation)
+Next action: Execute 38-03-PLAN.md (AgentRegistry implementation)
 
 ---
-*Updated: 2026-02-01 — Completed plan 38-01*
+*Updated: 2026-02-01 — Completed plan 38-02*
