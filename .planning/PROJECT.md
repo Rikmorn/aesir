@@ -8,6 +8,19 @@ An agentic development platform that automates software development workflows �
 
 End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
+## Current Milestone: v2.3 Unified Agent Framework
+
+**Goal:** Replace per-agent services, Temporal workflow state machines, and fragmented persistence with a unified agent framework where agents are declarative config, conversations are the execution primitive, and a single event log provides ground truth.
+
+**Target features:**
+- Declarative agent definitions (YAML + prompt.md) replacing hardcoded orchestrator code
+- Unified event log replacing three disconnected persistence stores
+- ConversationExecutor replacing Temporal workflows for pause/resume/signal routing
+- Full conversation history with three-phase compaction (tool pruning → anchored summary → agent memory)
+- Single agent service replacing per-agent HTTP servers and Temporal workers
+- Agent/Tool registries for zero-infrastructure-change agent additions
+- Generalized event/signal system with adapters and signal queueing
+
 ## Current State
 
 **Version:** v2.2 Agentic Architecture shipped (2026-01-31)
@@ -92,7 +105,19 @@ Smart Router (port 3006)
 
 ### Active
 
-**Next milestone (TBD):**
+**v2.3 Unified Agent Framework:**
+- [ ] Declarative agent definitions (YAML config + prompt.md files)
+- [ ] Unified event log replacing execution_traces, tasks, context_snapshots
+- [ ] ConversationExecutor with pause/resume/signal routing (replaces Temporal workflows)
+- [ ] Three-phase history management (tool pruning → anchored summary → future: agent memory)
+- [ ] Agent registry + tool registry with namespace-based resolution
+- [ ] Single agent service replacing per-agent HTTP servers
+- [ ] Generalized signal handling with adapters and signal queueing
+- [ ] wait_for tool for agent-controlled pause/resume
+- [ ] Smart router adapted from Temporal to ConversationExecutor
+- [ ] Remove Temporal dependency, per-agent services, old persistence stores
+
+**Deferred:**
 - [ ] CI/CD pipeline for deployment
 - [ ] Monitoring and alerting for agent health
 - [ ] Multi-environment configuration (dev/staging/prod)
@@ -121,9 +146,9 @@ Smart Router (port 3006)
 - Agent-first problem solving: fix agent behavior via prompts and tools, not deterministic overrides
 
 **Known Tech Debt (from v2.2):**
-- tool_result trace type not recorded (runAgentLoop lacks onToolResult callback)
-- dev-agent/classification/approval.ts dead code (absorbed into router, file not deleted)
-- Context snapshot JSONB fields have no size limits
+- tool_result trace type not recorded (runAgentLoop lacks onToolResult callback) — addressed by event log
+- dev-agent/classification/approval.ts dead code (absorbed into router, file not deleted) — deleted in v2.3
+- Context snapshot JSONB fields have no size limits — replaced by event log in v2.3
 - 4 pre-existing test failures, 11 tests skipped pending infrastructure
 
 ## Constraints
@@ -170,4 +195,4 @@ Lessons learned during development that guide future phases.
 | Prompts are first-class code | System prompts are the primary control surface for agent behavior. Test prompt changes against real scenarios. |
 
 ---
-*Last updated: 2026-02-01 after v2.2 milestone*
+*Last updated: 2026-02-01 after v2.3 milestone started*
