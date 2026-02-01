@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.3 Unified Agent Framework — Phase 37 ready to plan
+**Current focus:** v2.3 Unified Agent Framework — Phase 37 in progress
 
 ## Current Position
 
 Phase: 37 of 47 (Database Schema + Event Log Core)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-02-01 — Roadmap created (11 phases, 57 requirements mapped)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-01 — Completed 37-01-PLAN.md (schema, migration, framework types)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] ~3% (1/~30 estimated plans)
 
 ## Milestone History
 
@@ -28,15 +28,15 @@ Progress: [░░░░░░░░░░] 0%
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0 (v2.3)
-- Average duration: -
-- Total execution time: -
+- Total plans completed: 1 (v2.3)
+- Average duration: 4m39s
+- Total execution time: 4m39s
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 37 | 1/3 | 4m39s | 4m39s |
 
 *Updated after each plan completion*
 
@@ -51,6 +51,8 @@ v2.3 decisions:
 - pg-boss for timeout scheduling only -- delayed signal delivery is a pure delayed-job problem
 - JSONB messages column with persist-at-boundaries strategy -- avoids write amplification
 - Gapless sequences per conversation (MAX(sequence) + 1) -- one loop at a time per conversation makes this safe
+- Executor columns (claimed_by, claimed_at, last_heartbeat_at) added to conversations table in 37-01 migration -- avoids second migration in Phase 40
+- ArtifactExtractionConfig uses Map<string, ArtifactExtractor> with payloadPath -- keeps Phase 37 independent of Phase 38 ToolRegistry
 
 ### Pending Todos
 
@@ -68,9 +70,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: Roadmap created for v2.3 (Phases 37-47, 11 phases, 57 requirements)
+Stopped at: Completed 37-01-PLAN.md (schema, migration, framework types)
 Resume file: None
-Next action: Plan Phase 37 (Database Schema + Event Log Core)
+Next action: Execute 37-02-PLAN.md (EventLog service implementation)
 
 ---
-*Updated: 2026-02-01 — v2.3 roadmap created*
+*Updated: 2026-02-01 — Completed plan 37-01*

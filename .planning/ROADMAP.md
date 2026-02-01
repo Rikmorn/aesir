@@ -41,7 +41,7 @@ v2.3 replaces Temporal workflow orchestration, per-agent services, and fragmente
   4. agent_sessions projection reactively updates status, timing, and ground-truth artifacts (PR URLs, branch names) extracted from tool.succeeded events
 **Plans**: 3 plans
 Plans:
-- [ ] 37-01-PLAN.md -- Database schema (3 tables), migration, ID prefixes, framework type interfaces
+- [x] 37-01-PLAN.md -- Database schema (3 tables), migration, ID prefixes, framework type interfaces
 - [ ] 37-02-PLAN.md -- EventLog service (buffered writes, gapless sequences, subscribe) + tests
 - [ ] 37-03-PLAN.md -- SessionProjection service (reactive event subscription, artifact extraction) + tests
 
@@ -180,7 +180,7 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
-| 37. Database Schema + Event Log Core | 0/3 | Planned | - |
+| 37. Database Schema + Event Log Core | 1/3 | In progress | - |
 | 38. Agent and Tool Registries | 0/TBD | Not started | - |
 | 39. History Manager | 0/TBD | Not started | - |
 | 40. Conversation Executor | 0/TBD | Not started | - |
@@ -194,4 +194,4 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 
 ---
 *Roadmap created: 2026-02-01*
-*Last updated: 2026-02-01*
+*Last updated: 2026-02-01 -- Plan 37-01 complete*
