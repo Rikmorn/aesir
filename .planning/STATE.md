@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.3 Unified Agent Framework — Phase 38 complete, Phase 39 next
+**Current focus:** v2.3 Unified Agent Framework — Phase 39 plan 01 complete, plan 02 next
 
 ## Current Position
 
-Phase: 38 of 47 (Agent and Tool Registries)
-Plan: 4 of 4 in current phase
-Status: Phase complete
-Last activity: 2026-02-01 — Completed 38-04-PLAN.md (Tool factory registration)
+Phase: 39 of 47 (History Manager)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-01 — Completed 39-01-PLAN.md (Phase 1 pruning pipeline)
 
-Progress: [████░░░░░░] ~23% (7/~30 estimated plans)
+Progress: [████░░░░░░] ~27% (8/~30 estimated plans)
 
 ## Milestone History
 
@@ -28,9 +28,9 @@ Progress: [████░░░░░░] ~23% (7/~30 estimated plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7 (v2.3)
-- Average duration: 5m52s
-- Total execution time: 41m09s
+- Total plans completed: 8 (v2.3)
+- Average duration: 6m28s
+- Total execution time: 51m42s
 
 **By Phase:**
 
@@ -38,6 +38,7 @@ Progress: [████░░░░░░] ~23% (7/~30 estimated plans)
 |-------|-------|-------|----------|
 | 37 | 3/3 | 20m09s | 6m43s |
 | 38 | 4/4 | 20m59s | 5m15s |
+| 39 | 1/2 | 10m33s | 10m33s |
 
 *Updated after each plan completion*
 
@@ -66,6 +67,8 @@ v2.3 decisions:
 - AgentRegistry version mismatch returns cached definition with warning -- file-based registry only stores latest version
 - MCP adapter uses create-all-then-find pattern -- preserves v2.2 batch factory compatibility without modifying existing tool files
 - spawn_agent placeholder does NOT use createSpawnAgentTool -- Phase 40 replaces with ConversationExecutor-backed implementation
+- structuredClone for deep-cloning messages in history manager -- correctness over performance
+- Tool tier classification by name prefix rather than configurable map -- simpler, sufficient for v2.3
 
 ### Pending Todos
 
@@ -83,9 +86,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: Completed 38-04-PLAN.md (Tool factory registration -- 28 factories, 16 tests)
+Stopped at: Completed 39-01-PLAN.md (Phase 1 pruning pipeline -- 24 tests, 665 lines)
 Resume file: None
-Next action: Phase 38 complete. Next is Phase 39 (History Manager) research + planning.
+Next action: Phase 39 plan 02 (Phase 2 summarization)
 
 ---
-*Updated: 2026-02-01 — Completed plan 38-04, Phase 38 complete*
+*Updated: 2026-02-01 — Completed plan 39-01, Phase 1 pruning pipeline*
