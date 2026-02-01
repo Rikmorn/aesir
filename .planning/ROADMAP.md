@@ -57,7 +57,12 @@ Plans:
   3. dev-agent, product-agent, and sub-agents (researcher, coder, tester) exist as declarative definitions replacing hardcoded orchestrator code
   4. ToolRegistry resolves tools by namespace:tool_name convention via factory functions that receive ToolContext (agentId, correlationId, containerManager)
   5. AgentRegistry uses mtime-based cache invalidation, and running conversations remain pinned to the definition version they started with
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 38-01-PLAN.md -- Framework types (AgentDefinition schema, registry interfaces) + ToolRegistry implementation + tests
+- [ ] 38-02-PLAN.md -- Agent definition data files (5 YAML + 5 prompt.md for all agents)
+- [ ] 38-03-PLAN.md -- AgentRegistry implementation (YAML loading, mtime cache, Zod validation) + tests
+- [ ] 38-04-PLAN.md -- Tool factory registration (28 factories for all tools) + tests
 
 ### Phase 39: History Manager
 **Goal**: Framework-level conversation compaction that all agents get via config -- Phase 1 pruning replaces old tool outputs with descriptors, Phase 2 structured summarization injects ground-truth artifacts
@@ -181,7 +186,7 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
 | 37. Database Schema + Event Log Core | 3/3 | Complete | 2026-02-01 |
-| 38. Agent and Tool Registries | 0/TBD | Not started | - |
+| 38. Agent and Tool Registries | 0/4 | Not started | - |
 | 39. History Manager | 0/TBD | Not started | - |
 | 40. Conversation Executor | 0/TBD | Not started | - |
 | 41. Timeout Scheduling | 0/TBD | Not started | - |
@@ -194,4 +199,4 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 
 ---
 *Roadmap created: 2026-02-01*
-*Last updated: 2026-02-01 -- Phase 37 complete (3/3 plans)*
+*Last updated: 2026-02-01 -- Phase 38 planned (4 plans)*
