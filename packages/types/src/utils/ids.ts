@@ -22,8 +22,14 @@ const nanoid = customAlphabet(
  * const id = createId.execution();  // "exec_def456..."
  */
 export const createId = {
+  /** Agent event ID (agents.agent_events) */
+  agentEvent: () => `aevt_${nanoid()}`,
+
   /** Agent instance ID (for spawn_agent sub-agent tracking) */
   agentInstance: () => `ainst_${nanoid()}`,
+
+  /** Agent session ID (agents.agent_sessions) */
+  agentSession: () => `sess_${nanoid()}`,
 
   /** Agent task ID (agents.tasks) */
   agentTask: () => `atask_${nanoid()}`,
@@ -33,6 +39,9 @@ export const createId = {
 
   /** Context snapshot ID (agents.context_snapshots) */
   contextSnapshot: () => `ctx_${nanoid()}`,
+
+  /** Conversation ID (agents.conversations) */
+  conversation: () => `conv_${nanoid()}`,
 
   /** Credential ID (integrations.credentials) */
   credential: () => `cred_${nanoid()}`,

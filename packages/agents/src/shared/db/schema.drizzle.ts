@@ -15,6 +15,7 @@ import {
   pgSchema,
   text,
   timestamp,
+  unique,
 } from "drizzle-orm/pg-core";
 import { customAlphabet } from "nanoid";
 
@@ -45,6 +46,34 @@ const traceTypeValues = [
   "llm_response",
   "agent_spawn",
   "agent_complete",
+] as const;
+
+const conversationStatusValues = [
+  "queued",
+  "running",
+  "waiting",
+  "completed",
+  "failed",
+  "cancelled",
+] as const;
+
+const agentEventTypeValues = [
+  "tool.called",
+  "tool.succeeded",
+  "tool.failed",
+  "llm.response",
+  "agent.started",
+  "agent.completed",
+  "agent.paused",
+  "agent.resumed",
+  "signal.received",
+] as const;
+
+const sessionStatusValues = [
+  "running",
+  "waiting",
+  "completed",
+  "failed",
 ] as const;
 
 export const contextSnapshots = agentsSchema.table(
@@ -162,3 +191,87 @@ export const executionTraces = agentsSchema.table(
     index("execution_traces_workflow_idx").on(table.workflow_id),
   ],
 );
+
+// ─── Conversations ───────────────────────────────────────────────────────────
+
+export const conversations = agentsSchema.table(
+  "conversations",
+  {
+    id: text("id").primaryKey(),
+    agent_definition_id: text("agent_definition_id").notNull(),
+    agent_definition_version: text("agent_definition_version").notNull(),
+    messages: jsonb("messages").notNull().default([]),
+    status: text("status", { enum: conversationStatusValues })
+      .notNull()
+      .default("queued"),
+    pending_wait: jsonb("pending_wait"),
+    queued_signals: jsonb("queued_signals").notNull().default([]),
+    claimed_by: text("claimed_by"),
+    claimed_at: timestamp("claimed_at", { withTimezone: true }),
+    last_heartbeat_at: timestamp("last_heartbeat_at", { withTimezone: true }),
+    created_at: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updated_at: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("idx_conversations_status").on(table.status),
+    index("idx_conversations_definition").on(table.agent_definition_id),
+  ],
+);
+
+// ─── Agent Events ────────────────────────────────────────────────────────────
+
+export const agentEvents = agentsSchema.table(
+  "agent_events",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => `aevt_${nanoid()}`),
+    conversation_id: text("conversation_id").notNull(),
+    agent_definition_id: text("agent_definition_id").notNull(),
+    agent_definition_version: text("agent_definition_version").notNull(),
+    agent_instance_id: text("agent_instance_id").notNull(),
+    parent_instance_id: text("parent_instance_id"),
+    sequence: integer("sequence").notNull(),
+    type: text("type", { enum: agentEventTypeValues }).notNull(),
+    payload: jsonb("payload").notNull().default({}),
+    timestamp: timestamp("timestamp", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    token_count_input: integer("token_count_input"),
+    token_count_output: integer("token_count_output"),
+    duration_ms: integer("duration_ms"),
+  },
+  (table) => [
+    unique("uq_agent_events_conv_seq").on(
+      table.conversation_id,
+      table.sequence,
+    ),
+    index("idx_agent_events_conversation").on(
+      table.conversation_id,
+      table.sequence,
+    ),
+    index("idx_agent_events_type").on(table.type),
+    index("idx_agent_events_instance").on(table.agent_instance_id),
+  ],
+);
+
+// ─── Agent Sessions ──────────────────────────────────────────────────────────
+
+export const agentSessions = agentsSchema.table("agent_sessions", {
+  conversation_id: text("conversation_id").primaryKey(),
+  agent_definition_id: text("agent_definition_id").notNull(),
+  status: text("status", { enum: sessionStatusValues }).notNull(),
+  last_event_type: text("last_event_type").notNull(),
+  last_event_at: timestamp("last_event_at", { withTimezone: true }).notNull(),
+  artifacts: jsonb("artifacts").notNull().default({}),
+  started_at: timestamp("started_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updated_at: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

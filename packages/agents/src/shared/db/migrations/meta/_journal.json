@@ -8,6 +8,13 @@
       "when": 1738108800000,
       "tag": "0000_create_agents_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1738368000000,
+      "tag": "0001_add_v23_tables",
+      "breakpoints": true
     }
   ]
 }
