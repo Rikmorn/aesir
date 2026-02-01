@@ -14,7 +14,7 @@ v2.3 replaces Temporal workflow orchestration, per-agent services, and fragmente
 
 ## Phases
 
-- [ ] **Phase 37: Database Schema + Event Log Core** - Persistence layer for conversations, events, and session projections
+- [x] **Phase 37: Database Schema + Event Log Core** - Persistence layer for conversations, events, and session projections
 - [ ] **Phase 38: Agent and Tool Registries** - Declarative agent definitions loaded from YAML + prompt.md with factory-based tool resolution
 - [ ] **Phase 39: History Manager** - Three-phase conversation compaction with tool pruning and structured summarization
 - [ ] **Phase 40: Conversation Executor** - Postgres-backed durable executor replacing Temporal workflows
@@ -42,8 +42,8 @@ v2.3 replaces Temporal workflow orchestration, per-agent services, and fragmente
 **Plans**: 3 plans
 Plans:
 - [x] 37-01-PLAN.md -- Database schema (3 tables), migration, ID prefixes, framework type interfaces
-- [ ] 37-02-PLAN.md -- EventLog service (buffered writes, gapless sequences, subscribe) + tests
-- [ ] 37-03-PLAN.md -- SessionProjection service (reactive event subscription, artifact extraction) + tests
+- [x] 37-02-PLAN.md -- EventLog service (buffered writes, gapless sequences, subscribe) + tests
+- [x] 37-03-PLAN.md -- SessionProjection service (reactive event subscription, artifact extraction) + tests
 
 ### Phase 38: Agent and Tool Registries
 **Goal**: Agents defined as YAML config + prompt.md files loaded by registries, with factory-based tool resolution -- adding a new agent requires only a new definition directory
@@ -180,7 +180,7 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
-| 37. Database Schema + Event Log Core | 1/3 | In progress | - |
+| 37. Database Schema + Event Log Core | 3/3 | Complete | 2026-02-01 |
 | 38. Agent and Tool Registries | 0/TBD | Not started | - |
 | 39. History Manager | 0/TBD | Not started | - |
 | 40. Conversation Executor | 0/TBD | Not started | - |
@@ -194,4 +194,4 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 
 ---
 *Roadmap created: 2026-02-01*
-*Last updated: 2026-02-01 -- Plan 37-01 complete*
+*Last updated: 2026-02-01 -- Phase 37 complete (3/3 plans)*
