@@ -37,7 +37,7 @@ v2.3 replaces Temporal workflow orchestration, per-agent services, and fragmente
 **Success Criteria** (what must be TRUE):
   1. Drizzle migration creates conversations, agent_events, and agent_sessions tables in a new schema
   2. EventLog appends events with gapless per-conversation sequences and correct event types (tool.called, tool.succeeded, tool.failed, llm.response, agent.started, agent.completed, agent.paused, agent.resumed, signal.received)
-  3. Buffered batch INSERT flushes events at configurable intervals, with synchronous flush at lifecycle boundaries (pause, complete, fail)
+  3. Buffered writes flush events at configurable intervals, with synchronous flush at lifecycle boundaries (pause, complete, fail)
   4. agent_sessions projection reactively updates status, timing, and ground-truth artifacts (PR URLs, branch names) extracted from tool.succeeded events
 **Plans**: TBD
 

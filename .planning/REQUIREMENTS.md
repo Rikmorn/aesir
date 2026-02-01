@@ -22,7 +22,7 @@ Requirements for v2.3 milestone. Each maps to roadmap phases starting at Phase 3
 
 - [ ] **EVT-01**: Append-only agent_events table with conversation-scoped gapless sequences
 - [ ] **EVT-02**: Event types: tool.called, tool.succeeded, tool.failed, llm.response, agent.started, agent.completed, agent.paused, agent.resumed, signal.received
-- [ ] **EVT-03**: Buffered batch INSERT with configurable flush interval
+- [ ] **EVT-03**: Buffered writes with configurable flush interval
 - [ ] **EVT-04**: Synchronous flush at lifecycle boundaries (pause, complete, fail) — no data loss on crash
 - [ ] **EVT-05**: agent_sessions projection table reactively updated from events (artifacts, status, timing)
 - [ ] **EVT-06**: Session projection extracts ground-truth artifacts (PR URLs, branch names) from tool.succeeded events
@@ -119,13 +119,12 @@ Explicitly excluded. Documented to prevent scope creep.
 
 | Feature | Reason |
 |---------|--------|
-| Full event sourcing library | Append-only table with ~200 lines is sufficient; library adds complexity without benefit |
-| Generic job queue for executor | Conversation semantics (signal queueing, wait type matching) don't map to generic job abstractions |
-| Multiple worker processes | Single-process with concurrent loops handles 1-50 conversations; multi-process is premature |
-| Event-driven worker wakeup | Polling is acceptable at current scale (1-5 conversations); event-driven push is a future optimization |
+| Full event sourcing library | Append-only store with ~200 lines is sufficient; library adds complexity without benefit |
 | UI for agent definition management | Code/config first philosophy; file-based definitions are sufficient |
 | Streaming LLM responses | Non-streaming is appropriate for backend agents; streaming adds complexity without benefit |
 | Parallel sub-agents | Sequential sub-agent execution is sufficient; parallel adds concurrency complexity |
+
+**Implementation note:** v2.3 uses PostgreSQL as the backing store for all interfaces (EventLog, ConversationExecutor, SessionProjection). This is a convenience decision — Postgres is already in the stack and handles Aesir's current scale. The interfaces are designed to be backing-store agnostic; if a different technology makes sense for a subsystem later, the abstraction accommodates it.
 
 ## Traceability
 
