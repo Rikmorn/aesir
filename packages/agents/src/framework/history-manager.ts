@@ -4,6 +4,8 @@
  * Implements token-aware history compaction for agent conversations.
  * Phase 1: Token estimation, protected boundary, file read deduplication,
  * head+tail truncation, and tool-type-tiered descriptor replacement.
+ * Phase 2: LLM-generated structured summarization with ground-truth
+ * artifact injection, summary detection and merge.
  *
  * Based on JetBrains NeurIPS 2025 research: replacing old tool results
  * with descriptors preserves assistant reasoning while dramatically
@@ -14,6 +16,8 @@
  * - NEVER prunes assistant text blocks (only tool_result content)
  * - Protected boundary never splits tool_use/tool_result pairs
  * - File reads deduplicated by path (most recent kept)
+ * - Single summary block: existing summaries replaced (merged), not nested
+ * - Artifacts injected verbatim from session projection as structured data
  */
 
 import type { PinoLogger } from "@aesir/platform";
@@ -57,12 +61,13 @@ export interface HistoryManager {
   /**
    * Compact a conversation's message history.
    *
-   * Phase 1 (this plan): Token estimation + descriptor replacement.
-   * Phase 2 (plan 02): Summarization when Phase 1 is insufficient.
+   * Pipeline: estimate -> Phase 1 prune -> re-estimate -> Phase 2 summarize (if needed).
+   * Phase 1: Token estimation + descriptor replacement for old tool results.
+   * Phase 2: LLM-generated structured summarization with artifact grounding.
    *
    * @param messages - Conversation messages (never mutated)
    * @param config - History management configuration
-   * @param options - Optional dependencies for Phase 2
+   * @param options - Optional dependencies for Phase 2 (anthropicClient, artifacts)
    * @returns Compaction result with phase, tokens, and savings
    */
   compact(
@@ -581,6 +586,189 @@ function applyPhase1Pruning(
   return cloned;
 }
 
+// ─── Phase 2: Artifact Formatting ─────────────────────────────────────────
+
+/**
+ * Format artifacts as a readable list for the summary prompt.
+ *
+ * If empty, returns a placeholder string so the LLM knows
+ * no artifacts have been recorded yet.
+ *
+ * @param artifacts - Key-value map from session projection
+ * @returns Formatted string for inclusion in summary prompt
+ */
+export function formatArtifacts(artifacts: Record<string, string>): string {
+  const entries = Object.entries(artifacts);
+  if (entries.length === 0) {
+    return "(no artifacts recorded yet)";
+  }
+  return entries.map(([key, value]) => `- **${key}**: ${value}`).join("\n");
+}
+
+// ─── Phase 2: Summary Detection ──────────────────────────────────────────
+
+/**
+ * Detect whether any message contains a `<summary>` block.
+ *
+ * Scans from the START of the messages array for a user message
+ * whose text content contains `<summary>` tags.
+ *
+ * @param messages - Messages to scan
+ * @returns Whether a summary was found and its index (-1 if not)
+ */
+export function containsSummary(messages: Anthropic.MessageParam[]): {
+  hasSummary: boolean;
+  summaryIndex: number;
+} {
+  for (let i = 0; i < messages.length; i++) {
+    const message = messages[i];
+    if (!message || message.role !== "user") continue;
+
+    if (typeof message.content === "string") {
+      if (message.content.includes("<summary>")) {
+        return { hasSummary: true, summaryIndex: i };
+      }
+      continue;
+    }
+
+    if (Array.isArray(message.content)) {
+      for (const block of message.content) {
+        if (
+          block.type === "text" &&
+          (block as Anthropic.TextBlockParam).text.includes("<summary>")
+        ) {
+          return { hasSummary: true, summaryIndex: i };
+        }
+      }
+    }
+  }
+
+  return { hasSummary: false, summaryIndex: -1 };
+}
+
+// ─── Phase 2: Message Serialization ──────────────────────────────────────
+
+/**
+ * Serialize messages into a readable text representation for the summary prompt.
+ *
+ * Produces a human-readable transcript that the summary LLM can comprehend.
+ * Not token-efficient -- readability matters for summary quality.
+ *
+ * @param messages - Messages to serialize
+ * @returns Readable text representation
+ */
+function serializeMessagesForSummary(
+  messages: Anthropic.MessageParam[],
+): string {
+  const lines: string[] = [];
+
+  for (const message of messages) {
+    if (message.role === "user") {
+      if (typeof message.content === "string") {
+        lines.push(`User: ${message.content}`);
+      } else if (Array.isArray(message.content)) {
+        for (const block of message.content) {
+          if (block.type === "text") {
+            lines.push(`User: ${(block as Anthropic.TextBlockParam).text}`);
+          } else if (block.type === "tool_result") {
+            const toolResult = block as Anthropic.ToolResultBlockParam;
+            const text = extractToolResultText(toolResult);
+            const truncated =
+              text.length > 200 ? `${text.slice(0, 200)}...` : text;
+            lines.push(
+              `Tool Results: [${toolResult.tool_use_id}: ${truncated}]`,
+            );
+          }
+        }
+      }
+    } else if (message.role === "assistant") {
+      if (typeof message.content === "string") {
+        lines.push(`Assistant: ${message.content}`);
+      } else if (Array.isArray(message.content)) {
+        for (const block of message.content) {
+          if (block.type === "text") {
+            lines.push(
+              `Assistant: ${(block as Anthropic.TextBlockParam).text}`,
+            );
+          }
+          // Skip tool_use blocks -- the tool names/inputs are not useful for summary context
+        }
+      }
+    }
+  }
+
+  return lines.join("\n");
+}
+
+// ─── Phase 2: Summary Generation ─────────────────────────────────────────
+
+/**
+ * Generate a structured summary of conversation messages using an LLM.
+ *
+ * The summary prompt includes ground-truth artifacts from the session
+ * projection, which the LLM is instructed to include verbatim (no paraphrase).
+ * This prevents summarization drift on machine-extracted facts.
+ *
+ * @param client - Anthropic client for API calls
+ * @param messagesToSummarize - Messages to condense into a summary
+ * @param artifacts - Ground-truth artifacts from session projection
+ * @param summaryModel - Model ID to use for summary generation
+ * @returns Summary text (without wrapping tags)
+ */
+async function generateSummary(
+  client: Anthropic,
+  messagesToSummarize: Anthropic.MessageParam[],
+  artifacts: Record<string, string>,
+  summaryModel: string,
+): Promise<string> {
+  const serialized = serializeMessagesForSummary(messagesToSummarize);
+  const formattedArtifacts = formatArtifacts(artifacts);
+
+  const prompt = `You are summarizing a conversation to allow efficient continuation.
+
+## Conversation to Summarize
+${serialized}
+
+## Ground-Truth Artifacts (from event log -- DO NOT paraphrase or modify)
+${formattedArtifacts}
+
+## Instructions
+Create a structured continuation summary including:
+1. **Task Overview**: The user's core request and constraints
+2. **Completed Work**: What has been accomplished, files modified, key outputs
+3. **Key Decisions**: Technical decisions, rationale, errors resolved
+4. **Current State**: Where the agent stopped, what was in progress
+5. **Next Steps**: Specific actions needed to continue
+
+## Artifacts (from event log)
+Include the Ground-Truth Artifacts section verbatim -- these are machine-extracted from actual tool results and must not be paraphrased.
+
+Wrap your summary in <summary></summary> tags.`;
+
+  const response = await client.messages.create({
+    model: summaryModel,
+    max_tokens: 4096,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  // Extract text from response content blocks
+  let responseText = "";
+  for (const block of response.content) {
+    if (block.type === "text") {
+      responseText += block.text;
+    }
+  }
+
+  // Parse <summary>...</summary> tags from the response
+  const summaryMatch = responseText.match(/<summary>([\s\S]*?)<\/summary>/);
+  if (summaryMatch?.[1]) {
+    return summaryMatch[1].trim();
+  }
+
+  // If tags not found, use the full response text
+  return responseText.trim();
+}
+
 // ─── Factory ─────────────────────────────────────────────────────────────────
 
 /**
@@ -589,8 +777,10 @@ function applyPhase1Pruning(
  * The history manager compacts conversation history to fit within
  * context window limits while preserving critical information.
  *
- * Phase 1 (this plan): Descriptor replacement for old tool results.
- * Phase 2 (plan 02): Summarization when Phase 1 is insufficient.
+ * Pipeline: estimate -> Phase 1 prune -> re-estimate -> Phase 2 summarize (if needed).
+ *
+ * Phase 1: Descriptor replacement for old tool results.
+ * Phase 2: LLM-generated structured summarization with artifact grounding.
  *
  * @param options - Logger dependency
  * @returns HistoryManager instance
@@ -608,7 +798,7 @@ export function createHistoryManager(options: {
     async compact(
       messages: Anthropic.MessageParam[],
       config: HistoryConfig,
-      _options?: {
+      compactOptions?: {
         artifacts?: Record<string, string>;
         anthropicClient?: Anthropic;
         systemPrompt?: string;
@@ -639,27 +829,170 @@ export function createHistoryManager(options: {
 
       const prunedMessages = applyPhase1Pruning(messages, config, logger);
       const prunedTokens = estimateMessageTokens(prunedMessages);
-      const tokensSaved = originalTokens - prunedTokens;
+      const phase1Saved = originalTokens - prunedTokens;
 
       logger.info(
         {
           originalTokens,
           prunedTokens,
-          tokensSaved,
-          savedPercent: Math.round((tokensSaved / originalTokens) * 100),
+          tokensSaved: phase1Saved,
+          savedPercent: Math.round((phase1Saved / originalTokens) * 100),
         },
         "Phase 1 pruning complete",
       );
 
-      // Phase 2 check will be added in plan 02
-      // For now, return Phase 1 result
+      // Phase 2: Summarization (when Phase 1 is insufficient)
+      if (prunedTokens <= config.summaryThreshold) {
+        return {
+          messages: prunedMessages,
+          phase: "pruned",
+          estimatedTokens: prunedTokens,
+          tokensSaved: phase1Saved,
+        };
+      }
 
-      return {
-        messages: prunedMessages,
-        phase: "pruned",
-        estimatedTokens: prunedTokens,
-        tokensSaved,
-      };
+      // Phase 2 requires an Anthropic client
+      if (!compactOptions?.anthropicClient) {
+        logger.warn(
+          { prunedTokens, summaryThreshold: config.summaryThreshold },
+          "Phase 2 summarization needed but no anthropicClient provided, returning pruned result",
+        );
+        return {
+          messages: prunedMessages,
+          phase: "pruned",
+          estimatedTokens: prunedTokens,
+          tokensSaved: phase1Saved,
+        };
+      }
+
+      logger.info(
+        { prunedTokens, summaryThreshold: config.summaryThreshold },
+        "Pruned tokens still above summary threshold, applying Phase 2 summarization",
+      );
+
+      try {
+        const artifacts = compactOptions.artifacts ?? {};
+
+        // Calculate protected boundary (same logic as Phase 1)
+        let protectedStart = Math.max(
+          0,
+          prunedMessages.length - config.protectedMessages,
+        );
+        if (protectedStart > 0 && protectedStart < prunedMessages.length) {
+          const boundaryMessage = prunedMessages[protectedStart];
+          if (
+            boundaryMessage &&
+            boundaryMessage.role === "user" &&
+            Array.isArray(boundaryMessage.content)
+          ) {
+            const allToolResults = boundaryMessage.content.every(
+              (block) => block.type === "tool_result",
+            );
+            if (allToolResults && boundaryMessage.content.length > 0) {
+              protectedStart = protectedStart - 1;
+            }
+          }
+        }
+
+        // Determine what to summarize (everything before protected zone)
+        const unprotectedMessages = prunedMessages.slice(0, protectedStart);
+        const protectedMessages = prunedMessages.slice(protectedStart);
+
+        if (unprotectedMessages.length === 0) {
+          logger.warn(
+            "No unprotected messages to summarize, returning pruned result",
+          );
+          return {
+            messages: prunedMessages,
+            phase: "pruned",
+            estimatedTokens: prunedTokens,
+            tokensSaved: phase1Saved,
+          };
+        }
+
+        // Check for existing summary
+        const { hasSummary, summaryIndex } =
+          containsSummary(unprotectedMessages);
+
+        let messagesToSummarize: Anthropic.MessageParam[];
+        if (hasSummary) {
+          // Include existing summary content in messages to summarize.
+          // The new summary will replace the old one (merge, not nest).
+          logger.debug(
+            { summaryIndex },
+            "Existing summary found, will merge into new summary",
+          );
+          messagesToSummarize = unprotectedMessages;
+        } else {
+          messagesToSummarize = unprotectedMessages;
+        }
+
+        // Generate summary
+        const summaryText = await generateSummary(
+          compactOptions.anthropicClient,
+          messagesToSummarize,
+          artifacts,
+          config.summaryModel,
+        );
+
+        // Build the summary message
+        const summaryMessage: Anthropic.MessageParam = {
+          role: "user",
+          content: `<summary>\n${summaryText}\n</summary>`,
+        };
+
+        // Check that summary is actually smaller than what it replaces
+        const summaryTokens = estimateMessageTokens([summaryMessage]);
+        const replacedTokens = estimateMessageTokens(unprotectedMessages);
+        if (summaryTokens >= replacedTokens) {
+          logger.warn(
+            { summaryTokens, replacedTokens },
+            "Summary is larger than replaced messages, returning pruned result",
+          );
+          return {
+            messages: prunedMessages,
+            phase: "pruned",
+            estimatedTokens: prunedTokens,
+            tokensSaved: phase1Saved,
+          };
+        }
+
+        // Build final messages: summary + protected
+        const finalMessages = [summaryMessage, ...protectedMessages];
+        const finalTokens = estimateMessageTokens(finalMessages);
+        const totalSaved = originalTokens - finalTokens;
+
+        logger.info(
+          {
+            originalTokens,
+            prunedTokens,
+            finalTokens,
+            totalSaved,
+            savedPercent: Math.round((totalSaved / originalTokens) * 100),
+            hadExistingSummary: hasSummary,
+          },
+          "Phase 2 summarization complete",
+        );
+
+        return {
+          messages: finalMessages,
+          phase: "summarized",
+          estimatedTokens: finalTokens,
+          tokensSaved: totalSaved,
+        };
+      } catch (error) {
+        // If summary LLM call fails, fall back to Phase 1 pruned result
+        logger.error(
+          { err: error },
+          "Phase 2 summarization failed, falling back to pruned result",
+        );
+        return {
+          messages: prunedMessages,
+          phase: "pruned",
+          estimatedTokens: prunedTokens,
+          tokensSaved: phase1Saved,
+        };
+      }
     },
   };
 }

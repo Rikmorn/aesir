@@ -12,9 +12,11 @@ export type {
   HistoryManager,
 } from "./history-manager.js";
 export {
+  containsSummary,
   createHistoryManager,
   estimateMessageTokens,
   estimateTokens,
+  formatArtifacts,
 } from "./history-manager.js";
 export { createSessionProjection } from "./session-projection.js";
 export { registerAllTools } from "./tool-factories.js";
