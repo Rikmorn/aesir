@@ -74,7 +74,10 @@ Plans:
   1. Phase 1 pruning protects last N messages, replaces old tool results with descriptors, deduplicates consecutive same-file reads, and preserves head+tail for large outputs
   2. Phase 2 structured summarization replaces the oldest message section with an anchored summary that includes ground-truth artifacts from the session projection (not LLM memory)
   3. History config (protectedMessages, pruningThreshold, summaryThreshold) is set per agent definition, and every agent gets compaction through config without custom code
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 39-01-PLAN.md -- Phase 1 pruning (token estimation, dedup, head+tail, descriptors, protected boundary) + tests
+- [ ] 39-02-PLAN.md -- Phase 2 summarization (LLM summary, artifact grounding, summary merge, pipeline) + tests
 
 ### Phase 40: Conversation Executor
 **Goal**: Durable conversation executor that replaces Temporal workflows -- worker loop claims conversations with concurrency-safe locking, agents pause via wait_for tool, signals resume matching conversations, with at-least-once execution and crash recovery
@@ -187,7 +190,7 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 |-------|---------------|--------|-----------|
 | 37. Database Schema + Event Log Core | 3/3 | Complete | 2026-02-01 |
 | 38. Agent and Tool Registries | 4/4 | Complete | 2026-02-01 |
-| 39. History Manager | 0/TBD | Not started | - |
+| 39. History Manager | 0/2 | Not started | - |
 | 40. Conversation Executor | 0/TBD | Not started | - |
 | 41. Timeout Scheduling | 0/TBD | Not started | - |
 | 42. Event Router + Adapters | 0/TBD | Not started | - |
@@ -199,4 +202,4 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 
 ---
 *Roadmap created: 2026-02-01*
-*Last updated: 2026-02-01 -- Phase 38 complete (4/4 plans)*
+*Last updated: 2026-02-01 -- Phase 39 planned (2 plans in 2 waves)*
