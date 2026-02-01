@@ -15,7 +15,7 @@ v2.3 replaces Temporal workflow orchestration, per-agent services, and fragmente
 ## Phases
 
 - [x] **Phase 37: Database Schema + Event Log Core** - Persistence layer for conversations, events, and session projections
-- [ ] **Phase 38: Agent and Tool Registries** - Declarative agent definitions loaded from YAML + prompt.md with factory-based tool resolution
+- [x] **Phase 38: Agent and Tool Registries** - Declarative agent definitions loaded from YAML + prompt.md with factory-based tool resolution
 - [ ] **Phase 39: History Manager** - Three-phase conversation compaction with tool pruning and structured summarization
 - [ ] **Phase 40: Conversation Executor** - Postgres-backed durable executor replacing Temporal workflows
 - [ ] **Phase 41: Timeout Scheduling** - pg-boss integration for delayed signal delivery
@@ -59,10 +59,10 @@ Plans:
   5. AgentRegistry uses mtime-based cache invalidation, and running conversations remain pinned to the definition version they started with
 **Plans**: 4 plans
 Plans:
-- [ ] 38-01-PLAN.md -- Framework types (AgentDefinition schema, registry interfaces) + ToolRegistry implementation + tests
-- [ ] 38-02-PLAN.md -- Agent definition data files (5 YAML + 5 prompt.md for all agents)
-- [ ] 38-03-PLAN.md -- AgentRegistry implementation (YAML loading, mtime cache, Zod validation) + tests
-- [ ] 38-04-PLAN.md -- Tool factory registration (28 factories for all tools) + tests
+- [x] 38-01-PLAN.md -- Framework types (AgentDefinition schema, registry interfaces) + ToolRegistry implementation + tests
+- [x] 38-02-PLAN.md -- Agent definition data files (5 YAML + 5 prompt.md for all agents)
+- [x] 38-03-PLAN.md -- AgentRegistry implementation (YAML loading, mtime cache, Zod validation) + tests
+- [x] 38-04-PLAN.md -- Tool factory registration (28 factories for all tools) + tests
 
 ### Phase 39: History Manager
 **Goal**: Framework-level conversation compaction that all agents get via config -- Phase 1 pruning replaces old tool outputs with descriptors, Phase 2 structured summarization injects ground-truth artifacts
@@ -186,7 +186,7 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
 | 37. Database Schema + Event Log Core | 3/3 | Complete | 2026-02-01 |
-| 38. Agent and Tool Registries | 0/4 | Not started | - |
+| 38. Agent and Tool Registries | 4/4 | Complete | 2026-02-01 |
 | 39. History Manager | 0/TBD | Not started | - |
 | 40. Conversation Executor | 0/TBD | Not started | - |
 | 41. Timeout Scheduling | 0/TBD | Not started | - |
@@ -199,4 +199,4 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 
 ---
 *Roadmap created: 2026-02-01*
-*Last updated: 2026-02-01 -- Phase 38 planned (4 plans)*
+*Last updated: 2026-02-01 -- Phase 38 complete (4/4 plans)*

@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.3 Unified Agent Framework — Phase 38 in progress
+**Current focus:** v2.3 Unified Agent Framework — Phase 38 complete, Phase 39 next
 
 ## Current Position
 
 Phase: 38 of 47 (Agent and Tool Registries)
-Plan: 3 of 4 in current phase
-Status: In progress
-Last activity: 2026-02-01 — Completed 38-03-PLAN.md (AgentRegistry implementation)
+Plan: 4 of 4 in current phase
+Status: Phase complete
+Last activity: 2026-02-01 — Completed 38-04-PLAN.md (Tool factory registration)
 
-Progress: [████░░░░░░] ~20% (6/~30 estimated plans)
+Progress: [████░░░░░░] ~23% (7/~30 estimated plans)
 
 ## Milestone History
 
@@ -28,16 +28,16 @@ Progress: [████░░░░░░] ~20% (6/~30 estimated plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6 (v2.3)
-- Average duration: 6m06s
-- Total execution time: 36m34s
+- Total plans completed: 7 (v2.3)
+- Average duration: 5m52s
+- Total execution time: 41m09s
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 37 | 3/3 | 20m09s | 6m43s |
-| 38 | 3/4 | 16m24s | 5m28s |
+| 38 | 4/4 | 20m59s | 5m15s |
 
 *Updated after each plan completion*
 
@@ -64,6 +64,8 @@ v2.3 decisions:
 - Sub-agent tokenBudget set to standalone values (100k) -- v2.3 executor overrides with parent shared budget when spawning
 - AgentRegistry verifies YAML id matches directory name -- prevents mismatched definitions
 - AgentRegistry version mismatch returns cached definition with warning -- file-based registry only stores latest version
+- MCP adapter uses create-all-then-find pattern -- preserves v2.2 batch factory compatibility without modifying existing tool files
+- spawn_agent placeholder does NOT use createSpawnAgentTool -- Phase 40 replaces with ConversationExecutor-backed implementation
 
 ### Pending Todos
 
@@ -81,9 +83,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: Completed 38-03-PLAN.md (AgentRegistry implementation -- 159 lines impl, 448 lines tests)
+Stopped at: Completed 38-04-PLAN.md (Tool factory registration -- 28 factories, 16 tests)
 Resume file: None
-Next action: Execute 38-04-PLAN.md (Tool factory registration)
+Next action: Phase 38 complete. Next is Phase 39 (History Manager) research + planning.
 
 ---
-*Updated: 2026-02-01 — Completed plan 38-03*
+*Updated: 2026-02-01 — Completed plan 38-04, Phase 38 complete*
