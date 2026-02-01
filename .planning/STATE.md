@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.3 Unified Agent Framework — Phase 37 in progress
+**Current focus:** v2.3 Unified Agent Framework — Phase 37 complete, ready for Phase 38
 
 ## Current Position
 
-Phase: 37 of 47 (Database Schema + Event Log Core)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-01 — Completed 37-02-PLAN.md (EventLog service implementation + unit tests)
+Phase: 37 of 47 (Database Schema + Event Log Core) -- COMPLETE
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-01 — Completed 37-03-PLAN.md (SessionProjection implementation + unit tests)
 
-Progress: [██░░░░░░░░] ~7% (2/~30 estimated plans)
+Progress: [███░░░░░░░] ~10% (3/~30 estimated plans)
 
 ## Milestone History
 
@@ -28,15 +28,15 @@ Progress: [██░░░░░░░░] ~7% (2/~30 estimated plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2 (v2.3)
-- Average duration: 5m58s
-- Total execution time: 11m55s
+- Total plans completed: 3 (v2.3)
+- Average duration: 6m43s
+- Total execution time: 20m09s
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 37 | 2/3 | 11m55s | 5m58s |
+| 37 | 3/3 | 20m09s | 6m43s |
 
 *Updated after each plan completion*
 
@@ -55,6 +55,7 @@ v2.3 decisions:
 - ArtifactExtractionConfig uses Map<string, ArtifactExtractor> with payloadPath -- keeps Phase 37 independent of Phase 38 ToolRegistry
 - Copy truncateJsonPayload into event-log.ts rather than shared utility -- avoids cross-module dependency for small helper
 - Fire-and-forget subscriber notification via void handler().catch() -- errors must never block append()
+- Atomic JSONB merge for artifact extraction using COALESCE + || operator -- simpler than read-merge-write, no race conditions
 
 ### Pending Todos
 
@@ -72,9 +73,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: Completed 37-02-PLAN.md (EventLog service implementation + 44 unit tests)
+Stopped at: Completed 37-03-PLAN.md (SessionProjection implementation + 31 unit tests) -- Phase 37 complete
 Resume file: None
-Next action: Execute 37-03-PLAN.md (SessionProjection implementation)
+Next action: Execute Phase 38 (Agent Definitions)
 
 ---
-*Updated: 2026-02-01 — Completed plan 37-02*
+*Updated: 2026-02-01 — Completed plan 37-03, Phase 37 complete*
