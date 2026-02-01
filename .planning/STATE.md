@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.3 Unified Agent Framework — Phase 37 complete, ready for Phase 38
+**Current focus:** v2.3 Unified Agent Framework — Phase 38 in progress
 
 ## Current Position
 
-Phase: 37 of 47 (Database Schema + Event Log Core) -- COMPLETE
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-02-01 — Completed 37-03-PLAN.md (SessionProjection implementation + unit tests)
+Phase: 38 of 47 (Agent and Tool Registries)
+Plan: 1 of 4 in current phase
+Status: In progress
+Last activity: 2026-02-01 — Completed 38-01-PLAN.md (Framework types + ToolRegistry)
 
-Progress: [███░░░░░░░] ~10% (3/~30 estimated plans)
+Progress: [████░░░░░░] ~13% (4/~30 estimated plans)
 
 ## Milestone History
 
@@ -28,15 +28,16 @@ Progress: [███░░░░░░░] ~10% (3/~30 estimated plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3 (v2.3)
-- Average duration: 6m43s
-- Total execution time: 20m09s
+- Total plans completed: 4 (v2.3)
+- Average duration: 6m15s
+- Total execution time: 25m
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 37 | 3/3 | 20m09s | 6m43s |
+| 38 | 1/4 | 4m50s | 4m50s |
 
 *Updated after each plan completion*
 
@@ -56,6 +57,9 @@ v2.3 decisions:
 - Copy truncateJsonPayload into event-log.ts rather than shared utility -- avoids cross-module dependency for small helper
 - Fire-and-forget subscriber notification via void handler().catch() -- errors must never block append()
 - Atomic JSONB merge for artifact extraction using COALESCE + || operator -- simpler than read-merge-write, no race conditions
+- ToolContext uses optional DevContainerManager and taskId -- not all agents need containers
+- ToolRegistry reports ALL missing refs on resolve failure -- better developer experience than failing on first
+- AgentDefinitionYamlSchema version is z.string() -- avoids YAML numeric coercion issues
 
 ### Pending Todos
 
@@ -73,9 +77,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: Completed 37-03-PLAN.md (SessionProjection implementation + 31 unit tests) -- Phase 37 complete
+Stopped at: Completed 38-01-PLAN.md (Framework types + ToolRegistry implementation + 14 unit tests)
 Resume file: None
-Next action: Execute Phase 38 (Agent Definitions)
+Next action: Execute 38-02-PLAN.md (AgentRegistry implementation)
 
 ---
-*Updated: 2026-02-01 — Completed plan 37-03, Phase 37 complete*
+*Updated: 2026-02-01 — Completed plan 38-01*
