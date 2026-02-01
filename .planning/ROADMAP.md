@@ -68,27 +68,27 @@ v2.3 replaces Temporal workflow orchestration, per-agent services, and fragmente
 **Plans**: TBD
 
 ### Phase 40: Conversation Executor
-**Goal**: Postgres-backed durable executor that replaces Temporal workflows -- worker loop claims conversations via SKIP LOCKED, agents pause via wait_for tool, signals resume matching conversations, with exactly-once execution and crash recovery
+**Goal**: Durable conversation executor that replaces Temporal workflows -- worker loop claims conversations with concurrency-safe locking, agents pause via wait_for tool, signals resume matching conversations, with at-least-once execution and crash recovery
 **Depends on**: Phase 37 (database), Phase 38 (registries), Phase 39 (history manager)
 **Requirements**: EXEC-01, EXEC-02, EXEC-03, EXEC-04, EXEC-05, EXEC-06, EXEC-07, EXEC-08, EXEC-09, EXEC-10, EXEC-11
-**Risk**: HIGH (critical path, most complex component, most pitfalls -- JSONB write amplification, stale detection, signal races)
+**Risk**: HIGH (critical path, most complex component, most pitfalls -- write amplification, stale detection, signal races)
 **Research**: needs-research (heartbeat mechanism, atomic claiming, signal queueing, race condition prevention)
 **Success Criteria** (what must be TRUE):
-  1. ConversationExecutor exposes start(), signal(), get(), cancel(), list() API and worker polling loop claims queued conversations via SELECT FOR UPDATE SKIP LOCKED
-  2. Conversation messages persisted as JSONB only at lifecycle boundaries (pause/complete/fail), not per tool call -- avoiding write amplification
+  1. ConversationExecutor exposes start(), signal(), get(), cancel(), list() API and worker loop claims queued conversations with concurrency-safe locking
+  2. Conversation messages persisted only at lifecycle boundaries (pause/complete/fail), not per tool call -- avoiding write amplification
   3. wait_for tool pauses the conversation and registers the expected signal type; signals arriving while conversation is running are queued and checked on next wait_for
   4. Heartbeat mechanism (last_heartbeat_at updated during execution) detects stale conversations and re-enqueues them; concurrency invariant enforced so exactly one agent loop runs per conversation at any time
   5. Deterministic conversation IDs from agent definition + correlation key; duplicate start() calls for the same conversation ID are idempotent no-ops; failed/crashed conversations are re-enqueued for at-least-once execution
 **Plans**: TBD
 
 ### Phase 41: Timeout Scheduling
-**Goal**: pg-boss delivers delayed signals to conversations (e.g., "wake in 72 hours") through the same signal pathway as external events
+**Goal**: Delayed signal delivery to conversations (e.g., "wake in 72 hours") through the same signal pathway as external events
 **Depends on**: Phase 40 (executor -- delivers timeout signals to conversations)
 **Requirements**: TMO-01, TMO-02, TMO-03
 **Risk**: LOW
 **Research**: standard-pattern
 **Success Criteria** (what must be TRUE):
-  1. pg-boss schedules delayed signal delivery (e.g., timeout after 72 hours) that wakes paused conversations
+  1. Delayed signal delivery (e.g., timeout after 72 hours) wakes paused conversations
   2. Timeout signals are delivered through the same signal pathway as external events (no separate handling)
   3. Timeouts are cancelled when a conversation resumes before the timeout fires (preventing stale timeout signals)
 **Plans**: TBD

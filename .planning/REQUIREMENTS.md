@@ -31,9 +31,9 @@ Requirements for v2.3 milestone. Each maps to roadmap phases starting at Phase 3
 ### Conversation Executor
 
 - [ ] **EXEC-01**: ConversationExecutor with start(), signal(), get(), cancel(), list() API
-- [ ] **EXEC-02**: Worker polling loop claims queued conversations via SELECT FOR UPDATE SKIP LOCKED
-- [ ] **EXEC-03**: Conversation messages persisted as JSONB only at lifecycle boundaries (pause/complete/fail), not per tool call
-- [ ] **EXEC-04**: Heartbeat mechanism (last_heartbeat_at column updated during agent loop execution)
+- [ ] **EXEC-02**: Worker loop claims queued conversations with concurrency-safe locking (exactly one claimer per conversation)
+- [ ] **EXEC-03**: Conversation messages persisted only at lifecycle boundaries (pause/complete/fail), not per tool call
+- [ ] **EXEC-04**: Heartbeat mechanism detects running conversations during agent loop execution
 - [ ] **EXEC-05**: Stale conversation detection — re-enqueue conversations with expired heartbeats
 - [ ] **EXEC-06**: Concurrency invariant: exactly one agent loop per conversation at any time
 - [ ] **EXEC-07**: wait_for tool that pauses conversation and registers expected signal type
@@ -68,6 +68,7 @@ Requirements for v2.3 milestone. Each maps to roadmap phases starting at Phase 3
 - [ ] **SIG-04**: Correlation-based signal routing resolves conversation ID from correlation key
 - [ ] **SIG-05**: Fast-path routing preserved for unambiguous events (deterministic, no LLM needed)
 - [ ] **SIG-06**: Smart router adapted from Temporal workflowClient to ConversationExecutor
+- [ ] **SIG-07**: Signal deduplication — duplicate signals (webhook retries) are no-ops, tracked by source + delivery ID on conversation
 
 ### Service Consolidation
 
@@ -80,7 +81,7 @@ Requirements for v2.3 milestone. Each maps to roadmap phases starting at Phase 3
 
 ### Timeout Scheduling
 
-- [ ] **TMO-01**: pg-boss integration for delayed signal delivery (e.g., "wake in 72 hours")
+- [ ] **TMO-01**: Delayed signal delivery for timeout enforcement (e.g., "wake in 72 hours")
 - [ ] **TMO-02**: Timeout cancellation on conversation resume (prevent stale timeout signals)
 - [ ] **TMO-03**: Timeout signals delivered through same signal pathway as external events
 
@@ -121,7 +122,7 @@ Explicitly excluded. Documented to prevent scope creep.
 | Full event sourcing library | Append-only table with ~200 lines is sufficient; library adds complexity without benefit |
 | Generic job queue for executor | Conversation semantics (signal queueing, wait type matching) don't map to generic job abstractions |
 | Multiple worker processes | Single-process with concurrent loops handles 1-50 conversations; multi-process is premature |
-| Real-time LISTEN/NOTIFY | Drizzle ORM lacks native support; 5s polling is acceptable at current scale (1-5 conversations) |
+| Event-driven worker wakeup | Polling is acceptable at current scale (1-5 conversations); event-driven push is a future optimization |
 | UI for agent definition management | Code/config first philosophy; file-based definitions are sufficient |
 | Streaming LLM responses | Non-streaming is appropriate for backend agents; streaming adds complexity without benefit |
 | Parallel sub-agents | Sequential sub-agent execution is sufficient; parallel adds concurrency complexity |
@@ -179,6 +180,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SIG-04 | Phase 42 | Pending |
 | SIG-05 | Phase 43 | Pending |
 | SIG-06 | Phase 43 | Pending |
+| SIG-07 | Phase 40 | Pending |
 | SVC-01 | Phase 44 | Pending |
 | SVC-02 | Phase 44 | Pending |
 | SVC-03 | Phase 44 | Pending |
@@ -194,8 +196,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MIG-07 | Phase 47 | Pending |
 
 **Coverage:**
-- v2.3 requirements: 57 total
-- Mapped to phases: 57
+- v2.3 requirements: 58 total
+- Mapped to phases: 58
 - Unmapped: 0 ✓
 
 ---
