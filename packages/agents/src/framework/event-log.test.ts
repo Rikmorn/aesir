@@ -88,18 +88,23 @@ function createDefaultOptions(
     maxPayloadBytes: number;
   }>,
 ): EventLogOptions {
-  const opts: EventLogOptions = {
+  const base = {
     db: (overrides?.db ?? createMockDb()) as unknown as EventLogOptions["db"],
     logger: (overrides?.logger ??
       createMockLogger()) as unknown as EventLogOptions["logger"],
   };
-  if (overrides?.flushIntervalMs !== undefined)
-    opts.flushIntervalMs = overrides.flushIntervalMs;
-  if (overrides?.maxBufferSize !== undefined)
-    opts.maxBufferSize = overrides.maxBufferSize;
-  if (overrides?.maxPayloadBytes !== undefined)
-    opts.maxPayloadBytes = overrides.maxPayloadBytes;
-  return opts;
+  return {
+    ...base,
+    ...(overrides?.flushIntervalMs !== undefined && {
+      flushIntervalMs: overrides.flushIntervalMs,
+    }),
+    ...(overrides?.maxBufferSize !== undefined && {
+      maxBufferSize: overrides.maxBufferSize,
+    }),
+    ...(overrides?.maxPayloadBytes !== undefined && {
+      maxPayloadBytes: overrides.maxPayloadBytes,
+    }),
+  };
 }
 
 /**
