@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.3 Unified Agent Framework — Phase 39 plan 01 complete, plan 02 next
+**Current focus:** v2.3 Unified Agent Framework — Phase 39 complete, Phase 40 next
 
 ## Current Position
 
 Phase: 39 of 47 (History Manager)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-01 — Completed 39-01-PLAN.md (Phase 1 pruning pipeline)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-01 — Completed 39-02-PLAN.md (Phase 2 summarization)
 
-Progress: [████░░░░░░] ~27% (8/~30 estimated plans)
+Progress: [████░░░░░░] ~30% (9/~30 estimated plans)
 
 ## Milestone History
 
@@ -28,9 +28,9 @@ Progress: [████░░░░░░] ~27% (8/~30 estimated plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8 (v2.3)
-- Average duration: 6m28s
-- Total execution time: 51m42s
+- Total plans completed: 9 (v2.3)
+- Average duration: 6m26s
+- Total execution time: 57m59s
 
 **By Phase:**
 
@@ -38,7 +38,7 @@ Progress: [████░░░░░░] ~27% (8/~30 estimated plans)
 |-------|-------|-------|----------|
 | 37 | 3/3 | 20m09s | 6m43s |
 | 38 | 4/4 | 20m59s | 5m15s |
-| 39 | 1/2 | 10m33s | 10m33s |
+| 39 | 2/2 | 16m50s | 8m25s |
 
 *Updated after each plan completion*
 
@@ -69,6 +69,9 @@ v2.3 decisions:
 - spawn_agent placeholder does NOT use createSpawnAgentTool -- Phase 40 replaces with ConversationExecutor-backed implementation
 - structuredClone for deep-cloning messages in history manager -- correctness over performance
 - Tool tier classification by name prefix rather than configurable map -- simpler, sufficient for v2.3
+- Summary wrapped in <summary></summary> tags for detection -- simple regex parsing, unambiguous in message content
+- Single-summary-block-with-merge strategy -- prevents summaries-of-summaries degradation
+- Phase 2 error handling falls back to Phase 1 pruned result -- history manager is optimization, not safety mechanism
 
 ### Pending Todos
 
@@ -86,9 +89,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: Completed 39-01-PLAN.md (Phase 1 pruning pipeline -- 24 tests, 665 lines)
+Stopped at: Completed 39-02-PLAN.md (Phase 2 summarization -- 41 tests, 998 lines)
 Resume file: None
-Next action: Phase 39 plan 02 (Phase 2 summarization)
+Next action: Phase 40 (Conversation Executor)
 
 ---
-*Updated: 2026-02-01 — Completed plan 39-01, Phase 1 pruning pipeline*
+*Updated: 2026-02-01 — Completed plan 39-02, Phase 39 (History Manager) complete*
