@@ -79,11 +79,12 @@ export function createToolRegistry(options: ToolRegistryOptions): ToolRegistry {
         );
       }
 
-      return toolRefs.map((ref) => {
-        const factory = factories.get(ref);
-        // Safe assertion: we checked all refs above
-        return factory!(context);
-      });
+      const tools = [];
+      for (const ref of toolRefs) {
+        const factory = factories.get(ref) as ToolFactory;
+        tools.push(factory(context));
+      }
+      return tools;
     },
 
     has(ref: string): boolean {

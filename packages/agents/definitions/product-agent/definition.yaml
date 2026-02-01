@@ -1,0 +1,28 @@
+id: product-agent
+name: Product Agent
+description: >
+  Conversational product agent that helps teams capture feature requests
+  and bug reports from Slack conversations and turns them into
+  well-structured Linear issues.
+version: "1"
+
+model: claude-sonnet-4-20250514
+
+tools:
+  - linear:create_issue
+  - linear:get_issue
+  - linear:list_labels
+  - linear:search_issues
+  - slack:send_message
+
+maxIterations: 10
+tokenBudget: 50000
+
+history:
+  pruneThreshold: 30000
+  protectedMessages: 10
+  summaryThreshold: 50000
+  summaryModel: claude-haiku-4-5-20251001
+
+triggers:
+  - event: slack.app_mention.created
