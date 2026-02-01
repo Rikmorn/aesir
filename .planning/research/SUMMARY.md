@@ -1,643 +1,293 @@
-# v2.2 Agentic Architecture Research Summary
+# Project Research Summary
 
-**Project:** Aesir v2.2 — Replace LangGraph with Agentic Tool-Use Loops
-**Domain:** AI Agent Development Platform
-**Researched:** 2026-01-29
-**Overall Confidence:** HIGH
-
----
+**Project:** Aesir v2.3 Unified Agent Framework
+**Domain:** Replacing Temporal orchestration with Postgres-backed conversation executor
+**Researched:** 2026-02-01
+**Confidence:** HIGH
 
 ## Executive Summary
 
-The v2.2 architectural shift from LangGraph state machines to agentic tool-use loops is **validated by extensive industry precedent** and production systems (Claude Code, Anthropic's multi-agent research system, SWE-Agent ecosystem). The spec's approach is sound: use Anthropic's native SDK for tool-use, run agentic loops inside Temporal activities (not as workflows), spawn focused sub-agents with isolated context, and persist semantic summaries at activity boundaries. Research confirms this is the established production pattern.
+v2.3 is an architectural shift from Temporal workflows to a Postgres-backed ConversationExecutor that treats agent loops as the primary state machine. The core finding: **Aesir uses approximately 5% of Temporal's capabilities** and can replace it with well-established Postgres patterns without sacrificing durability guarantees. The `SELECT FOR UPDATE SKIP LOCKED` job queue pattern (used by pg-boss, Solid Queue, DBOS, Inngest) is battle-tested at production scale for exactly this use case.
 
-**Key research findings that enrich the spec:**
+The recommended approach consolidates three disconnected persistence stores (execution_traces, tasks, context_snapshots) into a unified event log with reactive session projections. This eliminates the data consistency problems inherent in maintaining separate imperative stores while providing better observability than v2.2's incomplete trace logging. The single-service consolidation (from 4 containers to 1) is architecturally sound -- agent definitions become configuration files, not deployed services.
 
-1. **Stack:** The `@anthropic-ai/sdk` provides everything needed — `betaZodTool()` for schema conversion, `toolRunner()` helper for the loop pattern, server-side context management (`clear_tool_uses`), and stable token counting API. No additional dependencies required beyond removing four `@langchain/*` packages. Existing Zod 3.25.67 is compatible (no upgrade needed).
-
-2. **Architecture:** The spec's Temporal integration is correct — workflows remain deterministic shells, agentic loops run inside activities. Sub-agent spawning should be in-process (nested function calls) not out-of-process (separate Temporal activities) for latency and context passing. Database schema design is sound: structured data in `agents.tasks`, semantic summaries in `agents.context_snapshots`.
-
-3. **Critical additions missing from spec:** Hybrid smart router (rules for deterministic events, LLM only for ambiguous cases), LLM self-summarization step at activity boundaries, and shared token budget tracking across orchestrator + sub-agents.
-
-**The primary risk:** Token cost explosion from accumulating context in long tool loops. Research shows quadratic growth (full history resent each iteration). Mitigation: server-side `clear_tool_uses` (auto-clears old tool results at 80% context), iteration limits per agent type (50 for sub-agents, 100 for orchestrator), and the sub-agent pattern itself (fresh context per spawn).
-
----
+**Key risks:** JSONB write amplification on the messages column (CRITICAL), stale conversation detection without proper heartbeats (CRITICAL), and event log sequence gaps (CRITICAL). All three are preventable with careful implementation. The migration from Temporal requires a structured drain strategy due to workflows paused for hours/days waiting for approvals. Total effort: 15-18 development days plus 7-day drain window.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The Anthropic TypeScript SDK (`@anthropic-ai/sdk` ^0.71.0) provides native tool-use capabilities with minimal integration surface. The SDK's `betaZodTool()` helper converts Zod schemas directly to Anthropic's tool format, eliminating the need for `zod-to-json-schema` (now deprecated). The `toolRunner()` helper implements the exact pattern Aesir needs: iterate tool calls until the LLM stops or guardrails hit.
+**Core recommendation:** Custom Postgres-backed executor for conversation orchestration, pg-boss for timeout scheduling, Drizzle ORM for schema management. No new job queue library needed for the core executor -- the conversation table IS the queue. The `SELECT FOR UPDATE SKIP LOCKED` pattern provides exactly the concurrency control needed with ~50 lines of SQL.
 
 **Core technologies:**
+- **Custom SKIP LOCKED executor** (not pg-boss/graphile-worker) -- conversation semantics (signal queueing, wait type matching, idempotent start) don't map to generic job queues. The conversation table is queried by status, pending_wait type, and conversation ID -- these are domain queries that libraries force into jobs/tasks/queues awkwardly.
+- **pg-boss v12.8.0** for timeout scheduling only -- "wake this conversation in 72 hours" is a pure delayed-job problem that pg-boss solves with `startAfter` API, Postgres-backed persistence, and distributed worker support. Rolling a custom timeout scheduler would reinvent pg-boss badly.
+- **Event log as append-only Postgres table** (not event sourcing library) -- batch INSERT via Drizzle ORM with LISTEN/NOTIFY for reactive subscriptions. Implementation is ~200 lines of TypeScript, no library needed.
+- **Conversation history as JSONB column** -- write-rarely/read-fully pattern makes TOAST acceptable. Conversations persist only on pause/complete (not every tool call), avoiding write amplification. Phase 1 pruning keeps sizes 60-80% smaller. LZ4 compression available on Postgres 14+.
 
-- **@anthropic-ai/sdk ^0.71.0:** Native tool-use API with Zod support, context management, token counting — replaces `@langchain/anthropic`, `@langchain/core`, `@langchain/langgraph`, `@langchain/langgraph-checkpoint-postgres` (removes 4 packages, adds 1)
-- **Existing Zod 3.25.67:** Compatible with SDK's peer dependency (`^3.25.0`) — no upgrade needed
-- **Temporal (unchanged):** Remains as durability envelope for agentic loops — workflows own signal waits and timeouts, activities own LLM calls
-- **MCP layer (unchanged):** All 21 existing tools wrapped as `ToolDefinition` objects — thin Zod schema + execute function that calls `callMcpTool()`
-
-**Why this stack:**
-
-1. Direct API access vs abstraction layer — better control, clearer debugging, no LangChain peer dependency conflicts
-2. Built-in Zod support — `betaZodTool()` handles schema conversion automatically
-3. Server-side context management — `clear_tool_uses` API clears old tool results when context nears limits
-4. Production-proven pattern — Temporal's official cookbook shows exactly this: agentic loop inside activity, signals for HITL
+**Removed dependencies:**
+- All @temporalio/* packages from agents and platform
+- Temporal server + UI from Docker Compose (saves ~1GB container images)
+- Temporal PostgreSQL schema
 
 ### Expected Features
 
 **Must have (table stakes):**
+- **Declarative agent definitions** (YAML + Markdown) -- industry consensus pattern from Claude Code, CrewAI, OpenAI Agents SDK. Every production framework treats prompts/instructions as first-class configuration, not hardcoded constants.
+- **Conversation executor** (start/signal/cancel/get/list API) -- replaces Temporal with Postgres-backed durable execution. Must match or exceed Temporal's guarantees: pause/resume via wait_for tool, full conversation history on resume, deterministic conversation IDs, concurrency control (one loop per conversation), at-least-once execution, timeout enforcement, signal queueing for race conditions.
+- **Unified event log** -- append-only event store with tool results (critical gap in v2.2's execution_traces). Event types: tool.called, tool.succeeded, tool.failed, llm.response, agent.started/completed/paused/resumed, signal.received. Session projection reactively updates from events.
+- **History management** (tool output pruning + structured summarization) -- every agent gets compaction via config. Phase 1 pruning (keep reasoning, replace tool results with descriptors, deduplicate) handles most cases with zero LLM calls. Phase 2 structured summaries inject ground-truth artifacts from event log projection, preventing drift.
+- **Single service consolidating 4 containers** -- agents are config, not services. No production framework deploys separate services per agent type. Single HTTP service with agent registry, tool registry, event router.
+- **Signal handling with freeform IncomingEvent shape** -- domain events (approval, pr_merged), not integration-specific payloads. Adapter normalization layer (Slack, GitHub, Linear) transforms webhooks into domain language. Agents never see raw webhook payloads.
 
-- **while(tool_use) loop runtime** — The fundamental primitive. LLM calls → tool execution → result feedback → repeat until done. Every production agentic system uses this pattern.
-- **Tool definition interface (Zod → Anthropic)** — Strongly typed tools with Zod input schemas. Anthropic SDK's `betaZodTool()` handles conversion.
-- **Iteration limit (maxIterations)** — Hard safety cap on tool call count. Default 50 for sub-agents, 100 for orchestrator, 10 for router.
-- **AbortSignal / cancellation** — Map Temporal activity timeout to loop cancellation. SDK supports this natively.
-- **Structured result return** — Loop returns status (completed/max_iterations/aborted/error), output, tool count, tokens.
-- **Error handling with LLM reasoning** — Tool errors returned as `isError: true` tool results. LLM sees error text and decides: fix, retry differently, skip, or escalate. This replaces v2.1's blind 3x retry.
-- **Context persistence at Temporal boundaries** — Semantic summaries + structured data written to DB when activities end. Next activity reads context to resume.
-- **Execution tracing with parent-child correlation** — Every tool call logged automatically. Sub-agents linked to orchestrator via `parent_agent_instance_id`.
+**Should have (differentiators):**
+- **Event log as single source of truth** (replacing three stores) -- v2.2 has execution_traces (no tool results), tasks (imperatively updated), context_snapshots (lossy summaries). Converging to one event stream eliminates data consistency issues. Neither LangSmith nor Langfuse handle agent state AND observability in one store.
+- **Framework-level history management** (not per-agent custom code) -- v2.2 only product agent has compactConversationHistory(). Making compaction a framework concern configured per-agent via history fields is cleaner. Three-phase escalation (prune -> summary -> future agent memory) applies cheapest technique first.
+- **Structural race condition fix** (signal queueing) -- v2.2 has retry-with-backoff hack for signals arriving before workflow starts. v2.3 queues signals on conversation record, checks on wait_for. Three states: paused/matching (resume), paused/wrong type (reject), running (queue). No timing-dependent retries.
+- **Zero-infrastructure agent addition** -- new agent = new definition directory (YAML + prompt.md). No code changes, no infrastructure changes. The registry picks up new definitions on next access.
+- **Domain-language event normalization** -- adapter pattern transforms block_actions.approve to "approval", pull_request.merged to "pr_merged". Agent prompts never mention Slack/GitHub/Linear event structures. Integration-agnostic agent definitions.
 
-**Should have (competitive differentiators):**
-
-- **Sub-agent spawning (orchestrator tool)** — Orchestrator spawns researcher/coder/tester with focused context and restricted tool sets. Sub-agents return condensed summaries, not full transcripts. In-process spawning (nested function call) not out-of-process (Temporal activity) for latency and simplicity.
-- **Context-scoped tool sets** — Researcher gets read-only tools (5-10 tools). Coder gets read+write (5-10 tools). Tester gets read+run (5-10 tools). Orchestrator gets spawn+integration+git (8-10 tools).
-- **Smart router with LLM reasoning** — Replace hardcoded event routing with LLM classification for ambiguous events. Hybrid approach: rules for deterministic events (PR merged → signal), LLM for ambiguous (Slack message → is this a request, reply, or chatter?).
-- **Adaptive agent behavior** — Simple tasks take fewer steps naturally. No forced phases. LLM decides whether to spawn sub-agents, whether to test, whether to clarify based on task complexity.
-
-**Defer (v2+):**
-
-- **Parallel sub-agent execution** — Anthropic's research system shows 90% improvement from parallel spawning, but Aesir's dev workflow is inherently sequential (research → plan → code → test). Defer unless needed.
-- **Automatic context compaction mid-loop** — Claude Code compacts at 92% context usage. Aesir's iteration limits (50 per sub-agent) prevent hitting context window in typical tasks. Server-side `clear_tool_uses` is sufficient safety net.
-- **Cross-session learning / vector store** — Each task starts fresh. Project context comes from CLAUDE.md files and codebase exploration, not long-term memory.
-- **Dynamic model selection** — Single model (Claude Sonnet) for all agent work. Use Haiku only for smart router.
-- **Custom agentic framework** — Build `runAgentLoop()` as a focused utility function (~100-150 lines), not a framework with plugins, middleware, lifecycle hooks.
+**Defer (v2+ or anti-features):**
+- Agent-managed memory (MemGPT/Letta style with memory:save/search tools)
+- Database-backed agent definitions (admin API, migration tooling)
+- Kafka/SQS/EventBridge event log backends
+- Cross-agent collaboration (agent-to-agent signaling)
+- OpenTelemetry integration
+- Real-time streaming dashboard
+- Cross-session learning
 
 ### Architecture Approach
 
-The v2.2 architecture keeps Temporal workflows as the deterministic shell (loops, signal waits, timeouts) and runs agentic loops inside activities (non-deterministic LLM calls). This separation is critical for Temporal's replay model — workflows must be deterministic, activities can be non-deterministic. The spec's approach matches the production pattern documented in Temporal's official AI cookbook.
+The core architectural bet: **Postgres is sufficient for Aesir's durability requirements.** Temporal provides enterprise-grade durable execution (replay, distributed task queues, visibility queries), but Aesir uses ~5% of those capabilities. Actual requirements: persist conversation state, route signals to paused conversations, enforce timeouts, detect stale executions, ensure at-least-once processing. Postgres handles all of these with SELECT FOR UPDATE SKIP LOCKED, heartbeat columns, polling-based timeout checks, and row-level locking.
 
 **Major components:**
+1. **ConversationExecutor** -- Postgres-backed durable orchestration. Worker polling loop claims queued conversations via SKIP LOCKED, runs agent loop, persists on pause/complete. Heartbeat updates detect stale conversations. Concurrency invariant: exactly one agent loop per conversation at any time.
+2. **EventLog** -- append-only Postgres table (agent_events) with buffered batch writes. Events recorded when things happen, not reconstructed afterward. LISTEN/NOTIFY for reactive subscriptions, polling fallback. Sequence per conversation is gapless (use MAX(sequence) + 1 within conversation scope).
+3. **SessionProjection** -- reactively updated agent_sessions table subscribing to EventLog. Replaces tasks table with ground-truth artifact extraction (PR numbers, branch names from tool.succeeded events). No more parsePrInfoFromTrace() scanning.
+4. **AgentRegistry** -- lazy-loading from definitions/ with mtime-based cache invalidation. Zod validation on load. Version pinning (running conversations stay pinned to definition version they started with).
+5. **ToolRegistry** -- factory-based resolution with namespace:tool_name convention (codebase:read_file, linear:get_issue). Each factory receives ToolContext (agentId, correlationId, containerManager) and returns configured ToolDefinition.
+6. **EventRouter** -- loads start rules from all registered definitions, matches incoming events. Adapters normalize integration payloads to IncomingEvent objects. Correlation-based signal routing resolves conversation ID from correlation key.
+7. **HistoryManager** -- three-phase compaction strategy. Phase 1 (pruning): protect last N messages, replace old tool results with descriptors, deduplicate same-file reads, head+tail preservation. Phase 2 (structured summary): anchored summary with artifact section populated from session projection (ground truth, not LLM memory).
 
-1. **Agentic Loop Runtime (`runAgentLoop`)** — Core execution primitive. Takes system prompt, tools, initial message → iterates: LLM call → tool execution → result feedback → repeat until done or limits hit. Wraps Anthropic SDK's `messages.create()` with tracing callbacks, token tracking, iteration counting, and abort handling.
-
-2. **Tool Library (per-agent toolkits)** — Composable tool sets. Codebase tools (read/write/search/list/run) wrap `DevContainerManager`. MCP tools (Linear/GitHub/Slack) wrap `callMcpTool()`. Git tools wrap GitHub MCP. Orchestrator gets `spawn_agent` tool for sub-agent coordination. Each agent type receives only the tools it needs.
-
-3. **Database Schema (agents.*)** — Three tables: `tasks` (critical structured data like PR number, branch name, container ID), `context_snapshots` (LLM-generated semantic summaries at activity boundaries), `execution_traces` (observability — every tool call and LLM response with parent-child correlation).
-
-4. **Temporal Activities (modified)** — `runOrchestratorPreApproval` replaces `runDevAgentGraphActivity`. `runOrchestratorPostApproval` replaces `continueAfterApprovalActivity`. Activity functions call `runAgentLoop()` instead of `graph.invoke()`. Return types stay compatible for smooth migration.
-
-5. **Smart Router** — LLM-based event classifier replacing hardcoded routing. Hybrid approach: deterministic events (PR merged, approval button clicked) use rules (zero-latency), ambiguous events (Slack mentions, Linear comments) use LLM reasoning (100-500ms).
-
-6. **Sub-Agent Pattern** — Orchestrator spawns focused sub-agents (researcher, coder, tester) via `spawn_agent` tool. Each sub-agent: fresh context window, restricted tool set, returns condensed summary (not full conversation). In-process spawning (function call) not out-of-process (Temporal activity).
-
-**Key architectural insights from research:**
-
-- **Sub-agent context isolation:** Sub-agents start with clean context (task brief + relevant data). They return only final output message, not full conversation history. This prevents context explosion in orchestrator.
-- **Context boundary management:** Write semantic summaries to DB only at Temporal activity boundaries (end of pre-approval, end of post-approval). DO NOT write between sub-agent invocations within a single activity (in-memory passing).
-- **Tool definition architecture:** Per-agent toolkits (composable) not global registry. Researcher toolkit = subset of codebase tools (read-only). Coder toolkit = codebase tools (read+write). No agent has all tools — reduces context window consumption and enforces security boundaries.
+**Critical dependency flow:**
+- Agent definition schema -> AgentRegistry + ToolRegistry
+- EventLog -> SessionProjection + HistoryManager
+- ConversationExecutor depends on: AgentRegistry, ToolRegistry, EventLog, HistoryManager
+- EventRouter depends on: AgentRegistry (triggers), ConversationExecutor
+- Single service wires all components together
 
 ### Critical Pitfalls
 
-Research identified pitfalls specific to agentic systems and v2.2 migration:
+1. **JSONB Conversation Messages Becomes Write Amplification Bomb** -- PostgreSQL's MVCC means every UPDATE to messages column rewrites entire JSONB blob. For 500KB conversation, every tool call generates 500KB row rewrite + WAL entry + dead tuple + index updates. TOAST compressed JSONB is 10x slower than inline (7,624ms vs 746ms per 1M row scan). **Prevention:** Persist messages only at lifecycle boundaries (pause/complete/fail), NOT every tool call. During agent loop, messages live in memory only. Consider separate conversation_messages table for append-only INSERTs instead of UPDATE of entire JSONB. Use LZ4 compression. Tune autovacuum aggressively.
 
-**1. Context Explosion in Multi-Agent Handoffs**
+2. **Stale Running Conversation Detection Without Proper Heartbeats** -- Agent loops run 5-30 minutes. Process could crash, container OOM-killed, database connection drop. Conversation shows "running" but nothing actually running. Simple timeout causes either killing legitimate slow conversations or leaving abandoned conversations stuck for hours. **Prevention:** Implement heartbeats (onHeartbeat callback updates last_heartbeat_at). Use claimed_by column with worker ID. Separate claiming (short transaction with SKIP LOCKED + SET status = running, COMMIT) from executing agent loop. Use pg_advisory_xact_lock or row-level lock to ensure one process per conversation.
 
-Full conversation histories passed between agents without summarization. Token costs explode, agents lose focus, quality degrades. One system "ballooned past every sensible limit, spat out fragmented thoughts like a sleep-deprived philosopher."
+3. **Event Log Sequence Gaps Cause Missed Events** -- PostgreSQL sequences are not transactional. Transaction A gets sequence 5, Transaction B gets sequence 6, B commits first. Projection reads up to sequence 6, records "last processed = 6." Transaction A commits with sequence 5. Projection never sees event 5. **Prevention:** Use gapless sequences per conversation (MAX(sequence) + 1 within conversation scope since one agent loop at a time per conversation). Or use transaction ID-based catchup with pg_current_xact_id(). LISTEN/NOTIFY as hint only, always back with polling. Periodic full reconciliation to catch gaps.
 
-**How v2.2 avoids:** Sub-agents return condensed summaries (1-2K tokens) not full transcripts. Server-side `clear_tool_uses` auto-clears old tool results at 80% context window. Semantic similarity filtering and rule-based pruning can yield 40-60% token savings.
+4. **Buffered Event Writes Lose Data on Crash** -- EventLog.append() is void (fire-and-forget). Events buffered in memory and batch-inserted periodically. Process crash between tool call and next flush permanently loses events. Event log cannot be "unified ground truth" AND "fire-and-forget" simultaneously. **Prevention:** Flush events synchronously at lifecycle boundaries (before persisting conversation, before writing session projection, before returning from agent loop). Use WAL-backed buffering (append to local file, replay on crash). Accept tradeoff explicitly (document which event types are "best effort" vs "guaranteed"). Flush on every tool result that produces artifacts.
 
-**2. Infinite Loops and Agent Deadlocks**
-
-Agent stuck calling same tool repeatedly. Runaway API costs. Single most common failure mode in multi-agent systems. LLMs can misinterpret termination signals due to probabilistic nature.
-
-**How v2.2 avoids:** Hard iteration limits (50 per sub-agent, 100 per orchestrator, 10 for router). Temporal activity timeout (30min) as ultimate backstop. Explicit termination check: if LLM returns text-only (no tool calls), agent is done. No explicit "stop" tool needed.
-
-**3. Autonomous Agents Operating Without Guardrails**
-
-The Replit incident (July 2025): AI agent deleted production database, then fabricated data and lied about actions. Lack of environmental segregation, no execution approval gates, agent exceeded design scope.
-
-**How v2.2 avoids:** All destructive operations (create branch, commit, PR) happen in sandbox container. Human approval gates via Temporal signals for plan execution. Environment separation (dev container, not prod). Risk tiers: auto-approve reads, require approval for writes.
-
-**4. AI-Generated Code Quality Problems**
-
-45% of AI-generated code samples fail security tests. PRs with AI code have 1.7x more problems (logic errors, maintainability, security, performance). AI duplicates code (8x increase in 2024) rather than refactors.
-
-**How v2.2 avoids:** All code generated in sandbox with static analysis. Tests run before PR creation. Human code review required for merge. System prompts guide refactoring over duplication. Codebase tools enable reading existing patterns before writing.
-
-**5. Poor Observability and Debugging Difficulty**
-
-Root cause analysis non-trivial in multi-turn conversations. Cascading errors. Opaque reasoning paths. Fragmented telemetry from different frameworks.
-
-**How v2.2 avoids:** Execution tracing built into agentic loop from day one. Every tool call and LLM response logged to `agents.execution_traces` automatically. Parent-child agent correlation via `parent_agent_instance_id`. Structured logging with correlation IDs throughout.
-
-**Additional pitfalls from research:**
-
-- **Uncontrolled token costs:** Using expensive models for simple tasks, no budget enforcement, context re-derivation. → Smart model routing (Haiku for router), token budgets per task, iteration limits.
-- **Human-in-the-loop blocking:** Low escalation thresholds overwhelm humans, high thresholds let risky decisions through. → Calibrated escalation: auto-approve low-risk, notify on medium-risk, require approval for high-risk.
-- **Specification and coordination issues:** 79% of multi-agent failures. Inter-agent misalignment, duplicate effort, unclear responsibilities. → Structured communication (Zod schemas for all tool inputs), clear agent boundaries (per-toolkit tool sets), coordinator pattern (orchestrator delegates to sub-agents).
-
----
-
-## Spec Validation
-
-The 2.2-spec.md is architecturally sound. Research validates these spec decisions:
-
-### What the Spec Gets Right
-
-1. **Anthropic SDK choice:** Direct `@anthropic-ai/sdk` usage is correct. Research confirms LangChain adds unnecessary abstraction. SDK's `betaZodTool` and `toolRunner` are purpose-built for this pattern. Removing 4 LangChain packages eliminates peer dependency conflicts documented in CLAUDE.md gotchas.
-
-2. **Temporal integration approach:** Keeping Temporal for orchestration, signals, approval gates, timeouts is validated by Temporal's official AI cookbook. Agentic loops run inside activities, not as workflows. Workflow owns deterministic shell, activity owns non-deterministic LLM work. This is the production pattern.
-
-3. **Sub-agent as in-process:** Spec proposes `spawn_agent` as orchestrator tool that runs nested `runAgentLoop()`. Research confirms this is correct — Anthropic's multi-agent research system uses exactly this pattern. In-process spawning has ~0ms overhead vs 100ms+ for Temporal activity scheduling. Sub-agents are short-lived (5-50 tool calls, <5 min each), share parent's container ID, need to return results synchronously.
-
-4. **Context snapshot design:** Separating critical structured data (`agents.tasks` table: PR number, branch name, container ID) from semantic context (`agents.context_snapshots`: LLM-generated summaries) is sound. Research confirms: "Find the smallest set of high-signal tokens that maximize the likelihood of your desired outcome." LLM summaries are lossy but sufficient for reasoning. Critical identifiers must never be summarized away.
-
-5. **Tool library design:** Wrapping existing MCP layer as `ToolDefinition` objects is the right approach. Thin wrapper: Zod schema + description + execute function that calls `callMcpTool()`. MCP HTTP layer unchanged. Codebase tools wrap `DevContainerManager`. Per-agent toolkits (not global registry) reduces context consumption.
-
-6. **Guardrails:** Iteration limits, token budgets, sandbox enforcement are all validated as necessary. Research shows these are table stakes for production agentic systems.
-
-7. **Migration plan:** Phased replacement (dev agent first, then product agent, then remove LangGraph) is sound. Activity boundary as isolation layer enables coexistence during migration.
-
-### Patterns Confirmed by Production Systems
-
-| Spec Decision | Validated By |
-|---------------|--------------|
-| Tool-use loop as core primitive | Claude Code (nO loop), SWE-Agent, Anthropic research system |
-| Sub-agent spawning with context isolation | Anthropic multi-agent research system, Claude Code Explore agents |
-| Temporal + agentic loop integration | Temporal official cookbook, Codex architecture |
-| Error recovery via LLM reasoning | Claude Code (vs blind retries), SWE-Agent patterns |
-| Semantic context summaries | Claude Code context management, Anthropic engineering blog |
-| Per-agent tool restriction | Anthropic guidance (performance degrades >20 tools) |
-
----
-
-## Spec Enrichments
-
-Research adds important details not fully specified in 2.2-spec.md:
-
-### 1. Hybrid Smart Router (Critical Addition)
-
-**What spec says:** Replace hardcoded event routing with LLM-based smart router.
-
-**What research adds:** Pure LLM routing adds latency to every webhook event (1-3s per event) and creates single point of failure. Hybrid approach is production-proven:
-
-- **Fast path (deterministic):** Well-known event types with clear routing handled by code, no LLM. Examples: `slack.block_actions.approved` → signal dev agent approval, `github.pull_request.merged` → signal PR completion. Zero latency.
-- **Slow path (LLM):** Ambiguous events requiring reasoning. Examples: `slack.app_mention.created` → is this product request, dev command, or chatter? `linear.comment.created` → is this approval, feedback, question, or just discussion? 100-500ms latency acceptable.
-
-**Rationale:** Current hardcoded routing already works reliably for common paths. Adding LLM reasoning for ambiguous cases extends capability without adding latency/risk to proven flows. The existing `classifyApprovalIntent()` already uses this pattern — LLM classification for comment interpretation.
-
-### 2. LLM Self-Summarization at Activity Boundaries (Implementation Gap)
-
-**What spec says:** Context snapshots written "at the end of each Temporal activity."
-
-**What research adds:** How does the agentic loop generate its own summary? Options:
-
-1. **LLM self-summary (recommended):** Before loop exits, one final LLM call: "Summarize what you accomplished, what you found, and what comes next."
-2. **Programmatic extraction:** Parse trace to extract key facts. Cheaper but lower quality.
-3. **Both (best):** Programmatic for structured fields (tool count, files changed), LLM for semantic fields (natural language summary).
-
-**Implementation:** `runAgentLoop()` should have a summarization phase at the end that counts tools/tokens programmatically, extracts structured data from tool results, and asks LLM for natural language summary. This produces the `agents.context_snapshots` row.
-
-### 3. Token Budget Tracking Across Sub-Agents (Missing Detail)
-
-**What spec says:** `maxTokenBudget` in `AgentLoopOptions`.
-
-**What research adds:** How is budget shared across orchestrator + sub-agents within a single Temporal activity?
-
-**Solution:** Use a shared mutable counter:
-
-```typescript
-class TokenBudget {
-  private remaining: number;
-  constructor(total: number) { this.remaining = total; }
-  consume(tokens: number): boolean {
-    this.remaining -= tokens;
-    return this.remaining > 0;
-  }
-  get isExhausted(): boolean { return this.remaining <= 0; }
-}
-```
-
-Pass this into `runAgentLoop()` options. Loop checks before each LLM call. Sub-agents receive the same budget object via closure, so orchestrator + all sub-agents share one pool. Default: 500K tokens per task.
-
-### 4. Server-Side Context Management (SDK Feature)
-
-**What spec says:** Context snapshots at activity boundaries.
-
-**What research adds:** Anthropic SDK provides server-side `clear_tool_uses` API (beta) that auto-clears oldest tool results when token threshold exceeded. This happens server-side — client maintains full history, API applies edits before sending to Claude.
-
-**Recommendation:** Enable `clear_tool_uses` as safety net:
-
-```typescript
-context_management: {
-  edits: [{
-    type: 'clear_tool_uses_20250919',
-    trigger: { type: 'input_tokens', value: 50000 },  // 80% of 200K context
-    keep: { type: 'tool_uses', value: 5 },  // Keep 5 most recent tool call pairs
-    clear_at_least: { type: 'input_tokens', value: 5000 },
-  }]
-}
-```
-
-This prevents context exhaustion within a single activity. Different from spec's cross-boundary snapshots (which persist semantic summaries to DB). Both mechanisms are complementary: server-side clearing manages within-loop context, DB snapshots manage across-boundary context.
-
-### 5. Anthropic SDK `toolRunner()` vs Custom Loop (Decision Point)
-
-**What spec says:** Build agentic loop runtime.
-
-**What research adds:** Anthropic SDK provides `toolRunner()` helper that automates the loop: iterate tool calls until done, execute tools automatically, handle parallel tool results, forward errors. Should Aesir use it or build custom loop?
-
-**Recommendation:** Start with custom loop wrapping `messages.create()`, not `toolRunner()`. Reasons:
-
-- Need explicit iteration counting (not just "loop until end_turn")
-- Need token budget checking before each iteration
-- Need tracing callbacks at precise moments
-- Need to inject context snapshots at activity boundaries
-- Need sub-agent spawning where `spawn_agent` tool runs a nested loop inside a tool's `execute()` function
-
-`toolRunner()` is designed for simpler use cases. Aesir needs more control. Use SDK for LLM calls, build loop logic ourselves. Keep `runAgentLoop()` as thin wrapper (~100-150 lines) with explicit control flow.
-
-### 6. Streaming vs Non-Streaming (Missing Detail)
-
-**What spec says:** Nothing about streaming.
-
-**What research adds:** Anthropic SDK supports streaming (SSE events for real-time token output). Claude Code uses streaming for UI feedback. But streaming adds complexity: event parsing, partial message handling, idle timeout detection.
-
-**Recommendation:** Non-streaming for v2.2. Agents run in background Temporal activities. No user watching tokens appear. Streaming latency benefit (first token faster) doesn't matter for backend agents. Add streaming later if building real-time UI (e.g., agent workspace dashboard).
-
----
-
-## Spec Challenges
-
-Areas where research identifies risks or disagrees with spec approach:
-
-### 1. Smart Router as Single Point of Failure (Medium Risk)
-
-**Spec approach:** Replace hardcoded event routing with LLM-based smart router.
-
-**Research concern:** Every incoming webhook triggers LLM call to decide routing. If router LLM call fails, no events get routed. Adds 1-3s latency to every event. Increases cost (every webhook = LLM tokens).
-
-**Recommendation:** Hybrid approach (described in Spec Enrichments above). Keep deterministic fast path for proven event types. Use LLM only for ambiguous cases. This preserves current reliability while adding intelligence where needed.
-
-**If spec insists on pure LLM routing:** Add fallback routing rules that activate if router errors. Cache routing decisions for repeated event patterns. Use Haiku (fast, cheap) not Sonnet for routing.
-
-### 2. Context Snapshot Generation Details (Low Risk)
-
-**Spec approach:** Write context snapshots at activity boundaries.
-
-**Research concern:** Spec doesn't specify when/how the snapshot content is generated. If done naively (serialize full conversation history), snapshots will be massive and defeat the purpose.
-
-**Recommendation:** Explicit summarization step at end of `runAgentLoop()` (see Spec Enrichments). LLM generates natural language summary, programmatic extraction for structured fields. Snapshot content is curated, not raw state dump.
-
-**Impact if not addressed:** Context snapshots become as bloated as LangGraph checkpoints, defeating the architecture's purpose.
-
-### 3. Re-Plan Loop in Temporal Workflow (Low Risk)
-
-**Spec approach:** Simplified workflow, re-planning handled by orchestrator.
-
-**Research concern:** Current workflow has complex re-plan loop with nested `wf.condition()` calls and TODO about "full re-planning loops needing recursion or while loop." Spec doesn't specify how workflow handles multiple rejection cycles.
-
-**Recommendation:** Simplify workflow with explicit while loop:
-
-```typescript
-let approved = false;
-while (!approved) {
-  const result = await runOrchestratorPreApproval({ ... });
-  await wf.condition(() => state.approval !== null, TIMEOUT);
-  if (state.approval?.approved) {
-    approved = true;
-  } else {
-    state.approval = null; // Reset for next iteration
-  }
-}
-```
-
-Cleaner than nested conditionals. Handles unlimited rejection cycles naturally.
-
-### 4. Product Agent Conversation History (Low Risk)
-
-**Spec approach:** Replace LangGraph `PostgresSaver` checkpoints with context snapshots.
-
-**Research concern:** Product agent needs turn-by-turn conversation state (Slack thread history). Context snapshots are designed for activity-end summaries, not turn-by-turn state.
-
-**Recommendation:** Store full conversation in Temporal workflow local state (already exists as `currentMessage` loop variable). Each turn's agentic loop starts fresh with latest user message + context summary of prior turns. This works because:
-
-- Product conversations are short (<20 turns)
-- Each turn is independent: user message → agent response
-- Context summary captures "we discussed X, user confirmed Y"
-
-No need for per-turn DB writes. Snapshot written only when issue created (end of conversation).
-
-### 5. Anthropic SDK Beta APIs (Low Risk)
-
-**Spec approach:** Use Anthropic SDK's `betaZodTool`.
-
-**Research concern:** `betaZodTool` and `toolRunner` are under `beta` namespace. Might indicate API instability.
-
-**Reality:** "Beta" in Anthropic SDK means "may have API changes," not "unstable." Tool runner is recommended by official docs for "most tool use implementations." It's production-ready within a major version range.
-
-**Recommendation:** Use `betaZodTool` (significantly simplifies tool definition). Wrap in thin adapter so if API changes, only adapter needs updating. Pin SDK version (`^0.71.0` not `latest`). Test on upgrade.
-
----
+5. **Signal Arrives Between Agent Loop Exit and Conversation Persist** -- When agent calls wait_for, must: return tool result, exit loop, write agent.paused event, set status to paused, persist conversation, register timeout. Signal arriving between loop exit and persist overwrites queued signal. The v2.2 race condition has merely moved to different window. **Prevention:** Use Postgres row-level locking for conversation updates. Write signal queue separately (signal_inbox table). Atomic transition to paused (single UPDATE with CTE that appends pending signals). Test explicitly (integration test sending signal 0ms after wait_for).
 
 ## Implications for Roadmap
 
-Based on combined research, recommended phase structure for v2.2:
-
-### Phase 1: Agentic Loop Runtime + SDK Migration (Foundation)
-
-**Rationale:** Everything depends on the core runtime. Cannot build tools without the loop. Cannot build agents without tools working in the loop. This is the foundation that enables all subsequent work.
-
-**Delivers:**
-- `runAgentLoop()` function with iteration limits, token tracking, abort support
-- Anthropic SDK integration (`@anthropic-ai/sdk` ^0.71.0)
-- Tool definition interface (`ToolDefinition`, Zod → Anthropic conversion)
-- Tracing callbacks (onToolCall, onResponse)
-- Remove `@langchain/*` dependencies (4 packages out)
-
-**Addresses:** Table stakes features (while loop, tool interface, iteration limits, abort handling)
-
-**Avoids:** Pitfall #2 (infinite loops) via hard iteration limits and explicit termination check
-
-**Validation:** Minimal test agent that reads files and answers questions
-
-**Research flags:** Standard pattern (Anthropic SDK docs, Temporal cookbook). Skip deep research.
-
----
-
-### Phase 2: Database Schema + Context Management
-
-**Rationale:** Tools and agents need somewhere to write traces and context. Building schema early means all subsequent phases can use it immediately.
-
-**Delivers:**
-- Drizzle schema definitions (`agents.tasks`, `agents.context_snapshots`, `agents.execution_traces`)
-- Migrations for new tables
-- Context read/write functions
-- LLM self-summarization helper
-
-**Uses:** Platform (existing Drizzle ORM, PostgreSQL connection)
-
-**Implements:** Context boundary design (structured vs semantic data separation)
-
-**Addresses:** Execution tracing (parent-child correlation), context persistence
-
-**Avoids:** Pitfall #1 (context explosion) via semantic summaries not raw state dumps
-
-**Research flags:** Standard PostgreSQL schema design. Skip research.
-
----
-
-### Phase 3: Tool Library (All Tool Definitions)
-
-**Rationale:** Depends on runtime (Phase 1) for types. Depends on DB (Phase 2) for traces. Enables all agent work.
-
-**Delivers:**
-- Codebase tools (read_file, write_file, search_codebase, list_directory, run_command)
-- MCP tool bridges (21 tools across Linear/GitHub/Slack wrapped with Zod schemas)
-- Git tools (create_branch, create_commit, create_pull_request)
-- spawn_agent coordination tool
-- Per-agent toolkits (researcher, coder, tester, orchestrator, product, router)
-
-**Uses:** Existing DevContainerManager, callMcpTool(), DevContainerGit
-
-**Addresses:** Tool library features, context-scoped tool sets
-
-**Avoids:** Pitfall #7 (LLM complexity) by providing clear tool descriptions optimized for LLM understanding
-
-**Validation:** Each tool independently tested. MCP bridges tested against running integration services.
-
-**Research flags:** Standard wrapper pattern. Skip research.
-
----
-
-### Phase 4: Dev Agent Orchestrator + Sub-Agents
-
-**Rationale:** This is the largest, most complex agent. Primary deliverable of v2.2. Depends on all prior phases.
-
-**Delivers:**
-- Orchestrator system prompts (research, planning, execution phases)
-- Sub-agent configurations (researcher, coder, tester with focused tool sets)
-- New Temporal activities (runOrchestratorPreApproval, runOrchestratorPostApproval)
-- Workflow updates (simplified approval loop, context snapshot loading)
-- In-process sub-agent spawning via spawn_agent tool
-
-**Uses:** All tools from Phase 3, context management from Phase 2, runtime from Phase 1
-
-**Implements:** Sub-agent architecture (orchestrator + focused sub-agents with context isolation)
-
-**Addresses:** Adaptive agent behavior, intelligent error recovery, complexity-aware routing
-
-**Avoids:** Pitfall #3 (uncontrolled agent actions) via sandbox, approval gates, tool restrictions. Pitfall #5 (poor observability) via execution tracing.
-
-**Validation:** Full flow: issue → research → plan → approval → execute → PR
-
-**Research flags:** Some prompt engineering needed. Standard agent patterns otherwise. Skip deep research.
-
----
-
-### Phase 5: Product Agent (Adaptive Conversation Loop)
-
-**Rationale:** Smaller agent, benefits from patterns established in Phase 4. Validates that runtime works for different agent types.
-
-**Delivers:**
-- Product agent agentic loop (classify → analyze → clarify → confirm → create as flexible reasoning, not fixed nodes)
-- New activity function (runProductAgentConversation)
-- Workflow simplification (conversation state in local workflow vars, snapshot only at end)
-- Conversation context management
-
-**Uses:** Tool library (Linear/Slack tools only), runtime from Phase 1
-
-**Addresses:** Adaptive behavior (skip clarification if request is clear)
-
-**Validation:** Slack message → clarification → issue creation
-
-**Research flags:** Standard pattern. Skip research.
-
----
-
-### Phase 6: Smart Router (Hybrid Event Classification)
-
-**Rationale:** Can be built after agents work. Current hardcoded routing works in interim. Router validates runtime for classification tasks.
-
-**Delivers:**
-- Hybrid router (rule-based fast path, LLM slow path for ambiguous events)
-- Workflow management tools (query_running_workflows)
-- Integration with dev-agent/product-agent event dispatchers
-
-**Uses:** Runtime from Phase 1 with Haiku model for speed/cost
-
-**Implements:** Smart router architecture (LLM reasoning for event interpretation)
-
-**Addresses:** Event classification feature
-
-**Avoids:** Pitfall #10 (specification issues) via structured communication, clear routing rules
-
-**Research flags:** Standard LLM classification pattern. Skip research.
-
----
-
-### Phase 7: Guardrails, Cleanup, Hardening
-
-**Rationale:** All functionality works. Polish phase. Remove old code, add safety features.
-
-**Delivers:**
-- Cost tracking and budget enforcement (per-task token limits)
-- Escalation policies (risk tiering for approvals)
-- LangGraph removal (delete graph.ts, nodes/, state.ts, code-workflow/)
-- Dependency cleanup (remove @langchain/* packages)
-- Server-side context management (clear_tool_uses configuration)
-
-**Addresses:** Token cost control, safety guardrails
-
-**Avoids:** Pitfall #9 (runaway token costs) via budgets, limits, model routing
-
-**Research flags:** Standard hardening. Skip research.
-
----
-
-### Phase 8: End-to-End Validation
-
-**Rationale:** Prove full flow works. Regression testing against v2.1 capabilities.
-
-**Delivers:**
-- E2E test scenarios (simple task, complex task, error recovery, approval rejection)
-- Performance baselines (token usage per task type, latency measurements)
-- Comparison against v2.1 (prove adaptive behavior improvements)
-
-**Validation:** Spec's target scenario ("Add health check endpoint") works end-to-end
-
----
+Based on research, suggested phase structure:
+
+### Phase 1: Database Schema + Core Infrastructure
+**Rationale:** Must establish persistence layer before any framework code. Database schema, migrations, and core event logging need to exist before ConversationExecutor or any component that writes to them.
+**Delivers:** Postgres schema (conversations, agent_events, agent_sessions tables), Drizzle migrations, EventLog implementation (append/query/flush/subscribe), basic SessionProjection
+**Addresses:** CRITICAL-3 (sequence gaps) requires correct schema design upfront. CRITICAL-4 (buffered writes) requires flush policy defined before implementation.
+**Avoids:** CRITICAL-1 (JSONB write amplification) via correct messages column strategy (persist only at boundaries, consider separate messages table). MAJOR-6 (MVCC dead tuples) via autovacuum tuning from day one.
+**Research flag:** Low -- schema design is well-understood from ARCHITECTURE.md analysis.
+
+### Phase 2: Agent and Tool Registries
+**Rationale:** ConversationExecutor depends on AgentRegistry (to load definitions) and ToolRegistry (to resolve tools). These can be built in parallel with database schema but must exist before executor.
+**Delivers:** AgentRegistry (lazy loading, mtime caching, Zod validation), ToolRegistry (factory registration, namespace resolution), agent definition files (YAML + prompt.md for dev-agent and product-agent)
+**Addresses:** MODERATE-2 (version pinning orphaned definitions) requires version handling in registry design. MINOR-1 (hot reload inconsistency) requires atomic definition loading.
+**Uses:** Existing system prompts converted to .md files, existing tool implementations wrapped in factories
+**Research flag:** Low -- file loading + caching is standard pattern (ARCHITECTURE.md confirms).
+
+### Phase 3: History Manager
+**Rationale:** Can be built in parallel with registries. ConversationExecutor needs it but doesn't depend on registries. Phase 1 pruning is critical for keeping conversation sizes manageable.
+**Delivers:** Phase 1 tool output pruning (protect N messages, replace old tool results, deduplicate, head+tail), Phase 2 structured summarization with artifact injection from session projection
+**Addresses:** MAJOR-3 (compaction drift) requires careful implementation and testing with real conversations. MODERATE-5 (pruning removes needed info) requires generous protectedMessages config.
+**Implements:** Three-phase escalation strategy from FEATURES.md research
+**Research flag:** Medium -- Phase 2 summarization needs empirical validation with real dev-agent conversations.
+
+### Phase 4: Conversation Executor (Core)
+**Rationale:** This is the Temporal replacement and the highest-complexity component. Requires database schema (Phase 1), registries (Phase 2), and history manager (Phase 3). The critical path bottleneck.
+**Delivers:** ConversationExecutor (start/signal/cancel/get/list), worker polling loop with SKIP LOCKED, heartbeat mechanism, stale conversation detection, wait_for tool implementation, concurrency control (one loop per conversation), signal queueing for race condition fix
+**Addresses:** CRITICAL-2 (stale detection) is the hardest problem -- requires heartbeats, claimed_by column, atomic claiming. MAJOR-1 (signal race during persist) requires row-level locking and atomic transitions. MAJOR-4 (memory pressure) requires concurrency limits and heap size configuration.
+**Uses:** All previous phases (database, registries, history manager)
+**Research flag:** High -- most complex component with most critical pitfalls. Needs careful implementation and extensive integration testing.
+
+### Phase 5: Timeout Scheduling
+**Rationale:** Depends on ConversationExecutor (delivers timeout signals to conversations). Can be built after core executor works but before event routing (timeout signals are internal, not from webhooks).
+**Delivers:** pg-boss integration for timeout scheduling, timeout signal delivery, timeout cancellation on resume
+**Addresses:** Part of ConversationExecutor requirement (timeout enforcement). Uses pg-boss startAfter API from STACK.md recommendation.
+**Research flag:** Low -- pg-boss is well-documented, timeout pattern is straightforward.
+
+### Phase 6: Event Router + Adapters
+**Rationale:** Requires ConversationExecutor to exist (routes events to it). Adapters transform integration payloads. Start rules from agent definitions in registry.
+**Delivers:** EventRouter (start rules, signal matching, correlation-based routing), event adapters (Slack, GitHub, Linear payload normalization to IncomingEvent)
+**Addresses:** MINOR-2 (signal dedup ID for internal sources) requires adapter implementation. MAJOR-1 (signal race) requires careful signal delivery logic.
+**Uses:** AgentRegistry (triggers), ConversationExecutor (start/signal)
+**Research flag:** Low -- adapter pattern is well-understood (FEATURES.md validation).
+
+### Phase 7: Single Service Consolidation
+**Rationale:** Wires all framework components together. Replaces dev-agent, product-agent, router services with single HTTP service and worker loop.
+**Delivers:** Single main.ts service with HTTP routes (/health, /events, /conversations/:id, /conversations/:id/cancel), worker polling loop, graceful shutdown with conversation draining, Docker Compose updates (remove 6 services, add 1)
+**Addresses:** MODERATE-3 (graceful shutdown) requires drain logic and stop_grace_period tuning. MODERATE-4 (event table growth) requires retention policy planning.
+**Implements:** Bootstrap sequence from ARCHITECTURE.md (env validation -> DB connect -> migrations -> registries -> event log -> session projection -> executor -> router -> HTTP server -> worker loop)
+**Research flag:** Low -- mechanical consolidation, HTTP routing is straightforward.
+
+### Phase 8: Smart Router Adaptation
+**Rationale:** Existing smart router uses Temporal client. Must adapt to use ConversationExecutor instead. Requires single service (Phase 7) to exist.
+**Delivers:** Smart router adapted from Temporal workflowClient to ConversationExecutor, fast-path and slow-path routing unchanged, LLM classification unchanged
+**Uses:** ConversationExecutor API instead of Temporal client API
+**Research flag:** Low -- wrapper replacement, logic unchanged.
+
+### Phase 9: Integration Testing + Validation
+**Rationale:** Before cutover, validate full lifecycle: start -> pause -> signal -> resume -> complete. Test all critical paths and edge cases.
+**Delivers:** Integration tests (full dev-agent flow, product-agent flow, signal queueing, timeout enforcement, stale detection), smoke tests with real LLM calls and webhooks
+**Addresses:** All critical pitfalls require explicit testing. MAJOR-1 (signal race) needs test sending signal 0ms after wait_for. CRITICAL-2 (stale detection) needs test killing process mid-loop.
+**Research flag:** Medium -- integration testing with Docker, webhooks, and LLM calls requires testcontainers setup.
+
+### Phase 10: Temporal Migration + Cutover
+**Rationale:** After validation passes, cut over to v2.3. Drain existing Temporal workflows (up to 7 days for workflows waiting on approvals/PR feedback).
+**Delivers:** Feature flag (USE_V23_EXECUTOR=true) routing new events to executor, Temporal drain monitoring (verify no running workflows after 7 days), dual-mode signal routing during transition
+**Addresses:** MAJOR-5 (Temporal drain long tail) requires migration signals to gracefully terminate waiting workflows, hard cutoff date for forced termination.
+**Research flag:** Medium -- drain strategy needs careful execution, dual-mode routing adds complexity.
+
+### Phase 11: Cleanup + Documentation
+**Rationale:** After Temporal is fully drained, remove all Temporal code, services, and documentation references.
+**Delivers:** Delete packages/agents/src/shared/temporal/, delete per-agent main.ts and worker.ts, remove @temporalio/* from package.json, remove Temporal services from Docker Compose, drop old DB tables (tasks, context_snapshots, execution_traces), update CLAUDE.md
+**Research flag:** Low -- mechanical deletion.
 
 ### Phase Ordering Rationale
 
-**Dependencies first:** Phase 1 (runtime) → Phase 2 (DB) → Phase 3 (tools) is strict dependency chain. Nothing can proceed without these foundations.
+**Why this order:**
+- **Database schema first** because everything persists to it. No framework code can exist without schema.
+- **Registries next** because they are pure functions (read files, validate, cache) with no external dependencies. Can build in parallel with schema.
+- **History manager in parallel** because it only depends on message array format, not on databases or executors.
+- **Executor is the critical path** -- most complex component, depends on all previous phases, blocks event routing.
+- **Timeout scheduling after core executor** because it delivers signals to executor (internal signal source).
+- **Event routing after executor** because it orchestrates start/signal calls to executor (external signal source).
+- **Single service consolidation wires everything** -- cannot exist until all framework components exist.
+- **Smart router adaptation** is thin wrapper -- quick once single service exists.
+- **Integration testing before cutover** -- validate everything works before touching production.
+- **Temporal migration last** -- only after v2.3 is fully validated.
 
-**Critical path:** Phases 4-5 (agents) are the primary deliverable. Dev agent first (complex, establishes patterns), product agent second (validates patterns).
+**Why this grouping:**
+- **Phases 1-3 are foundational infrastructure** (database, registries, compaction) that can be built in parallel with careful coordination.
+- **Phase 4 is the executor** (critical path, blocks everything downstream).
+- **Phases 5-6 are signal sources** (timeout scheduler, event router) that deliver events to executor.
+- **Phase 7 is integration** (wiring all components into single service).
+- **Phases 8-9 are adaptation and validation** (prepare for cutover).
+- **Phases 10-11 are migration and cleanup** (replace Temporal, remove old code).
 
-**Independent work:** Phase 6 (router) can be built after Phase 3 (needs tools but not agents). Phase 7 (hardening) only after agents proven.
-
-**Validates incrementally:** Each phase has clear validation criteria. Phase N builds on proven Phase N-1.
-
-**Avoids big bang:** Existing LangGraph code remains until Phase 7. Rollback possible until Phase 5 complete.
-
----
+**How this avoids pitfalls:**
+- **CRITICAL-1 (JSONB write amplification)** addressed in Phase 1 (schema design before any code).
+- **CRITICAL-2 (stale detection)** addressed in Phase 4 (heartbeat implementation required for executor).
+- **CRITICAL-3 (sequence gaps)** addressed in Phase 1 (gapless sequence strategy in schema).
+- **CRITICAL-4 (buffered writes data loss)** addressed in Phase 1 (flush policy defined before EventLog implementation).
+- **MAJOR-1 (signal race)** addressed in Phase 4 (atomic persist) and Phase 6 (signal delivery logic).
+- **MAJOR-3 (compaction drift)** addressed in Phase 3 (history manager with testing before integration).
+- **MAJOR-5 (Temporal drain)** addressed in Phase 10 (explicit migration strategy, not assumed).
+- **MAJOR-6 (MVCC dead tuples)** addressed in Phase 1 (autovacuum tuning in schema setup).
 
 ### Research Flags
 
-**Phases needing deeper research during implementation:**
-
-None. All phases use well-documented patterns. Anthropic SDK is documented. Temporal + agentic loops is documented. MCP wrapping is straightforward.
-
-**Prompt engineering may require iteration:** Phase 4 (orchestrator prompts), Phase 5 (product agent prompts), Phase 6 (router prompts). But this is tuning, not research.
+**Phases likely needing deeper research during planning:**
+- **Phase 4 (ConversationExecutor)** -- most critical component with most pitfalls. Needs detailed implementation research for heartbeat mechanism, atomic claiming, signal queueing. Consider dedicated research-phase call before implementation.
+- **Phase 9 (Integration Testing)** -- testcontainers setup for Docker-based testing, webhook simulation, real LLM call mocking. May need research on testing patterns for long-running agent loops.
+- **Phase 10 (Temporal Migration)** -- drain strategy needs validation. Consider research on Temporal workflow inspection/migration patterns.
 
 **Phases with standard patterns (skip research-phase):**
+- **Phase 1 (Database Schema)** -- Drizzle ORM schema definition is well-understood from existing codebase patterns.
+- **Phase 2 (Registries)** -- file loading + caching is straightforward pattern.
+- **Phase 5 (Timeout Scheduling)** -- pg-boss integration is well-documented.
+- **Phase 6 (Event Router)** -- adapter pattern is well-established.
+- **Phase 7 (Single Service)** -- HTTP server consolidation is mechanical.
+- **Phase 8 (Smart Router Adaptation)** -- wrapper replacement.
+- **Phase 11 (Cleanup)** -- code deletion.
 
-All phases. This is integration work (combining existing pieces) not novel architecture. Research already comprehensive.
-
----
+**Phase 3 (History Manager) is borderline** -- Phase 1 pruning is standard (well-researched), Phase 2 summarization may benefit from targeted research on Claude API prompting for structured summaries.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Anthropic SDK is official, well-documented. Zod compatibility verified. Temporal patterns proven in cookbook. |
-| Features | HIGH | All features validated by production systems (Claude Code, Anthropic research system, SWE-Agent). |
-| Architecture | HIGH | Temporal + agentic loop pattern documented in official sources. Sub-agent spawning validated by Anthropic's own system. |
-| Pitfalls | HIGH | Pitfalls come from real post-mortems (Replit incident), production systems (Claude Code), official guidance (Anthropic, OpenAI). |
+| Stack | **HIGH** | Custom SKIP LOCKED pattern verified across pg-boss, Solid Queue, DBOS, Inngest. pg-boss for timeouts is correct tool for the job. Event log as Postgres table is well-established. JSONB for conversation history is acceptable given write-rarely pattern. All stack decisions backed by production implementations. |
+| Features | **HIGH** | Every table stakes feature validated against production frameworks (Claude Code, OpenAI Agents SDK, CrewAI, AutoGen, LangGraph). Feature dependencies clearly mapped. MVP scope well-defined with explicit anti-features list. Differentiators are architectural consequences, not separate features. |
+| Architecture | **HIGH** (custom build) / **MEDIUM** (external patterns) | ConversationExecutor pattern is well-documented (pg-boss, Solid Queue, DBOS). Event log integration with Drizzle is standard. Single service consolidation is straightforward. JSONB performance analysis is theoretical (not load-tested with Aesir data). History compaction has documented failure modes (Claude Code issues). |
+| Pitfalls | **HIGH** | All critical pitfalls sourced from production post-mortems (Brandur's Postgres queues, pganalyze JSONB benchmarks, Claude Code compaction failures, Event-Driven.io sequence gaps). Mitigation strategies validated across multiple sources. Phase-specific warnings mapped to implementation phases. |
 
-**Overall confidence:** HIGH
+**Overall confidence:** **HIGH**
 
-The v2.2 architecture is sound. Every major decision has production precedent. The risks are known and mitigable. The migration path is incremental.
+Research is comprehensive with cross-verification across multiple production systems. The core technical bet (Postgres as durable executor) is validated by pg-boss (215K weekly downloads), Solid Queue (Rails production usage), and DBOS (VC-backed company built entirely on this pattern). All critical pitfalls have documented mitigations from real-world implementations.
 
 ### Gaps to Address
 
-**1. Prompt Engineering Quality**
+**Areas where research was inconclusive or needs validation during implementation:**
 
-Research provides patterns but not actual prompts. System prompts for orchestrator, sub-agents, router will require iteration. Expect 2-3 revision cycles per agent type based on E2E testing results.
+- **Actual conversation memory footprint in Node.js** -- MAJOR-4 estimates 500KB-5MB per conversation but needs measurement with real Anthropic SDK payloads. Profile memory during real dev-agent conversation before setting concurrency limits. **Resolution:** Phase 9 integration testing includes memory profiling.
 
-**How to handle:** Start with prompts following Anthropic's guidance (clear instructions, examples, explicit constraints). Iterate based on observed behavior. Don't over-optimize prompts before seeing agent behavior in real scenarios.
+- **Optimal event buffer flush interval** -- CRITICAL-4 prevention requires balancing performance (too frequent = overhead) vs data loss risk (too infrequent = loss). **Resolution:** Start with conservative 1-second flush, benchmark during Phase 1 EventLog implementation, tune based on observed event volumes.
 
-**2. Token Budget Calibration**
+- **History compaction trigger thresholds** -- Spec says 80K tokens for pruning, 120K for summarization. Needs empirical validation with real dev-agent conversations. **Resolution:** Phase 3 history manager includes testing with saved v2.2 conversation histories. Adjust thresholds based on observed behavior.
 
-Research recommends budget limits (500K default per task) but optimal values depend on actual usage. Too low = tasks fail unnecessarily. Too high = runaway costs.
+- **Worker polling interval** -- Trade-off between responsiveness (5s = responsive signal delivery) and database load (5s = ~12 queries/minute). **Resolution:** Start with 5-second interval as recommended in ARCHITECTURE.md, monitor pg_stat_user_tables for query load, adjust if needed.
 
-**How to handle:** Start with generous limits (500K). Track actual usage per task type in Phase 8 validation. Adjust downward based on data. Add monitoring alerts at 80% of budget.
+- **Conversation cleanup policy** -- When should completed conversations be archived? Spec mentions retention but no specific policy. Without cleanup, conversations table grows indefinitely. **Resolution:** Define retention policy in Phase 1 schema design. Recommend 30-day retention with monthly partitioning.
 
-**3. Iteration Limit Tuning**
+- **Sub-agent persistence strategy** -- Spec says sub-agents "run inline" but if a sub-agent runs 10+ minutes, its state is at risk on process crash. **Resolution:** Clarify in Phase 4 ConversationExecutor design. Recommendation: sub-agents inherit parent conversation's persistence (saved on parent pause/complete).
 
-Recommended limits (50 sub-agent, 100 orchestrator, 10 router) are research-based estimates. Real tasks may need different values.
-
-**How to handle:** Start with recommended values. Track how often limits are hit vs how often tasks complete naturally. Adjust based on failure modes. Simple tasks should never hit limits. Complex tasks should hit limits rarely (5-10% of time).
-
-**4. Smart Router Rule Definition**
-
-Spec doesn't enumerate which events are deterministic vs ambiguous. This must be defined during Phase 6.
-
-**How to handle:** Audit all event types (webhook payloads from Linear, GitHub, Slack). Categorize: obvious routing (PR merged), ambiguous routing (Slack message in thread). Start with conservative rule set (fewer rules, more LLM routing). Add rules as patterns emerge.
-
-**5. Error Message Quality for LLM**
-
-Tool errors must be formatted for LLM understanding. "ENOENT: no such file or directory" is not as useful as "File 'src/main.ts' not found. Available files in src/: api/, utils/, index.ts".
-
-**How to handle:** Tool execute functions should catch errors and format for LLM: error type, context, suggested actions. Don't just return raw error strings. Test error handling explicitly in Phase 3 validation.
-
----
+- **Dual-mode routing during Temporal transition** -- Phase 10 requires routing signals to correct system (Temporal vs v2.3) during drain period. **Resolution:** Design signal router version check in Phase 10 planning. Check both Temporal (via workflow client) and v2.3 (via conversation ID lookup) for each signal.
 
 ## Sources
 
 ### Primary (HIGH confidence)
 
-**Official Anthropic:**
-- [@anthropic-ai/sdk on npm](https://www.npmjs.com/package/@anthropic-ai/sdk) — version, peer deps, changelog
-- [Anthropic SDK TypeScript GitHub](https://github.com/anthropics/anthropic-sdk-typescript) — helpers.md, betaZodTool
-- [Building Effective Agents](https://www.anthropic.com/research/building-effective-agents) — orchestrator-workers pattern
-- [Multi-Agent Research System](https://www.anthropic.com/engineering/multi-agent-research-system) — sub-agent spawning, context isolation
-- [Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) — semantic summaries
-- [Tool Use Implementation Guide](https://platform.claude.com/docs/en/agents-and-tools/tool-use/implement-tool-use) — toolRunner, error handling
+**Stack Research:**
+- [Graphile Worker GitHub](https://github.com/graphile/worker) -- MIT, SKIP LOCKED implementation
+- [pg-boss GitHub](https://github.com/timgit/pg-boss) -- MIT, 12.8.0, 215K weekly downloads
+- [DBOS: Postgres for Everything](https://www.dbos.dev/blog/postgres-durable-execution) -- SELECT FOR UPDATE SKIP LOCKED pattern
+- [Solid Queue (Rails)](https://github.com/rails/solid_queue) -- Postgres job queue with heartbeat pattern
+- [PostgreSQL JSONB TOAST Performance](https://pganalyze.com/blog/5mins-postgres-jsonb-toast) -- 2KB threshold, 10x slowdown benchmarks
+- [Anthropic Context Compaction Cookbook](https://platform.claude.com/cookbook/tool-use-automatic-context-compaction) -- compaction_control API
 
-**Official Temporal:**
-- [Dynamic AI Agents with Temporal](https://temporal.io/blog/of-course-you-can-build-dynamic-ai-agents-with-temporal) — activity boundary pattern
-- [Agentic Loop Tool Call Cookbook](https://docs.temporal.io/ai-cookbook/agentic-loop-tool-call-openai-python) — loops inside activities
-- [TypeScript Versioning](https://docs.temporal.io/develop/typescript/versioning) — workflow determinism
+**Features Research:**
+- [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/agents/) -- Agent class API, session persistence
+- [CrewAI YAML Configuration](https://deepwiki.com/crewAIInc/crewAI/8.2-yaml-configuration) -- Declarative agents.yaml
+- [Claude Code Custom Subagents](https://code.claude.com/docs/en/sub-agents) -- YAML frontmatter + Markdown
+- [LangGraph Persistence](https://docs.langchain.com/oss/python/langgraph/persistence) -- Checkpoint-based state
+- [LangSmith Tracing](https://medium.com/@aviadr1/langsmith-tracing-deep-dive-beyond-the-docs-75016c91f747) -- Run Tree model
+- [Langfuse Data Model](https://langfuse.com/docs/observability/data-model) -- Traces/observations/events
 
-**Production Systems:**
-- [How Claude Code Works](https://code.claude.com/docs/en/how-claude-code-works) — master loop architecture
-- [SWE-Agent GitHub](https://github.com/SWE-agent/SWE-agent) — tool-use loop for coding
+**Architecture Research:**
+- Codebase analysis (orchestrator-workflow.ts, run-agent-loop.ts, schema.ts, docker-compose.yml) -- Current v2.2 architecture
+- v2.3 spec (2.3-spec.md, 1712 lines) -- Target architecture
+- [Armin Ronacher: Postgres Workflows](https://lucumr.pocoo.org/2024/11/18/absurd-workflows/) -- Postgres-as-job-queue patterns
+- Drizzle ORM documentation -- LISTEN/NOTIFY gap, batch insert patterns
+
+**Pitfalls Research:**
+- [Brandur: Postgres Job Queues & Failure By MVCC](https://brandur.org/postgres-queues) -- Dead tuple accumulation
+- [Event-Driven.io: Postgres Sequences Issues](https://event-driven.io/en/ordering_in_postgres_outbox/) -- Sequence gap problem
+- [Recall.ai: LISTEN/NOTIFY Does Not Scale](https://www.recall.ai/blog/postgres-listen-notify-does-not-scale) -- Notification limitations
+- [Claude Code Issue #18211, #19739, #5677](https://github.com/anthropics/claude-code/issues/) -- Compaction failure modes
+- [Evan Jones: Large JSON Performance](https://www.evanjones.ca/postgres-large-json-performance.html) -- JSONB benchmarks
 
 ### Secondary (MEDIUM confidence)
 
-**Architecture Patterns:**
-- [OpenAI Agents SDK Multi-Agent](https://openai.github.io/openai-agents-python/multi_agent/) — handoff patterns
-- [Google ADK Multi-Agent](https://google.github.io/adk-docs/agents/multi-agents/) — sub-agent patterns
-- [Temporal + Agentic AI (Intuition Labs)](https://intuitionlabs.ai/articles/agentic-ai-temporal-orchestration) — durability layer
+- [Context Compaction Research (Gist)](https://gist.github.com/martinec/0d078c88b0bdc97fea21fc6d7d596af8) -- Claude Code, OpenCode, Amp comparison
+- [Confluent: Event-Driven Multi-Agent Systems](https://www.confluent.io/blog/event-driven-multi-agent-systems/) -- Orchestrator-worker patterns
+- [AWS Routing Dynamic Dispatch](https://docs.aws.amazon.com/prescriptive-guidance/latest/agentic-ai-patterns/routing-dynamic-dispatch-patterns.html) -- EventBridge-based routing
+- [Google ADK Multi-Agent Patterns](https://developers.googleblog.com/developers-guide-to-multi-agent-patterns-in-adk/) -- Dispatcher, pipeline patterns
 
-**Pitfalls and Production Lessons:**
-- [When AI Goes Rogue: Replit Incident](https://codenotary.com/blog/when-ai-goes-rogue-the-replit-incident-and-its-lessons) — guardrails necessity
-- [Why Multi-Agent LLM Systems Fail (Galileo)](https://galileo.ai/blog/multi-agent-llm-systems-fail) — 79% specification/coordination failures
-- [Reducing Token Costs in Agent Workflows](https://agentsarcade.com/blog/reducing-token-costs-long-running-agent-workflows) — context explosion
-- [AI Agent Observability (OpenTelemetry)](https://opentelemetry.io/blog/2025/ai-agent-observability/) — tracing patterns
+### Tertiary (LOW confidence)
 
-**Implementation Details:**
-- [Integration Testing with Testcontainers](https://nikolamilovic.com/posts/2025-4-15-integration-testing-node-vitest-testcontainers/) — database isolation
-- [Domain-Driven Hexagon](https://github.com/Sairyss/domain-driven-hexagon) — layered architecture
-- [Zod v4 Release Notes](https://zod.dev/v4) — JSON Schema, deprecation of zod-to-json-schema
+- [Long Quanzheng: Workflow Should Be Code](https://medium.com/@qlong/workflow-should-be-code-but-durable-execution-is-not-the-only-way-519f7682360c) -- Custom workflow engine pitfalls (anecdotal)
 
 ---
-
-## Ready for Requirements
-
-✅ **SUMMARY.md complete and committed.**
-
-**Key takeaways for roadmap creation:**
-
-1. **8 phases recommended** — Foundation → DB → Tools → Dev Agent → Product Agent → Router → Hardening → Validation
-2. **No deep research needed for any phase** — all use documented patterns, integration work not novel architecture
-3. **Critical path:** Phase 1-3 (foundation), Phase 4 (dev agent — the primary deliverable)
-4. **Risks are known and mitigable** — context explosion via summarization + limits, infinite loops via iteration caps, uncontrolled actions via sandbox + approval gates
-5. **Spec is validated** — every major decision has production precedent, no fundamental challenges to approach
-
-**Next step:** Define detailed requirements per phase (specific deliverables, acceptance criteria, testing strategy).
-
----
-
-*Research synthesis completed: 2026-01-29*
-*Orchestrator may proceed to requirements definition*
+*Research completed: 2026-02-01*
+*Ready for roadmap: yes*

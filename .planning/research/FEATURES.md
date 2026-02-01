@@ -1,391 +1,378 @@
-# Feature Landscape: Agentic Tool-Use Loop Architecture
+# Feature Landscape: v2.3 Unified Agent Framework
 
-**Domain:** Agentic AI system with tool-use loops replacing fixed-graph state machines
-**Researched:** 2026-01-29
-**Overall Confidence:** HIGH (patterns well-established in production systems: Claude Code, Anthropic Research, SWE-Agent, Open SWE)
-**Context:** v2.2 milestone - replacing LangGraph fixed-node graphs with agentic tool-use loops
+**Domain:** Unified agent framework replacing per-agent services and Temporal orchestration with declarative agent definitions, conversation-based execution, and event-sourced persistence.
+**Researched:** 2026-02-01
+**Overall Confidence:** HIGH (patterns well-established across OpenAI Agents SDK, Claude Code, Google ADK, CrewAI, AutoGen/Microsoft Agent Framework, Anthropic SDK compaction API)
+**Context:** v2.3 milestone -- replacing Temporal with ConversationExecutor, unifying persistence into an event log, making agents declarative config
 
 ---
 
 ## Table Stakes
 
-Features that production agentic systems universally implement. Missing any of these means the system is a demo, not production-ready.
+Features users expect. Missing any of these means the unified framework is incomplete relative to the v2.2 system it replaces, or deficient compared to production agent frameworks.
 
-### Core Loop Runtime
-
-| Feature | Why Expected | Complexity | Existing Dependencies | Notes |
-|---------|--------------|------------|----------------------|-------|
-| **while(tool_use) loop** | The fundamental execution primitive. Every production agentic system (Claude Code, SWE-Agent, Anthropic Research) uses this exact pattern: send to LLM, if tool_use in response execute tools and feed back, if text-only response stop. | Low | None - new code | Claude Code calls this the "nO" loop. The Anthropic SDK's `stop_reason === "tool_use"` check is purpose-built for this. There is no explicit stop tool needed - when the agent outputs text without tool calls, it's done. |
-| **Tool definition interface (Zod -> JSON Schema)** | Tools must be strongly typed with Zod schemas that convert to Anthropic's JSON Schema format. Every tool needs name, description, input schema, execute function. | Low | Existing Zod usage throughout codebase | The `@anthropic-ai/sdk` has built-in Zod support for tool schemas. This is a direct port of existing MCP tool shapes into the Anthropic tool format. |
-| **Iteration limit (maxIterations)** | Hard safety cap on tool call count. Every production system implements this. Without it, agents can spin indefinitely and burn unbounded tokens. | Low | Existing `AgentConfig.maxIterations` (currently 10 for LangGraph) | Claude Code has no explicit iteration limit but uses context window exhaustion as natural bound. For Aesir's cost model, explicit limits are essential. Default 50 for sub-agents, 100 for orchestrator, 10 for router. |
-| **AbortSignal / cancellation** | Temporal activities have timeouts (30min dev, 5min product). The loop must respect cancellation signals for graceful shutdown. | Low | Existing Temporal activity timeout infrastructure | Pass `AbortSignal` through to `client.messages.create()`. The Anthropic SDK supports this natively. |
-| **Structured result return** | Loop must return status (completed/max_iterations/aborted/error), final output, tool call count, and token usage. The orchestrator needs this to decide next steps. | Low | None - new interface | Match the `AgentLoopResult` interface from the spec. Status is critical for orchestrator decision-making. |
-| **Conversation history management** | The loop accumulates messages (user, assistant with tool_use, tool results). This history must be passed correctly to each subsequent API call. | Low | None - new code, but follows Anthropic SDK patterns | Append-only message array. Each iteration adds assistant response + tool results. The Anthropic API requires the full conversation history on each call. |
-| **Error handling for tool execution** | When a tool throws, the error must be returned to the LLM as a tool result with `isError: true` so the agent can reason about what went wrong and try a different approach. | Low | Existing MCP client has retry logic | This is the critical difference from v2.1's blind retry pattern. The LLM sees the error and decides what to do about it - fix, retry differently, escalate, or skip. |
-
-**Confidence: HIGH** - These patterns are directly observed in Claude Code's architecture, documented in Anthropic's "Building Effective Agents" guide, and consistent across SWE-Agent, Live-SWE-Agent, and Open SWE.
-
-### Tool Library
+### 1. Declarative Agent Definitions
 
 | Feature | Why Expected | Complexity | Existing Dependencies | Notes |
 |---------|--------------|------------|----------------------|-------|
-| **MCP tool wrappers** | Wrap existing `callMcpTool()` calls as `ToolDefinition` objects so the LLM can invoke Linear, GitHub, and Slack tools via native tool-use. | Low | Existing MCP client (`shared/mcp/client.ts`), all 21 tools across 3 services | Thin wrapper: take existing MCP tool, add Zod schema + description, execute calls `callMcpTool()`. The MCP HTTP layer is unchanged. |
-| **Codebase tools (read/write/search/list/run)** | The dev agent needs to explore and modify code. These wrap `DevContainerManager.execute()` for sandboxed file/command operations. | Medium | Existing `DevContainerManager`, `DevContainerGit` from Phase 24 | Five tools: `read_file`, `write_file`, `search_codebase`, `list_directory`, `run_command`. Each runs inside the dev container sandbox. |
-| **Git tools (branch/commit/PR)** | Creating branches, commits, and PRs is core dev agent functionality. These wrap existing GitHub MCP tools. | Low | Existing GitHub MCP tools (`create_branch`, `create_commit`, `create_pull_request`) | Already available via MCP. The wrapper adds Zod schemas and descriptions for the Anthropic tool format. |
+| **YAML + Markdown agent config** | Industry consensus. Claude Code uses YAML frontmatter + Markdown body. CrewAI uses `agents.yaml` + `tasks.yaml`. OpenAI Agents SDK uses code objects but industry is moving to data. The v2.3 spec proposes `definition.yaml` + `prompt.md`. This is the dominant pattern. | Low | Existing system prompts as constants, existing tool lists in orchestrator code | Claude Code: `---\nname: code-reviewer\ndescription: ...\ntools: Read, Glob, Grep\nmodel: sonnet\n---\nYou are a code reviewer...` CrewAI: separate `agents.yaml` with role/goal/backstory. Aesir's proposed split (YAML config + Markdown prompt) aligns with Claude Code's approach and keeps prompts in their natural format. |
+| **Zod schema validation on load** | All frameworks validate agent definitions at load time. CrewAI fails on malformed YAML with clear errors. OpenAI Agents SDK uses Pydantic for type enforcement. AutoGen validates `Agent` constructor parameters. Runtime errors from invalid definitions are unacceptable. | Low | Existing Zod usage throughout codebase | The `AgentDefinition` Zod schema validates identity fields, tool references, model, guardrails, history config, and triggers. Invalid definitions fail immediately at load time, not at runtime. |
+| **System prompt as primary control surface** | Every framework treats instructions/prompts as the core agent behavior definition. OpenAI: `instructions` field. CrewAI: `role` + `goal` + `backstory`. Claude Code: Markdown body. AutoGen: `system_message`. Anthropic's v2.2 principle: "Prompt Engineering over Code Engineering." | Low | Existing `ORCHESTRATOR_SYSTEM_PROMPT` constants | Move prompt constants to `.md` files verbatim. The framework reads the prompt file alongside the YAML config. No content changes needed -- only the storage location changes. |
+| **Tool references by name (not implementation)** | OpenAI Agents SDK: `tools=[get_weather]` (function objects). CrewAI: tools assigned by name or import. Claude Code: `tools: Read, Glob, Grep`. AutoGen: `tools=[web_search]`. All decouple tool selection from tool implementation. The v2.3 spec uses `"linear:get_issue"` string references resolved at runtime. | Low | Existing tool implementations in `shared/tools/`, existing name-based filtering in orchestrator | The current code already does `["linear_get_issue", ...].includes(t.name)` filtering. This formalizes the pattern with a namespace:tool_name convention. No tool implementations change. |
+| **Model and temperature config per agent** | All frameworks support per-agent model selection. OpenAI: `model="gpt-5-nano"`. Claude Code: `model: sonnet`. CrewAI: `llm: provider/model-id`. AutoGen: `model_client`. Different agents need different models (Haiku for sub-agents, Sonnet for orchestrator). | Low | Existing per-agent model selection (hardcoded in orchestrator configs) | Move from hardcoded model strings to definition YAML fields. The `runAgentLoop()` already accepts model as a parameter. |
+| **Guardrails (maxIterations, tokenBudget)** | Every production framework has hard limits. OpenAI: `reset_tool_choice` to prevent loops. Claude Code: context window as natural bound. AutoGen: retry strategies and timeout settings. LangGraph: configurable recursion limits. Without these, agents spin indefinitely. | Low | Existing `maxIterations ?? 100` and `maxTokenBudget ?? 500_000` | Move from function parameter defaults to definition YAML fields. The `runAgentLoop()` already enforces these limits. |
 
-**Confidence: HIGH** - These are direct wrappers of existing infrastructure. No new capabilities needed, just a different invocation mechanism.
+**Confidence: HIGH** -- Every framework cited uses declarative-ish agent configuration. The specific YAML+Markdown split is validated by Claude Code's production usage.
 
-### Temporal Integration
-
-| Feature | Why Expected | Complexity | Existing Dependencies | Notes |
-|---------|--------------|------------|----------------------|-------|
-| **Agentic loop as Temporal activity** | The loop must run inside Temporal activities for durability. If the process crashes mid-loop, Temporal replays and restarts the activity. | Medium | Existing Temporal worker infrastructure, signal handlers, workflow definitions | Replace `runDevAgentGraphActivity` with `runOrchestratorPreApproval` / `runOrchestratorPostApproval`. Same timeout/retry config. |
-| **Context persistence at activity boundaries** | When a Temporal activity ends (e.g., pre-approval loop finishes), its findings must be persisted so the next activity (post-approval) can resume with full context. | Medium | Existing PostgreSQL, Drizzle ORM | Write semantic summaries + structured data to DB at activity end. Read at activity start and inject into system prompt. Replaces LangGraph `PostgresSaver` checkpointing. |
-| **Signal-based human-in-the-loop** | Approval signals, PR feedback, escalation resolution must work exactly as today. The agentic loop pauses (activity ends), Temporal waits for signal, next activity starts. | Low | All 6 existing signals unchanged: `planApprovalSignal`, `prFeedbackSignal`, `prCompletionSignal`, `escalationResolvedSignal`, `userReplySignal`, `cancelConversationSignal` | Signal infrastructure is completely unchanged. What changes is what runs between signals (agentic loop instead of LangGraph graph). |
-
-**Confidence: HIGH** - Temporal + agentic AI is a well-established production pattern. Temporal's blog explicitly covers this architecture. Existing signal infrastructure requires zero changes.
-
-### Execution Tracing
+### 2. Conversation Executor (Replaces Temporal)
 
 | Feature | Why Expected | Complexity | Existing Dependencies | Notes |
 |---------|--------------|------------|----------------------|-------|
-| **Automatic tool call logging** | Every tool invocation (name, params, result, duration, tokens) must be recorded without manual instrumentation. The loop runtime handles this via `onToolCall`/`onResponse` callbacks. | Medium | Existing `@aesir/observability` package, `observability.execution_events` table | New `agents.execution_traces` table. The agentic loop calls the trace callback automatically on every step. Agent code never touches tracing directly. |
-| **Parent-child agent correlation** | When an orchestrator spawns a sub-agent, traces must link parent to child via `parent_agent_instance_id`. This enables "show me everything that happened for task AES-42" queries. | Medium | None - new capability | Each agent invocation gets a unique `agent_instance_id`. Sub-agents inherit `parent_agent_instance_id` from spawner. Sequential `step_number` within each agent. |
-| **Token usage per agent instance** | Track input/output tokens per agent invocation. Essential for cost attribution and budget enforcement. | Low | Anthropic API returns usage in every response | Sum `usage.input_tokens` and `usage.output_tokens` from each API response. Store per-agent-instance totals. |
+| **start/signal/cancel/get/list API** | The fundamental CRUD+lifecycle for conversations. OpenAI Agents SDK: `session.run()` for start/continue. Google ADK: Runner with event loop. Microsoft Agent Framework: session-based state management. SnapLogic: continuation-based pause/resume. Temporal provided this via workflows -- the executor must match or exceed. | High | Existing Temporal workflow client (`start`, `signal`, `getHandle`, `cancel`, `list`) | This is the highest-complexity feature in v2.3. Must replicate Temporal's durable execution guarantees without Temporal. Postgres-backed for local dev, with interface that supports SQS/EventBridge for production. |
+| **Pause/resume via wait_for tool** | Every agent framework needs external wait capability. Temporal: signals. OpenAI: `pause_turn` stop reason. Google ADK: yield/pause/process/resume cycle. SnapLogic: continuation snapshots. The agent needs to express "I need to wait for X" as a tool call, not as workflow state. | Medium | Existing signal infrastructure (6 signal types in v2.2) | The `wait_for` tool replaces 6 typed Temporal signals with one freeform tool. The agent calls `wait_for({ type: "approval" })`, the framework pauses and persists. This is a structural improvement over Temporal's approach. |
+| **Full conversation history on resume** | The critical improvement over v2.2. Currently, each Temporal activity starts a fresh agent with an LLM-generated summary. Every major framework preserves full history: OpenAI Sessions store complete conversation. LangGraph checkpoints store full state. Google ADK sessions store full event history. | Medium | Existing `runAgentLoop()` accepts messages array | Persist the Anthropic API message array (user/assistant turns with tool_use and tool_result blocks) to Postgres. On resume, load and pass to `runAgentLoop()`. No summaries needed at pause boundaries. |
+| **Deterministic conversation IDs** | Standard pattern for idempotent starts. Temporal: `workflowId` for dedup. OpenAI Conversations API: durable identifier across sessions/devices. The formula `{agentDefinitionId}-{correlationKey}` ensures the same event never creates duplicate conversations. | Low | Existing Temporal `WorkflowExecutionAlreadyStartedError` handling | Replace the error-catching idempotency pattern with deterministic ID construction. Same event, same conversation ID, same result. |
+| **Concurrency control (one loop per conversation)** | Temporal enforces this via workflow execution uniqueness. Google ADK's Runner processes events synchronously per session. Without this guarantee, two simultaneous signal arrivals could run two agent loops for the same conversation, creating race conditions. | Medium | Existing Temporal workflow uniqueness guarantee | Postgres advisory locks or row-level locking on the conversation record. The executor acquires a lock before running the agent loop and releases on completion or pause. |
+| **At-least-once execution** | Temporal's core guarantee: if an activity crashes, it replays. The executor must detect stale "running" conversations (heartbeat timeout) and re-enqueue them. | Medium | Existing Temporal retry/replay infrastructure | Heartbeat column on conversations table. A periodic checker finds conversations with stale heartbeats and re-enqueues. Simpler than Temporal's deterministic replay but sufficient for agent loops. |
+| **Timeout enforcement** | Temporal: workflow-level and activity-level timeouts. The executor must wake paused conversations after N hours if no signal arrives. `wait_for` accepts timeout. The framework delivers a timeout signal when it expires. | Medium | Existing Temporal timeout configuration (24h/72h approval, 7d feedback) | pg_cron or polling-based timeout checker. Finds paused conversations past their timeout and delivers `wait_timeout` signals. The agent decides what to do (escalate, retry, complete). |
+| **Signal queueing for race conditions** | Structural fix for v2.2's retry-with-backoff hack. OpenAI session memory handles this implicitly (SDK manages ordering). Google ADK processes events synchronously (no races). When a signal arrives before the conversation has paused, it must be queued and checked on the next `wait_for` call. | Low | None -- new capability replacing workaround | Store signals on the conversation record. When `wait_for` executes, check queued signals before suspending. If a match exists, resume immediately without pausing. |
 
-**Confidence: HIGH** - Execution tracing is universally considered table stakes for production agentic systems. OpenTelemetry's AI Agent Observability spec, Arize, LangSmith, and Vellum all center on this. Hierarchical tracing with parent-child correlation is the standard pattern.
+**Confidence: HIGH** -- These are the specific capabilities Temporal provides today. Each one has clear prior art in other frameworks. The executor must match all of them.
+
+### 3. Unified Event Log
+
+| Feature | Why Expected | Complexity | Existing Dependencies | Notes |
+|---------|--------------|------------|----------------------|-------|
+| **Append-only event store** | Event sourcing is the standard pattern for agent observability. LangSmith: Run Tree model with nested spans. Langfuse: traces/observations/events built on OpenTelemetry. Google ADK: event-based session history. Every observability platform records events in real-time, not reconstructed afterward. | Medium | Existing `execution_traces` table (records tool calls but NOT tool results -- noted as gap) | The event log replaces three disconnected stores. Events are written when things happen. `append()` is fire-and-forget (void return, buffered writes). Postgres batch inserts with configurable flush interval. |
+| **Event types covering full lifecycle** | LangSmith run types: chain, llm, tool. Langfuse observation types: span, generation, event. Google ADK events: function_call, function_response, text_response, state_change. The v2.3 spec defines: `tool.called`, `tool.succeeded`, `tool.failed`, `llm.response`, `agent.started`, `agent.completed`, `agent.paused`, `agent.resumed`, `agent.spawned`, `agent.child_completed`, `signal.received`. | Low | Existing trace types in `execution_traces` | The type system covers the full agent lifecycle: tool execution, LLM interaction, agent lifecycle, sub-agent lifecycle, and external signals. Each event carries conversation ID, agent instance ID, sequence number, and timestamp. |
+| **Tool results in events** | The critical gap in v2.2's `execution_traces`. LangSmith traces capture full inputs AND outputs. Langfuse generations capture model responses. Google ADK function_response events carry results. Without tool results, you cannot debug what the agent saw. | Low | None -- this is the gap being filled | `tool.succeeded` events include the tool's result payload. This is the single most important improvement to observability over v2.2. |
+| **Query interface** | All observability platforms support querying by trace/session. LangSmith: filter by trace ID, tags, time range. Langfuse: filter by session, user, time range. The event log needs `query(conversationId, opts)` for debugging and projection building. | Low | Existing PostgreSQL + Drizzle | SQL queries on the `agent_events` table with indexes on `conversation_id + sequence` and `type`. Standard database queries. |
+| **Session projection (fast reads)** | CQRS pattern from event sourcing. Write to the event log, project to optimized read models. The `agent_sessions` table replaces `tasks` with reactively-updated state: status, last event, artifacts. | Medium | Existing `tasks` table (imperatively updated by Temporal activities) | The projection subscribes to events and updates on each `tool.succeeded` (for artifacts) and lifecycle event (for status). Replaces `parsePrInfoFromTrace()` with ground-truth extraction. |
+| **Artifact extraction from tool results** | Tool results contain structured data (PR number, branch name) that must be queryable without replaying the entire conversation. LangSmith allows custom metadata on runs. Langfuse supports scored observations. The tool registry maps tools to artifact keys. | Medium | Existing PR/branch extraction via `parsePrInfoFromTrace()` | When `tool.succeeded` fires for a tool with artifact config AND the result includes `data`, store it in the session projection under the configured key. The tool knows its own output format. |
+
+**Confidence: HIGH** -- Event sourcing for agent systems is the industry standard. LangSmith, Langfuse, and Google ADK all use append-only event logs with projections.
+
+### 4. History Management
+
+| Feature | Why Expected | Complexity | Existing Dependencies | Notes |
+|---------|--------------|------------|----------------------|-------|
+| **Tool output pruning (Phase 1)** | The most impactful, cheapest compaction technique. Claude Code: two-phase (clear old tool results first, then summarize). OpenCode: head+tail preservation (first 500 + last 1500 tokens, truncate middle). Cline: middle-out truncation + dedup. JetBrains NeurIPS 2025: observation masking matched LLM summarization quality, was 7% cheaper, and faster. | Medium | Existing conversation history in Anthropic API format | When conversation exceeds `pruneThreshold`, protect last `protectedMessages` messages. For older messages: keep assistant reasoning, replace tool results with short descriptors. Deduplicate same-file reads (keep only most recent). Head+tail preservation for large results. |
+| **Protected recent messages** | Every compaction implementation protects recent context. Claude Code protects recently accessed files. OpenCode: `PRUNE_PROTECT` guards last 40K tokens. Forge Code: `retention_window` preserves recent messages. The agent needs its recent chain of thought intact. | Low | None -- new parameter on AgentDefinition | `protectedMessages: 20` in the definition. The last N messages are never touched by pruning or summarization. Simple index-based protection. |
+| **Configurable thresholds** | Forge Code supports: `token_threshold`, `message_threshold`, `turn_threshold`, `retention_window`, `eviction_window`. Anthropic SDK: `context_token_threshold` (default 100K). OpenCode: hardcoded at 95%. Community consensus: 70-80% is the right trigger point, not 95%. | Low | None -- new fields on AgentDefinition | `pruneThreshold` and `summaryThreshold` in the definition. Per-agent configuration because different agents have different context needs (product agent: 30K prune, dev agent: 80K prune). |
+| **Structured anchored summarization (Phase 2)** | When pruning alone is not enough, generate a structured summary. Factory.ai found structured summaries preserve file paths and artifact references better than freeform. OpenCode's prompt: "what we did, what we're doing, which files we're working on, what we're going to do next." Claude Code preserves "architectural decisions, unresolved bugs, and implementation details." | High | Event log session projection (for artifact data injection) | The summary has explicit sections: goal, progress, artifacts (from event log -- ground truth, not LLM memory), current state, next steps. Updated incrementally (anchored), not regenerated from scratch. This resists the "summaries of summaries" drift that every research paper identifies as the primary failure mode. |
+
+**Confidence: HIGH** -- Compaction is well-studied. The three-phase approach (prune first, summarize second, agent-managed memory future) is backed by JetBrains research and production usage in Claude Code, OpenCode, and Cline.
+
+### 5. Agent Registry and Single Service
+
+| Feature | Why Expected | Complexity | Existing Dependencies | Notes |
+|---------|--------------|------------|----------------------|-------|
+| **Single service replacing per-agent services** | Industry consensus: agents are config, not services. Claude Code: single process, agents loaded from files. OpenAI Agents SDK: single process, agents are objects. CrewAI: single process, agents from YAML. AutoGen: single runtime managing multiple agent types. No production framework deploys separate services per agent type. | Medium | Existing `dev-agent/main.ts` (port 3004), `product-agent/main.ts` (port 3005), `router/main.ts` | One `main.ts`, one HTTP server, one port. Routes: `GET /health`, `POST /events`, `GET /conversations/:id`, `POST /conversations/:id/cancel`. All webhook traffic enters through `POST /events` and the event router dispatches. |
+| **Lazy-loading agent registry** | AutoGen: agents registered with factory function, created on first use. CrewAI: YAML loaded at startup. Claude Code: agent files loaded at session start. The registry reads definitions from disk on first `get()` call, caches in memory. | Low | None -- new component | File-based for v2.3. Definitions in `packages/agents/definitions/`. Cached with mtime invalidation (no file watchers). New definition files picked up on next access without restart. |
+| **Factory-based tool registry** | AutoGen: `register()` class method with factory function. Microsoft Agent Framework: `AIFunctionFactory.Create()` with reflection. LangGraph: allowlisted tool registry. The pattern: string reference in, ToolDefinition out, with per-invocation context injection. | Medium | Existing tool implementations in `shared/tools/` | Tool factories registered at startup: `toolRegistry.register("codebase:read_file", (ctx) => createReadFileTool(ctx))`. Each factory receives `ToolContext` (agentId, correlationId, containerManager, logger) and returns a configured `ToolDefinition`. |
+| **Namespace:tool_name convention** | OpenAI: tools are functions with unique names. Claude Code: tools are named (Read, Glob, Grep). MCP: tools have server-scoped names. The namespace convention `codebase:read_file`, `linear:get_issue` groups tools by integration and prevents naming collisions. | Low | Existing tool names (e.g., `linear_get_issue`) | Simple rename from underscore to colon separator. The namespace maps to the integration/toolkit the tool belongs to. Makes tool permissions and auditing straightforward. |
+
+**Confidence: HIGH** -- Registry + factory pattern is the standard approach across AutoGen, Microsoft Agent Framework, and LangGraph.
+
+### 6. Signal Handling and Event Routing
+
+| Feature | Why Expected | Complexity | Existing Dependencies | Notes |
+|---------|--------------|------------|----------------------|-------|
+| **Freeform IncomingEvent shape** | Confluent's event-driven multi-agent patterns use domain events, not integration-specific payloads. Google ADK uses typed events but with extensible schemas. AWS dynamic dispatch converts structured event attributes into semantically classified actions. No predefined enum -- any source can emit events. | Low | Existing 6 typed Temporal signals | Replace `defineSignal<[PlanApprovalPayload]>` with freeform `IncomingEvent { type: "approval", data: {...} }`. The agent speaks domain language ("approval", "pr_merged"), never integration-specific names. |
+| **Adapter normalization** | Google ADK dispatcher pattern: central agent analyzes intent and routes. AWS agentic routing: raw events transformed into context-aware domain events. The Slack adapter maps `block_actions.approve` to `"approval"`. The GitHub adapter maps `pull_request.merged` to `"pr_merged"`. Agents never see raw webhook payloads. | Low | Existing webhook parsing in dev-agent and product-agent API handlers | Extract existing webhook-to-action logic into standalone adapter functions. Each adapter transforms one integration's payloads into `IncomingEvent` objects. The adapter is the only code that knows about integration-specific payload structures. |
+| **Start rules from agent triggers** | CrewAI: tasks define which agent handles them. Google ADK: dispatcher routes to specialist agents. The event router loads triggers from all registered definitions and matches incoming events. When `linear.agent_session.created` arrives, it matches dev-agent's trigger. | Low | Existing hardcoded routing in event handlers | Move routing rules from code to agent definition `triggers` field. The router reads triggers from all registered definitions at startup. Declarative, not imperative. |
+| **Correlation-based signal routing** | Confluent: correlation ID assigned to first event, all subsequent events carry same ID. Arkency: correlation ID + causation ID pattern. The conversation ID is constructed deterministically from correlation data, enabling signal routing without database lookups. | Low | Existing correlation ID pattern in shared/mcp | The formula `{agentDefinitionId}-{correlationKey}` constructs the same conversation ID from both start events and signal events. The router resolves the conversation and delivers the signal. |
+| **Three-layer deduplication** | Webhook delivery dedup (HTTP layer). Conversation start dedup (deterministic IDs). Signal dedup (source + delivery ID). Temporal provided workflow uniqueness. The executor must match or exceed this protection. | Low | Existing `WebhookIdempotencyService` | Layer 1 is unchanged. Layer 2 comes from deterministic conversation IDs (start is idempotent). Layer 3 tracks delivered signal IDs on the conversation record. |
+
+**Confidence: HIGH** -- Event routing with correlation IDs is a well-established distributed systems pattern. The specific application to agent frameworks is validated by Google ADK, Confluent's multi-agent guide, and AWS prescriptive guidance.
 
 ---
 
 ## Differentiators
 
-Features that make Aesir's agents actually intelligent rather than just functional. These separate a useful system from a demo.
+Features that would make Aesir's approach better than alternatives. Not expected by industry standards, but create clear competitive advantage.
 
-### Intelligent Error Recovery
-
-| Feature | Value Proposition | Complexity | Existing Dependencies | Notes |
-|---------|-------------------|------------|----------------------|-------|
-| **LLM-diagnosed error recovery** | When a tool fails, the LLM reads the error output and decides what to do: fix the code, try a different command, skip the step, or escalate. This replaces the current blind 3x retry in `execute.ts` (lines 237-273). | Low (inherent to the loop pattern) | Existing tool execution infrastructure | This is the single most impactful improvement over v2.1. The current `execute.ts` has a TODO comment: "In future, use LLM to analyze and fix." Tool errors returned with `isError: true` give the LLM the error text to reason about. No special code needed - this is the natural behavior of the loop. |
-| **Distinct approach escalation** | Escalate only after 3 genuinely different approaches fail, not 3 identical retries. The LLM must describe its approach and the system checks that each attempt is distinct. | Medium | None - new guardrail logic | Track approach descriptions. Simple uniqueness check (LLM generates a one-line approach description, system ensures it differs from previous attempts). Prevents the current blind retry pattern. |
-| **Adaptive test decisions** | The LLM decides whether to run tests, which tests, and how to test based on what changed. A README edit skips tests. A function change runs unit tests. A config change runs integration tests. | Low (inherent to the loop) | Existing test execution via `DevContainerManager` | Currently hardcoded: `allFilesAreNonCode()` check in execute.ts. The LLM naturally makes this decision by reading what it changed and reasoning about testing needs. System prompt guides but doesn't force. |
-
-**Confidence: HIGH** - These are the specific failure modes documented in v2.1 E2E testing. The fix is inherent to the agentic loop pattern.
-
-### Sub-Agent Architecture
+### 1. Event Log as Single Source of Truth (Replacing Three Stores)
 
 | Feature | Value Proposition | Complexity | Existing Dependencies | Notes |
 |---------|-------------------|------------|----------------------|-------|
-| **spawn_agent orchestrator tool** | Orchestrator spawns focused sub-agents (researcher, coder, tester) with separate context windows and restricted tool sets. Each sub-agent gets a clean context with only relevant information. | High | Agentic loop runtime (must exist first) | Anthropic's multi-agent research system uses exactly this pattern: lead agent spawns specialized subagents in parallel. Claude Code uses Explore subagents with separate context. The key insight: subagents return condensed summaries (1-2K tokens), not full transcripts. |
-| **Context-scoped tool sets** | Researcher gets read-only tools. Coder gets read+write. Tester gets read+run. Orchestrator gets spawn+integration tools. | Low | Tool definitions (must exist first) | Restricting tool sets is a natural security boundary. It also reduces context window consumption from tool definitions and prevents the coder from accidentally calling Slack. |
-| **Sub-agent result aggregation** | Sub-agent returns structured result (summary, files found, patterns, etc.) that the orchestrator injects into its own context for next decisions. | Medium | spawn_agent tool (must exist first) | The orchestrator calls spawn_agent as a tool. The tool's `execute()` runs a nested agentic loop and returns the structured result as tool output. The orchestrator sees this as a regular tool result. |
-| **Parallel sub-agent execution** | For research tasks, spawn multiple subagents simultaneously. Anthropic's research system achieves 90% improvement over sequential processing. | High | Sub-agent infrastructure (must exist first) | Defer to post-v2.2 unless needed. Claude Code limits to one sub-agent branch at a time. Aesir's dev agent tasks are largely sequential (research -> plan -> code -> test). Parallelism matters more for research/analysis. |
+| **Converging three stores into one** | v2.2 has `execution_traces` (no tool results), `tasks` (imperatively updated), and `context_snapshots` (lossy summaries). Most frameworks have at least two (state + traces). Converging to a single event stream eliminates data consistency issues across stores. Neither LangSmith nor Langfuse handle agent state AND observability in one store. | Medium | All three existing stores (to be replaced) | The event log IS the trace log AND the state projection source. No separate "update task table" step. When a tool succeeds, the event is written once. The session projection is derived, not separately maintained. This is architecturally cleaner than any production framework researched. |
+| **Reactive projections via subscribe** | Standard event sourcing: projections subscribe to the event stream. LangSmith rebuilds dashboards from traces. Langfuse generates scores from observations. But neither offers a programmatic `subscribe()` API for custom projections. The event log's `subscribe(filter, handler)` enables arbitrary downstream consumers without modifying the log. | Medium | EventLog interface (must exist first) | Session projection is the first subscriber. Future subscribers: metrics aggregation, billing, external webhooks, audit log. Adding a new projection requires zero changes to the event log or any existing code. |
+| **Ground truth artifact injection into summaries** | No framework researched injects verified data from the event log into compaction summaries. Claude Code and OpenCode rely entirely on the LLM's memory of file paths and PR numbers. Factory.ai identified artifact loss as the primary failure mode. Anchoring summaries with event-log-sourced artifacts is a genuine improvement. | Low (with event log + session projection) | Session projection with artifacts | The Phase 2 summary's "Artifacts" section is populated from `session.artifacts`, not from the LLM. PR numbers, branch names, and file paths come from ground truth (`tool.succeeded` events), not from the LLM's potentially-lossy memory. |
 
-**Confidence: HIGH for core pattern, MEDIUM for parallel execution** - Anthropic's multi-agent research system and Claude Code both use orchestrator + subagent patterns. Parallel execution is proven but may not be needed for Aesir's sequential dev workflow.
+**Confidence: HIGH** -- The convergence pattern is well-understood from event sourcing. The specific application to agent frameworks (one event stream for observability + state + history) is novel but architecturally sound.
 
-### Smart Router
-
-| Feature | Value Proposition | Complexity | Existing Dependencies | Notes |
-|---------|-------------------|------------|----------------------|-------|
-| **LLM-based event classification** | Replace hardcoded switch statements in `events.ts` with an LLM that reasons about event routing. Absorbs the approval intent classifier. Handles ambiguous events that can't be classified by rules alone. | Medium | Existing event infrastructure, webhook receivers, Temporal client | The current hardcoded routing in dev-agent and product-agent events.ts works but can't handle novel situations. LLM routing handles: "is this Slack message a feature request, a bug report, or chatter?" which rules can't. |
-| **Running workflow awareness** | Router queries Temporal to check for running workflows before deciding. "Is there already a workflow for this issue?" prevents duplicate agent runs. | Low | Existing Temporal client with query support | `query_running_workflows` tool. Uses existing `devAgentStatusQuery` pattern. |
-| **Lightweight model for routing** | Use a cheaper/faster model (Haiku) for the router since it needs to decide quickly with minimal context. | Low | None - model selection in loop config | Claude Code uses Haiku for command sanitization specifically because it's fast and cheap. Router decisions are simpler than agent work - smaller model is appropriate. |
-
-**Confidence: MEDIUM** - LLM-based routing is established (AWS prescriptive guidance, Patronus AI patterns), but hybrid approaches (rules first, LLM for ambiguous) are more robust in production. Pure LLM routing adds latency to every event.
-
-### Context Engineering
+### 2. Framework-Level History Management (Not Per-Agent Custom Code)
 
 | Feature | Value Proposition | Complexity | Existing Dependencies | Notes |
 |---------|-------------------|------------|----------------------|-------|
-| **Semantic context snapshots** | At Temporal activity boundaries, the LLM generates a summary of work done, findings, and intent. This replaces full state serialization (LangGraph's PostgresSaver). Summaries are more useful than raw state dumps because they capture reasoning, not just data. | Medium | PostgreSQL, Drizzle ORM | Anthropic's context engineering guide emphasizes: "find the smallest set of high-signal tokens that maximize the likelihood of your desired outcome." An LLM-generated summary is higher signal than a serialized state blob. |
-| **Critical data in structured columns** | PR number, branch name, issue ID, container ID stored in typed DB columns, not in JSONB summaries. LLM summaries are lossy - critical identifiers must never be summarized away. | Low | PostgreSQL, Drizzle ORM | The spec's `agents.tasks` table design is correct: explicit columns for PR number, branch, approval status, etc. JSONB only for semantic/flexible data. |
-| **Just-in-time context loading** | Sub-agents load files on demand rather than receiving all context upfront. The orchestrator provides file paths and descriptions, sub-agents read what they need. | Low (inherent to having read_file tool) | Codebase tools (read_file, search_codebase) | Claude Code's approach: "maintain lightweight identifiers (file paths, stored queries) and use references to dynamically load data into context at runtime using tools." This is the natural behavior when agents have file reading tools. |
+| **Every agent gets compaction via config** | v2.2: only the product agent has `compactConversationHistory()`. Most frameworks require per-agent custom code for history management. Anthropic's SDK `compaction_control` parameter is the closest analogue -- but it's SDK-level, not framework-level. Making compaction a framework concern configured per-agent via `history` fields is cleaner. | Low (once history manager exists) | History manager component | The `history` field on `AgentDefinition` configures thresholds. The framework applies compaction transparently before each `runAgentLoop()` call. Agent code never touches history management. |
+| **Three-phase escalation strategy** | Most tools use one technique. Claude Code: clear tool results, then summarize. OpenCode: prune then summarize. Cline: auto-compact OR manual compact. The three-phase strategy (prune -> structured summary -> future agent-managed memory) applies the cheapest technique first and only escalates when needed. | Low (design decision, not implementation complexity) | Phases 1 and 2 of history manager | Phase 1 (pruning) handles most cases with zero LLM calls. Phase 2 (structured summary) only fires when pruning alone is insufficient. This saves LLM calls and cost compared to always-summarize approaches. JetBrains evidence: pruning-only matched summarization quality and was 7% cheaper. |
 
-**Confidence: HIGH** - Claude Code's context management, Anthropic's context engineering guide, and the multi-agent research system all validate these patterns. LLM-generated summaries at boundaries is the standard approach.
+**Confidence: HIGH** -- Framework-level compaction is validated by Anthropic's `compaction_control` API. The three-phase approach is backed by JetBrains NeurIPS 2025 research.
 
-### Adaptive Agent Behavior
+### 3. Structural Race Condition Fix (Signal Queueing)
 
 | Feature | Value Proposition | Complexity | Existing Dependencies | Notes |
 |---------|-------------------|------------|----------------------|-------|
-| **Complexity-aware routing** | Simple tasks (README edit) take fewer steps than complex features. The LLM naturally adapts its approach based on task complexity without hardcoded thresholds. | Low (inherent to the loop) | None - natural LLM behavior with good prompts | The spec's success criterion: "README edit without tests in under 10 tool calls." This happens naturally when the LLM isn't forced through a 13-node graph. |
-| **Skip unnecessary phases** | No forced clarification on clear requests (product agent). No forced research on trivial changes (dev agent). The LLM decides what's needed. | Low (inherent to the loop) | None | v2.1 forces every task through classify -> analyze -> clarify -> confirm -> create -> notify. The agentic loop lets the product agent go directly from understanding to creating if the request is clear. |
-| **Dynamic plan granularity** | Trivial change gets a brief plan. Complex feature gets detailed steps with risk analysis. The LLM judges appropriate effort. | Low (inherent to the loop with good prompts) | None | Anthropic's multi-agent research system: "Agents struggle to judge appropriate effort for different tasks, so scaling rules should be embedded in the prompts." Provide guidelines in system prompt, not hardcoded logic. |
+| **Signal queueing eliminates retry-with-backoff** | v2.2 has a known race condition: signals arrive before the workflow starts. The fix is `retry-with-backoff` (a timing-dependent workaround). No framework researched has an explicit signal queueing mechanism -- most avoid the problem by using synchronous event processing (Google ADK) or SDK-managed sessions (OpenAI). Aesir's approach (queue on conversation record, check on `wait_for`) is a structural fix. | Low | Conversation persistence with `queuedSignals` field | Three states when signal arrives: (1) paused with matching type -- resume, (2) paused with wrong type -- reject, (3) running/not yet paused -- queue. When `wait_for` fires, check queue before suspending. If match, resume immediately. No `sleep(500ms)` hacks. |
 
-**Confidence: HIGH** - This is the fundamental value proposition of replacing the fixed graph. Every tool-use loop system exhibits this behavior naturally.
+**Confidence: HIGH** -- This is a direct fix for a documented v2.2 bug with clear implementation path.
+
+### 4. Zero-Infrastructure Agent Addition
+
+| Feature | Value Proposition | Complexity | Existing Dependencies | Notes |
+|---------|-------------------|------------|----------------------|-------|
+| **New agent = new definition directory** | Currently: adding an agent requires new service, new Dockerfile, new port, new Temporal worker, ~400 lines of boilerplate. In v2.3: add `definitions/new-agent/definition.yaml` + `prompt.md`. No code changes. No infrastructure changes. Claude Code and CrewAI both achieve this, but they're single-process tools. Achieving this for a production distributed system (webhooks, signals, durable execution) is genuinely harder and more valuable. | Already covered by registry + single service | Agent registry, tool registry, event router | The registry picks up new definitions on next access. Triggers from the definition integrate with the event router. Existing tools are referenced by name. This is the primary developer experience improvement in v2.3. |
+
+**Confidence: HIGH** -- This is a direct consequence of the architecture, not a separate feature to implement. If the registries and single service work, this works.
+
+### 5. Domain-Language Event Normalization
+
+| Feature | Value Proposition | Complexity | Existing Dependencies | Notes |
+|---------|-------------------|------------|----------------------|-------|
+| **Agents think in domain terms, not integration terms** | The adapter layer normalizes `block_actions.approve` to `"approval"` and `pull_request.merged` to `"pr_merged"`. This means agent prompts never mention Slack, GitHub, or Linear event structures. Adding Jira support means adding an adapter -- existing agent prompts and `wait_for` types are unchanged. Google ADK's dispatcher pattern is the closest analogue, but it uses LLM routing (expensive). Aesir's approach uses deterministic adapters (free). | Low | Adapter functions (new code) | Each adapter is a pure function: `(rawPayload) => IncomingEvent | null`. Highly testable, no dependencies, no state. Integration-agnostic agent definitions are the payoff. |
+
+**Confidence: HIGH** -- This is an adapter pattern, one of the simplest and most well-understood patterns in software engineering.
 
 ---
 
 ## Anti-Features
 
-Features to deliberately NOT build. These are common over-engineering traps in agentic systems that add complexity without proportional value.
+Features to deliberately NOT build in v2.3. These are common traps that add complexity without proportional value for Aesir's specific use case.
 
 ### Architecture Over-Engineering
 
 | Anti-Feature | Why Avoid | What to Do Instead |
 |--------------|-----------|-------------------|
-| **Multi-agent swarm / mesh** | Claude Code explicitly chose single-threaded master loop over multi-agent swarms. Anthropic's research system found that "domains requiring shared context or high interdependency between agents remain challenging for current multi-agent architectures." Aesir's dev workflow is inherently sequential (research -> plan -> approve -> code -> test -> PR). | Orchestrator + focused sub-agents (one at a time). Claude Code limits to one sub-agent branch. Aesir should do the same for v2.2. |
-| **Dynamic agent creation / agent registry** | Building a generic agent spawning system with registration, discovery, and capability negotiation adds massive complexity. The v2.2 scope is 3 sub-agents (researcher, coder, tester) with known capabilities. | Hardcode the 3 sub-agent types with their tool sets. Add new types as needed in future milestones. The `spawn_agent` tool takes a type enum, not an arbitrary agent spec. |
-| **Agent-to-agent communication protocol** | Google A2A, IBM ACP, and similar protocols are for multi-organization agent ecosystems. Aesir's agents run in the same process, communicate through function calls and Temporal signals. | Orchestrator talks to sub-agents via function calls (spawn_agent returns result). Agents talk to humans via Slack/Linear MCP tools. Cross-agent collaboration is out of scope for v2.2. |
-| **Autonomous model selection** | RouteLLM and MasRouter dynamically select the best model per request. Aesir uses one model (Claude Sonnet) for all agent work. Model selection optimization is premature. | Single model per agent type in config. Use Haiku for the router only. Model selection is a tuning parameter, not an architecture feature. |
-| **Custom agentic framework / SDK** | Building a general-purpose agentic framework is a product in itself. The spec describes `runAgentLoop` - that's a function, not a framework. | Build `runAgentLoop` as a focused utility function (~100-150 lines). Do NOT build a framework with plugins, middleware, lifecycle hooks, etc. If you need a framework later, consider the Claude Agent SDK. |
-| **Claude Agent SDK adoption** | The `@anthropic-ai/claude-agent-sdk` provides agent loop, built-in tools, context management, and MCP support. However, adopting it means giving up control over the loop, context management, and tool execution - all things Aesir needs to customize for Temporal integration and sub-agent spawning. | Use `@anthropic-ai/sdk` (low-level) for direct API access. Build `runAgentLoop` as a thin wrapper. Keep full control over the loop for Temporal integration, custom tracing, and sub-agent coordination. The Claude Agent SDK is designed for Claude Code-like agents, not for agents embedded in Temporal workflows. |
+| **Database-backed agent definitions** | The v2.3 spec supports it (the interface abstracts the backing store), but building DB storage, admin API, and migration tooling for agent definitions is premature. There are 5 agents. They change infrequently. File-based is sufficient and keeps definitions in version control where they belong. | File-based definitions with `AgentRegistry` interface. Database backing is a future extension, not a v2.3 deliverable. |
+| **Kafka/SQS/EventBridge implementations** | The `EventLog` and `ConversationExecutor` interfaces are designed for these backends. But implementing them adds distributed systems complexity (exactly-once delivery, partition ordering, dead letter queues) that is unnecessary for local dev and early production. | Postgres implementations for v2.3. The interfaces support swapping backends later without changing agent or framework code. |
+| **Cross-agent collaboration (agent-to-agent signaling)** | The architecture supports it (agents can signal each other via the executor). But wiring it adds signal type negotiation, dependency tracking between conversations, and deadlock detection. Aesir's current agents don't need this -- the orchestrator spawns sub-agents synchronously. | Sub-agents run inline via `spawn_agent` (same process, separate conversation). Cross-agent signaling is out of scope for v2.3. |
+| **Agent marketplace / third-party definitions** | The framework supports external definitions. But packaging, distribution, sandboxing, and trust verification for third-party agents is a product in itself. | Internal definitions only. The `AgentRegistry` interface supports external sources later. |
+| **Dynamic model selection per request** | RouteLLM and MasRouter dynamically select models based on query complexity. Aesir has 5 agents with fixed model assignments. The complexity of model routing outweighs any cost savings at this scale. | Fixed model per agent in definition YAML. Update the definition to change the model. |
+| **Plugin/middleware architecture for the framework** | Building a general-purpose extensible framework with lifecycle hooks, middleware chains, and plugin registries. The v2.3 spec describes 7 specific components. Building extension points for hypothetical future needs adds accidental complexity. | Build the 7 components as direct implementations. Refactor to extensibility patterns only when a concrete extension need arises. |
+
+### History Management Over-Engineering
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| **Phase 3: Agent-managed memory (MemGPT/Letta style)** | Adds `memory:save` and `memory:search` tools. The agent manages its own memory via LLM calls. Adds cost (extra LLM calls), complexity (memory retrieval quality), and a new failure mode (agent forgets to save important things). Not needed when Phase 1+2 handle most cases. | Defer to post-v2.3. The architecture supports it (just add tools to the registry). No framework changes needed when the time comes. |
+| **Opaque/encrypted compression** | OpenAI's `/responses/compact` achieves 99.3% token reduction. But it's a black box -- cannot inspect, debug, or port across providers. Aesir uses Anthropic directly; this is not available. | Phase 1 (pruning) + Phase 2 (structured summary) provide transparent, debuggable compaction. |
+| **Cross-session learning** | Agent improves over time by remembering past tasks. Requires vector store, embedding pipeline, semantic search. Unclear value for Aesir's use case where agents work on discrete tasks with clear boundaries. | Each conversation is independent. Convention discovery happens via codebase tools (read existing code, detect patterns). |
+| **Automatic compaction model selection** | Cline community proposes using cheap models (Llama 3, Mistral) for summarization. Adds multi-model complexity (auth, routing, quality verification). | Use a single `summaryModel` per agent definition (default: Haiku). One model, configured in YAML. |
 
 ### Observability Over-Engineering
 
 | Anti-Feature | Why Avoid | What to Do Instead |
 |--------------|-----------|-------------------|
-| **Full OpenTelemetry spans** | OpenTelemetry's AI Agent Observability spec is still evolving. Adding OTEL instrumentation to every tool call adds 12-15% latency overhead (benchmarked by Langfuse/AgentOps studies). Aesir's tracing needs are simpler. | Write trace rows to PostgreSQL directly. The `agents.execution_traces` table captures everything needed for debugging. Add OTEL later if/when an external observability platform is adopted. |
-| **Visual agent topology / DAG visualization** | Dynatrace and Arize offer this. Building a custom visualization for 3 sub-agent types is not worth the effort. | SQL queries on `execution_traces` with parent-child joins. A simple CLI or admin endpoint that shows the trace tree for a task ID. Visualization is a future UI concern. |
-| **Real-time streaming of agent reasoning** | Streaming each LLM token and tool call to a dashboard in real-time. Adds WebSocket infrastructure and streaming complexity. | Log to DB. Query after the fact. Pino logs show real-time progress for development. Streaming UI is out of scope for v2.2. |
+| **Full OpenTelemetry integration** | Langfuse is built on OpenTelemetry. LangSmith uses Run Tree. Both are complex instrumentation frameworks. Aesir's event log already captures everything needed for debugging. Adding OTel spans, exporters, and collectors adds infrastructure complexity. Benchmarks show 5-15% overhead from observability frameworks (LangSmith: ~0%, Langfuse: ~15%, AgentOps: ~12%). | Write events to Postgres directly via the `EventLog` interface. The `subscribe()` API allows adding OTel export as a subscriber later without changing any event-producing code. |
+| **Real-time event streaming dashboard** | WebSocket infrastructure, streaming UI, real-time trace visualization. High complexity, low immediate value when conversations run in the background. | SQL queries on `agent_events` table. Pino logs for development. Dashboard is a future UI concern. |
+| **LLM-as-judge evaluation pipelines** | Braintrust excels at this. LangSmith supports it. But evaluation requires datasets, scoring rubrics, and regression test infrastructure. This is an MLOps concern, not a framework concern. | Monitor via event log queries. Manual evaluation of agent quality through conversation review. Automated evaluation is a separate initiative. |
 
-### Context Management Over-Engineering
-
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| **Automatic context compaction mid-loop** | Claude Code compacts at ~92% context usage. Aesir's activities have 30-minute timeouts and sub-agents have 50-iteration limits. Context exhaustion within a single activity is unlikely for well-scoped tasks. | Set iteration limits that prevent context exhaustion. If a sub-agent hits 50 tool calls, it returns what it has. The orchestrator can spawn another sub-agent if more work is needed. Context compaction is a complexity trap for v2.2. |
-| **Long-term memory / vector store** | RAG, embeddings, vector databases for agent memory. Massively complex, unclear value for Aesir's use case where agents work on discrete tasks with clear boundaries. | Context snapshots in PostgreSQL. Each task starts fresh. Project context (conventions, patterns) comes from CLAUDE.md files and codebase exploration, not from a memory store. |
-| **Cross-session learning** | Agent improves over time by remembering past tasks, common patterns, successful approaches. Requires sophisticated storage and retrieval. | Each task is independent. Convention discovery happens via codebase tools (read existing code, detect patterns). Learning from past tasks is a future milestone if needed. |
-
-### Smart Router Over-Engineering
+### Signal Handling Over-Engineering
 
 | Anti-Feature | Why Avoid | What to Do Instead |
 |--------------|-----------|-------------------|
-| **Pure LLM routing for all events** | Adding LLM latency to every webhook event (even simple ones like PR merged -> signal workflow) is wasteful. Some events have deterministic routing. | Hybrid approach: rule-based routing for deterministic events (e.g., `github.pull_request.merged` always signals the dev-agent workflow). LLM-based routing only for ambiguous events (e.g., Slack messages, Linear comments with unclear intent). |
-| **Router learns from corrections** | A feedback loop where the router improves over time from human corrections. Requires labeling infrastructure, training pipeline. | Static system prompt with clear routing rules. Update the prompt when new event types or routing patterns emerge. The routing space is small and well-defined. |
-
-### Cost Management Over-Engineering
-
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| **Real-time cost dashboard** | Building a UI to show live cost tracking per task. Out of scope for v2.2. | Log token usage in `execution_traces`. Provide a SQL query to calculate cost per task. Dashboard is a future UI concern. |
-| **Dynamic model downgrading based on budget** | Switching to a cheaper model mid-task when budget is running low. Adds complexity, may degrade quality at critical moments. | Hard budget limit per task. If exceeded, the loop returns `max_tokens` status and the orchestrator decides whether to continue with a new budget or escalate. Simple, predictable. |
-| **Token prediction before execution** | Research shows token consumption prediction has Pearson's r < 0.15 (OpenReview 2025). It doesn't work reliably. | Track actual usage. Set generous budgets. Alert on anomalies. Don't try to predict. |
+| **LLM-based signal classification** | Using an LLM to classify every incoming signal type. Adds latency and cost to every webhook. The existing smart router already handles ambiguous events via slow-path LLM classification. Signal routing is deterministic (conversation ID + expected wait type). | Deterministic signal matching. The router checks `pendingWait.type` against `signal.type`. Mismatches are rejected, not reclassified. LLM classification only for initial event routing (existing smart router), not for signal delivery. |
+| **Complex event processing (CEP)** | Aggregating multiple events before routing (e.g., "3 PR reviews within 1 hour = ready for merge"). Adds temporal windowing, event buffering, and complex matching rules. | Each event is processed independently. The agent reasons about aggregated state via its tools (e.g., query PR reviews). Business logic stays in the agent, not in event processing infrastructure. |
+| **Bi-directional event bus** | Events flow in AND out of the agent system. Agents publish events that external systems subscribe to. Adds publisher/subscriber infrastructure, event schemas, and API contracts. | Events flow in via `POST /events`. The event log's `subscribe()` API enables outbound event forwarding as a future extension. For v2.3, the agent communicates outward via its tools (Slack, Linear, GitHub MCP calls). |
 
 ---
 
 ## Feature Dependencies
 
 ```
-                   @anthropic-ai/sdk migration
-                           |
-                           v
-                   runAgentLoop() runtime
-                     (core while loop)
-                           |
-            +--------------+--------------+
-            |              |              |
-            v              v              v
-    Tool definitions   Tracing      Guardrails
-    (Zod -> JSON)    callbacks    (iter/token limits)
-            |              |              |
-            +--------------+--------------+
-                           |
-            +--------------+--------------+
-            |              |              |
-            v              v              v
-    Codebase tools   MCP wrappers   Context
-    (DevContainer)   (Linear/GH/    snapshots
-                      Slack)        (DB tables)
-            |              |              |
-            +--------------+--------------+
-                           |
-            +--------------+--------------+
-            |              |              |
-            v              v              v
-    Dev Agent       Product Agent   Smart Router
-    Orchestrator    (single loop)   (hybrid rules
-    + sub-agents                     + LLM)
-            |              |              |
-            +--------------+--------------+
-                           |
-                           v
-               Temporal workflow updates
-               (new activities, same signals)
-                           |
-                           v
-                    E2E validation
+                 Agent Definition Schema (Zod)
+                         |
+              +----------+-----------+
+              |                      |
+              v                      v
+       Agent Registry         Tool Registry
+       (lazy load from        (factory functions,
+        definitions/)          namespace resolution)
+              |                      |
+              +----------+-----------+
+                         |
+                         v
+                    Event Log
+                  (append-only,
+                   buffered writes)
+                         |
+              +----------+-----------+
+              |                      |
+              v                      v
+       Session Projection     History Manager
+       (reactive from         (pruning + summary
+        events, artifacts)     + protected messages)
+              |                      |
+              +----------+-----------+
+                         |
+                         v
+              Conversation Executor
+              (start/signal/cancel/get,
+               concurrency, timeouts,
+               at-least-once)
+                         |
+              +----------+-----------+
+              |                      |
+              v                      v
+        Event Router           wait_for Tool
+        (start rules,          (framework-
+         signal matching,        intercepted
+         adapter normalization)   tool call)
+              |                      |
+              +----------+-----------+
+                         |
+                         v
+                Single HTTP Service
+                (main.ts, one port,
+                 POST /events entry)
+                         |
+                         v
+               Router Adaptation
+               (smart router:
+                Temporal -> executor)
+                         |
+                         v
+              Temporal Removal + Cleanup
+              (delete workflows, signals,
+               per-agent services, old tables)
+                         |
+                         v
+                E2E Validation
+                (dev-agent + product-agent
+                 full workflow smoke test)
 ```
 
 ### Critical Path
 
-1. **Anthropic SDK + Loop Runtime** -- everything depends on this
-2. **Tool Definitions** -- agents can't do anything without tools
-3. **Context Persistence** -- agents can't cross Temporal boundaries without this
-4. **Dev Agent Orchestrator** -- the primary deliverable
-5. **Product Agent** -- second agent, validates the pattern
-6. **Smart Router** -- replaces event handling, ties everything together
-7. **E2E Validation** -- proves it all works
+1. **Agent Definition Schema + Registries** -- everything references these
+2. **Event Log + Session Projection** -- executor depends on event recording
+3. **History Manager** -- executor needs compaction before resuming conversations
+4. **Conversation Executor** -- the core replacement for Temporal
+5. **Event Router + Adapters + wait_for** -- connects external events to conversations
+6. **Single Service** -- wires everything together
+7. **Router Adaptation** -- adapt existing smart router from Temporal to executor
+8. **Temporal Removal** -- clean up after cutover
+9. **E2E Validation** -- proves the full flow works
 
 ### Parallelizable Work
 
-- **Tool definitions** (codebase tools, MCP wrappers, git tools) can be built in parallel once the `ToolDefinition` interface exists
-- **DB schema + migrations** (context_snapshots, tasks, execution_traces) can be built in parallel with tool definitions
-- **System prompts** for each agent can be drafted in parallel with implementation
-- **Smart Router** is largely independent from agent implementation (different loop instance, different tools)
+- **Agent definition files** (YAML + Markdown) can be created from existing prompts/configs in parallel with framework code
+- **Event adapters** (Slack, GitHub, Linear) can be built in parallel once `IncomingEvent` shape is defined
+- **History manager** can be built in parallel with conversation executor (they share the definition schema but not implementation)
+- **Database schema + migrations** can be built in parallel with framework components
 
 ---
 
 ## MVP Recommendation
 
-### Must Have for v2.2 Launch
+### Must Have for v2.3 Launch
 
-1. **Agentic loop runtime** (`runAgentLoop`) with iteration limits, token tracking, abort support
-2. **Tool definitions** for all existing MCP tools + codebase tools
-3. **Dev agent orchestrator** with spawn_agent for researcher/coder/tester sub-agents
-4. **Product agent** as single adaptive loop
-5. **Context persistence** at Temporal activity boundaries (semantic snapshots + structured tasks table)
-6. **Execution tracing** with parent-child correlation
-7. **Token budget enforcement** per task
-8. **Temporal workflow updates** (new activities, same signals)
-9. **E2E validation** of the full flow
+1. **AgentDefinition schema + validation** -- 5 agents with definition files that produce identical configs to v2.2
+2. **AgentRegistry** -- lazy loading from files, cached with mtime invalidation
+3. **ToolRegistry** -- factory-based resolution with namespace:tool_name convention
+4. **EventLog** -- append-only Postgres store with query, subscribe, flush
+5. **Session projection** -- reactive status + artifact tracking from events
+6. **ConversationExecutor** -- start/signal/cancel/get/list with full conversation persistence
+7. **wait_for tool** -- pause/resume conversations with type matching and timeout
+8. **History manager** -- Phase 1 (tool output pruning) + Phase 2 (structured anchored summarization)
+9. **Event router** -- start rules from triggers + signal matching from correlation
+10. **Event adapters** -- Slack, GitHub, Linear payload normalization
+11. **Single HTTP service** -- one main.ts replacing three per-agent services
+12. **Smart router adaptation** -- Temporal calls to executor calls
+13. **Three-layer deduplication** -- webhook, conversation start, signal
+14. **Signal queueing** -- structural race condition fix
+15. **Timeout enforcement** -- paused conversation wake-up
+16. **Temporal removal** -- delete workflows, signals, per-agent services
 
-### Should Have (v2.2 if time, otherwise next)
+### Defer to Post-v2.3
 
-10. **Smart Router** with hybrid rules + LLM (can ship with existing hardcoded routing if needed)
-11. **Distinct approach escalation** (vs simple iteration limit)
-12. **Lightweight model for router** (Haiku)
-
-### Defer to Post-v2.2
-
-- Parallel sub-agent execution
-- Agent topology visualization
+- Agent-managed memory (Phase 3 history)
+- Database-backed agent definitions (admin API)
+- Kafka/SQS/EventBridge event log backends
+- Cross-agent collaboration (agent-to-agent signaling)
+- OpenTelemetry integration
 - Real-time streaming dashboard
-- Cross-session learning / memory
-- Context compaction mid-loop
-- Dynamic model selection
+- Cross-session learning
+- Production deployment infrastructure (AWS services)
 
 ---
 
-## Decision: `@anthropic-ai/sdk` vs `@anthropic-ai/claude-agent-sdk`
+## Existing Feature Inventory (Unchanged in v2.3)
 
-This is a critical technology choice that affects the entire architecture.
+These features already exist and require NO changes. Listed for completeness because they interact with v2.3 features.
 
-### Recommendation: Use `@anthropic-ai/sdk` (low-level), NOT `@anthropic-ai/claude-agent-sdk`
-
-**Reasons:**
-
-1. **Temporal integration**: The Claude Agent SDK manages its own loop lifecycle. Aesir needs the loop to run inside Temporal activities with specific timeout and retry semantics. A managed loop fights Temporal's execution model.
-
-2. **Custom sub-agent spawning**: The Claude Agent SDK's subagent model is designed for Claude Code's explore-agent pattern. Aesir needs spawn_agent as a tool the orchestrator calls, with custom context briefing and tool set restriction. This requires loop-level control.
-
-3. **Custom tracing**: The Agent SDK has its own observability. Aesir needs tracing that writes to its own PostgreSQL tables with parent-child agent correlation and Temporal workflow IDs. Custom `onToolCall`/`onResponse` callbacks are simpler than adapting the SDK's observability.
-
-4. **Context management**: Aesir persists context to PostgreSQL at Temporal boundaries. The Agent SDK manages context internally with compaction and memory. These models conflict.
-
-5. **Simplicity**: `runAgentLoop` is ~100-150 lines of code. It's a while loop with API calls. The Claude Agent SDK is thousands of lines handling concerns (terminal UI, permissions, MCP server management, file system access) that Aesir doesn't need.
-
-6. **Debuggability**: With the raw SDK, every API call is visible and controllable. With the Agent SDK, the loop is a black box that makes decisions about compaction, tool search, and context management that may not align with Aesir's needs.
-
-**Trade-off acknowledged**: The Claude Agent SDK provides battle-tested context management, tool search for large tool sets, and automatic compaction. By not using it, Aesir takes on the burden of context management. This is acceptable because:
-- Aesir's tool count is small (~25 tools total, well within context budget)
-- Context management happens at Temporal boundaries (not mid-loop)
-- The sub-agent pattern naturally resets context per invocation
-
----
-
-## Decision: Hybrid Router vs Pure LLM Router
-
-### Recommendation: Hybrid (rules + LLM for ambiguous cases)
-
-**Rules handle (zero-latency, deterministic):**
-- `github.pull_request.merged` -> signal dev-agent workflow (always the same)
-- `github.pull_request.closed` -> signal dev-agent workflow (always the same)
-- `slack.block_actions.approved` / `rejected` -> signal appropriate workflow (deterministic from payload)
-- Events with existing workflow context (thread_ts matches running workflow) -> signal that workflow
-
-**LLM handles (100-500ms latency, but necessary):**
-- `slack.app_mention.created` -> Is this a product request, dev command, or chatter?
-- `linear.comment.created` -> What's the intent? (approval, feedback, question, guidance)
-- `slack.message.created` in thread -> Is this a reply, cancellation, or new topic?
-- Novel/unknown event types -> What should we do with this?
-
-**Why hybrid wins:**
-- Adds LLM latency only where it's needed (ambiguous events)
-- Deterministic events get instant routing
-- Reduces LLM cost (most events are deterministic)
-- More testable (rule-based paths have deterministic test coverage)
-- Graceful degradation (if LLM is down, deterministic events still route)
-
----
-
-## Existing Feature Inventory (Kept Unchanged)
-
-These features already exist and require NO changes in v2.2. They are listed for completeness because they interact with new features.
-
-| Feature | Location | How It Interacts with v2.2 |
+| Feature | Location | How It Interacts with v2.3 |
 |---------|----------|---------------------------|
-| MCP HTTP protocol | `shared/mcp/client.ts` | Tool wrappers call `callMcpTool()` unchanged |
-| MCP tool permissions | Integration DB tables | Same permission checks, now invoked through tool wrappers |
-| MCP rate limiting | Integration HTTP middleware | Same 100 req/min/agent limit applies |
-| Temporal signals (6 types) | `shared/temporal/signals.ts` | Same signals, same handlers, different activity content |
-| Temporal workflow timeouts | `shared/temporal/workflows/` | Same timeouts (24h/72h approval, 7d feedback) |
-| Dev container sandbox | `@aesir/platform` | Codebase tools wrap `DevContainerManager.execute()` |
-| Dev container git | `@aesir/platform` | Git tools wrap `DevContainerGit` operations |
-| Pino structured logging | `@aesir/platform` | Agents use existing logger with correlation IDs |
-| PostgreSQL + Drizzle ORM | `@aesir/platform` | New tables use same connection, same migration pattern |
-| Webhook receivers | Integration HTTP servers | Same webhook handling, events pass through router |
-| OAuth credential storage | Integration DB schemas | Unchanged, MCP tools access credentials as before |
-| Docker Compose local dev | `docker-compose.yml` | Same topology, agents just run different code internally |
+| `runAgentLoop()` | `shared/agent-loop/` | Core runtime unchanged. ConversationExecutor calls it with messages + resolved tools. |
+| MCP HTTP protocol | `shared/mcp/client.ts` | Tool factories use `callMcpTool()` unchanged. |
+| MCP tool permissions | Integration DB tables | Same permission checks, invoked through tool registry factories. |
+| MCP rate limiting | Integration HTTP middleware | Same 100 req/min/agent limit applies. |
+| Dev container sandbox | `@aesir/platform` | Codebase tools wrap `DevContainerManager.execute()` unchanged. |
+| Pino structured logging | `@aesir/platform` | Agents use existing logger with correlation IDs. |
+| PostgreSQL + Drizzle ORM | `@aesir/platform` | New tables use same connection, same migration pattern. |
+| Webhook receivers | Integration HTTP servers | Same webhook handling. Events forwarded to single agent service. |
+| OAuth credential storage | Integration DB schemas | Unchanged. MCP tools access credentials as before. |
+| Integration packages | `@aesir/integration-*` | Linear, GitHub, Slack packages unchanged. |
 
 ---
 
 ## Sources
 
-### Anthropic Official
-- [Building Effective Agents](https://www.anthropic.com/research/building-effective-agents) - Core patterns guide (orchestrator-workers, augmented LLM, tool use loops)
-- [How We Built Our Multi-Agent Research System](https://www.anthropic.com/engineering/multi-agent-research-system) - Production multi-agent architecture with orchestrator-worker pattern
-- [Effective Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) - Context management patterns
-- [Effective Harnesses for Long-Running Agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents) - Long-running agent patterns
-- [Advanced Tool Use](https://www.anthropic.com/engineering/advanced-tool-use) - Tool Search, Programmatic Tool Calling, Tool Use Examples
-- [Claude Code: Best Practices for Agentic Coding](https://www.anthropic.com/engineering/claude-code-best-practices) - Production agentic coding patterns
-- [Claude Agent SDK TypeScript](https://github.com/anthropics/claude-agent-sdk-typescript) - Agent SDK reference
-- [Anthropic Cookbook - Agent Patterns](https://github.com/anthropics/anthropic-cookbook/tree/main/patterns/agents) - Reference implementations
+### Agent Definition Formats
+- [OpenAI Agents SDK - Agents](https://openai.github.io/openai-agents-python/agents/) - Agent class API with name, instructions, model, tools, handoffs, hooks
+- [OpenAI Agents SDK - GitHub](https://github.com/openai/openai-agents-python) - Lightweight framework with Agent, Handoff, Guardrail primitives
+- [CrewAI YAML Configuration](https://deepwiki.com/crewAIInc/crewAI/8.2-yaml-configuration) - Declarative agents.yaml and tasks.yaml with variable interpolation
+- [CrewAI Getting Started](https://docs.crewai.com/en/quickstart) - @CrewBase decorator pattern linking YAML to Python
+- [Claude Code Custom Subagents](https://code.claude.com/docs/en/sub-agents) - YAML frontmatter + Markdown body, tools/model/permissionMode fields
+- [AutoGen Agents](https://microsoft.github.io/autogen/stable//user-guide/agentchat-user-guide/tutorial/agents.html) - AssistantAgent with name, model_client, tools, system_message
+- [AutoGen Agent Runtime](https://microsoft.github.io/autogen/stable/user-guide/core-user-guide/framework/agent-and-agent-runtime.html) - Factory-based agent registration with runtime management
 
-### Claude Code Architecture
-- [How Claude Code Works](https://code.claude.com/docs/en/how-claude-code-works) - Official architecture documentation
-- [Claude Code: Behind the Scenes of the Master Agent Loop](https://blog.promptlayer.com/claude-code-behind-the-scenes-of-the-master-agent-loop/) - Detailed loop analysis
-- [Tracing Claude Code's LLM Traffic](https://medium.com/@georgesung/tracing-claude-codes-llm-traffic-agentic-loop-sub-agents-tool-use-prompts-7796941806f5) - Sub-agent and tool-use traffic analysis
-- [Claude Code Agent Architecture: Single-Threaded Master Loop](https://www.zenml.io/llmops-database/claude-code-agent-architecture-single-threaded-master-loop-for-autonomous-coding) - Architecture analysis
-- [Context Engineering Under the Hood of Claude Code](https://blog.lmcache.ai/en/2025/12/23/context-engineering-reuse-pattern-under-the-hood-of-claude-code/) - KV cache optimization and context reuse
-- [Designing Agentic Loops (Simon Willison)](https://simonwillison.net/2025/Sep/30/designing-agentic-loops/) - Design principles
+### Conversation Persistence and Pause/Resume
+- [OpenAI Agents SDK Sessions](https://openai.github.io/openai-agents-python/sessions/) - SQLite, SQLAlchemy, Dapr, OpenAI-hosted, encrypted session backends
+- [OpenAI Session Memory Cookbook](https://cookbook.openai.com/examples/agents_sdk/session_memory) - Context engineering with session-based persistence
+- [OpenAI Conversation State](https://platform.openai.com/docs/guides/conversation-state) - Conversations API with durable identifiers
+- [LangGraph Persistence](https://docs.langchain.com/oss/python/langgraph/persistence) - Checkpoint-based state persistence across conversation turns
+- [LangGraph Checkpointing Best Practices](https://sparkco.ai/blog/mastering-langgraph-checkpointing-best-practices-for-2025) - PostgresSaver for production, InMemorySaver for testing
+- [Google ADK Event Loop](https://google.github.io/adk-docs/runtime/event-loop/) - Yield/pause/process/resume cycle with session state management
+- [SnapLogic Agent Continuations](https://www.snaplogic.com/blog/agent-continuations-for-resumable-ai-workflows) - Continuation-based snapshots for pause/resume
+- [Microsoft Agent Framework - Persisted Conversations](https://learn.microsoft.com/en-us/agent-framework/tutorials/agents/persisted-conversation) - Thread serialization with Cosmos DB
 
-### SWE-Agent Ecosystem
-- [SWE-Agent GitHub](https://github.com/SWE-agent/SWE-agent) - Original tool-use loop for coding agents
-- [Open SWE (LangChain)](https://www.blog.langchain.com/introducing-open-swe-an-open-source-asynchronous-coding-agent/) - Asynchronous coding agent architecture
-- [Live-SWE-Agent](https://github.com/OpenAutoCoder/live-swe-agent) - Minimal scaffold with SOTA results (79.2% SWE-bench)
+### Event Sourcing and Observability
+- [LangSmith Tracing Deep Dive](https://medium.com/@aviadr1/langsmith-tracing-deep-dive-beyond-the-docs-75016c91f747) - Run Tree model, run_type classification, context propagation
+- [LangSmith Observability Concepts](https://docs.langchain.com/langsmith/observability-concepts) - Traces, runs, nested spans
+- [Langfuse Tracing Data Model](https://langfuse.com/docs/observability/data-model) - Traces, observations (span/generation/event), OpenTelemetry foundation
+- [Langfuse OpenTelemetry Integration](https://langfuse.com/integrations/native/opentelemetry) - OTel-native SDK with semantic conventions
+- [AI Agent Observability Tools 2026](https://research.aimultiple.com/agentic-monitoring/) - Platform comparison with overhead benchmarks
+- [AgentOps Taxonomy (arXiv)](https://arxiv.org/html/2411.05285v1) - Academic taxonomy of agent traceable artifacts
+- [Event Sourcing Pattern - Azure](https://learn.microsoft.com/en-us/azure/architecture/patterns/event-sourcing) - Append-only logs, projections, replay, snapshots
+- [Event Sourcing - Kurrent](https://www.kurrent.io/event-sourcing) - Projections as read-side optimization, replayability
 
-### Multi-Agent Patterns
-- [Building Multi-Agent Systems Part 3](https://blog.sshh.io/p/building-multi-agent-systems-part-c0c) - Convergence toward Planner + Builder + Task Agent pattern
-- [Google ADK Multi-Agent Patterns](https://developers.googleblog.com/developers-guide-to-multi-agent-patterns-in-adk/) - Sequential, parallel, and loop agent patterns
-- [OpenAI Agents SDK - Multi-Agent](https://openai.github.io/openai-agents-python/multi_agent/) - Handoff patterns
+### History Compaction
+- [Context Compaction Research](https://gist.github.com/martinec/0d078c88b0bdc97fea21fc6d7d596af8) - Claude Code, Codex CLI, OpenCode, Amp comparison
+- [Anthropic Context Compaction Cookbook](https://platform.claude.com/cookbook/tool-use-automatic-context-compaction) - compaction_control API with configurable thresholds
+- [Anthropic Context Editing](https://platform.claude.com/docs/en/build-with-claude/context-editing) - clear_tool_uses and clear_thinking strategies
+- [Anthropic Context Engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) - Context as precious, finite resource
+- [Claude Code Compaction](https://stevekinney.com/courses/ai-development/claude-code-compaction) - Auto-compact triggers at 64-75% context usage
+- [How Claude Code Got Better by Protecting Context](https://hyperdev.matsuoka.com/p/how-claude-code-got-better-by-protecting) - Earlier compaction preserves more working memory
+- [Cline Auto Compact](https://docs.cline.bot/features/auto-compact) - LLM-based summarization with rule-based fallback
+- [OpenCode Context Management](https://deepwiki.com/sst/opencode/2.4-context-management-and-compaction) - 95% threshold, prune then summarize, head+tail preservation
 
-### Temporal + Agentic AI
-- [Agentic AI Workflows with Temporal](https://intuitionlabs.ai/articles/agentic-ai-temporal-orchestration) - Temporal as durability layer for agents
-- [Dynamic AI Agents with Temporal](https://temporal.io/blog/of-course-you-can-build-dynamic-ai-agents-with-temporal) - Loop-in-workflow pattern
-- [Durable Multi-Agentic AI with Temporal](https://temporal.io/blog/using-multi-agent-architectures-with-temporal) - Multi-agent orchestration
-- [Building Production-Ready Agentic Systems](https://temporal.io/blog/building-an-agentic-system-thats-actually-production-ready) - Production patterns
+### Event Routing and Multi-Agent Patterns
+- [Confluent Event-Driven Multi-Agent Systems](https://www.confluent.io/blog/event-driven-multi-agent-systems/) - Orchestrator-worker, hierarchical, blackboard, market-based patterns
+- [AWS Routing Dynamic Dispatch](https://docs.aws.amazon.com/prescriptive-guidance/latest/agentic-ai-patterns/routing-dynamic-dispatch-patterns.html) - EventBridge-based agentic routing
+- [Google ADK Multi-Agent Patterns](https://developers.googleblog.com/developers-guide-to-multi-agent-patterns-in-adk/) - Dispatcher, sequential pipeline, human-in-the-loop patterns
+- [Confluent Correlation Identifier](https://developer.confluent.io/patterns/event/correlation-identifier/) - UUID-based correlation across event flows
+- [Correlation and Causation IDs](https://blog.arkency.com/correlation-id-and-causation-id-in-evented-systems/) - Correlation ID + causation ID pattern
 
-### Observability
-- [AI Agent Observability - OpenTelemetry](https://opentelemetry.io/blog/2025/ai-agent-observability/) - Standardization efforts
-- [Practical Guide to AI Observability (Vellum)](https://www.vellum.ai/blog/understanding-your-agents-behavior-in-production) - Production observability patterns
-- [15 AI Agent Observability Tools in 2026](https://research.aimultiple.com/agentic-monitoring/) - Tool landscape
-
-### Error Recovery & Graceful Degradation
-- [Multi-Agent AI Failure Recovery (Galileo)](https://galileo.ai/blog/multi-agent-ai-system-failure-recovery) - Reviewer agent, escalation patterns
-- [Error Recovery Strategies in AI Agents](https://www.gocodeo.com/post/error-recovery-and-fallback-strategies-in-ai-agent-development) - State verification, retry strategies
-- [Cognitive Degradation Resilience (CSA)](https://cloudsecurityalliance.org/blog/2025/11/10/introducing-cognitive-degradation-resilience-cdr-a-framework-for-safeguarding-agentic-ai-systems-from-systemic-collapse) - Long-running agent degradation
-
-### Cost Management
-- [Token Consumption in Agentic Coding Tasks (OpenReview)](https://openreview.net/forum?id=1bUeVB3fov) - Token prediction research (r < 0.15)
-- [Hidden Costs of Agentic AI (Galileo)](https://galileo.ai/blog/hidden-cost-of-agentic-ai) - Why 40% of projects fail
-- [Agentic AI Cost Iceberg (Dataiku)](https://www.dataiku.com/stories/blog/the-agentic-ai-cost-iceberg) - Hidden cost analysis
-
-### Routing & Classification
-- [AWS Routing Dynamic Dispatch Patterns](https://docs.aws.amazon.com/prescriptive-guidance/latest/agentic-ai-patterns/routing-dynamic-dispatch-patterns.html) - Event-driven routing for agents
-- [AI Agent Routing Tutorial (Patronus AI)](https://www.patronus.ai/ai-agent-development/ai-agent-routing) - Rule-based, ML, and LLM routing approaches
-- [Intent Recognition in Multi-Agent Systems](https://gist.github.com/mkbctrl/a35764e99fe0c8e8c00b2358f55cd7fa) - Router patterns
+### Tool Registries
+- [AutoGen Agent Runtime - Registration](https://microsoft.github.io/autogen/stable/user-guide/core-user-guide/framework/agent-and-agent-runtime.html) - Factory function pattern for agent type registration
+- [Microsoft Agent Framework - AIFunctionFactory](https://medium.com/@venya-brodetskiy/getting-started-with-microsoft-agent-framework-61a1112220f8) - Reflection-based tool schema generation
+- [AgentScope Runtime](https://github.com/agentscope-ai/agentscope-runtime) - White-box adapter pattern with namespace/tag configuration
 
 ---
 
-*Feature research for v2.2 Agentic Architecture - Tool-Use Loop Features*
-*Researched: 2026-01-29*
-*Replaces: v2.0 Foundation feature research (2026-01-19)*
+*Feature research for v2.3 Unified Agent Framework*
+*Researched: 2026-02-01*
+*Replaces: v2.2 Agentic Architecture feature research (2026-01-29)*

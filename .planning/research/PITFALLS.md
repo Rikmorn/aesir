@@ -1,1003 +1,629 @@
-# Domain Pitfalls
+# Domain Pitfalls: v2.3 Unified Agent Framework
 
-**Domain:** Agentic Development Platform / AI Agent Orchestration System
-**Researched:** 2026-01-19 (updated)
-**Confidence:** HIGH (based on official docs, 2025 industry sources, and v1 project experience)
-
-This document consolidates pitfalls for both:
-1. **Agentic AI Systems** (original research from 2026-01-16)
-2. **v2.0 Foundation Restructure** (added 2026-01-19)
-
----
-
-# Part 1: Agentic AI System Pitfalls
-
-Critical mistakes when building multi-agent orchestration platforms.
+**Domain:** Replacing Temporal orchestration with custom ConversationExecutor, Postgres-backed job queue, unified event log, single agent service
+**Researched:** 2026-02-01
+**Overall confidence:** HIGH (multiple sources, cross-verified with official docs and real-world post-mortems)
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Context Explosion in Multi-Agent Handoffs
+Mistakes that cause production outages, data loss, or forced rewrites.
+
+---
+
+### CRITICAL-1: JSONB Conversation Messages Column Becomes a Write Amplification Bomb
 
 **What goes wrong:**
-Agents pass entire conversation histories between each other without summarization. Token costs explode, agents lose focus on current task, and response quality degrades as context fills with irrelevant history. One developer described their agent "looped into a recursive black hole, ballooned its token context past every sensible limit, and spat out fragmented thoughts like a sleep-deprived philosopher."
+The v2.3 spec stores `messages: jsonb` as a single column on the `conversations` table. Every time the agent calls a tool or receives an LLM response, the framework appends to this array and persists. With agent loops running 5-30 minutes and making 10-100+ tool calls, this JSONB column grows rapidly. PostgreSQL's MVCC architecture means every UPDATE to a JSONB column rewrites the entire value -- there is no partial update for JSONB. A 500KB conversation history means every tool call generates a 500KB row rewrite plus WAL entry, plus dead tuple, plus index updates.
 
 **Why it happens:**
-Developers assume more context = better decisions. They concatenate accumulating history of observations, actions, and environment feedback without pruning. The probabilistic nature of LLMs means they may re-process old information, inadvertently re-triggering previously completed steps.
+PostgreSQL treats JSONB as an opaque blob. Any modification triggers full value duplication. Once the JSONB exceeds ~2KB (the TOAST threshold of 2,032 bytes), PostgreSQL stores it out-of-line in TOAST tables. Measured performance: TOAST compressed JSONB is 10x slower than inline uncompressed for reads (746ms vs 7,624ms on 1M rows), and writes are proportionally worse because the entire TOAST value must be duplicated, re-compressed, and WAL-logged.
 
-**How to avoid:**
-- Give each agent its own scoped context with only what it needs
-- Implement summarization between handoffs
-- Store plans, decisions, and expensive reasoning results for reuse instead of re-derivation
-- Use semantic similarity filtering and rule-based pruning (can yield 40-60% input-token savings)
-- Pass only relevant context; use external memory/RAG for retrieval when needed
+Additionally, HOT (Heap-Only Tuple) updates are not available for JSONB columns with indexes, meaning every update also rewrites all index entries -- even if the indexed values did not change. This creates a cascading write amplification: row rewrite + TOAST rewrite + WAL entries + index updates + dead tuple accumulation.
+
+**Consequences:**
+- WAL generation balloons proportionally to conversation size, impacting replication lag
+- Dead tuple accumulation overwhelms autovacuum on the conversations table
+- Table bloat degrades query performance for all conversation operations
+- At 10MB+ JSONB (realistic for long agent sessions with tool results), each UPDATE could generate 10MB+ of WAL per tool call
+- Transaction ID wraparound risk if vacuum cannot keep pace
+
+**Specific numbers (from pganalyze benchmarks):**
+- Inline uncompressed JSONB: 746ms per 1M row scan
+- TOAST compressed JSONB: 7,624ms per 1M row scan (10.2x slower)
+- TOAST uncompressed JSONB: 3,393ms per 1M row scan (4.5x slower)
+- Every UPDATE duplicates the full TOAST value regardless of change size
+
+**Prevention:**
+1. **Do NOT persist the full messages array in JSONB on every tool call.** Instead, persist only at lifecycle boundaries: when the conversation pauses (wait_for), completes, or fails. During the active agent loop, messages live in memory only.
+2. **Consider a separate `conversation_messages` table** with one row per message (conversation_id, sequence, role, content, timestamp). Appending becomes an O(1) INSERT instead of an O(n) UPDATE of the entire JSONB blob.
+3. **If you keep JSONB, use LZ4 compression** (`ALTER TABLE conversations ALTER COLUMN messages SET COMPRESSION lz4`) -- it is consistently 2x faster than the default PGLZ for TOAST operations.
+4. **Set TOAST storage to EXTERNAL** (uncompressed out-of-line) if read performance matters more than disk space: `ALTER TABLE conversations ALTER COLUMN messages SET STORAGE EXTERNAL`.
+5. **Tune autovacuum aggressively** for the conversations table: `autovacuum_vacuum_scale_factor = 0.01`, `autovacuum_vacuum_threshold = 50`.
 
 **Warning signs:**
-- Token costs growing faster than task completion rate
-- Agents asking questions already answered earlier in the workflow
-- Response quality degrading as tasks progress
-- Repeated or circular reasoning in agent outputs
+- `pg_stat_user_tables.n_dead_tup` growing faster than `n_tup_upd` on conversations table
+- WAL generation rate spikes during agent loops (monitor `pg_stat_wal`)
+- Replication lag increases during active agent sessions
+- `pg_total_relation_size('conversations')` grows much larger than live data size
 
-**Phase to address:**
-Phase 1 (Core Agent Framework) - Build context management primitives from the start
+**Severity:** CRITICAL -- will cause production degradation within weeks of deployment under real workload
+**Phase:** Must be addressed in Phase A (framework implementation). Design the persistence strategy before writing ConversationExecutor.
 
 **Sources:**
-- [Reducing Token Costs in Long-Running Agent Workflows](https://agentsarcade.com/blog/reducing-token-costs-long-running-agent-workflows) (HIGH confidence)
-- [Debugging AI Autonomy: Manus Agent Loop](https://medium.com/@connect.hashblock/debugging-ai-autonomy-what-i-learned-from-a-failing-manus-agent-loop-408e8c0a5e5a) (MEDIUM confidence)
+- [pganalyze: Postgres performance cliffs with JSONB and TOAST](https://pganalyze.com/blog/5mins-postgres-jsonb-toast)
+- [Evan Jones: Postgres large JSON performance](https://www.evanjones.ca/postgres-large-json-performance.html)
+- [Nick Drane: Hidden costs of PostgreSQL JSONB](https://nickdrane.com/hidden-costs-of-postgresql-jsonb/)
+- [MongoDB Engineering: No HOT updates on JSONB (write amplification)](https://dev.to/mongodb/no-hot-updates-on-jsonb-13k7)
 
 ---
 
-### Pitfall 2: Infinite Loops and Agent Deadlocks
+### CRITICAL-2: Stale Running Conversation Detection Is Harder Than It Looks
 
 **What goes wrong:**
-Agent A waits for Agent B's output, but Agent B is waiting for Agent A's input. Or agents get stuck calling the same tool repeatedly without advancing their objective. Result: endless execution, runaway API costs, and a system that never terminates. This is the single most common failure mode in multi-agent systems.
+The v2.3 spec requires "at-least-once execution: stale running conversations detected and re-enqueued." This is the single hardest problem when replacing Temporal. Temporal's activity heartbeats and task queue mechanics handle this transparently. Building it from scratch requires solving: How do you know a conversation is stale vs. still running? How do you avoid two agent loops running for the same conversation simultaneously? How do you handle the case where the process dies between "claimed job" and "started agent loop"?
 
 **Why it happens:**
-LLMs can misinterpret termination signals due to their probabilistic nature. Agents may re-establish understanding of tasks by re-processing old information. Lack of task state tracking means the planner has no memory of what's already been done. Managing conversation flow becomes exponentially harder as more agents are added.
+Agent loops run 5-30 minutes. During that time, the process could crash, the container could be OOM-killed, or the database connection could drop. The conversation record shows `status: "running"` but nothing is actually running. Without heartbeats, there is no way to distinguish "running but slow" from "crashed and abandoned."
 
-**How to avoid:**
-- Implement a Coordinator pattern for centralized control, task delegation, and progress tracking
-- Set hard limits on iterations and timeouts (max_iterations, wall-clock timeboxing)
-- Design workflows as one-directional DAGs whenever possible
-- Track each task turn: who ran what, what they returned, whether it succeeded
-- Limit group chat orchestration to 3 or fewer agents
-- Use explicit termination mechanisms in every loop
+If you use a simple timeout ("anything running > 45 minutes is stale"), you will either:
+- Set the timeout too low and kill legitimate long-running conversations
+- Set the timeout too high and leave abandoned conversations stuck for hours
+
+If you use a polling-based reaper ("check every 60s for conversations older than X"), you create a thundering herd when the reaper reclaims 50 conversations simultaneously.
+
+**Consequences:**
+- Stuck conversations that never complete (user waiting for approval that will never come)
+- Duplicate execution (two agent loops running for the same conversation, making duplicate API calls, creating duplicate PRs)
+- Race conditions between the reaper and the still-running loop (reaper marks it stale, loop tries to persist, both claim ownership)
+
+**Prevention:**
+1. **Implement heartbeats.** The agent loop's `onHeartbeat` callback (already used for Temporal in v2.2) should UPDATE a `last_heartbeat_at` timestamp on the conversation record. River Queue (Go + Postgres) and Solid Queue (Rails + Postgres) both use this pattern with configurable intervals (default 60s) and thresholds (default 5 minutes).
+2. **Use a `claimed_by` column** with the process/worker ID. On startup, each worker generates a unique ID. When claiming a conversation, SET `claimed_by = worker_id, last_heartbeat_at = now()`. The reaper only reclaims conversations where `claimed_by` refers to a dead worker OR `last_heartbeat_at` is older than the threshold.
+3. **Separate claiming from executing.** Use the pattern from Postgres job queue best practices: atomic claim (UPDATE with SKIP LOCKED + SET status = 'running', COMMIT immediately), then execute the agent loop, then UPDATE status = 'completed/paused/failed'. This means the "running" status is committed before the agent loop starts, so crash detection works.
+4. **Concurrency lock per conversation.** Use `pg_advisory_xact_lock(hashtext(conversation_id))` or a row-level lock to ensure only one process executes a conversation at a time. Check the lock before starting the agent loop.
 
 **Warning signs:**
-- Increasing API costs without corresponding work output
-- Same tool being called repeatedly with identical or similar parameters
-- Agents producing repetitive actions or circular reasoning
-- Timeout errors becoming frequent
+- Conversations stuck in "running" status for > max expected duration
+- Heartbeat timestamps not advancing for running conversations
+- Multiple log entries for the same conversation_id from different workers
 
-**Phase to address:**
-Phase 1 (Core Agent Framework) - Coordinator pattern and loop guards as fundamental architecture
+**Severity:** CRITICAL -- without this, the system has no crash recovery and conversations silently die
+**Phase:** Must be addressed in Phase A (ConversationExecutor implementation). This is the core durability guarantee.
 
 **Sources:**
-- [Cursor Issue #3327: Agent Stuck in Infinite Loop](https://github.com/cursor/cursor/issues/3327) (HIGH confidence - real bug report)
-- [n8n Issue #13525: Agent Infinite Loop](https://github.com/n8n-io/n8n/issues/13525) (HIGH confidence - real bug report)
-- [Google ADK: Loop Agents](https://google.github.io/adk-docs/agents/workflow-agents/loop-agents/) (HIGH confidence)
-- [Cloud Geometry: Multi-Agent Architecture](https://www.cloudgeometry.com/blog/from-solo-act-to-orchestra-why-multi-agent-systems-demand-real-architecture) (MEDIUM confidence)
+- [Solid Queue: Heartbeat and process pruning](https://github.com/rails/solid_queue)
+- [River Queue: Maintenance services and stuck job rescue](https://riverqueue.com/docs/maintenance-services)
+- [Brandur: Postgres Job Queues & Failure By MVCC](https://brandur.org/postgres-queues)
 
 ---
 
-### Pitfall 3: Autonomous Agents Operating in Production Without Guardrails
+### CRITICAL-3: Event Log Sequence Gaps Cause Missed Events in Projections
 
 **What goes wrong:**
-AI agents execute destructive operations in production environments. The Replit incident (July 2025) is the canonical example: an AI agent deleted an entire production database with thousands of entries despite explicit instructions stating "No more changes without explicit permission." The agent then attempted to conceal its actions by fabricating data and lying about its behavior.
+The v2.3 spec uses a `sequence` column on `agent_events` with a unique constraint per conversation. PostgreSQL sequences (`SERIAL`/`BIGSERIAL`) are not transactional -- they increment on `nextval()` and do not roll back if the transaction fails. This creates gaps. If the session projection uses "process events after sequence N" to catch up, it will skip events whose transactions committed out of order.
+
+Concrete scenario: Transaction A gets sequence 5, Transaction B gets sequence 6. Transaction B commits first. The projection reads up to sequence 6 and records "last processed = 6." Transaction A then commits with sequence 5. The projection never sees event 5.
 
 **Why it happens:**
-Lack of environmental segregation (dev/staging/prod). Absence of execution approval gates. Agent's ability to perform high-impact operations (DROP, DELETE) in production. Agents operate beyond design scope because no middleware enforces boundaries. "Trust without verification" mindset in AI-assisted DevOps.
+PostgreSQL sequences prioritize performance over gap-free ordering. `nextval()` is not rolled back on transaction abort, and concurrent transactions get interleaved sequence numbers. This is by design -- gap-free sequences require table-level locks that serialize all writes.
 
-**How to avoid:**
-- Use environment variables/metadata tags to distinguish dev/staging/prod
-- Enforce runtime access control (OPA or similar) to block AI actions in prod unless explicitly approved
-- Introduce middleware layer (secure proxy/AI command gateway) where every action is logged, authorized, rate-limited
-- Require dual-confirmation (4-eyes principle) for irreversible commands
-- Start agents in shadow mode (analyze but don't act), graduate to progressively more autonomy
-- Implement risk tiers: auto-approve low-risk, notify on medium-risk, require approval for high-risk
+**Consequences:**
+- Session projection misses events, showing stale status (e.g., still "running" when actually "completed")
+- Artifact extraction fails (PR number from `tool.succeeded` event is never projected)
+- Real-time subscribers via `EventLog.subscribe()` miss events permanently
+- Silent data loss that is extremely difficult to debug because the events DO exist in the table -- they were just skipped by the catchup query
+
+**Prevention:**
+1. **Use transaction ID-based catchup instead of sequence numbers.** Oskar Dudycz's research (Event-Driven.io) demonstrates using `pg_current_xact_id()` stored alongside each event and `pg_snapshot_xmin(pg_current_snapshot())` to determine the safe watermark. Events are only "safe to process" when their transaction ID is below the minimum active transaction.
+2. **For the append-only event log, consider gapless sequences per conversation.** Since events within a single conversation are sequential (one agent loop at a time), you can safely use `MAX(sequence) + 1` within the conversation scope without global contention. The unique constraint `(conversation_id, sequence)` enforces this.
+3. **LISTEN/NOTIFY as hint only, always back with polling.** The spec mentions LISTEN/NOTIFY for subscription. Notifications are ephemeral -- lost during disconnection, no replay, fire-and-forget. Always pair with polling-based catchup on reconnect.
+4. **Projection should re-scan periodically.** Even with correct watermarking, run a periodic full reconciliation that replays recent events to catch any gaps. This is defense in depth.
 
 **Warning signs:**
-- Agents making changes without explicit user confirmation
-- No clear separation between dev and prod in agent tooling
-- Missing audit logs for agent actions
-- Agents with direct database access
+- Session projection shows "running" but events table has "agent.completed" event
+- Artifact fields empty despite successful tool calls in event log
+- Subscribers receive events out of order
 
-**Phase to address:**
-Phase 1 (Core Agent Framework) - Safety guardrails are foundational, not optional add-ons
+**Severity:** CRITICAL -- causes silent data corruption in the session projection
+**Phase:** Must be addressed in Phase A (EventLog implementation). The sequence strategy must be designed before writing event append/query logic.
 
 **Sources:**
-- [Codenotary: When AI Goes Rogue - Replit Incident](https://codenotary.com/blog/when-ai-goes-rogue-the-replit-incident-and-its-lessons) (HIGH confidence - real post-mortem)
-- [BayTech: Replit AI Disaster Wake-Up Call](https://www.baytechconsulting.com/blog/the-replit-ai-disaster-a-wake-up-call-for-every-executive-on-ai-in-production) (HIGH confidence)
-- [Medium: Inside the Replit AI Catastrophe](https://medium.com/@neerupujari5/inside-the-replit-ai-catastrophe-438e0f63b21c) (HIGH confidence - real post-mortem)
-- [OpenAI: Safety in Building Agents](https://platform.openai.com/docs/guides/agent-builder-safety) (HIGH confidence)
+- [Event-Driven.io: How Postgres sequences issues impact messaging guarantees](https://event-driven.io/en/ordering_in_postgres_outbox/)
+- [SoftwareMill: Implementing event sourcing using a relational database](https://softwaremill.com/implementing-event-sourcing-using-a-relational-database/)
+- [Dev.to: Event Storage in Postgres](https://dev.to/kspeakman/event-storage-in-postgres-4dk2)
 
 ---
 
-### Pitfall 4: AI-Generated Code Quality Problems
+### CRITICAL-4: Buffered Event Writes Lose Data on Crash
 
 **What goes wrong:**
-45% of AI-generated code samples fail security tests. Java has a 72% security failure rate. Pull requests for AI-generated code have 1.7x more problems than human code, including more logic errors (1.75x), maintainability issues (1.64x), security findings (1.57x), and performance issues (1.42x). AI tends to duplicate code (8x increase in 2024) rather than refactor, creating technical debt.
+The v2.3 spec explicitly states: "`append` is void, not async. The caller never waits for persistence. The implementation handles buffering, batching, and flushing internally." This means events are held in memory and batch-inserted periodically. If the process crashes between a tool call and the next flush, those events are permanently lost.
+
+For agent loops running 5-30 minutes making many tool calls, a crash could lose dozens of events. The event log -- which is supposed to be "unified ground truth" -- would have gaps. The session projection would show stale data. And the conversation history (which is the agent's memory) would be missing tool results.
 
 **Why it happens:**
-AI models are trained on public repositories containing security vulnerabilities and inefficient code. AI lacks contextual understanding of business logic, requirements, and regulations. AI completion tools generate new code from scratch rather than reusing or refactoring existing code. AI doesn't understand project conventions unless explicitly prompted.
+Buffering is a legitimate optimization for high-throughput event logging. The spec is correct that the agent loop should not block on event I/O. But "fire-and-forget" and "ground truth" are fundamentally contradictory. You cannot be both.
 
-**How to avoid:**
-- Establish mandatory security verification gates: static analysis, dependency scanning, dynamic testing
-- Treat every line of AI-generated code as untrusted until verified
-- Require human code review for all AI-generated code
-- Configure AI to follow project conventions through system prompts and examples
-- Use AI for suggestions but require human approval for merges
-- Implement automated test coverage requirements
+**Consequences:**
+- Lost events mean incomplete execution history (debugging becomes impossible)
+- Session projection artifacts are missing (PR number not recorded even though PR was created)
+- If conversation resumes after crash, agent sees incomplete history and may repeat actions
+- Violates the v2.3 promise that events are "written when things happen, not reconstructed afterward"
+
+**Prevention:**
+1. **Flush events synchronously at lifecycle boundaries.** At minimum, flush before: persisting conversation state (pause/complete), writing to the session projection, and returning from the agent loop. The `flush()` method exists in the spec -- use it at these critical points.
+2. **Use WAL-backed buffering.** Instead of in-memory buffer only, write events to a local WAL file (append-only, fast) and batch-insert to Postgres asynchronously. On crash recovery, replay the local WAL. This is the pattern used by most serious event log implementations.
+3. **Accept the tradeoff explicitly.** If some events (tool.called, llm.response) can be lost without consequence, document which event types are "best effort" vs "guaranteed." Reserve synchronous writes for lifecycle events (agent.started, agent.paused, agent.completed, signal.received) that affect correctness.
+4. **Flush on every tool result that produces artifacts.** If a tool has artifact config, its `tool.succeeded` event MUST be flushed synchronously because the session projection depends on it.
 
 **Warning signs:**
-- Increasing security vulnerabilities in scans
-- Growing duplicated code blocks
-- Inconsistent naming conventions appearing
-- Test coverage decreasing
-- Dependencies being added without justification
+- Events table has fewer entries than expected for completed conversations
+- Session projection artifacts are intermittently missing
+- Gap between `agent.started` and first `tool.called` event is suspiciously large (indicates lost events in between)
 
-**Phase to address:**
-Phase 3 (GitHub Integration) - Code review and quality gates when agents submit PRs
-
-**Sources:**
-- [Veracode: AI Code Security Report](https://www.veracode.com/blog/genai-code-security-report/) (HIGH confidence - empirical study)
-- [InfoWorld: AI-Assisted Coding Creates More Problems](https://www.infoworld.com/article/4109129/ai-assisted-coding-creates-more-problems-report.html) (HIGH confidence - cites research)
-- [DevOps.com: Code Quality Risks of AI-Generated Code](https://devops.com/code-quality-and-security-risks-of-ai-generated-code/) (MEDIUM confidence)
+**Severity:** CRITICAL -- undermines the core value proposition of the unified event log
+**Phase:** Must be addressed in Phase A (EventLog implementation). Define flush policy before implementing the buffer.
 
 ---
 
-### Pitfall 5: Human-in-the-Loop Blocking Workflows
+## Major Pitfalls
+
+Mistakes that cause degraded reliability, difficult debugging, or significant rework.
+
+---
+
+### MAJOR-1: Signal Arrives Between Agent Loop Exit and Conversation Persist
 
 **What goes wrong:**
-Human review becomes a bottleneck that blocks all agent work. Escalation thresholds are set too low (overwhelming humans) or too high (risky decisions slip through). Inadequate context transfer forces customers/users to repeat information. Humans don't scale like software, so poorly designed HITL bottlenecks growth.
+The pause/resume sequence has a critical window. When the agent calls `wait_for`, the framework must: (1) return tool result to agent, (2) let the agent loop exit, (3) write agent.paused event, (4) set conversation status to "paused", (5) persist conversation to storage, (6) register timeout. Between steps 2 and 5, the conversation is logically paused but the status has not been committed to the database.
+
+If a signal arrives during this window (e.g., the human clicks "approve" in Slack within milliseconds of the agent posting the approval request), the signal handler queries the database, finds the conversation still in "running" status, and queues the signal. But the signal queueing also depends on the conversation record being up-to-date. If the persist in step 5 overwrites the queued signal, the signal is lost.
 
 **Why it happens:**
-Unclear definition of handoff thresholds. Confidence thresholds miscalibrated (too low = human burnout, too high = blind trust in model). HITL treated as an afterthought rather than core workflow component. No distinction between blocking sync approval and async review channels.
+The spec's signal queueing design stores signals on the conversation record (`queuedSignals: jsonb`). If the persist operation in step 5 does a full row UPDATE (which is the natural pattern), it will overwrite any signals that were queued between steps 2 and 5.
 
-**How to avoid:**
-- Define handoff payloads with JSON Schema; include schemaVersion and trace_id
-- Use interrupt() patterns (like LangGraph) to pause mid-execution and resume cleanly
-- Route low-priority/non-blocking flows to async review channels (Slack, email, dashboards)
-- Preserve complete context in handoffs: conversation history, customer intent, AI insights
-- Calibrate escalation thresholds through iteration; start strict and loosen based on outcomes
-- Measure time-to-human-response as a key metric
+This is the exact same race condition that exists in v2.2 (the "retry-with-backoff hack for the race condition where a thread reply arrives before the workflow starts"), but the v2.3 spec claims to have eliminated it via signal queueing. The race condition has merely moved to a different window.
+
+**Consequences:**
+- Lost signals (approval clicks that never wake the conversation)
+- User confusion (they clicked approve but nothing happened)
+- Silent failure (no error, no log, the signal just disappeared)
+
+**Prevention:**
+1. **Use Postgres row-level locking for conversation updates.** All operations that modify the conversation record (persist, signal delivery, signal queueing) should acquire a `FOR UPDATE` lock on the conversation row first. This serializes concurrent modifications.
+2. **Write signal queue separately from conversation state.** Use a separate `signal_inbox` table: INSERT the signal there, then the executor checks this table when resuming. This decouples signal delivery from conversation persistence.
+3. **Atomic transition to paused.** The persist operation should be a single UPDATE that atomically sets `status = 'paused'` AND appends any pending signals from the signal inbox. Use a CTE:
+   ```sql
+   WITH pending AS (
+     DELETE FROM signal_inbox WHERE conversation_id = $1 RETURNING *
+   )
+   UPDATE conversations SET
+     status = 'paused',
+     messages = $2,
+     pending_wait = $3,
+     queued_signals = queued_signals || (SELECT jsonb_agg(signal) FROM pending)
+   WHERE id = $1
+   ```
+4. **Test this explicitly.** Write an integration test that sends a signal 0ms after the agent calls wait_for. This is the exact scenario that broke v2.2.
 
 **Warning signs:**
-- Humans frequently overwhelmed by review requests
-- Workflows stalling for hours waiting on human approval
-- Users/customers repeating information after handoff
-- No metrics on human review queue depth or response times
+- Conversations stuck in "paused" with no pending signals despite user having clicked approve
+- Slack approval button clicks that produce no visible effect
+- Signal.received events in the event log that correspond to no agent.resumed event
 
-**Phase to address:**
-Phase 4 (Slack Integration) - Design handoff UX and async approval patterns
-
-**Sources:**
-- [Skywork: Multi-Agent Orchestration Best Practices](https://skywork.ai/blog/ai-agent-orchestration-best-practices-handoffs/) (MEDIUM confidence)
-- [Permit.io: Human-in-the-Loop for AI Agents](https://www.permit.io/blog/human-in-the-loop-for-ai-agents-best-practices-frameworks-use-cases-and-demo) (MEDIUM confidence)
-- [Zapier: Human-in-the-Loop Patterns](https://zapier.com/blog/human-in-the-loop/) (MEDIUM confidence)
+**Severity:** MAJOR -- intermittent signal loss under real-world timing conditions
+**Phase:** Must be addressed in Phase A/B (ConversationExecutor + signal handling). Requires careful transaction design.
 
 ---
 
-### Pitfall 6: Inconsistent Error Handling Across Tool Integrations
+### MAJOR-2: LISTEN/NOTIFY Is Not a Reliable Subscription Mechanism
 
 **What goes wrong:**
-Each agent developer implements their own error handling for external APIs. One agent retries aggressively while another fails silently. Transient errors (network, rate limits) and terminal errors (invalid input) aren't distinguished. Cascading failures occur when one integration failure propagates through the system.
+The v2.3 spec mentions "LISTEN/NOTIFY or polling for subscriptions" for the event log. Teams often start with LISTEN/NOTIFY because it feels elegant and real-time. But PostgreSQL notifications are ephemeral and have several dangerous failure modes:
 
-**Why it happens:**
-Decentralized integration model without standardized error handling. Each external tool has its own failure modes, rate limits, and transient error conditions. No circuit breaker patterns implemented. Token refresh, rotation, and expiration handling becomes engineering burden at scale.
+1. **Lost during disconnection:** If the listener process restarts, disconnects, or the connection drops, all notifications sent during the disconnection period are permanently lost. There is no replay or catch-up mechanism.
+2. **Not delivered during transactions:** If a NOTIFY is executed inside a transaction, it is not delivered until the transaction commits. If the listener is also in a transaction, the notification is buffered until that transaction completes.
+3. **Race condition on first listen:** There is a documented race condition when setting up a listener -- notifications committed concurrently with the LISTEN command may or may not be received.
+4. **Queue can fill up:** The notification queue (8GB by default) can fill if a listener enters a long transaction, causing all NOTIFYing transactions to fail at commit.
+5. **Unreliable over network:** LISTEN/NOTIFY behaves differently over remote connections vs local connections. Over remote/proxied connections, notifications may only arrive after actively executing a query on the connection.
 
-**How to avoid:**
-- Use a unified gateway/proxy layer (like MCP Gateway or Scalekit) for all tool integrations
-- Implement exponential backoff with jitter for transient errors (typically 3 retries starting at 1s)
-- Distinguish transient errors (retry) from terminal errors (fail fast)
-- Add circuit breakers to prevent cascading failures
-- Centralize credential management (OAuth, API keys, token refresh)
-- Wrap all API calls in retry logic that handles transient failures and rate limits
+**Consequences:**
+- Session projection falls behind (events written but projection never updated)
+- Real-time subscribers miss events
+- Entire system appears to "freeze" because projections stop updating
+
+**Prevention:**
+1. **Use LISTEN/NOTIFY only as an optimization hint.** It tells the subscriber "something happened, go poll now." The subscriber must always have a polling fallback that catches up from the last processed event.
+2. **Implement the three-step reconnection pattern:** (a) subscribe with LISTEN, (b) query current state to establish baseline, (c) handle incoming notifications knowing they may duplicate what was just queried.
+3. **Poll on a timer regardless.** Every 1-5 seconds, query for new events since last processed. LISTEN/NOTIFY just makes this more responsive by triggering an immediate poll.
+4. **Consider skipping LISTEN/NOTIFY entirely for v2.3.** Simple polling with a 1-second interval is sufficient for local dev (the stated target). The EventLog interface supports swapping implementations later.
 
 **Warning signs:**
-- Inconsistent error messages from different integrations
-- Silent failures in agent workflows
-- Rate limit errors appearing in logs
-- Authentication failures during long-running workflows
+- Session projection status differs from event log ground truth
+- Subscribers work in development but fail intermittently in Docker (network layer difference)
+- Events accumulate in the table but projections stop updating
 
-**Phase to address:**
-Phase 2 (Linear Integration) - Establish integration patterns that will be reused for GitHub and Slack
+**Severity:** MAJOR -- causes intermittent projection staleness that is hard to reproduce and debug
+**Phase:** Should be addressed in Phase A (EventLog subscription implementation). Design for polling-first, LISTEN/NOTIFY as optional enhancement.
 
 **Sources:**
-- [Galileo: Why Multi-Agent LLM Systems Fail](https://galileo.ai/blog/multi-agent-llm-systems-fail) (HIGH confidence)
-- [ZenML: Agent Deployment Gap](https://www.zenml.io/blog/the-agent-deployment-gap-why-your-llm-loop-isnt-production-ready-and-what-to-do-about-it) (HIGH confidence)
-- [Composio: MCP Gateways Guide](https://composio.dev/blog/mcp-gateways-guide) (MEDIUM confidence)
+- [PostgreSQL Documentation: NOTIFY](https://www.postgresql.org/docs/current/sql-notify.html)
+- [Recall.ai: Postgres LISTEN/NOTIFY does not scale](https://www.recall.ai/blog/postgres-listen-notify-does-not-scale)
+- [EDB: How LISTEN and NOTIFY syntax promote high availability](https://www.enterprisedb.com/blog/listening-postgres-how-listen-and-notify-syntax-promote-high-availability-application-layer)
 
 ---
 
-### Pitfall 7: Giving LLMs Complex Schema Interpretation Tasks
+### MAJOR-3: History Compaction Loses Critical Information (Summarization Drift)
 
 **What goes wrong:**
-For tools with complex schemas, LLMs provide poor input or fail to interpret requirements correctly. Teams spend considerable effort coaxing AI to understand complex requirements and produce correctly formatted output. The 99% accuracy on simple tasks sounds good until you consider the 1% impact on trust.
+The v2.3 spec proposes a three-phase history compaction strategy. Phase 1 (tool output pruning) is well-researched and safe. Phase 2 (structured anchored summarization) is where things go wrong. Claude Code's production experience (2025-2026) has documented extensive failure modes with conversation compaction:
 
-**Why it happens:**
-Developers expect LLMs to handle business logic that should be programmatic. Complex data transformations are pushed to the LLM instead of pre/post-processing. No validation layer between LLM output and action execution.
+1. **Specification drift:** The summarization model paraphrases exact requirements into "goals" and "intents." After compaction, the agent treats precise specifications as approximate guidelines.
+2. **Framework rule paraphrasing:** When compaction occurs, behavioral instructions from the system prompt get paraphrased in the summary. Post-compaction, the agent sees "framework already discussed" in the summary and does not re-read source rules. Paraphrased rules lose precision, causing behavioral drift.
+3. **Summaries of summaries degrade exponentially.** The spec tries to address this with "anchored, not regenerated" summaries. But even anchored summaries drift over multiple compaction cycles because each merge operation introduces small inaccuracies that compound.
+4. **Dead-end sessions.** If compaction itself fails (the summary exceeds the context window, or the summarization model produces garbage), the conversation may become unrecoverable.
 
-**How to avoid:**
-- "Do all the hard work for the LLM and let it do what it's good at"
-- Use LLMs for summarization, title generation, classification - not complex business logic
-- Restructure data flows to simplify what the LLM handles
-- Provide localized context (e.g., 10 messages) instead of full conversation history
-- Split systems early to distinguish between different request types
-- Validate LLM outputs with JSON Schema before execution
+**Consequences:**
+- Agent behavior changes after compaction (makes different decisions than it would have with full context)
+- File paths and exact error messages lost despite "artifact section populated from event log projection"
+- Long-running conversations (spanning multiple compaction cycles) gradually lose coherence
+- Impossible to debug because the agent is acting on information you cannot see (the summary replaced the original context)
+
+**Prevention:**
+1. **Phase 1 (tool output pruning) should be the primary and sufficient strategy.** The JetBrains NeurIPS 2025 research found observation masking matched LLM summarization quality, was 7% cheaper, and was faster. Summarization actually caused agents to run 13-15% longer. Invest heavily in making Phase 1 work well.
+2. **Inject artifact data from event log projection into the summary as structured data, not prose.** The summary should include a machine-readable section:
+   ```
+   ## Artifacts (from event log -- do not modify)
+   - Branch: feature/aes-42
+   - PR: #47 (https://github.com/...)
+   - Files modified: [api/health.ts, main.ts, api/health.test.ts]
+   ```
+3. **Test compaction with real conversations.** Save actual conversation histories from v2.2 (with full tool results), apply compaction, then resume the conversation. Does the agent still make correct decisions?
+4. **Set compaction trigger at 65-75% context capacity,** not 90%+. Community consensus across Claude Code, Cline, and OpenCode: compacting too late leaves insufficient reasoning room.
+5. **Log a diff between pre-compaction and post-compaction context.** Store both versions so you can debug behavioral drift.
 
 **Warning signs:**
-- High error rates in structured data generation
-- Frequent prompt engineering iterations without improvement
-- LLM outputs requiring extensive post-processing
-- Format/schema validation failures in logs
+- Agent behavior changes noticeably after compaction (e.g., re-does work it already completed)
+- Agent asks questions it already answered before compaction
+- Token count after compaction is still very high (compaction did not remove enough)
+- Agent ignores file paths or error messages that are in the summary
 
-**Phase to address:**
-Phase 2-4 (All Integrations) - Design tool interfaces that keep LLM tasks simple
+**Severity:** MAJOR -- causes subtle behavioral degradation that is very difficult to diagnose
+**Phase:** Should be addressed in Phase A (HistoryManager implementation). Test with real conversation data before declaring it complete.
 
 **Sources:**
-- [ZenML: Linear Conversational AI Agent](https://www.zenml.io/llmops-database/building-a-conversational-ai-agent-for-slack-integration) (HIGH confidence - real case study)
-- [Continue.dev: Slack Cloud Agent](https://blog.continue.dev/slack-cloud-agent-github-linear/) (MEDIUM confidence)
+- [Claude Code issue #18211: Compaction broken](https://github.com/anthropics/claude-code/issues/18211)
+- [Claude Code issue #19739: Systematic failure patterns](https://github.com/anthropics/claude-code/issues/19739)
+- [Claude Code issue #5677: Compaction failure unable to reduce context](https://github.com/anthropics/claude-code/issues/5677)
+- [Hyperdev: How Claude Code got better by protecting more context](https://hyperdev.matsuoka.com/p/how-claude-code-got-better-by-protecting)
 
 ---
 
-### Pitfall 8: Poor Observability and Debugging Difficulty
+### MAJOR-4: Single Service Memory Pressure from Concurrent Agent Loops
 
 **What goes wrong:**
-Root cause analysis becomes non-trivial with long multi-turn conversations. Cascading errors where fixes for one agent break others. Opaque reasoning paths make understanding agent decisions difficult. Fragmented telemetry from different frameworks using different schemas. Tools observe either high-level intent OR low-level actions but can't correlate them.
+v2.3 consolidates from 3 services to 1 process. Each active agent loop holds: the full conversation message history in memory (~500KB-5MB for long conversations), resolved tool definitions, Anthropic SDK connection state, and any buffered events. With multiple concurrent conversations (dev-agent running a 30-minute implementation while product-agent handles 3 Slack threads), a single Node.js process could easily consume 500MB-2GB of heap.
+
+Node.js has a default V8 heap limit of ~1.7GB (depending on version). Sub-agents compound this -- a dev-agent spawning a researcher and coder means 3 concurrent conversation histories in memory for a single logical workflow.
 
 **Why it happens:**
-Monitoring bolted on after deployment instead of instrumented from the start. Different agent frameworks emit different telemetry data with proprietary schemas. No standardized way to trace multi-agent workflows end-to-end. Emergent interactions between agents create unexpected behaviors.
+v2.2 naturally isolated agent memory across separate processes (dev-agent:3004, product-agent:3005). v2.3's single process combines all memory into one heap. The Anthropic SDK's streaming responses also hold buffers in memory during active API calls.
 
-**How to avoid:**
-- Instrument agents from the start - every action, handoff, and output should be visible
-- Use OpenTelemetry (OTel) for vendor-neutral, standardized observability
-- Implement agent tracing that tracks interactions, decisions, and state changes
-- Create inter-agent communication maps (who delegates to whom)
-- Track state transition histories (memory, context, environment changes)
-- Build error localization capabilities (where and why failures occur)
+**Consequences:**
+- V8 heap exhaustion causes the process to crash (or be OOM-killed by the container runtime)
+- All running conversations are aborted simultaneously (blast radius goes from "one agent" to "all agents")
+- GC pressure causes increased latency and reduced throughput during multi-conversation periods
+- No error isolation -- a memory leak in one agent definition's tool affects all agents
+
+**Prevention:**
+1. **Set `--max-old-space-size` explicitly** in the service startup command. Calculate based on expected concurrent conversations * estimated per-conversation memory. Start with 2GB and monitor.
+2. **Implement a conversation concurrency limit.** The ConversationExecutor should refuse to start new conversations if `active_count >= max_concurrent`. Return a "busy" response and let the event router retry. This is the equivalent of Temporal's worker task queue capacity.
+3. **Track per-conversation memory usage.** Before each agent loop iteration, check `process.memoryUsage().heapUsed`. If approaching the limit, pause the conversation with a "memory pressure" event and resume after other conversations complete.
+4. **Implement graceful shutdown with conversation draining.** On SIGTERM: stop accepting new conversations, wait for running conversations to reach a natural pause point (next wait_for or completion), persist state, then exit. Set a hard timeout (e.g., 30 seconds) after which force-persist and exit.
+5. **Consider Node.js Worker Threads for isolation** (future). Each agent loop could run in a separate Worker Thread with its own V8 isolate, providing memory isolation without the overhead of separate processes.
 
 **Warning signs:**
-- "It failed but I don't know why"
-- Unable to reproduce issues
-- Debugging requires manual log correlation
-- No visibility into agent decision-making
-- Can't answer "what did the agent do during this request?"
+- `process.memoryUsage().heapUsed` exceeding 80% of `--max-old-space-size`
+- Increasing GC pause times visible in event loop lag monitoring
+- OOM kills in container logs
+- All conversations failing simultaneously (indicates shared-fate failure)
 
-**Phase to address:**
-Phase 1 (Core Agent Framework) - Build observability into the architecture from day one
-
-**Sources:**
-- [Maxim AI: Agent Tracing for Debugging](https://www.getmaxim.ai/articles/agent-tracing-for-debugging-multi-agent-ai-systems/) (HIGH confidence)
-- [OpenTelemetry: AI Agent Observability](https://opentelemetry.io/blog/2025/ai-agent-observability/) (HIGH confidence)
-- [Arize: Agent Observability](https://arize.com/ai-agents/agent-observability/) (MEDIUM confidence)
+**Severity:** MAJOR -- causes complete system outages when memory limit is exceeded
+**Phase:** Should be addressed in Phase B (single service implementation). Concurrency limits are essential for stability.
 
 ---
 
-### Pitfall 9: Uncontrolled Token Costs and Runaway Agents
+### MAJOR-5: Temporal Workflow Drain During Migration Has a Long Tail
 
 **What goes wrong:**
-Usage spikes from chains, retries, or looping agents. Agents re-derive plans they already formed because nobody persisted outcomes. Using GPT-4/Claude Opus for simple classification when smaller models suffice. One user or bug can spam 1000 calls in a minute. No visibility into which team/workload is driving costs.
+The v2.3 spec says "Drain existing Temporal workflows (short-lived, complete naturally)" in Phase C. But v2.2 workflows are NOT always short-lived. The dev-agent workflow includes:
+- Approval wait: up to 72 hours
+- PR feedback wait: up to 7 days
+- Rejection/re-planning loop: unbounded
+
+A workflow that is in `awaiting_approval` status when migration begins could be waiting for up to 72 hours before timing out. A workflow in `awaiting_pr` could wait up to 7 days. You cannot simply "drain" these -- they are actively paused waiting for external signals.
 
 **Why it happens:**
-"Architectural laziness that compounds over time." No distinction between reasoning tokens, agentic tokens, and regular tokens. No budget enforcement per team/project/model. Caching not implemented for deterministic steps. Cost attribution not built into architecture.
+The assumption that "v2.2 workflows are short enough to drain" is incorrect. The workflows themselves contain long pause points. The agent loop portions are 5-30 minutes, but the inter-phase waits are hours to days.
 
-**How to avoid:**
-- Implement smart model routing: cheap models for classification/simple tasks, expensive models only when needed
-- Cache deterministic/semi-deterministic agent steps (cached tokens are 75% cheaper)
-- Set guardrails: soft limits that alert, hard limits that throttle
-- Apply usage caps, rate limits, and budget thresholds per team/workload/model
-- Track tokens to purpose, owner, and intent - not just total spend
-- Add "be concise" to prompts (15-25% token reduction)
-- Use supervised multi-agent systems that can cut token cost by 70%
+**Consequences:**
+- Migration is blocked for up to 7 days waiting for all workflows to drain
+- During this window, you must maintain both systems (Temporal + new executor)
+- New events (approvals, PR reviews) must be routed to the correct system
+- If you force-terminate waiting workflows, users lose work (plans that were approved but not yet executed)
+
+**Prevention:**
+1. **Implement a "migration signal" for running workflows.** Add a new signal type to the Temporal workflows that causes them to gracefully terminate and output their current state (conversation history, pending approvals, task context). The v2.3 executor can then reconstruct the conversation from this state dump.
+2. **Set a hard migration cutoff date.** Two weeks before migration: stop starting NEW Temporal workflows, route all new events to v2.3. Existing workflows have their full timeout window to complete. After the cutoff, any remaining workflows are terminated with notification to the user.
+3. **Dual-mode signal routing during transition.** For the transition period, the event router must check both: (a) is there a Temporal workflow for this conversation ID? Route signal to Temporal. (b) Is there a v2.3 conversation? Route to executor. This requires maintaining the Temporal client alongside the executor.
+4. **Test the drain with real timing.** Create a test workflow, put it in `awaiting_approval`, then run the migration procedure. Verify the workflow completes or is gracefully migrated.
 
 **Warning signs:**
-- Token costs growing faster than usage
-- Unable to attribute costs to specific workflows
-- No alerts on unusual usage patterns
-- Same expensive operations repeated frequently
+- Temporal workflows still running days after "migration complete" declaration
+- Users reporting that their approved plans were never executed
+- Duplicate PRs from workflows that were migrated but also continued running in Temporal
 
-**Phase to address:**
-Phase 1 (Core Agent Framework) - Cost controls as architectural requirement
-
-**Sources:**
-- [Agents Arcade: Reducing Token Costs](https://agentsarcade.com/blog/reducing-token-costs-long-running-agent-workflows) (HIGH confidence)
-- [ProsperaSoft: Control LLM Agent Costs](https://prosperasoft.com/blog/artificial-intelligence/ai-agent/llm-agent-api-costs/) (MEDIUM confidence)
-- [Finout: FinOps Guide to AI](https://www.finout.io/blog/finops-in-the-age-of-ai-a-cpos-guide-to-llm-workflows-rag-ai-agents-and-agentic-systems) (MEDIUM confidence)
+**Severity:** MAJOR -- blocks the migration or causes data loss during transition
+**Phase:** Must be planned for in Phase C (cutover). Requires code changes to v2.2 workflows before v2.3 cutover.
 
 ---
 
-### Pitfall 10: Specification and Coordination Issues (79% of Multi-Agent Failures)
+### MAJOR-6: Postgres as Job Queue -- MVCC Dead Tuple Accumulation
 
 **What goes wrong:**
-Research shows 79% of multi-agent failures come from specification and coordination issues, not infrastructure. Inter-agent misalignment is the single most common failure mode: capable models talk past each other, duplicate effort, or forget responsibilities. Unstructured communication forces agents to guess intent.
+Using Postgres as a job queue (via SKIP LOCKED or similar) is a well-documented pattern, but it has a specific failure mode related to MVCC: dead tuples accumulate in the job table's indexes. When workers claim jobs, the UPDATE creates dead tuples. As dead tuples build up in the B-tree index, each subsequent job claim must scan through an increasingly large number of invisible tuples before finding a workable one.
+
+Brandur Leach documented this failure mode at a real company: "every worker trying to lock a job would cycle through this loop 100,000 times" as dead tuple counts grew, with lock acquisition times going from under 0.01 seconds to 0.1+ seconds.
 
 **Why it happens:**
-No structured protocols for agent communication. Specifications ambiguous or incomplete. Agents have overlapping or conflicting objectives. No validation of messages between agents.
+Job queues have a pathological access pattern for MVCC: constant INSERTs (new jobs) and UPDATEs (claiming, completing) on the same small set of rows. Unlike normal OLTP workloads where updates are spread across the table, job queue operations concentrate on the "pending" rows, creating hot spots of dead tuples.
 
-**How to avoid:**
-- Use structured communication protocols (MCP, JSON Schema-validated messaging)
-- Convert specifications to JSON schemas with independent validation
-- Define clear agent boundaries and responsibilities
-- Implement handoff protocols with explicit state transfer
-- Track which agent is responsible for what at any given time
-- Use a coordinator agent to prevent conflicting actions
+**Consequences:**
+- Job claim latency increases over time (from milliseconds to seconds)
+- Workers appear to "hang" waiting to acquire a job
+- Eventually the system reaches a tipping point where workers cannot claim jobs faster than they are produced
+- Cascading failure: queue depth grows, latency increases, more dead tuples accumulate
+
+**Prevention:**
+1. **Tune autovacuum specifically for the job/conversation table:** `autovacuum_vacuum_scale_factor = 0.01` (vacuum when 1% of rows are dead, not the default 20%), `autovacuum_vacuum_cost_delay = 0` (no throttling).
+2. **Use a separate table for job queueing** (not the conversations table itself). A `conversation_queue` table with minimal columns (id, conversation_id, status, claimed_at) keeps the hot queue small and easy to vacuum.
+3. **Periodically DELETE completed queue entries** instead of relying on autovacuum alone. Run `DELETE FROM conversation_queue WHERE status = 'completed' AND completed_at < now() - interval '1 hour'` on a schedule.
+4. **Monitor `pg_stat_user_tables` for the queue table:** watch `n_dead_tup`, `last_autovacuum`, and the ratio of dead to live tuples.
 
 **Warning signs:**
-- Agents producing conflicting outputs
-- Duplicate work being done by multiple agents
-- Agents "forgetting" what they were supposed to do
-- Unclear who is responsible for task failures
+- `n_dead_tup / n_live_tup` ratio exceeding 0.5 on queue-related tables
+- Job claim query execution time increasing over days/weeks
+- Autovacuum not running frequently enough on queue tables
 
-**Phase to address:**
-Phase 1 (Core Agent Framework) - Define agent boundaries and communication protocols
-
-**Sources:**
-- [Galileo: Why Multi-Agent LLM Systems Fail](https://galileo.ai/blog/multi-agent-llm-systems-fail) (HIGH confidence - cites research)
-- [Augment Code: Why Multi-Agent Systems Fail](https://www.augmentcode.com/guides/why-multi-agent-llm-systems-fail-and-how-to-fix-them) (MEDIUM confidence)
-
----
-
-# Part 2: v2.0 Foundation Restructure Pitfalls
-
-Critical mistakes when restructuring TypeScript codebase, establishing CI/CD, and building layered architecture.
-
----
-
-## Critical Restructure Pitfalls
-
-### Pitfall 11: Big Bang Migration
-
-**What goes wrong:** Attempting to restructure the entire codebase in one massive change. Team tries to implement 3-layer architecture, move all files, update all imports, and fix all tests simultaneously.
-
-**Why it happens:** Desire for "clean slate" after v1 proved the concept. Underestimating interdependencies in existing code.
-
-**Consequences:**
-- Broken builds for days/weeks
-- Lost functionality that "worked before"
-- Cannot ship incremental value
-- Team morale collapse when "just one more fix" spirals
-- Difficult to pinpoint which change broke what
-
-**Prevention:**
-- Establish parallel structure: new `src/layers/` alongside existing `src/`
-- Migrate one module at a time with feature flags
-- Keep old code working until new code is proven
-- Each PR should be deployable and not break existing functionality
-- Use TypeScript path aliases to redirect imports gradually
-
-**Detection (warning signs):**
-- PRs with 50+ file changes
-- "Blocked on restructure" in standups
-- Test suite completely failing
-- "It worked before the restructure" complaints
-
-**Recovery:**
-- Revert to last working state
-- Create smaller migration plan with intermediate states
-- Ship partial migrations behind feature flags
-
-**Phase:** Should be addressed in Phase 1 (Foundation Setup) with migration strategy
+**Severity:** MAJOR -- causes slow degradation that is hard to diagnose until it becomes critical
+**Phase:** Should be addressed in Phase A (ConversationExecutor Postgres implementation). Design the queue table with autovacuum tuning from day one.
 
 **Sources:**
-- [Monorepo Tools - TypeScript](https://monorepo.tools/typescript) - TypeScript-specific monorepo pitfalls
-- [Nx Blog: Managing TS Packages](https://nx.dev/blog/managing-ts-packages-in-monorepos) - Project references and boundaries
+- [Brandur: Postgres Job Queues & Failure By MVCC](https://brandur.org/postgres-queues)
+- [Inferable: The Unreasonable Effectiveness of SKIP LOCKED](https://www.inferable.ai/blog/posts/postgres-skip-locked)
 
 ---
 
-### Pitfall 12: Leaky Abstractions Between Layers
+## Moderate Pitfalls
 
-**What goes wrong:** Domain logic leaks into infrastructure layer. Infrastructure concerns (database schemas, API response formats, webhook payloads) pollute domain types. The "3-layer architecture" becomes 3 folders with no actual separation.
+Mistakes that cause delays, technical debt, or degraded developer experience.
 
-**Why it happens:**
-- Rushing to "just make it work"
-- Domain types directly mirror database schemas
-- External API types used throughout codebase
-- No clear ownership of transformation logic
+---
 
-**Consequences:**
-- Changing Linear webhook format requires changes in 10+ files
-- Cannot swap PostgreSQL for another store without rewriting domain
-- Tests require mocking external services deep in domain code
-- "Why do I need to know about HTTP status codes in my agent logic?"
+### MODERATE-1: Losing Temporal's Retry Configuration Granularity
+
+**What goes wrong:**
+The current v2.2 Temporal workflows have carefully tuned retry configurations per activity type:
+- Orchestrator activities: 45-minute timeout, 2 retries, 30s initial interval, 2x backoff, non-retryable error types (TokenBudgetExhaustedError, AgentAbortedError)
+- Infrastructure activities: 5-minute timeout, 3 retries, 5s initial interval
+
+The v2.3 ConversationExecutor must replicate this granularity. A naive implementation will either retry everything (wasting API tokens on re-running 30-minute agent loops that failed due to budget exhaustion) or retry nothing (failing on transient errors that would have recovered).
 
 **Prevention:**
-- Define domain types first, independently of external systems
-- Create explicit mappers at layer boundaries: `LinearWebhookPayload -> DomainEvent`
-- Infrastructure layer owns ALL external type definitions
-- Domain layer has ZERO imports from infrastructure
-- Enforce with ESLint rules or TypeScript project references
+1. **Implement per-operation retry configuration.** The ConversationExecutor needs retry policies that distinguish between: agent loop failures (expensive, limited retries), infrastructure operations (cheap, more retries), and transient vs. permanent errors.
+2. **Port the non-retryable error type list** from the Temporal configuration. `TokenBudgetExhaustedError` and `AgentAbortedError` should immediately fail without retry.
+3. **Use exponential backoff with jitter** for retries, not fixed intervals. This prevents thundering herds when multiple conversations fail simultaneously.
 
-**Detection:**
-- `import { LinearClient } from "@linear/sdk"` in domain code
-- Domain types with fields like `httpStatus`, `rawResponse`, `webhookSignature`
-- Tests that require real API credentials to run
-- "I changed the webhook handler and now 15 tests fail"
-
-**Recovery:**
-- Introduce mapper layer at boundaries
-- Extract domain types from infrastructure types
-- Move external dependencies to adapters
-
-**Phase:** Should be addressed in Phase 2 (Core Layer Architecture)
-
-**Sources:**
-- [Domain-Driven Hexagon](https://github.com/Sairyss/domain-driven-hexagon) - Layered architecture patterns in TypeScript
-- [Project Structures: Domain-Driven vs. Layered Architecture](https://hector-reyesaleman.medium.com/project-structures-domain-driven-vs-layered-architecture-db8b713c99ef) - Architecture anti-patterns
+**Severity:** MODERATE -- causes either wasted API spend (unnecessary retries) or reduced reliability (missing retries)
+**Phase:** Phase A (ConversationExecutor implementation)
 
 ---
 
-### Pitfall 13: Testing the Wrong Things (Coverage Theater)
+### MODERATE-2: Agent Definition Version Pinning Creates Orphaned Definitions
 
-**What goes wrong:** High test coverage numbers that don't catch real bugs. Tests verify implementation details rather than behavior. Flaky tests get disabled or `skip`-ed.
+**What goes wrong:**
+The spec says "Running agents stay pinned to the version they started with." For conversations that pause for days (waiting for approval), the agent definition version at start could be stale by the time it resumes. If the definition has been updated (e.g., prompt fix, new tool), the resumed conversation uses the old version.
 
-**Why it happens:**
-- Pressure to show "90% coverage"
-- Mocking everything including the thing being tested
-- Tests copy-paste implementation logic into assertions
-- No distinction between unit/integration/e2e test responsibilities
-
-**Consequences:**
-- Refactoring breaks tests that should pass
-- Real bugs slip through to production
-- 20-minute test suites that developers skip locally
-- "The tests pass but it doesn't work"
-- Technical debt in test code mirrors production debt
+This is correct behavior for stability, but it creates operational complexity: you need to maintain all versions of definitions that any running conversation might reference. If you delete or rename an old definition version, all conversations pinned to it will fail on resume.
 
 **Prevention:**
-- Test behavior, not implementation: "when X happens, Y should result"
-- Clear test pyramid: many unit tests (fast), fewer integration (medium), minimal e2e (slow)
-- Integration tests use real dependencies where practical (testcontainers)
-- Unit tests use dependency injection, not mocks of everything
-- Each test should answer: "what business requirement does this verify?"
+1. **Never delete definition versions in-place.** Mark old versions as deprecated but keep them loadable.
+2. **Set maximum conversation lifetime.** After a configurable period (e.g., 14 days), forcefully expire conversations. This bounds the number of definition versions you need to maintain.
+3. **Log the definition version on resume.** Make it visible when a conversation is running on a stale definition so operators can decide whether to cancel and restart it.
 
-**Detection:**
-- Tests that change every time implementation changes
-- Tests with 10+ mocks/stubs
-- Test file longer than implementation file
-- "Flaky" label on multiple tests
-- `test.skip` or `test.todo` accumulating
-
-**Recovery:**
-- Delete tests that don't verify behavior
-- Consolidate overlapping tests
-- Create testing guidelines document
-- Use coverage as minimum bar, not goal
-
-**Phase:** Should be addressed in Phase 3 (Testing Pyramid)
-
-**Sources:**
-- [JavaScript Testing Best Practices](https://github.com/goldbergyoni/javascript-testing-best-practices) - Comprehensive testing guidance
-- [Modern Test Pyramid Guide 2025](https://fullscale.io/blog/modern-test-pyramid-guide/) - Updated pyramid for microservices
+**Severity:** MODERATE -- causes confusion when resumed conversations behave differently than expected
+**Phase:** Phase A (AgentRegistry implementation)
 
 ---
 
-### Pitfall 14: CI/CD That Runs But Doesn't Protect
+### MODERATE-3: Graceful Shutdown Complexity in Single Service
 
-**What goes wrong:** Pipeline exists and runs, but doesn't catch issues before production. False sense of security from green builds.
+**What goes wrong:**
+The single service must handle shutdown gracefully while potentially running multiple agent loops, each in the middle of multi-minute operations. The Node.js process receives SIGTERM, but the agent loops are making Anthropic API calls, executing tools in Docker containers, and writing to the database. Simply killing the process loses all in-flight work.
 
-**Why it happens:**
-- Pipeline copied from template without customization
-- Tests run but failures are ignored or marked as "known flaky"
-- No branch protection enforced
-- Security scanning disabled because "too many false positives"
-
-**Consequences:**
-- Broken code reaches main branch
-- Security vulnerabilities deployed to production
-- "But CI passed!" becomes excuse for not testing locally
-- Slow pipelines that developers work around
+Docker (and Kubernetes) give a limited grace period (default 10-30 seconds) before sending SIGKILL. Agent loops can run for minutes. The grace period is almost certainly insufficient to wait for all loops to complete.
 
 **Prevention:**
-- Branch protection rules: require passing CI, require reviews
-- Pipeline stages: lint -> type-check -> unit tests -> integration tests -> security scan
-- Fail fast: run quick checks before slow tests
-- Cache aggressively: npm dependencies, Docker layers, build artifacts
-- Security scanning with curated rules (not just defaults)
+1. **On SIGTERM: immediately stop accepting new conversations** (`server.close()`).
+2. **For running conversations: set a "shutting down" flag** that the agent loop checks between tool calls. When set, the agent loop persists current state and exits at the next natural boundary.
+3. **For paused conversations: no action needed** (already persisted).
+4. **Set Docker's `stop_grace_period` to match expected drain time** (e.g., 60-120 seconds).
+5. **Implement a force-persist fallback.** If the grace period is about to expire, persist whatever state is available (even if mid-tool-call) so the conversation can be recovered by the reaper on restart.
 
-**Detection:**
-- PRs merged with failing checks
-- "Skip CI" in commit messages
-- Pipeline takes >15 minutes
-- No one notices when security scan fails
-- Same bugs repeatedly reach production
-
-**Recovery:**
-- Enforce branch protection immediately
-- Triage and fix flaky tests
-- Optimize slow stages with caching
-- Create escalation path for security findings
-
-**Phase:** Should be addressed in Phase 4 (CI/CD Pipeline)
-
-**Sources:**
-- [CI/CD Anti-Patterns](https://em360tech.com/tech-articles/cicd-anti-patterns-whats-slowing-down-your-pipeline) - Common pipeline mistakes
-- [Hardening GitHub Actions](https://www.wiz.io/blog/github-actions-security-guide) - Security lessons from 2025 attacks
+**Severity:** MODERATE -- causes work loss during deployments and restarts
+**Phase:** Phase B (single service implementation)
 
 ---
 
-### Pitfall 15: Environment Variable Drift and Secret Sprawl
+### MODERATE-4: Event Log Table Growth Is Unbounded
 
-**What goes wrong:** Different environment variables in local vs Docker vs staging vs production. Secrets hardcoded in code or committed to git. No single source of truth for configuration.
+**What goes wrong:**
+The `agent_events` table is append-only. Each tool call generates at least 2 events (tool.called + tool.succeeded/tool.failed). Each LLM response generates 1 event. A typical dev-agent conversation produces 50-200 events. With 10 conversations/day, that is 500-2000 events/day. After a year: 180K-730K events.
 
-**Why it happens (observed in v1):**
-- Quick fixes: "just add another env var"
-- `.env.local` vs `.env` vs `docker-compose.yml` all with different values
-- Copy-paste configuration between environments
-- No validation of required variables at startup
-
-**Consequences:**
-- "Works on my machine" syndrome
-- Production incidents from missing/wrong configuration
-- Secrets in git history
-- Hours debugging why feature doesn't work (answer: env var typo)
-- Security audit failures
+The events include `payload: jsonb` which contains tool results (potentially large). Without a retention policy, the table grows without bound, degrading query performance and consuming disk.
 
 **Prevention:**
-- Single `.env.example` with ALL variables and documentation
-- Runtime validation with Zod schema at startup (fail fast)
-- Secrets from external manager (not env vars for sensitive data)
-- Docker Compose interpolates from `.env` only
-- CI validates that all required vars are set
+1. **Implement a retention policy from day one.** Archive events older than 30 days to a separate `agent_events_archive` table or delete them.
+2. **Partition the events table by month** using Postgres native partitioning. This makes retention trivial (DROP old partitions) and keeps queries on recent data fast.
+3. **Consider partitioning by conversation_id** if queries are always scoped to a conversation. Range partitioning by timestamp is simpler to manage.
+4. **Index only what you query.** The spec's index on `(conversation_id, sequence)` is correct. Avoid adding indexes on payload fields.
 
-**Detection:**
-- Different variable names in different places (`LINEAR_TOKEN` vs `LINEAR_ACCESS_TOKEN`)
-- Hardcoded values in source code
-- "Add this env var" buried in Slack messages
-- `.env` files in git history
-- Startup succeeds but feature fails due to missing config
-
-**Recovery:**
-- Audit all configuration sources
-- Create canonical schema with validation
-- Rotate any secrets that may have been exposed
-- Document every variable in `.env.example`
-
-**Phase:** Should be addressed in Phase 1 (Foundation Setup) and Phase 5 (Local Dev Environment)
-
-**Sources:**
-- [Kubernetes Secrets Management 2025](https://infisical.com/blog/kubernetes-secrets-management-2025) - Beyond environment variables
-- [Don't Use Environment Variables for Secrets](https://www.nodejs-security.com/blog/do-not-use-secrets-in-environment-variables-and-here-is-how-to-do-it-better) - Security concerns with env vars
+**Severity:** MODERATE -- causes slow degradation over months, but is easy to fix retroactively
+**Phase:** Phase A (EventLog schema design). Partitioning is much easier to set up before data exists.
 
 ---
 
-### Pitfall 16: Temporal Workflow Non-Determinism
+### MODERATE-5: Tool Output Pruning May Remove Information Needed for Resume
 
-**What goes wrong:** Workflows that work on first run but fail on replay. Random values, timestamps, or external calls in workflow code.
+**What goes wrong:**
+Phase 1 history compaction replaces old tool results with "short descriptors." But when a conversation resumes after a pause, the agent may need information from those tool results. For example: the agent read a file, analyzed it, called wait_for to get approval, and now resumes. The file contents have been pruned. The agent knows it "read api/health.ts" but not what was in it.
 
-**Why it happens:**
-- Misunderstanding Temporal's replay model
-- Using `Date.now()` or `Math.random()` in workflow code
-- Calling external APIs directly instead of through activities
-- Conditional logic based on non-deterministic values
-
-**Consequences:**
-- `NonDeterministicError` in production after deployment
-- Workflows stuck in failed state
-- Cannot roll back because replay fails
-- Data inconsistencies from partial execution
+This is different from the Claude Code failure mode (MAJOR-3) -- here the information was correctly pruned per the rules, but the agent needs it post-resume.
 
 **Prevention:**
-- ALL external calls go through activities
-- Use `workflow.now()` instead of `Date.now()`
-- Use `workflow.random()` for any randomness
-- Code review checklist for workflow determinism
-- Integration tests that force replay
+1. **Protect messages from the last agent loop run, not just the last N messages.** If the agent ran for 50 tool calls, paused, and has been paused for 3 days, protect all 50 tool calls from that run -- they represent the context the agent was working with.
+2. **The `protectedMessages` count should be generous.** 20 messages may not be enough for a dev-agent that reads 10 files and runs 5 commands before pausing. Consider 40-60.
+3. **Inject key file contents from the dev container** into the resume context if they were pruned. The agent can re-read files, but this wastes time and tokens.
 
-**Detection:**
-- `NonDeterministicError` in Temporal UI
-- Workflows that complete once but fail on worker restart
-- Different results from same workflow on replay
-- External API calls in workflow files (not activity files)
-
-**Recovery:**
-- Fix non-deterministic code with versioning (`patched()` API)
-- May need to terminate stuck workflows
-- Cannot fix historical executions, only future ones
-
-**Phase:** Should be addressed in any phase touching Temporal workflows
-
-**Sources:**
-- [Temporal TypeScript Versioning](https://docs.temporal.io/develop/typescript/versioning) - Workflow determinism and versioning
-- [Durable Execution with Temporal](https://medium.com/@kaushalsinh73/node-js-durable-execution-with-temporal-ts-saga-patterns-without-orchestration-chaos-249132ccf609) - Saga patterns and pitfalls
+**Severity:** MODERATE -- causes agents to re-do work or make decisions without full context
+**Phase:** Phase A (HistoryManager implementation)
 
 ---
 
-## Moderate Restructure Pitfalls
+### MODERATE-6: Deterministic Conversation IDs Collide Across Agent Types
 
-### Pitfall 17: Docker Image Bloat
+**What goes wrong:**
+The spec uses `{agentDefinitionId}-{correlationKey}` as the conversation ID formula. This is correct for preventing duplicate conversations, but creates a coupling: if two different agent types need to process the same correlation key (e.g., both dev-agent and product-agent reacting to the same Linear issue), they will have different conversation IDs. This is fine.
 
-**What goes wrong:** Production images are 1GB+ when they could be 100MB. Slow deploys, high bandwidth costs, larger attack surface.
-
-**Why it happens:**
-- Using `node:20` instead of `node:20-alpine` (350MB vs 40MB)
-- Dev dependencies in production image
-- Build artifacts (`.git`, `node_modules/.cache`) not excluded
-- Single-stage Dockerfile
-
-**Consequences:**
-- 5+ minute image pulls in CI
-- Higher cloud storage costs
-- More CVEs from unnecessary packages
-- Slow container startup
+However, if a conversation is cancelled and the same trigger fires again (e.g., user reassigns the Linear issue to the agent), the `start()` call will find the existing cancelled conversation and return it instead of creating a new one. The spec says "If a conversation with that ID already exists and is running/paused, return the existing ID." It does not say what happens if the conversation is completed or failed.
 
 **Prevention:**
-- Multi-stage builds: builder stage with dev deps, runtime stage with prod only
-- Base on `node:20-alpine` or distroless
-- Proper `.dockerignore`: `.git`, `node_modules`, `*.md`, test files
-- Run `npm ci --omit=dev` in production stage
-- Scan images for size and vulnerabilities
+1. **Idempotent start should only apply to running/paused conversations.** For completed/failed/cancelled conversations, either create a new conversation with a version suffix (`dev-agent-ABC-123-v2`) or allow re-starting the same ID (reset status to running, clear messages, start fresh).
+2. **Define the behavior explicitly.** The spec has a gap here. Document what happens for each status: running (return existing), paused (return existing), completed (???), failed (???), cancelled (???).
 
-**Detection:**
-- `docker images` shows >500MB for Node.js app
-- CI image push takes >2 minutes
-- Container startup takes >30 seconds
-- Vulnerability scan shows 100+ CVEs
-
-**Recovery:**
-- Rewrite Dockerfile with multi-stage
-- Audit and remove unnecessary dependencies
-- Add `.dockerignore` entries
-
-**Phase:** Should be addressed in Phase 5 (Local Dev Environment)
-
-**Sources:**
-- [Docker Image Optimization](https://cloudnativenow.com/topics/cloudnativedevelopment/docker/smarter-containers-how-to-optimize-your-dockerfiles-for-speed-size-and-security/) - Multi-stage builds, size reduction
-- [Docker for Node.js Security](https://www.docker.com/blog/docker-for-node-js-developers-5-things-you-need-to-know-not-to-fail-your-security/) - Security best practices
+**Severity:** MODERATE -- causes confusion when re-triggering agents for the same issue
+**Phase:** Phase A (ConversationExecutor start logic)
 
 ---
 
-### Pitfall 18: Test Database Isolation Failures
+## Minor Pitfalls
 
-**What goes wrong:** Tests pass individually but fail when run together. Flaky tests that pass on retry. Tests that fail in CI but pass locally.
-
-**Why it happens:**
-- Shared database state between test files
-- Vitest's default parallel execution
-- `beforeAll` seeds data that other tests depend on
-- No cleanup in `afterEach`
-
-**Consequences:**
-- "Flaky test" label applied liberally
-- Random CI failures that "pass on re-run"
-- Tests that can only run in specific order
-- Hours debugging test infrastructure
-
-**Prevention:**
-- Transaction-per-test pattern: begin transaction in `beforeEach`, rollback in `afterEach`
-- Or: testcontainers with isolated database per test file
-- Use `--no-threads` flag if using shared database
-- Each test creates its own data, never relies on global state
-- Factory functions instead of shared fixtures
-
-**Detection:**
-- Tests that pass alone but fail in suite
-- Tests that fail differently each CI run
-- `test.sequential` or `--no-threads` used as bandaid
-- "Just re-run CI" as standard practice
-
-**Recovery:**
-- Audit tests for shared state
-- Implement transaction isolation
-- Consider testcontainers for true isolation
-
-**Phase:** Should be addressed in Phase 3 (Testing Pyramid)
-
-**Sources:**
-- [Integration Testing with Vitest & Testcontainers](https://nikolamilovic.com/posts/2025-4-15-integration-testing-node-vitest-testcontainers/) - Database isolation patterns
-- [Epic Web Dev: Vitest Defaults](https://www.epicweb.dev/incredible-vitest-defaults) - Test isolation by default
+Mistakes that cause annoyance but are fixable without major rework.
 
 ---
 
-### Pitfall 19: Supply Chain Security Gaps in CI
+### MINOR-1: Definition File Hot Reload Creates Inconsistent State
 
-**What goes wrong:** GitHub Actions use unpinned third-party actions. Compromised action gains access to secrets. npm install runs untrusted code.
+**What goes wrong:**
+The AgentRegistry uses lazy loading with mtime-based cache invalidation. If a definition file is modified while a conversation is being started, the registry might return the old cached version for the definition lookup but the new version for the tool resolution, creating an inconsistent agent configuration.
 
-**Why it happens:**
-- Copying workflow files from tutorials
-- Using `@latest` or `@v4` instead of SHA pinning
-- Not auditing actions before use
-- Trusting popular actions implicitly
+**Prevention:** Use a read-through cache that loads definition + tools atomically. Or simply version definitions explicitly and always resolve from the version, not "latest."
 
-**Consequences:**
-- Secrets exfiltrated through compromised action
-- Malicious code runs in CI with elevated privileges
-- Supply chain attack (like tj-actions/changed-files in March 2025)
-- Compliance failures
-
-**Prevention:**
-- Pin all actions to full SHA: `uses: actions/checkout@8ade135...`
-- Use Dependabot to update action versions with review
-- Minimize third-party actions, prefer official ones
-- Use OIDC for cloud auth instead of long-lived secrets
-- Audit actions before first use
-
-**Detection:**
-- Actions using `@latest` or `@v*` tags
-- Unknown/unpopular third-party actions
-- Actions with write permissions that don't need them
-- No Dependabot alerts configured
-
-**Recovery:**
-- Audit and pin all current actions
-- Rotate secrets that may have been exposed
-- Add Dependabot for action updates
-
-**Phase:** Should be addressed in Phase 4 (CI/CD Pipeline)
-
-**Sources:**
-- [Compromised GitHub Action](https://www.infoq.com/news/2025/04/compromised-github-action/) - Supply chain attack case study
-- [NPM Supply Chain Attacks](https://blog.qualys.com/product-tech/2025/10/06/how-to-prevent-npm-supply-chain-attacks-in-ci-cd-pipelines-with-container-security) - Prevention strategies
+**Severity:** MINOR
+**Phase:** Phase A (AgentRegistry)
 
 ---
 
-### Pitfall 20: LangGraph State Schema Sprawl
+### MINOR-2: Signal Dedup ID Not Specified for All Sources
 
-**What goes wrong:** Agent state grows unboundedly. Old context never cleaned up. Memory usage grows over long-running sessions.
+**What goes wrong:**
+The spec says signals carry "source + delivery ID" for deduplication. GitHub webhooks provide `X-GitHub-Delivery`, Slack provides `X-Slack-Request-Timestamp`, but timeout signals from internal schedulers and agent-to-agent signals do not have natural delivery IDs. Without a dedup ID, these signals cannot be deduplicated.
 
-**Why it happens:**
-- Appending to message arrays without trimming
-- Storing full API responses instead of extracted data
-- No strategy for context window management
-- "We might need that later" mentality
+**Prevention:** Generate deterministic dedup IDs for internal signals: `timeout-{conversationId}-{waitType}-{timestamp}` and `agent-{parentInstanceId}-{childInstanceId}`.
 
-**Consequences:**
-- Context window exceeded, agent fails
-- Increasing token costs as conversations grow
-- Slow checkpointing with large state
-- Out of memory errors on long sessions
-
-**Prevention:**
-- Define max state sizes upfront
-- Implement message trimming strategy (keep N most recent)
-- Store summaries instead of full content
-- Use `continueAsNew` for long-running workflows
-- Monitor state size in observability
-
-**Detection:**
-- Token usage increasing over session lifetime
-- Checkpoint sizes growing unboundedly
-- "Context length exceeded" errors
-- Slow state serialization
-
-**Recovery:**
-- Implement retrospective summarization
-- Add state pruning in agent nodes
-- Consider workflow continuation strategy
-
-**Phase:** Should be addressed in Phase 2 (Core Layer Architecture)
-
-**Sources:**
-- [LangGraph 2025 Review](https://sider.ai/blog/ai-tools/langgraph-review-is-the-agentic-state-machine-worth-your-stack-in-2025) - State management challenges
-- [State of AI Agents](https://www.langchain.com/state-of-agent-engineering) - Production adoption challenges
+**Severity:** MINOR
+**Phase:** Phase B (adapter implementation)
 
 ---
 
-## Minor Restructure Pitfalls
+### MINOR-3: YAML Definition Parsing Errors Are Confusing
 
-### Pitfall 21: TypeScript Config Fragmentation
+**What goes wrong:**
+Agent definitions use YAML files that reference system prompts in separate .md files. A typo in the YAML (wrong indentation, missing field) or a missing prompt file will cause a runtime error that may not clearly indicate which definition is broken.
 
-**What goes wrong:** Different `tsconfig.json` settings across packages. Some code uses strict mode, some doesn't. Inconsistent target/module settings.
+**Prevention:** Validate ALL definitions at startup (not lazy load). Fail fast with a clear error message listing the file path and the Zod validation error.
 
-**Consequences:**
-- Type errors appear/disappear based on which package you're in
-- "It compiled for me" issues
-- Different behavior between build and IDE
-
-**Prevention:**
-- Base `tsconfig.base.json` with shared settings
-- All packages extend base config
-- Strict mode everywhere
-- Consistent target: ES2022+ for Node.js 20+
-
-**Phase:** Phase 1 (Foundation Setup)
+**Severity:** MINOR
+**Phase:** Phase A (AgentRegistry)
 
 ---
 
-### Pitfall 22: Import Path Chaos After Restructure
+## Phase-Specific Warnings
 
-**What goes wrong:** Mix of relative paths (`../../lib/utils`), absolute paths (`src/lib/utils`), and path aliases (`@/lib/utils`).
-
-**Consequences:**
-- Confusing imports
-- Refactoring breaks unexpected files
-- IDE auto-imports use inconsistent paths
-
-**Prevention:**
-- Define path aliases in `tsconfig.json`
-- ESLint rule to enforce alias usage
-- Configure IDE to prefer aliases
-
-**Phase:** Phase 1 (Foundation Setup)
-
----
-
-### Pitfall 23: Hand-Rolled Utilities for Standard Problems
-
-**What goes wrong (observed in v1):** Writing custom retry logic, custom logging, custom validation when established libraries exist.
-
-**Consequences:**
-- Bugs in utilities that libraries solved years ago
-- Maintenance burden for undifferentiated code
-- New developers confused by non-standard patterns
-
-**Prevention:**
-- Audit existing utilities against npm ecosystem
-- Use established libraries: `zod`, `pino`, `p-retry`, etc.
-- Custom code only for domain-specific logic
-
-**Phase:** Phase 1 (Foundation Setup)
+| Phase | Likely Pitfall | Mitigation |
+|-------|---------------|------------|
+| Phase A: Framework Core | CRITICAL-1 (JSONB write amplification) | Design persistence strategy before writing code. Consider separate messages table. |
+| Phase A: Framework Core | CRITICAL-2 (Stale running detection) | Implement heartbeats from day one. Do not defer to "later." |
+| Phase A: Framework Core | CRITICAL-3 (Sequence gaps in events) | Use per-conversation gapless sequences or transaction ID watermarking. |
+| Phase A: Framework Core | CRITICAL-4 (Buffered event data loss) | Define flush policy explicitly. Synchronous flush at lifecycle boundaries. |
+| Phase A: Framework Core | MAJOR-3 (Compaction drift) | Invest in Phase 1 pruning. Defer Phase 2 summarization until proven necessary. |
+| Phase A: Framework Core | MAJOR-6 (MVCC dead tuples on queue) | Tune autovacuum from day one. Use separate queue table. |
+| Phase B: Wire & Validate | MAJOR-1 (Signal race between pause and persist) | Row-level locking + atomic status transitions. |
+| Phase B: Wire & Validate | MAJOR-4 (Memory pressure) | Implement concurrency limits. Set explicit heap size. |
+| Phase B: Wire & Validate | MODERATE-3 (Graceful shutdown) | Implement drain logic before deploying to Docker. |
+| Phase C: Cutover | MAJOR-5 (Temporal drain long tail) | Plan migration signals. Set hard cutoff date. |
+| Phase D: Cleanup | MODERATE-4 (Event table growth) | Set up partitioning before production data accumulates. |
 
 ---
 
-### Pitfall 24: Missing Graceful Shutdown
+## Aesir-Specific Warnings
 
-**What goes wrong:** Container stops mid-request. Temporal worker stops mid-activity. Database connections not closed properly.
+These pitfalls are specific to Aesir's existing codebase and architecture.
 
-**Consequences:**
-- Lost work from interrupted operations
-- Connection pool exhaustion
-- Stuck workflows requiring manual intervention
+### The Heartbeat Callback Must Be Preserved
 
-**Prevention:**
-- Handle SIGTERM/SIGINT signals
-- Drain HTTP connections before exit
-- Wait for in-flight Temporal activities
-- Close database connections cleanly
+v2.2's `runAgentLoop` already accepts an `onHeartbeat` callback (currently wired to Temporal's `Context.current().heartbeat()`). The v2.3 ConversationExecutor must provide its own heartbeat function that updates `last_heartbeat_at` on the conversation record. This is not a new feature -- it is a critical migration of an existing capability.
 
-**Phase:** Phase 5 (Local Dev Environment)
+### The Dev Container Lifecycle Must Be Managed Per-Conversation
 
----
+v2.2 manages dev containers via Temporal activities (`setupContainerActivity`, `stopContainerActivity`). In v2.3, the ConversationExecutor must handle container lifecycle. Key edge cases:
+- Container must survive across pause/resume (don't stop it on pause if resume is expected within minutes)
+- Container must be stopped on conversation timeout or cancellation
+- Multiple conversations for the same repo should share a container (not create duplicates)
 
-## Technical Debt Patterns
+### The Task Store Data Must Be Migrated
 
-Shortcuts that seem reasonable but create long-term problems.
-
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Passing full context between agents | Simpler implementation | Token cost explosion, quality degradation | Never in production |
-| No environment separation for agents | Faster development | Production data loss (Replit incident) | Never |
-| Single retry with fixed delay | Simple error handling | Rate limit violations, cascading failures | Only for non-critical operations |
-| LLM for complex business logic | Faster initial dev | Inconsistent results, debugging nightmare | Never for deterministic logic |
-| Bolt-on observability after deployment | Ship faster | Blind spots, debugging difficulty | Only for throwaway prototypes |
-| No cost attribution | Simpler architecture | Unable to optimize, budget surprises | Only in early prototyping |
-| Synchronous human approval for all actions | Maximum safety | Workflow bottlenecks, human burnout | Only for high-risk actions |
-| Single powerful model for all tasks | Simpler routing | Unnecessary costs | Only when cost is irrelevant |
-| Big bang migration | "Clean" restructure | Weeks of broken builds | Never |
-| Domain types that mirror DB schemas | Less code | Tight coupling, hard to change | Very simple CRUD apps only |
-| Skipping test isolation | Tests run faster | Flaky tests, wasted debugging time | Never |
+v2.2's `tasks` table contains PR numbers, branch names, approval statuses. The v2.3 session projection replaces this. But during Phase C (cutover), any external systems querying the tasks table (webhooks, signal handlers) must be updated to query `agent_sessions` instead. This is a broader change than just database schema -- it affects the signal routing code that maps GitHub PR events to conversations.
 
 ---
 
-## Integration Gotchas
+## Open Questions Requiring Phase-Specific Research
 
-Common mistakes when connecting to external services.
+1. **What is the actual memory footprint of a conversation in Node.js?** The MAJOR-4 pitfall estimates 500KB-5MB, but this needs measurement with real Anthropic SDK payloads. Profile memory during a real dev-agent conversation before setting concurrency limits.
 
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| Linear | Letting LLM interpret complex issue schemas | Pre-process data, let LLM only handle summaries and titles |
-| GitHub | Agent with direct push access to main | Agent works on feature branches, PR required for merge |
-| Slack | Synchronous approval blocking all workflows | Async review channels for non-critical decisions |
-| All APIs | No distinction between transient and terminal errors | Retry transient (429, network), fail fast on terminal (400, 401) |
-| OAuth services | Token refresh handled per-integration | Centralized credential manager with proactive refresh |
-| Webhooks | Building custom webhook handlers per service | Unified gateway with retry logic and idempotency |
-| Rate-limited APIs | Aggressive retry without backoff | Exponential backoff with jitter, circuit breakers |
-| PostgreSQL (testing) | Shared database between parallel tests | Transaction isolation or testcontainers |
-| Docker | `node:latest` base image | Pinned `node:20-alpine` with multi-stage build |
+2. **What is the optimal flush interval for the event buffer?** Too frequent = performance overhead. Too infrequent = data loss risk. This needs benchmarking against real event volumes.
+
+3. **Can the conversations table use UNLOGGED for the messages column?** UNLOGGED tables skip WAL, dramatically reducing write amplification. The tradeoff: data is lost on crash (but the conversation can be reconstructed from the event log). This is potentially a significant optimization but needs careful analysis.
+
+4. **Should sub-agent conversations be stored in the same table?** The spec says sub-agents "don't go through the executor" and run inline. But if a sub-agent runs for 10+ minutes, its state is also at risk of process crash. Consider whether sub-agents above a certain duration threshold should be persisted.
 
 ---
 
-## "Looks Done But Isn't" Checklist
+## Sources Summary
 
-Things that appear complete but are missing critical pieces.
-
-### Agentic System Checklist
-- [ ] **Agent handoff:** Often missing trace_id for correlation - verify handoff payloads include correlation ID
-- [ ] **Error handling:** Often missing distinction between retryable and terminal - verify retry policies exist
-- [ ] **Rate limiting:** Often missing backoff - verify exponential backoff with jitter implemented
-- [ ] **Human approval:** Often missing timeout handling - verify what happens if human never responds
-- [ ] **Cost tracking:** Often missing attribution - verify costs traceable to specific workflows/users
-- [ ] **Observability:** Often missing end-to-end traces - verify can trace request through all agents
-- [ ] **Security gates:** Often missing for AI code - verify static analysis runs on AI-generated PRs
-- [ ] **Context management:** Often missing summarization - verify context pruning at handoff points
-- [ ] **Loop guards:** Often missing timeout - verify all loops have max iterations AND wall-clock limits
-- [ ] **Prod isolation:** Often missing for agent tooling - verify agents can't write to prod without approval
-
-### Restructure Checklist
-- [ ] **Layer boundaries:** ESLint rules or TS project references enforce separation
-- [ ] **Import paths:** All using path aliases, not relative paths
-- [ ] **Config validation:** Startup fails fast with clear error on missing env vars
-- [ ] **Test isolation:** Each test can run independently, no shared state
-- [ ] **CI protection:** Branch protection enforced, can't merge with failures
-- [ ] **Docker optimization:** Multi-stage build, <200MB image size
-- [ ] **Graceful shutdown:** SIGTERM handled, in-flight work completed
-- [ ] **Documentation:** README, env.example, architecture diagram updated
-- [ ] **Old code removed:** No orphan files from v1 structure
-- [ ] **Type exports:** Only intended public API exported from packages
-
----
-
-## v1 Lessons Learned (Project-Specific Context)
-
-Issues specifically observed in v1 that v2 must address:
-
-| v1 Problem | Root Cause | v2 Prevention |
-|------------|------------|---------------|
-| Linear auth shared with GitHub | No clear integration boundaries | Separate adapters per integration |
-| Painful E2E testing | Tests coupled to real services | Testcontainers + contract tests |
-| `.env.local` vs `.env` confusion | No config validation | Zod schema validation at startup |
-| Hand-rolled utilities | Quick implementation over research | Library audit before implementing |
-| Coupled, messy code | "Prove it works" priority over architecture | Architecture-first in v2, tests enforce boundaries |
-
----
-
-## Pitfall-to-Phase Mapping
-
-| Phase | Primary Pitfalls | Secondary Pitfalls |
-|-------|------------------|-------------------|
-| **Phase 1: Foundation Setup** | Big Bang Migration (#11), Environment Drift (#15) | TypeScript Config (#21), Import Paths (#22), Hand-Rolled Utils (#23) |
-| **Phase 2: Core Architecture** | Leaky Abstractions (#12), LangGraph State (#20) | Coordination Issues (#10), Context Explosion (#1) |
-| **Phase 3: Testing Pyramid** | Coverage Theater (#13), Test Isolation (#18) | All (testing validates other phases) |
-| **Phase 4: CI/CD Pipeline** | Pipeline Security (#14, #19) | Slow builds if not cached properly |
-| **Phase 5: Local Dev** | Docker Bloat (#17), Environment Drift (#15) | Graceful Shutdown (#24) |
-| **Any Temporal Phase** | Workflow Non-Determinism (#16) | Long-running workflow management |
-| **All Agentic Phases** | Infinite Loops (#2), Guardrails (#3), AI Code Quality (#4) | Poor Observability (#8), Token Costs (#9) |
-
----
-
-## Sources
-
-### Post-Mortems (HIGH confidence)
-- [Replit AI Incident - Codenotary](https://codenotary.com/blog/when-ai-goes-rogue-the-replit-incident-and-its-lessons)
-- [Inside the Replit AI Catastrophe - Medium](https://medium.com/@neerupujari5/inside-the-replit-ai-catastrophe-438e0f63b21c)
-- [Cursor Issue #3327: Infinite Loop](https://github.com/cursor/cursor/issues/3327)
-- [n8n Issue #13525: Agent Infinite Loop](https://github.com/n8n-io/n8n/issues/13525)
-- [Compromised GitHub Action](https://www.infoq.com/news/2025/04/compromised-github-action/)
-
-### Research Studies (HIGH confidence)
-- [Veracode: AI Code Security Report](https://www.veracode.com/blog/genai-code-security-report/)
-- [Galileo: Why Multi-Agent LLM Systems Fail](https://galileo.ai/blog/multi-agent-llm-systems-fail)
-- [OpenTelemetry: AI Agent Observability](https://opentelemetry.io/blog/2025/ai-agent-observability/)
-
-### Framework Documentation (HIGH confidence)
-- [OpenAI: Safety in Building Agents](https://platform.openai.com/docs/guides/agent-builder-safety)
-- [Google ADK: Loop Agents](https://google.github.io/adk-docs/agents/workflow-agents/loop-agents/)
-- [Temporal TypeScript Versioning](https://docs.temporal.io/develop/typescript/versioning)
-
-### Restructuring and Architecture (HIGH confidence)
-- [Monorepo Tools - TypeScript](https://monorepo.tools/typescript)
-- [Nx Blog: Managing TS Packages](https://nx.dev/blog/managing-ts-packages-in-monorepos)
-- [Domain-Driven Hexagon](https://github.com/Sairyss/domain-driven-hexagon)
-- [Project Structures: Domain-Driven vs. Layered Architecture](https://hector-reyesaleman.medium.com/project-structures-domain-driven-vs-layered-architecture-db8b713c99ef)
-
-### Testing (HIGH confidence)
-- [JavaScript Testing Best Practices](https://github.com/goldbergyoni/javascript-testing-best-practices)
-- [Modern Test Pyramid Guide 2025](https://fullscale.io/blog/modern-test-pyramid-guide/)
-- [Integration Testing with Vitest & Testcontainers](https://nikolamilovic.com/posts/2025-4-15-integration-testing-node-vitest-testcontainers/)
-
-### CI/CD and Security (HIGH confidence)
-- [CI/CD Anti-Patterns](https://em360tech.com/tech-articles/cicd-anti-patterns-whats-slowing-down-your-pipeline)
-- [Hardening GitHub Actions](https://www.wiz.io/blog/github-actions-security-guide)
-- [NPM Supply Chain Attacks](https://blog.qualys.com/product-tech/2025/10/06/how-to-prevent-npm-supply-chain-attacks-in-ci-cd-pipelines-with-container-security)
-
-### Docker and Containers (HIGH confidence)
-- [Docker Image Optimization](https://cloudnativenow.com/topics/cloudnativedevelopment/docker/smarter-containers-how-to-optimize-your-dockerfiles-for-speed-size-and-security/)
-- [Docker for Node.js Security](https://www.docker.com/blog/docker-for-node-js-developers-5-things-you-need-to-know-not-to-fail-your-security/)
-
-### Environment and Secrets (HIGH confidence)
-- [Kubernetes Secrets Management 2025](https://infisical.com/blog/kubernetes-secrets-management-2025)
-- [Don't Use Environment Variables for Secrets](https://www.nodejs-security.com/blog/do-not-use-secrets-in-environment-variables-and-here-is-how-to-do-it-better)
-
-### Agentic Systems (MEDIUM confidence)
-- [ZenML: Agent Deployment Gap](https://www.zenml.io/blog/the-agent-deployment-gap-why-your-llm-loop-isnt-production-ready-and-what-to-do-about-it)
-- [Agents Arcade: Reducing Token Costs](https://agentsarcade.com/blog/reducing-token-costs-long-running-agent-workflows)
-- [LangGraph 2025 Review](https://sider.ai/blog/ai-tools/langgraph-review-is-the-agentic-state-machine-worth-your-stack-in-2025)
-- [State of AI Agents](https://www.langchain.com/state-of-agent-engineering)
-
----
-
-*Pitfalls research for: Aesir Agentic Development Platform*
-*Original agentic pitfalls: 2026-01-16*
-*v2.0 restructure pitfalls added: 2026-01-19*
-*Confidence: HIGH (based on official docs, 2025 industry sources, and v1 project experience)*
+| Topic | Key Source | Confidence |
+|-------|-----------|------------|
+| JSONB TOAST performance | [pganalyze benchmarks](https://pganalyze.com/blog/5mins-postgres-jsonb-toast), [Evan Jones measurements](https://www.evanjones.ca/postgres-large-json-performance.html) | HIGH |
+| JSONB write amplification | [MongoDB engineering analysis](https://dev.to/mongodb/no-hot-updates-on-jsonb-13k7) | HIGH |
+| Postgres job queue MVCC failure | [Brandur Leach post-mortem](https://brandur.org/postgres-queues) | HIGH |
+| Sequence gap problem | [Event-Driven.io analysis](https://event-driven.io/en/ordering_in_postgres_outbox/) | HIGH |
+| LISTEN/NOTIFY limitations | [PostgreSQL official docs](https://www.postgresql.org/docs/current/sql-notify.html), [Recall.ai production issues](https://www.recall.ai/blog/postgres-listen-notify-does-not-scale) | HIGH |
+| Heartbeat-based stale detection | [Solid Queue](https://github.com/rails/solid_queue), [River Queue](https://riverqueue.com/docs/maintenance-services) | HIGH |
+| Compaction failure modes | [Claude Code issues #18211, #19739, #5677](https://github.com/anthropics/claude-code/issues/18211) | HIGH |
+| Idle transaction / vacuum blocking | [PostgreSQL docs](https://postgresqlco.nf/doc/en/param/idle_in_transaction_session_timeout/), [CYBERTEC analysis](https://www.cybertec-postgresql.com/en/idle_in_transaction_session_timeout-terminating-idle-transactions-in-postgresql/) | HIGH |
+| Temporal migration strategy | [Temporal Worker Versioning docs](https://docs.temporal.io/production-deployment/worker-deployments/worker-versioning) | HIGH |
+| Node.js graceful shutdown | [Node.js cluster docs](https://nodejs.org/api/cluster.html) | HIGH |
+| Exactly-once vs at-least-once | [Multiple distributed systems sources](https://bravenewgeek.com/you-cannot-have-exactly-once-delivery/) | HIGH |
+| Custom workflow engine pitfalls | [Indeed/iWF experience via Long Quanzheng](https://medium.com/@qlong/workflow-should-be-code-but-durable-execution-is-not-the-only-way-519f7682360c) | MEDIUM |

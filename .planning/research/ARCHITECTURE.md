@@ -1,7 +1,7 @@
-# Architecture Patterns: Agentic Tool-Use Loop Integration
+# Architecture Patterns: Unified Agent Framework (v2.3)
 
-**Domain:** Agentic development platform -- replacing LangGraph state machine with agentic tool-use loops
-**Researched:** 2026-01-29
+**Domain:** Agentic development platform -- replacing Temporal workflows + 3 persistence stores with a unified conversation-based framework
+**Researched:** 2026-02-01
 **Overall confidence:** HIGH (codebase analysis) / MEDIUM (external patterns)
 
 ---
@@ -9,1019 +9,964 @@
 ## Table of Contents
 
 1. [Executive Summary](#1-executive-summary)
-2. [Temporal + Agentic Loops: Integration Architecture](#2-temporal--agentic-loops-integration-architecture)
-3. [Sub-Agent Spawning Patterns](#3-sub-agent-spawning-patterns)
-4. [Context Boundary Design](#4-context-boundary-design)
-5. [Tool Definition Architecture](#5-tool-definition-architecture)
-6. [MCP-to-Tool-Definition Bridging](#6-mcp-to-tool-definition-bridging)
-7. [Database Schema for Agentic State](#7-database-schema-for-agentic-state)
-8. [Migration Path: LangGraph to Agentic Loops](#8-migration-path-langgraph-to-agentic-loops)
-9. [Spec Validation and Gaps](#9-spec-validation-and-gaps)
-10. [Recommended Build Order](#10-recommended-build-order)
-11. [Sources and Confidence Assessment](#11-sources-and-confidence-assessment)
+2. [ConversationExecutor as Temporal Replacement](#2-conversationexecutor-as-temporal-replacement)
+3. [Event Log Integration with Drizzle ORM](#3-event-log-integration-with-drizzle-orm)
+4. [Single Service Consolidation](#4-single-service-consolidation)
+5. [Agent Registry + Definition Loading](#5-agent-registry--definition-loading)
+6. [Conversation History as JSONB](#6-conversation-history-as-jsonb)
+7. [Migration Sequence: Temporal to Custom Orchestration](#7-migration-sequence-temporal-to-custom-orchestration)
+8. [Data Flow: Full Pause/Resume Cycle](#8-data-flow-full-pauseresume-cycle)
+9. [Suggested Build Order](#9-suggested-build-order)
+10. [Component Interface Summary](#10-component-interface-summary)
+11. [Performance Implications](#11-performance-implications)
+12. [Sources and Confidence Assessment](#12-sources-and-confidence-assessment)
 
 ---
 
 ## 1. Executive Summary
 
-The v2.2 architecture replaces LangGraph's fixed state machine (13 nodes, 16 phases, `routeByPhase()` switch statement) with agentic tool-use loops where the LLM decides control flow. The existing Temporal workflow infrastructure remains intact -- it continues to provide durable execution, signal-based human-in-the-loop gates, and timeout handling. The change is surgical: swap what runs inside Temporal activities, not the Temporal orchestration itself.
+v2.3 removes Temporal as the orchestration layer and replaces it with a Postgres-backed `ConversationExecutor` that treats the agent loop as the only state machine. Three disconnected persistence stores (`execution_traces`, `tasks`, `context_snapshots`) converge into a unified event log with reactive session projections. Per-agent services (dev-agent:3004, product-agent:3005, router:3006) merge into a single HTTP service with an agent registry.
 
-**The key architectural insight from production systems (Temporal's official AI cookbook, OpenAI Codex on Temporal, Anthropic's multi-agent research system):**
+The core architectural bet: **Postgres is sufficient for Aesir's durability requirements.** Temporal provides enterprise-grade durable execution (replay, distributed task queues, visibility queries), but Aesir uses approximately 5% of those capabilities. The actual requirements are: persist conversation state, route signals to paused conversations, enforce timeouts, detect stale executions, and ensure at-least-once processing. Postgres can handle all of these with well-established patterns.
 
-> The workflow owns the deterministic shell (loops, signal waits, timeouts). Activities own the non-deterministic work (LLM calls, tool execution). The agentic loop runs inside an activity, not as the workflow itself.
+**Key finding from research:** The `SELECT FOR UPDATE SKIP LOCKED` pattern used by PgBoss, Solid Queue (Rails), DBOS, and Inngest is the battle-tested approach for Postgres-backed job queues. It provides exactly the concurrency control needed: only one worker processes a conversation at a time, other workers skip locked rows and pick up different work.
 
-This aligns perfectly with Aesir's current structure. Today, `runDevAgentGraphActivity` runs a LangGraph graph inside a Temporal activity. Tomorrow, it runs an agentic tool-use loop instead. Temporal's role does not change.
+**What changes and what stays the same:**
 
-**Core changes required:**
-
-| Layer | Current | Target | Effort |
-|-------|---------|--------|--------|
-| LLM SDK | `@langchain/anthropic` (text only) | `@anthropic-ai/sdk` (native tool-use) | New dependency, remove 4 old |
-| Agent logic | LangGraph StateGraph with 13 nodes | `runAgentLoop()` function with tools | New runtime, delete graph code |
-| State persistence | `PostgresSaver` graph checkpoints | Context snapshots in `agents.*` tables | New schema, new write/read logic |
-| Control flow | `routeByPhase()` switch on 16 phases | LLM decides next tool call | Prompt engineering |
-| Activity boundary | Activity runs full graph | Activity runs agentic loop | Modify activity functions |
-| Event routing | Hardcoded switch in `events.ts` | LLM-based smart router | New component |
-
----
-
-## 2. Temporal + Agentic Loops: Integration Architecture
-
-### 2.1 The Production Pattern
-
-**Confidence: HIGH** (verified across Temporal official docs, blog, and community repos)
-
-The established pattern for combining Temporal with LLM tool-use loops separates concerns at the activity boundary:
-
-```
-Temporal Workflow (deterministic)
-  |
-  |-- Activity: runOrchestratorPreApproval()
-  |     |
-  |     +-- runAgentLoop(systemPrompt, tools, "Research and plan for AES-42")
-  |           |
-  |           +-- LLM call -> tool_use -> execute tool -> feed result back
-  |           +-- LLM call -> tool_use (spawn_agent) -> nested loop
-  |           +-- LLM call -> text only -> done
-  |           |
-  |           return AgentLoopResult (plan, context summary)
-  |
-  |-- wf.condition(() => approval !== null, "24 hours")  [signal wait]
-  |
-  |-- Activity: runOrchestratorPostApproval()
-  |     |
-  |     +-- runAgentLoop(systemPrompt, tools, "Execute approved plan")
-  |           |
-  |           +-- ... (similar loop)
-  |           |
-  |           return AgentLoopResult (PR URL, files changed)
-  |
-  |-- wf.condition(() => completion !== null, "7 days")  [signal wait]
-  |
-  |-- Activity: completeTask()
-```
-
-**Why the agentic loop goes INSIDE an activity, not as the workflow itself:**
-
-1. **Determinism requirement**: Temporal workflows must be deterministic for replay. LLM calls are non-deterministic. Therefore, LLM calls must be in activities.
-2. **Replay efficiency**: If the workflow crashes after the pre-approval loop completes but before the signal wait, Temporal replays by reading the activity result from history -- it does NOT re-run the LLM calls. This is critical for cost control.
-3. **Timeout enforcement**: Activity `startToCloseTimeout` (30 minutes for dev agent) caps the duration of the agentic loop. If the loop gets stuck, Temporal terminates the activity and triggers retry policy.
-4. **Retry semantics**: Temporal retries the entire activity on failure (3 attempts with exponential backoff). A stuck agentic loop that errors out gets a fresh start from the beginning of that phase.
-
-### 2.2 Mapping to Aesir's Current Architecture
-
-The current Temporal workflow (`dev-agent-workflow.ts`) already has the correct structure. Here is the mapping:
-
-**Current activities -> New activities:**
-
-| Current Activity | What It Does | New Activity | What Changes |
-|-----------------|--------------|--------------|-------------|
-| `runDevAgentGraphActivity` | Runs LangGraph graph from start | `runOrchestratorPreApproval` | Runs agentic loop instead of graph |
-| `continueAfterApprovalActivity` | Runs LangGraph from execute phase | `runOrchestratorPostApproval` | Runs agentic loop with approved plan context |
-| `handlePRFeedbackActivity` | Runs LangGraph from feedback phase | `runOrchestratorFeedback` | Runs agentic loop with feedback context |
-| `handleRePlanActivity` | Runs LangGraph from re-plan phase | (folded into pre-approval) | Orchestrator re-plans as part of its loop |
-| `stopContainerActivity` | Stops container (currently no-op) | Unchanged | Keep as-is |
-| `sendReminderActivity` | Sends Slack reminder | Could fold into orchestrator tools | Keep separate for simplicity |
-| `updateSlackApprovalActivity` | Updates Slack message | Fold into orchestrator tools | Orchestrator calls send_message directly |
-| `syncApprovalToLinearActivity` | Posts approval to Linear | Fold into orchestrator tools | Orchestrator calls create_comment directly |
-| `completeTaskActivity` | Updates Linear, notifies Slack, cleans up | Simplify | Orchestrator handles most via tools |
-
-**What the workflow file changes look like:**
-
-The workflow structure simplifies because the orchestrator handles more transitions internally. The key change is that `runOrchestratorPreApproval` returns a structured plan result, and `runOrchestratorPostApproval` receives the approved plan as context. The signal handling, timeout logic, and `wf.condition()` calls remain identical.
-
-### 2.3 Activity Timeout and Cost Handling
-
-**Current timeouts (kept as-is):**
-- Dev agent activities: 30 min `startToCloseTimeout`, 3 retries, 5s exponential backoff
-- Product agent activities: 5 min `startToCloseTimeout`
-
-**New guardrails layered inside the activity:**
-- `maxIterations` (50 per sub-agent, 100 per orchestrator): Loop exits with `max_iterations` status
-- `maxTokenBudget` (500K default): Loop exits with `max_tokens` status
-- `AbortSignal` from Temporal's heartbeat/cancellation mechanism
-
-**Recommendation:** Keep the existing Temporal timeout at 30 minutes. The agentic loop's iteration limit is the primary guardrail. The Temporal timeout is the safety net if the iteration limit somehow fails (e.g., very long tool executions). If a sub-agent runs 50 iterations with each taking ~30 seconds (LLM call + tool execution), that is ~25 minutes -- within the 30 minute window.
-
-### 2.4 State Passing Between Activities
-
-**Current pattern (kept):** Activities return serializable results. The workflow stores these in local mutable state. Subsequent activities receive relevant data as input parameters.
-
-```typescript
-// Current pattern in dev-agent-workflow.ts (lines 266-275):
-let graphResult = await runDevAgentGraphActivity({ taskId, issue, slackChannel });
-state.phase = graphResult.phase;
-state.prNumber = graphResult.prNumber;
-// ... later ...
-graphResult = await continueAfterApprovalActivity({ taskId, issue, slackChannel });
-```
-
-**New pattern:** Activities return richer structured results. Context summaries are written to DB inside the activity. The workflow passes task identifiers, not full context.
-
-```typescript
-// New pattern:
-const preApprovalResult = await runOrchestratorPreApproval({
-  taskId, issue, slackChannel, containerId
-});
-// preApprovalResult contains: { plan, slackMessageTs, contextSnapshotId }
-// Context details are in DB, not passed through workflow state
-
-// ... signal wait for approval ...
-
-const postApprovalResult = await runOrchestratorPostApproval({
-  taskId, issue, slackChannel, containerId,
-  contextSnapshotId: preApprovalResult.contextSnapshotId
-});
-// postApprovalResult contains: { prNumber, prUrl, contextSnapshotId }
-```
-
-**Why write context to DB rather than pass through Temporal:**
-1. Temporal event history has a size limit (50MB default). Full conversation histories with tool results can be large.
-2. Context summaries are semantically compressed by the LLM before writing -- much smaller than raw conversation history.
-3. DB allows querying context across activities (for debugging, observability).
-4. Sub-agent spawning within an activity needs DB access for context anyway.
+| Layer | Current (v2.2) | Target (v2.3) | Risk |
+|-------|----------------|---------------|------|
+| Agent loop | `runAgentLoop()` | Unchanged | None |
+| Orchestration | Temporal workflows | ConversationExecutor (Postgres) | MEDIUM |
+| Persistence | 3 stores (traces, tasks, snapshots) | Event log + session projection | LOW |
+| Services | 4 containers (dev-agent, worker, product-agent, router) | 1 container | LOW |
+| Agent config | Hardcoded constants | Declarative YAML + prompt.md | LOW |
+| Signal handling | 5 typed Temporal signals | Freeform IncomingEvent + adapters | LOW |
+| Tool registry | Inline toolkit factories | Centralized registry with factories | LOW |
+| Context persistence | LLM summaries at activity boundaries | Full conversation history (compacted) | MEDIUM |
 
 ---
 
-## 3. Sub-Agent Spawning Patterns
+## 2. ConversationExecutor as Temporal Replacement
 
-### 3.1 In-Process Spawning (Recommended for Aesir)
+### 2.1 What Temporal Currently Provides
 
-**Confidence: HIGH** (validated by Anthropic's multi-agent research system architecture)
+Reading the current `orchestrator-workflow.ts` (613 lines), Temporal provides:
 
-The spec proposes `spawn_agent` as a tool the orchestrator calls. This should be **in-process**: a nested function call that creates a fresh `runAgentLoop()` invocation with its own system prompt, tools, and context window.
+1. **Durable signal waits** (`wf.condition(() => state.approval !== null, "72 hours")`) -- conversation pauses until external event or timeout
+2. **Activity retries** (`maximumAttempts: 2`, exponential backoff) -- restart agent loop on failure
+3. **Phase machine** (pre_approval -> awaiting_approval -> post_approval -> awaiting_pr -> addressing_feedback -> complete) -- deterministic state transitions
+4. **Heartbeat detection** (`heartbeatTimeout: "5 minutes"`) -- detect stuck activities
+5. **Signal handlers** (4 typed signals: planApproval, prFeedback, prCompletion, escalationResolved)
+6. **Workflow queries** (orchestratorStatusQuery for current phase/PR info)
 
-**Why in-process:**
+Of these, **items 1, 2, 4, and 5 are essential**. Item 3 (phase machine) is the thing v2.3 explicitly removes -- the agent loop replaces it. Item 6 is replaced by the session projection.
 
-| Factor | In-Process | Out-of-Process (Temporal activity) |
-|--------|-----------|-----------------------------------|
-| Latency | ~0ms overhead | 100ms+ (Temporal scheduling) |
-| Context passing | Direct object reference | Must serialize to Temporal history |
-| Failure boundary | Fails with parent activity | Independent retry |
-| Token tracking | Shared budget counter | Separate, harder to aggregate |
-| Timeout | Parent activity timeout covers all | Each sub-agent has its own timeout |
-| Implementation | Function call | Temporal child workflow or activity |
+### 2.2 The Postgres-Backed Executor Pattern
 
-**In-process is correct because:**
-1. Sub-agents are short-lived (5-50 tool calls, < 5 minutes each)
-2. They share the parent's container ID for codebase tools
-3. They need to return structured results synchronously to the orchestrator
-4. The orchestrator needs to reason about sub-agent results immediately
-5. A single activity timeout (30 min) covers the orchestrator + all its sub-agents
+**Confidence: HIGH** (verified across DBOS, PgBoss, Solid Queue, Inngest)
 
-**When out-of-process would be better (not applicable to Aesir v2.2):**
-- Sub-agents that take > 30 minutes independently
-- Sub-agents that need independent retry semantics
-- Sub-agents on different machines (distributed)
-- Sub-agents that outlive the parent
+The pattern has three components:
 
-### 3.2 Implementation: `spawn_agent` as a Tool
+**Component A: Job Queue (replaces Temporal task queue)**
+
+```sql
+-- Conceptual, not literal SQL
+SELECT id, conversation_id FROM conversations
+WHERE status = 'queued'
+ORDER BY updated_at ASC
+FOR UPDATE SKIP LOCKED
+LIMIT 1;
+```
+
+- `FOR UPDATE` locks the row -- no other worker can claim it
+- `SKIP LOCKED` means other workers skip locked rows and find different work
+- Transaction commit releases the lock
+- If the worker crashes, the transaction rolls back and the row becomes available again
+
+**Component B: Signal Routing (replaces Temporal signals)**
+
+When a webhook arrives:
+
+```
+1. Adapter normalizes payload -> IncomingEvent
+2. Router resolves conversation ID from correlation key
+3. Load conversation from DB
+4. If paused + matching wait type:
+   - Append signal as user message to messages[]
+   - Set status = "queued" (ready to resume)
+   - Worker picks it up via Component A
+5. If running or not yet paused:
+   - Append to queued_signals[] JSONB column
+   - Checked when agent next calls wait_for
+```
+
+**Component C: Timeout Enforcement (replaces Temporal timers)**
+
+Two options, both viable for Aesir's scale:
+
+| Option | How | Pros | Cons |
+|--------|-----|------|------|
+| **Polling (recommended)** | Worker scans for `WHERE status = 'paused' AND timeout_at < NOW()` every 30s | Simple, no dependencies, works everywhere | 30s worst-case latency on timeout |
+| pg_cron | Scheduled function runs timeout check | Exact timing | Requires extension, adds operational surface |
+
+**Recommendation: Polling.** Aesir's timeouts are 24h, 72h, 7d. A 30-second check interval means worst-case 30 seconds of delay on a 72-hour timeout. The simplicity wins decisively.
+
+### 2.3 Concurrency Control: The Critical Invariant
+
+**The invariant: exactly one agent loop runs per conversation at any time.**
+
+Temporal enforces this automatically (one workflow execution per workflow ID). The Postgres executor must enforce it explicitly.
+
+The approach:
+
+1. **Conversation status column** acts as a state lock:
+   - `queued` -- waiting for a worker to pick it up
+   - `running` -- a worker is executing the agent loop
+   - `paused` -- waiting for an external signal
+   - `completed` / `failed` -- terminal states
+
+2. **Worker claims a conversation** by atomically updating `status = 'running'` within the `SELECT FOR UPDATE SKIP LOCKED` transaction. If two workers try to claim the same conversation, only one succeeds.
+
+3. **Heartbeat column** (`last_heartbeat_at`) is updated by the worker every N seconds during agent loop execution. A separate sweep query detects stale conversations:
+
+```sql
+UPDATE conversations
+SET status = 'queued', last_heartbeat_at = NULL
+WHERE status = 'running'
+  AND last_heartbeat_at < NOW() - INTERVAL '5 minutes';
+```
+
+This provides at-least-once execution. If a worker crashes, the conversation is re-enqueued after the heartbeat timeout.
+
+### 2.4 The `wait_for` Tool: Framework-Intercepted Sentinel
+
+The `wait_for` tool is the mechanism by which agents pause conversations. It is NOT a normal tool -- the framework intercepts it before execution.
+
+**How it integrates with `runAgentLoop()`:**
+
+The current `runAgentLoop()` has a tool execution loop (lines 489-567 in `run-agent-loop.ts`). The framework needs to detect `wait_for` tool calls and exit the loop:
+
+```
+1. LLM returns tool_use block with name "wait_for"
+2. Framework intercepts BEFORE executing the tool
+3. Framework returns tool_result: "Conversation paused. Waiting for: {type}"
+4. Framework sets a flag to exit the loop after sending the tool_result
+5. Agent loop completes normally with the tool_result in conversation history
+6. Executor persists conversation (messages include the wait_for + result)
+7. Executor sets status = "paused", pendingWait = { type, metadata }
+```
+
+**Key design decision:** The `wait_for` tool result IS added to the conversation history before persisting. When the agent resumes, it sees:
+
+```
+[assistant]: I need human approval for this plan. [tool_use: wait_for({type: "approval"})]
+[user]: [tool_result: "Conversation paused. Waiting for: approval"]
+[user]: "Plan approved by John Smith. Feedback: 'Looks good, proceed.'"
+```
+
+The agent has full context of what it was doing, why it paused, and what the response was.
+
+**Integration point with existing `runAgentLoop()`:**
+
+The current loop does NOT need modification for `wait_for` to work. The executor can achieve this by:
+
+1. Registering `wait_for` as a regular tool whose `execute` function sets a side-channel flag
+2. After each tool execution cycle, checking the flag
+3. If set, the executor breaks out of the agent loop by using the existing `abortSignal`
+
+Alternatively, `runAgentLoop()` could be extended with a new option: `messages?: Anthropic.MessageParam[]` to accept a pre-populated conversation history for resume (the spec notes this need). This is a minimal change -- the current `buildInitialMessage` logic is bypassed when `messages` is provided.
+
+### 2.5 Failure Modes and Mitigations
+
+| Failure | Detection | Recovery | v2.2 Equivalent |
+|---------|-----------|----------|-----------------|
+| Worker crashes mid-loop | Heartbeat timeout (5 min) | Re-enqueue conversation | Temporal activity retry |
+| DB connection lost during persist | Write failure throws | Agent loop re-runs on next pickup | Temporal event history |
+| Signal arrives for wrong conversation | `pendingWait.type` mismatch | Log and reject signal | Temporal signal typing |
+| Duplicate signal (webhook retry) | Dedup by signal source + ID | No-op, return success | Webhook idempotency layer |
+| Conversation stuck in "running" | Heartbeat sweep query | Re-enqueue after timeout | Temporal heartbeat timeout |
+| Total timeout exceeded | Polling check on `timeout_at` | Wake with timeout signal | Temporal `wf.condition` timeout |
+
+### 2.6 What Temporal Capabilities Are Genuinely Lost
+
+Being honest about tradeoffs:
+
+| Temporal Capability | Impact on Aesir | Mitigation |
+|---------------------|-----------------|------------|
+| **Deterministic replay** | Cannot replay exact execution sequence for debugging | Event log provides full trace (better than replay for debugging) |
+| **Workflow versioning** | Cannot run v1 and v2 workflows side-by-side | Agent definition versioning serves the same purpose |
+| **Visibility queries** | Cannot use Temporal UI for workflow inspection | Session projection + admin API provide equivalent data |
+| **Distributed task queues** | Cannot scale workers across machines | Postgres `FOR UPDATE SKIP LOCKED` supports multiple workers on same DB |
+| **Activity retry with backoff** | Must implement retry logic manually | Agent loop already has rate-limit retry (3 attempts, 30s backoff); executor adds outer retry |
+
+**Assessment:** None of these are blockers. The event log + session projection provides better observability than Temporal's visibility queries for Aesir's use case (agent behavior debugging). Distributed scaling is not needed at current volume.
+
+---
+
+## 3. Event Log Integration with Drizzle ORM
+
+### 3.1 Schema Design
+
+The spec defines three new tables (Appendix B.3). They map to the existing Drizzle ORM pattern used throughout Aesir (`pgSchema("agents")` + table definitions).
+
+**New tables replacing existing ones:**
+
+| New Table | Replaces | Purpose |
+|-----------|----------|---------|
+| `agent_events` | `execution_traces` | Append-only event stream with tool results |
+| `agent_sessions` | `tasks` | Materialized projection (status, artifacts) |
+| `conversations` | `context_snapshots` | Full conversation state + message history |
+
+The `agent_events` table has a unique constraint on `(conversation_id, sequence)` ensuring monotonic ordering per conversation. This is the primary query pattern and the main index.
+
+### 3.2 Write Path: Buffered Batch Inserts
+
+**Confidence: HIGH** (same pattern as existing `trace-recorder.ts`, proven at Aesir's scale)
+
+The current `trace-recorder.ts` already implements buffered fire-and-forget writes. The event log follows the same pattern but fixes the gap (tool results ARE recorded).
+
+```
+Agent loop executes tool
+  -> onToolCall callback fires
+  -> EventLog.append({ type: "tool.called", ... })  // void, non-blocking
+  -> Tool executes
+  -> onToolResult callback fires
+  -> EventLog.append({ type: "tool.succeeded", ... })  // void, non-blocking
+
+Background:
+  Buffer accumulates events
+  Every 100ms OR when buffer hits 50 events:
+    Batch INSERT into agent_events
+    Update agent_sessions projection
+```
+
+**Key implementation detail:** The `append()` method is synchronous (void return). Events are buffered in memory and flushed periodically. The `flush()` method is called explicitly at conversation pause points and shutdown.
+
+**Drizzle ORM integration:** Batch insert uses Drizzle's `.insert().values([...])` syntax. The existing pattern in `task-store.ts` and `trace-recorder.ts` confirms this works with the `agents` schema.
+
+### 3.3 Read Path: Filtered Queries
+
+Event queries use the spec's `EventQueryOpts` interface:
 
 ```typescript
-// Conceptual implementation
-const spawnAgentTool: ToolDefinition = {
-  name: "spawn_agent",
-  description: "Spawn a focused sub-agent with specific tools and context",
-  inputSchema: z.object({
-    agentType: z.enum(["researcher", "coder", "tester"]),
-    task: z.string().describe("What the sub-agent should accomplish"),
-    context: z.record(z.unknown()).optional()
-      .describe("Additional context for the sub-agent"),
+// Query by conversation (primary pattern)
+db.select().from(agentEvents)
+  .where(eq(agentEvents.conversationId, conversationId))
+  .orderBy(agentEvents.sequence);
+
+// Query by type (observability)
+db.select().from(agentEvents)
+  .where(and(
+    eq(agentEvents.conversationId, conversationId),
+    inArray(agentEvents.type, ["tool.succeeded", "tool.failed"])
+  ));
+```
+
+The `(conversation_id, sequence)` index handles the primary query pattern efficiently. Per-conversation event counts are expected to be 100-500 (based on current `execution_traces` data: 100-500 traces per task, 10-50 tasks/day from `cost-tracking.ts`).
+
+### 3.4 LISTEN/NOTIFY Analysis
+
+**Confidence: MEDIUM** (researched Drizzle ORM support, found gap)
+
+The spec mentions `LISTEN/NOTIFY or polling for subscriptions`. Research finding: **Drizzle ORM does NOT support LISTEN/NOTIFY natively.** The Drizzle connection uses `node-postgres` (`pg`) under the hood, and LISTEN/NOTIFY requires a dedicated raw `pg.Client` connection that stays open for notification delivery.
+
+**Options:**
+
+| Option | How | Complexity |
+|--------|-----|------------|
+| **Polling (recommended for v2.3)** | Session projection queries `agent_sessions` on interval | Trivial |
+| Raw pg Client | Maintain separate connection outside Drizzle for LISTEN/NOTIFY | Medium -- connection lifecycle management |
+| pg-listen library | Wrapper around pg LISTEN/NOTIFY with reconnection | Low -- but adds dependency |
+
+**Recommendation: Polling for v2.3.** The `subscribe()` method on EventLog is used by the session projection (which is the only subscriber in v2.3 scope). Polling the events table every 100ms for new events per active conversation is sufficient and avoids adding a separate connection management layer.
+
+The `EventLog.subscribe()` interface is designed so that a LISTEN/NOTIFY implementation can be swapped in later without changing callers. The interface abstracts the delivery mechanism.
+
+### 3.5 Session Projection: Reactive Updates
+
+The `agent_sessions` table is a materialized view of the event stream. It replaces the `tasks` table with reactively computed fields instead of imperatively set fields.
+
+**How it updates:**
+
+```
+Event arrives: tool.succeeded for "github:create_pull_request"
+  -> Session projection checks: does this tool have artifact config?
+  -> Yes: artifact key = "github:pr"
+  -> Extract result.data from event payload
+  -> UPSERT agent_sessions SET artifacts = jsonb_set(artifacts, '{github:pr}', ...)
+```
+
+**What this replaces in the current codebase:**
+
+Currently, `parsePrInfoFromTrace()` in `orchestrator-activities.ts` (line ~60) scans the agent's trace array after the loop completes looking for `github_create_pull_request` tool calls. If the agent creates a PR in an unexpected phase, the parsing misses it. The event log approach records the PR data when the tool succeeds -- no scanning, no phase assumptions.
+
+---
+
+## 4. Single Service Consolidation
+
+### 4.1 What Gets Merged
+
+Currently 4 agent-related containers in `docker-compose.yml`:
+
+| Container | Port | Entry Point | Purpose |
+|-----------|------|-------------|---------|
+| `dev-agent` | 3004 | `dist/dev-agent/main.js` | HTTP for dev-agent events |
+| `dev-agent-worker` | none | `dist/dev-agent/worker.js` | Temporal worker |
+| `product-agent` | 3005 | `dist/product-agent/main.js` | HTTP + embedded Temporal worker |
+| `router` | 3006 | `dist/router/main.js` | Event classification |
+
+These become **one container**:
+
+| Container | Port | Entry Point | Purpose |
+|-----------|------|-------------|---------|
+| `agent-service` | 3004 | `dist/main.js` | HTTP + worker polling loop |
+
+### 4.2 HTTP Router Composition
+
+All three current services use Node.js `http.createServer()` (not Express). The dev-agent `main.ts` shows the pattern:
+
+```typescript
+const server = createServer(async (req, res) => {
+  if (req.method === "GET" && req.url === "/health") { ... }
+  if (req.method === "POST" && req.url === "/events") { ... }
+});
+```
+
+The merged service adds routes:
+
+```
+GET  /health                        -- combined health check
+POST /events                        -- webhook events (from integrations)
+GET  /conversations/:id             -- query conversation state
+POST /conversations/:id/cancel      -- cancel a conversation
+```
+
+This is straightforward composition -- a single `createServer` with a URL matcher. No Express needed, no additional dependency.
+
+### 4.3 Docker Compose Migration
+
+**Removed services:** `dev-agent`, `dev-agent-worker`, `product-agent`, `router`, `temporal`, `temporal-ui`
+
+**Modified services:**
+
+| Service | Change |
+|---------|--------|
+| `nginx` | Remove routing for `/agent/`, `/router/`; add single route to `agent-service` |
+| Integration services | Change `ROUTER_URL` from `http://router:3006/events` to `http://agent-service:3004/events` |
+
+**New service:**
+
+```yaml
+agent-service:
+  build: { context: ., dockerfile: Dockerfile }
+  container_name: aesir-agent-service
+  user: root  # Docker socket for DevContainerManager
+  depends_on:
+    postgresql: { condition: service_healthy }
+    linear-integration: { condition: service_healthy }
+    github-integration: { condition: service_healthy }
+    slack-integration: { condition: service_healthy }
+  environment:
+    # Same as current dev-agent + product-agent combined
+    # MINUS all TEMPORAL_* vars
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  command: ["node", "dist/main.js"]
+  ports: ["3004:3004"]
+```
+
+**Net reduction:** 6 services removed (dev-agent, dev-agent-worker, product-agent, router, temporal, temporal-ui), 1 added (agent-service). Total service count drops from 10 to 5 (postgresql, 3 integrations, agent-service, nginx).
+
+### 4.4 Bootstrap Sequence
+
+The single service `main.ts` bootstrap order matters for dependency injection:
+
+```
+1. Load environment config (Zod validation, fail fast)
+2. Connect to PostgreSQL (Drizzle ORM)
+3. Run migrations (optional, can be gated by env flag)
+4. Create AgentRegistry (lazy-loading from definitions/)
+5. Create ToolRegistry, register all tool factories
+6. Create EventLog (Postgres-backed, buffered writes)
+7. Create SessionProjection (subscribes to EventLog)
+8. Create ConversationExecutor (uses EventLog, AgentRegistry, ToolRegistry)
+9. Create EventRouter (loads start rules from AgentRegistry)
+10. Start HTTP server (routes to EventRouter, Executor)
+11. Start worker polling loop (claims queued conversations)
+12. Register graceful shutdown (flush EventLog, close DB)
+```
+
+**Key integration point:** Step 5 (ToolRegistry) needs the `DevContainerManager` for codebase tools. The current `worker.ts` creates this with Docker socket access. The merged service inherits this -- same Docker socket mount, same container manager initialization.
+
+---
+
+## 5. Agent Registry + Definition Loading
+
+### 5.1 Lazy Loading with mtime Invalidation
+
+**Confidence: HIGH** (well-established pattern: Logstash, Metricbeat, OpenCode)
+
+Agent definitions live in `packages/agents/definitions/`, one directory per agent. The registry loads on first `get()` call and caches. Cache invalidation uses file `mtime` (modification time):
+
+```
+registry.get("dev-agent"):
+  1. Check in-memory cache for "dev-agent"
+  2. If cached:
+     a. stat() the definition file
+     b. Compare mtime to cached mtime
+     c. If unchanged: return cached definition (fast path)
+     d. If changed: reload from disk, update cache
+  3. If not cached:
+     a. Read definition.yaml + prompt.md
+     b. Parse YAML, validate with Zod schema
+     c. Assemble AgentDefinition object
+     d. Cache with mtime
+     e. Return
+```
+
+**Why NOT file watchers (fs.watch/chokidar):**
+
+| Concern | File Watcher | mtime Check |
+|---------|-------------|-------------|
+| Cross-platform reliability | fs.watch is unreliable on Docker volumes, NFS | `stat()` works everywhere |
+| Resource usage | Holds inotify/kqueue handles per file | Zero idle cost |
+| Complexity | Event handler, debouncing, error recovery | Single `stat()` call |
+| Docker compatibility | Known issues with bind mounts | Works reliably |
+
+The mtime check adds ~1ms of latency per `get()` call (filesystem stat). Given that `get()` is called once per conversation start (not per tool call), this is negligible.
+
+### 5.2 Schema Validation
+
+Each definition file is validated against a Zod schema on load:
+
+```typescript
+const AgentDefinitionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  version: z.string(),
+  model: z.string(),
+  temperature: z.number().optional().default(0),
+  tools: z.array(z.string()),           // Validated against ToolRegistry
+  subAgents: z.record(z.string()).optional(),
+  maxIterations: z.number(),
+  tokenBudget: z.number(),
+  history: z.object({
+    pruneThreshold: z.number(),
+    protectedMessages: z.number(),
+    summaryThreshold: z.number(),
+    summaryModel: z.string(),
   }),
-  execute: async (input) => {
-    const subAgentConfig = SUB_AGENT_CONFIGS[input.agentType];
-
-    const result = await runAgentLoop({
-      systemPrompt: subAgentConfig.systemPrompt(input.task, input.context),
-      tools: subAgentConfig.tools,  // Focused tool set, NOT all tools
-      initialMessage: input.task,
-      maxIterations: 50,  // Sub-agent limit
-      // Share parent's token budget tracker
-      onToolCall: parentTracer.createChildTracer(input.agentType),
-    });
-
-    // Return summary to orchestrator (NOT full conversation)
-    return {
-      content: result.output,  // LLM's final summary of work done
-      isError: result.status !== "completed",
-    };
-  },
-};
-```
-
-### 3.3 Context Isolation Between Sub-Agents
-
-**Critical design principle from Anthropic's multi-agent research:**
-
-> The sub-agent response contains only the sub-agent's final output message. Even if the sub-agent made multiple tool calls, went through extended thinking, or generated intermediate responses during its execution, the parent agent only sees the end result.
-
-This means:
-- **Orchestrator -> Sub-agent:** Orchestrator composes a focused brief (task + relevant context + conventions). This goes as the `initialMessage` to the sub-agent's loop.
-- **Sub-agent -> Orchestrator:** Sub-agent returns its final text output (summary of findings, or list of files changed). NOT the full conversation history.
-- **Context window isolation:** Each sub-agent starts with a fresh context window. It does not inherit the orchestrator's conversation history.
-
-**This is exactly what Aesir needs because:**
-- Researcher needs task description + repo structure, NOT the orchestrator's prior tool calls
-- Coder needs plan + relevant files, NOT research conversation history
-- Tester needs changed files + test runner info, NOT coding conversation
-
-### 3.4 Scaling Effort to Complexity
-
-Anthropic documented a critical lesson: agents over-spawn without explicit guidance. Their solution: embed scaling rules in the system prompt.
-
-**For Aesir:**
-
-```
-Simple task (README edit, config change):
-  - Orchestrator handles directly (no sub-agents)
-  - 5-15 tool calls total
-
-Medium task (add endpoint, fix bug):
-  - 1 researcher (10-20 tool calls)
-  - 1 coder (15-30 tool calls)
-  - 1 tester (5-10 tool calls)
-
-Complex task (new feature with tests):
-  - 1 researcher (15-30 tool calls)
-  - 1-2 coders (20-40 tool calls each)
-  - 1 tester (10-20 tool calls)
-```
-
-The orchestrator's system prompt should include these scaling guidelines. The LLM decides whether to spawn based on task complexity.
-
----
-
-## 4. Context Boundary Design
-
-### 4.1 Where Context Snapshots Are Written
-
-Context snapshots serve a specific purpose: **they bridge Temporal activity boundaries** where the in-memory conversation history of an agentic loop is lost.
-
-**Write points:**
-
-| When | What | Why |
-|------|------|-----|
-| End of pre-approval activity | Research findings, plan, project context | Orchestrator needs this after approval wait |
-| End of post-approval activity | Execution summary, PR details, files changed | For completion and feedback handling |
-| End of feedback activity | Feedback addressed summary | In case of crash recovery |
-| On error/escalation | Full state dump for debugging | Human needs context to help |
-| Sub-agent brief (NOT persisted to DB) | Focused task description | In-memory only, passed as initialMessage |
-
-**Do NOT write at:**
-- Every tool call (too much overhead, traces table handles this)
-- Between sub-agent invocations within a single activity (unnecessary -- in-memory)
-- Before spawning a sub-agent (pass context directly, no DB round-trip)
-
-### 4.2 Where Context Snapshots Are Read
-
-| When | What | Why |
-|------|------|-----|
-| Start of post-approval activity | Pre-approval snapshot (plan, research summary) | Reconstruct orchestrator context after signal wait |
-| Start of feedback activity | Post-approval snapshot (PR details, execution context) | Know what was built to address feedback |
-| Crash recovery (Temporal replay) | Latest snapshot for the task | Resume with understanding of what was done |
-| Smart router context lookup | Task status from `agents.tasks` table | Know which workflows are active |
-
-### 4.3 Snapshot Content Design
-
-The spec proposes `agents.context_snapshots` with a mix of structured and semantic fields. This is sound. The key insight:
-
-**Critical data (must be exact) goes in `agents.tasks` table:**
-- `container_id`, `branch_name`, `pr_number`, `pr_url`
-- `approval_status`, `slack_channel`, `slack_message_ts`
-
-**Semantic context (LLM-generated summary) goes in `agents.context_snapshots`:**
-- `summary`: "Researched the codebase, found existing /health pattern in integration services..."
-- `completed_actions`: What steps were taken
-- `project_context`: Detected package manager, test framework, conventions
-- `research_findings`: Structured research output
-- `plan`: The approved execution plan
-
-**Why this split matters:**
-The orchestrator's post-approval system prompt can say: "You previously researched and planned: {snapshot.summary}. The approved plan is: {snapshot.plan}. The branch is: {task.branch_name}. Now execute the plan."
-
-The summary is lossy (LLM-compressed) but sufficient for reasoning. The task fields are exact (PR numbers, branch names) and used for tool calls.
-
-### 4.4 Temporal Replay and Context
-
-A subtle but important point: when Temporal replays a workflow after crash, it does NOT re-execute completed activities. It reads their return values from the event history. So:
-
-1. Pre-approval activity completes -> result stored in Temporal history
-2. Crash happens during signal wait
-3. Temporal replays: reads pre-approval result from history (no re-execution)
-4. Signal arrives -> post-approval activity runs fresh (not replayed)
-5. Post-approval reads context from DB using `contextSnapshotId` from step 1
-
-This means context snapshots must be durable (DB) -- they survive crashes. The activity return values stored in Temporal are just pointers (`contextSnapshotId`), not the full context.
-
----
-
-## 5. Tool Definition Architecture
-
-### 5.1 Recommended: Per-Agent Toolkits (Composable)
-
-**Confidence: HIGH** (aligns with Anthropic's guidance and the spec's design)
-
-Do NOT use a single global registry. Instead, compose tool sets per agent type:
-
-```
-tools/
-  base/
-    codebase.ts       -- read_file, write_file, search_codebase, list_directory, run_command
-    integration.ts    -- MCP wrappers: get_issue, create_issue, send_message, etc.
-    git.ts            -- create_branch, create_commit, create_pull_request
-  toolkits/
-    researcher.ts     -- codebase.readOnly + run_command (read-only tools)
-    coder.ts          -- codebase.all + run_command (read+write tools)
-    tester.ts         -- codebase.readOnly + run_command (read+run tools)
-    orchestrator.ts   -- integration.all + git.all + spawn_agent + codebase.readOnly
-    product-agent.ts  -- integration.slack + integration.linear
-    router.ts         -- workflow management tools
-```
-
-**Why per-agent toolkits:**
-1. **Context window efficiency**: Each tool definition consumes tokens. Coder does not need Linear tools. Tester does not need write_file.
-2. **Safety**: Researcher cannot write files. Tester cannot create PRs. Enforce at the tool level.
-3. **Clarity**: When debugging, you can see exactly what tools an agent had access to.
-4. **Anthropic's finding**: Performance degrades with > ~20 tools. Sub-agents should have 5-10 focused tools.
-
-### 5.2 Tool Definition Interface
-
-The spec's `ToolDefinition` interface is correct. Here is the refined version:
-
-```typescript
-interface ToolDefinition {
-  name: string;
-  description: string;
-  inputSchema: ZodSchema;  // Zod schema, converted to JSON Schema for Anthropic API
-  execute: (input: unknown) => Promise<ToolResult>;
-}
-
-interface ToolResult {
-  content: string;          // Text fed back to LLM
-  isError?: boolean;        // LLM sees this as an error to reason about
-  structuredData?: unknown; // Optional structured data for programmatic use
-}
-```
-
-**Zod-to-Anthropic conversion:** The `@anthropic-ai/sdk` provides `betaZodTool` helper that converts Zod schemas to Anthropic's tool format automatically. This is the recommended approach -- no manual JSON Schema conversion needed.
-
-### 5.3 Tool Registry Pattern
-
-Each toolkit exports a function that creates tools with injected dependencies:
-
-```typescript
-// tools/base/codebase.ts
-export function createCodebaseTools(deps: {
-  manager: DevContainerManager;
-  taskId: string;
-}): ToolDefinition[] {
-  return [
-    {
-      name: "read_file",
-      description: "Read the contents of a file in the repository",
-      inputSchema: z.object({
-        path: z.string().describe("File path relative to repo root"),
-      }),
-      execute: async (input) => {
-        const result = await deps.manager.execute(deps.taskId, {
-          command: ["cat", input.path],
-          workdir: "/workspace/repo",
-          timeoutMs: 5000,
-        });
-        if (result.exitCode !== 0) {
-          return { content: `Error: ${result.stderr}`, isError: true };
-        }
-        return { content: result.stdout };
-      },
-    },
-    // ... more tools
-  ];
-}
-```
-
-```typescript
-// tools/toolkits/researcher.ts
-export function createResearcherToolkit(deps: CodebaseToolsDeps): ToolDefinition[] {
-  const codebaseTools = createCodebaseTools(deps);
-  // Researcher gets read-only tools only
-  return codebaseTools.filter(t =>
-    ["read_file", "search_codebase", "list_directory", "run_command"].includes(t.name)
-  );
-}
-```
-
----
-
-## 6. MCP-to-Tool-Definition Bridging
-
-### 6.1 The Bridge Pattern
-
-Aesir already has 21 MCP tools across 3 integration services. These need to become `ToolDefinition` objects that the LLM can invoke via native tool-use.
-
-**The bridge is thin:** Each MCP tool already has a name and params. The bridge adds a Zod schema (for the LLM to understand the parameters) and an execute function (that calls `callMcpTool()`).
-
-```typescript
-// tools/base/integration.ts
-function createMcpToolBridge(config: {
-  integration: McpIntegration;
-  tool: string;
-  description: string;
-  inputSchema: ZodSchema;
-  agentId: string;
-  correlationId: string;
-}): ToolDefinition {
-  return {
-    name: `${config.integration}_${config.tool}`,  // e.g., "linear_get_issue"
-    description: config.description,
-    inputSchema: config.inputSchema,
-    execute: async (input) => {
-      try {
-        const result = await callMcpTool({
-          integration: config.integration,
-          tool: config.tool,
-          params: input as Record<string, unknown>,
-          agentId: config.agentId,
-          correlationId: config.correlationId,
-        });
-        return { content: JSON.stringify(result, null, 2) };
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        return { content: `MCP tool error: ${message}`, isError: true };
-      }
-    },
-  };
-}
-```
-
-### 6.2 Schema Definition Strategy
-
-The MCP server-side tools already have schemas (used for input validation). However, these schemas are on the server side and not exposed to the agent client. The agent must define its own Zod schemas for each MCP tool.
-
-**Two approaches:**
-
-**Option A: Manual Zod schemas (Recommended for v2.2)**
-Define Zod schemas in `tools/base/integration.ts` for each MCP tool. There are only 21 tools -- this is a manageable one-time effort.
-
-```typescript
-const getIssueSchema = z.object({
-  issueId: z.string().describe("Linear issue ID or identifier (e.g., 'AES-42')"),
-});
-
-const createIssueSchema = z.object({
-  title: z.string().describe("Issue title"),
-  description: z.string().optional().describe("Issue description in markdown"),
-  priority: z.enum(["urgent", "high", "medium", "low", "none"]).optional(),
-  labels: z.array(z.string()).optional(),
-  teamId: z.string().describe("Linear team ID"),
+  triggers: z.array(z.object({ event: z.string() })).optional(),
 });
 ```
 
-**Option B: Auto-discovery from MCP servers**
-Each MCP server already has `GET /mcp/tools` that lists available tools. Could fetch schemas at startup and convert to Zod. But this adds complexity and a startup dependency on all integration services being available.
+**Validation timing:** On load (first `get()` or cache invalidation). Invalid definitions throw immediately -- fail fast, loud error in logs. This matches Aesir's existing pattern (env validation via Zod fails at startup).
 
-**Recommendation: Option A.** The manual schemas give better descriptions (optimized for LLM understanding, not API validation). 21 tools is not a maintenance burden. Auto-discovery can be added later if the tool count grows significantly.
+### 5.3 Version Pinning
 
-### 6.3 Tool Naming Convention
+When a conversation starts, the executor records the `agentDefinitionVersion` from the definition. On resume, the executor loads the definition by `id + version`:
 
-MCP tools are currently namespaced by integration endpoint (the agent specifies `integration: "linear"` and `tool: "get_issue"` separately). For the LLM, tools need unique flat names.
+```
+registry.get("dev-agent", "1")
+```
 
-**Convention:** `{integration}_{tool_name}`
+If the version file has been updated to "2" between pauses, the resumed conversation still uses version "1". This prevents mid-conversation behavior changes -- the agent that resumes is the same agent that paused.
 
-Examples:
-- `linear_get_issue`, `linear_create_issue`, `linear_update_issue_status`
-- `github_create_branch`, `github_create_commit`, `github_create_pull_request`
-- `slack_send_message`, `slack_send_approval_request`
-
-This avoids collisions and makes tool purpose clear to the LLM.
+**Implementation:** The registry caches by `id:version` composite key. Multiple versions of the same agent can coexist in cache.
 
 ---
 
-## 7. Database Schema for Agentic State
+## 6. Conversation History as JSONB
 
-### 7.1 Schema Design
+### 6.1 TOAST Performance Analysis
 
-**Confidence: HIGH** (spec's schema is well-designed; recommendations are refinements)
+**Confidence: MEDIUM** (researched Postgres JSONB internals, applied to Aesir's expected data)
 
-The spec proposes three tables in an `agents` schema. Here is the refined design with rationale for each decision:
+PostgreSQL stores JSONB using TOAST (The Oversized Attribute Storage Technique). When a JSONB column exceeds ~2KB, Postgres compresses and stores it out-of-line. The concern: does this affect performance for conversation histories that grow to 50-200KB?
 
-#### agents.tasks (critical structured data)
+**Aesir's expected conversation sizes:**
 
-```sql
-CREATE SCHEMA IF NOT EXISTS agents;
+| Conversation Type | Turns | Estimated Size | TOAST Behavior |
+|-------------------|-------|----------------|---------------|
+| Product agent (short) | 5-20 turns | 10-30KB | Out-of-line, compressed |
+| Dev agent (simple task) | 20-50 iterations | 30-80KB | Out-of-line, compressed |
+| Dev agent (complex task) | 50-100 iterations | 80-200KB | Out-of-line, compressed |
+| Dev agent after compaction | Any | 20-60KB | Out-of-line, compressed |
 
-CREATE TABLE agents.tasks (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  task_id TEXT NOT NULL UNIQUE,              -- Linear issue ID (e.g., UUID)
-  issue_identifier TEXT,                     -- Human-readable (e.g., "AES-42")
-  agent_type TEXT NOT NULL,                  -- "dev" or "product"
-  workflow_id TEXT,                          -- Temporal workflow ID (e.g., "dev-agent-{uuid}")
-  status TEXT NOT NULL DEFAULT 'pending',    -- pending|researching|planning|approved|executing|in_review|complete|failed|escalated
+**The performance concern:**
 
-  -- Container & branch (exact, not LLM-summarized)
-  container_id TEXT,
-  branch_name TEXT,
+TOAST has write amplification. Updating a JSONB column rewrites the entire TOAST value, not just the changed part. For a 100KB conversation, every message append means rewriting 100KB.
 
-  -- PR info (exact)
-  pr_number INTEGER,
-  pr_url TEXT,
+**Why this is acceptable for Aesir:**
 
-  -- Approval (exact)
-  approval_status TEXT DEFAULT 'pending',    -- pending|approved|rejected
-  approval_feedback TEXT,
+1. **Write frequency is low.** The conversation is only written at two points: (a) when the agent calls `wait_for` (pause), and (b) when the conversation completes. During agent execution, the conversation lives in memory. There is NOT a write per tool call.
 
-  -- Error tracking
-  error TEXT,
-  escalation_reason TEXT,
+2. **Single read + single write per execution cycle.** The executor reads the conversation once (on resume), runs the agent loop entirely in memory, and writes once (on pause/complete). This is 2 I/O operations per execution cycle, regardless of conversation size.
 
-  -- Slack context (for message updates)
-  slack_channel TEXT,
-  slack_message_ts TEXT,
+3. **History compaction limits growth.** The three-phase compaction strategy (tool output pruning at 80K tokens, structured summary at 120K tokens) keeps conversation sizes bounded. A compacted 200-message conversation is typically 20-60KB.
 
-  -- Timestamps
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+4. **The alternative is worse.** Normalizing messages into separate rows (one row per message) adds JOIN complexity, loses atomic consistency (partial writes), and makes the resume path slower (N queries instead of 1).
 
-CREATE INDEX idx_tasks_task_id ON agents.tasks(task_id);
-CREATE INDEX idx_tasks_workflow_id ON agents.tasks(workflow_id);
-CREATE INDEX idx_tasks_status ON agents.tasks(status);
-```
+### 6.2 Size Estimates
 
-**Rationale:** This table holds data that must be exact. PR number 47 is always 47 -- it should never be LLM-summarized. The orchestrator updates this table directly when it creates a branch, opens a PR, etc. This is similar to the existing workflow state but persisted to a proper schema instead of Temporal's opaque event history.
+Anthropic's message format includes content blocks. A typical tool-use turn:
 
-#### agents.context_snapshots (semantic context)
-
-```sql
-CREATE TABLE agents.context_snapshots (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  task_id TEXT NOT NULL REFERENCES agents.tasks(task_id),
-  workflow_id TEXT NOT NULL,
-  agent_type TEXT NOT NULL,                  -- "dev-orchestrator", "product", "researcher"
-  stage TEXT NOT NULL,                       -- "post-research", "post-plan", "post-execution", "post-feedback"
-
-  -- LLM-generated semantic context
-  summary TEXT NOT NULL,                     -- Natural language summary of work done
-  completed_actions JSONB DEFAULT '[]',      -- Array of action descriptions
-  pending_intent TEXT,                       -- What agent planned to do next
-  known_issues JSONB DEFAULT '[]',           -- Problems encountered
-  project_context JSONB DEFAULT '{}',        -- { packageManager, testRunner, framework, conventions }
-  key_files JSONB DEFAULT '[]',              -- Array of { path, relevance }
-  research_findings JSONB,                   -- Structured research output (if applicable)
-  plan JSONB,                                -- Execution plan (if applicable)
-
-  -- Usage metrics
-  tool_call_count INTEGER NOT NULL DEFAULT 0,
-  token_count JSONB DEFAULT '{}',            -- { input, output }
-  duration_ms INTEGER,
-
-  -- Timestamps
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_context_snapshots_task ON agents.context_snapshots(task_id);
-CREATE INDEX idx_context_snapshots_workflow ON agents.context_snapshots(workflow_id);
-CREATE INDEX idx_context_snapshots_stage ON agents.context_snapshots(task_id, stage);
-```
-
-**Refinement from spec:** Added `duration_ms` for performance tracking. Removed `updated_at` because snapshots are immutable -- you create a new one, you do not update an existing one.
-
-#### agents.execution_traces (observability)
-
-```sql
-CREATE TABLE agents.execution_traces (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  task_id TEXT NOT NULL,
-  workflow_id TEXT NOT NULL,
-  agent_type TEXT NOT NULL,                  -- "dev-orchestrator", "researcher", "coder", "tester"
-  agent_instance_id TEXT NOT NULL,           -- UUID per agent invocation
-  parent_agent_instance_id TEXT,             -- NULL for orchestrator, set for sub-agents
-
-  step_number INTEGER NOT NULL,              -- Sequential within agent instance
-  type TEXT NOT NULL,                        -- "tool_call" | "tool_result" | "llm_request" | "llm_response" | "agent_spawn" | "agent_complete"
-
-  -- Tool details
-  tool_name TEXT,                            -- NULL for LLM responses
-  input JSONB,                               -- Tool params or LLM messages
-  output JSONB,                              -- Tool result or LLM response
-
-  -- Cost tracking
-  token_count_input INTEGER,
-  token_count_output INTEGER,
-  duration_ms INTEGER,
-
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_execution_traces_task ON agents.execution_traces(task_id);
-CREATE INDEX idx_execution_traces_instance ON agents.execution_traces(agent_instance_id);
-CREATE INDEX idx_execution_traces_parent ON agents.execution_traces(parent_agent_instance_id);
-
--- Partitioning recommendation for production (traces grow fast):
--- Consider partitioning by created_at (monthly) if table grows beyond 10M rows
-```
-
-**Refinement from spec:** Added `parent_agent_instance_id` index for querying sub-agent trees. Added partitioning recommendation note.
-
-### 7.2 Relationship to Existing Schemas
-
-The new `agents` schema sits alongside existing schemas:
-
-```
-PostgreSQL Database
-  |-- platform.*           (workspaces, config)
-  |-- integrations.*       (legacy shared)
-  |-- observability.*      (agent_executions - keep for backward compatibility)
-  |-- linear.*             (credentials, webhooks, MCP permissions)
-  |-- github.*             (credentials, webhooks, MCP permissions)
-  |-- slack.*              (credentials, events, MCP permissions)
-  |-- agents.*             (NEW: tasks, context_snapshots, execution_traces)
-```
-
-**Migration consideration:** The existing `observability.agent_executions` table tracks lifecycle events (started, completed, failed). This overlaps with `agents.tasks.status`. Options:
-1. Keep both: `observability` for backward compat, `agents` for new features
-2. Migrate: Move `agent_executions` queries to use `agents.tasks`
-
-**Recommendation:** Keep `observability.agent_executions` for now, write to both during transition. Deprecate after v2.2 stabilizes.
-
-### 7.3 Drizzle ORM Integration
-
-All existing Aesir schemas use Drizzle ORM. The new tables should follow the same pattern:
-
-```typescript
-// packages/agents/src/db/schema.ts (new file)
-import { pgSchema, text, integer, jsonb, timestamp, uuid } from "drizzle-orm/pg-core";
-
-export const agentsSchema = pgSchema("agents");
-
-export const tasks = agentsSchema.table("tasks", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  taskId: text("task_id").notNull().unique(),
-  // ... etc
-});
-```
-
----
-
-## 8. Migration Path: LangGraph to Agentic Loops
-
-### 8.1 Coexistence Strategy
-
-**Confidence: MEDIUM** (no direct precedents found for LangGraph -> native migration; based on general incremental migration principles)
-
-LangGraph and agentic loops CAN coexist during migration. The key insight: **Temporal activities are the isolation boundary.** Each activity is a black box -- it can run LangGraph or an agentic loop. The Temporal workflow does not care.
-
-**Migration order:**
-
-```
-Phase 1: Build runAgentLoop() runtime + tool definitions
-  [LangGraph still running for both agents]
-
-Phase 2: Replace dev agent activities with agentic loop activities
-  [Product agent still on LangGraph]
-
-Phase 3: Replace product agent activities with agentic loop
-  [Both agents on agentic loops]
-
-Phase 4: Remove LangGraph dependencies
-  [Clean break]
-```
-
-### 8.2 Incremental Migration Steps
-
-**Step 1: Build the new runtime alongside the old one**
-- Add `@anthropic-ai/sdk` to dependencies (keep `@langchain/*` temporarily)
-- Build `runAgentLoop()` in a new directory: `packages/agents/src/shared/agent-loop/`
-- Build tool definitions in `packages/agents/src/shared/tools/`
-- Test independently with a minimal agent
-
-**Step 2: Create new activity functions**
-- Create `runOrchestratorPreApproval()` that calls `runAgentLoop()` instead of `graph.invoke()`
-- Keep the same return type as the existing activity (same `RunDevAgentGraphOutput` interface)
-- Worker registers both old and new activities
-
-**Step 3: Swap the Temporal workflow to use new activities**
-- Update `dev-agent-workflow.ts` to call new activities
-- Keep old activities available for rollback
-- Feature flag or environment variable to switch
-
-**Step 4: Product agent migration**
-- Same pattern: new activity function, swap in workflow
-
-**Step 5: Remove LangGraph**
-- Delete `workflow/graph.ts`, `workflow/nodes/`, `workflow/state.ts`, `code-workflow/`
-- Remove `@langchain/*` from `package.json`
-- Remove `PostgresSaver` initialization from `worker.ts`
-
-### 8.3 Rollback Strategy
-
-If the agentic loop produces worse results than LangGraph:
-1. The Temporal workflow can be updated to call the old activity functions
-2. LangGraph code is still in the codebase until Step 5
-3. Feature flag in worker.ts: `USE_AGENTIC_LOOP=true/false`
-4. Running workflows complete with their current activity (no in-flight breakage)
-
-### 8.4 What Breaks During Migration
-
-**Nothing breaks if you follow the activity boundary.** The Temporal workflow does not change shape -- it still calls activities and waits for signals. The activities just run different code internally.
-
-**Potential issues:**
-1. **Different return shapes:** If new activities return different data than old ones, the workflow needs updating. Mitigate: keep the same `RunDevAgentGraphOutput` interface initially, evolve later.
-2. **State format mismatch:** LangGraph checkpoints are in a different format than context snapshots. Solution: during migration, write to both (LangGraph checkpoints for old code, context snapshots for new).
-3. **Observability gaps:** Existing LangGraph tracing (`shared/tracing/`) will not trace the new loop. Solution: build tracing into `runAgentLoop()` from day one via `onToolCall`/`onResponse` callbacks.
-
----
-
-## 9. Spec Validation and Gaps
-
-### 9.1 What the Spec Gets Right
-
-1. **Temporal integration approach:** Keeping Temporal for orchestration, signals, timeouts. Running agentic loops inside activities. This matches the production pattern.
-
-2. **Sub-agent as in-process:** `spawn_agent` as a nested function call with fresh context is the right choice for short-lived focused agents.
-
-3. **Context snapshot design:** Separating critical structured data (tasks table) from semantic context (snapshots table) is sound.
-
-4. **Tool library design:** MCP wrapping, codebase tools via DevContainerManager, per-agent tool sets -- all correct.
-
-5. **Guardrails:** Iteration limits, token budgets, sandbox enforcement -- necessary and well-specified.
-
-6. **Migration plan:** Phased replacement of agents, keeping infrastructure stable.
-
-### 9.2 Gaps and Risks in the Spec
-
-#### Gap 1: Smart Router as Single Point of Failure
-
-**Risk: MEDIUM**
-
-The spec replaces hardcoded event routing with an LLM-based smart router. Every incoming webhook triggers an LLM call to decide routing. This adds:
-- Latency: 1-3 seconds per event (LLM inference)
-- Cost: Every webhook = LLM tokens
-- Failure mode: If the router LLM call fails, no events get routed
-
-**Recommendation:** Implement the smart router as a hybrid:
-- **Fast path (deterministic):** Well-known event types with clear routing (e.g., `slack.block_actions.approved` always goes to dev agent approval signal) handled by code, no LLM.
-- **Slow path (LLM):** Ambiguous events (e.g., `linear.comment.created` -- is this approval, guidance, or just a comment?) go through LLM classification.
-
-This preserves the current reliability for common paths while adding LLM reasoning for ambiguous cases. The existing `classifyApprovalIntent()` already uses this pattern -- it is LLM-based classification for comment interpretation.
-
-#### Gap 2: Context Snapshot Generation Inside the Agentic Loop
-
-**Risk: LOW-MEDIUM**
-
-The spec says context is written "at the end of each Temporal activity." But how? The agentic loop needs to generate a summary of its own work. Options:
-
-1. **LLM self-summary (recommended):** Before the loop exits, add one final LLM call: "Summarize what you accomplished, what you found, and what comes next." This produces the context snapshot.
-2. **Programmatic extraction:** Parse the trace to extract key facts. Cheaper but lower quality.
-3. **Both:** Use programmatic extraction for structured fields (tool call count, files changed) and LLM summary for semantic fields.
-
-**Recommendation:** Option 3. The `runAgentLoop()` function should have a `summarize` phase at the end that:
-- Counts tool calls and tokens (programmatic)
-- Extracts structured data from tool results (programmatic)
-- Asks the LLM to produce a natural language summary (one final call)
-
-#### Gap 3: Token Budget Tracking Across Sub-Agents
-
-**Risk: LOW**
-
-The spec mentions `maxTokenBudget` but does not specify how it is shared across orchestrator and sub-agents within a single activity.
-
-**Recommendation:** Use a shared mutable counter:
-
-```typescript
-class TokenBudget {
-  private remaining: number;
-  constructor(total: number) { this.remaining = total; }
-  consume(tokens: number): boolean {
-    this.remaining -= tokens;
-    return this.remaining > 0;
-  }
-  get isExhausted(): boolean { return this.remaining <= 0; }
+```json
+{
+  "role": "assistant",
+  "content": [
+    { "type": "text", "text": "I'll read the configuration file..." },
+    { "type": "tool_use", "id": "toolu_01...", "name": "read_file", "input": {"path": "config.ts"} }
+  ]
 }
 ```
 
-Pass this into `runAgentLoop()` options. The loop checks before each LLM call. Sub-agents receive the same budget object, so orchestrator + all sub-agents share one pool.
+Plus the tool result:
 
-#### Gap 4: Re-Plan Loop in Temporal Workflow
-
-**Risk: LOW**
-
-The current workflow has a complex re-plan loop (reject -> re-plan -> re-approve) with nested `wf.condition()` calls and a TODO about "full re-planning loops needing recursion or a while loop." The spec simplifies this by folding re-planning into the orchestrator loop, but does not specify how the Temporal workflow handles multiple rejection cycles.
-
-**Recommendation:** Simplify the workflow to use a `while` loop:
-
-```typescript
-// Simplified approval loop
-let approved = false;
-while (!approved) {
-  const result = await runOrchestratorPreApproval({ ... });
-  // Wait for approval
-  await wf.condition(() => state.approval !== null, TIMEOUT);
-  if (state.approval?.approved) {
-    approved = true;
-  } else {
-    // Reset, next iteration re-runs pre-approval with feedback
-    state.approval = null;
-  }
+```json
+{
+  "role": "user",
+  "content": [
+    { "type": "tool_result", "tool_use_id": "toolu_01...", "content": "export const config = {...}" }
+  ]
 }
 ```
 
-This is cleaner than the current nested conditional approach.
+**Per-iteration size estimate:**
+- Assistant turn with tool call: ~200-500 bytes (reasoning + tool use block)
+- Tool result: 100-10,000 bytes (depends on file size)
+- After pruning (old turns): 200-500 bytes (reasoning kept, result replaced with descriptor)
 
-#### Gap 5: Product Agent Conversation History
+**Total estimate for a 50-iteration dev agent conversation:**
+- Raw (no compaction): ~150KB (average 3KB per iteration with file contents)
+- After Phase 1 pruning: ~40KB (keep 20 recent messages raw, prune older tool results)
+- After Phase 2 summary: ~25KB (oldest section replaced with structured summary)
 
-**Risk: LOW**
+### 6.3 Mitigation: LZ4 Compression (Optional)
 
-The product agent currently uses LangGraph's `PostgresSaver` checkpointer for multi-turn conversation history (thread_id = Slack thread timestamp). The spec replaces this with context snapshots, but the product agent needs turn-by-turn conversation state, not just end-of-activity summaries.
+PostgreSQL's default TOAST compression is pglz (moderate compression, moderate speed). For better compression on JSONB:
 
-**Recommendation:** For the product agent, store the full conversation in the Temporal workflow's local state (it is already there as `currentMessage` in the loop). The agentic loop for each turn starts fresh with the latest user message + a context summary of prior turns. This is sufficient because:
-- Product conversations are short (< 20 turns)
-- Each turn is independent: user message -> agent response
-- Context summary captures "we discussed X, user confirmed Y"
+- **pglz (default):** ~40% compression ratio on JSON. No configuration needed.
+- **lz4 (Postgres 14+):** Faster compression/decompression, similar ratio. Set with `ALTER TABLE ... ALTER COLUMN ... SET COMPRESSION lz4`.
 
-#### Gap 6: Anthropic SDK `betaZodTool` is Beta
+Aesir uses Postgres 15 (from `docker-compose.yml`: `postgres:15-alpine`), so lz4 is available.
 
-**Risk: LOW**
-
-The `betaZodTool` helper in `@anthropic-ai/sdk` is currently under a `beta` import path. This means the API may change.
-
-**Recommendation:** Use `betaZodTool` for now (it significantly simplifies tool definition). Wrap it in a thin adapter so that if the API changes, only the adapter needs updating. The underlying concept (Zod -> JSON Schema -> Anthropic tool format) is stable even if the helper API changes.
-
----
-
-## 10. Recommended Build Order
-
-Based on dependency analysis, here is the recommended build order with rationale:
-
-### Phase 1: Agentic Loop Runtime + SDK Migration (Foundation)
-
-**Build:** `runAgentLoop()`, Anthropic SDK integration, tool definition interface, tracing callbacks
-
-**Why first:** Everything depends on this. Cannot build tools without the runtime. Cannot build agents without tools working in the loop.
-
-**Dependencies:** None (greenfield)
-
-**Key files:**
-- `packages/agents/src/shared/agent-loop/runtime.ts` (new)
-- `packages/agents/src/shared/agent-loop/types.ts` (new)
-- `packages/agents/src/shared/agent-loop/tracing.ts` (new)
-
-**Validation:** Minimal test agent that reads files and answers questions.
-
-### Phase 2: Database Schema + Context Management
-
-**Build:** Drizzle schema definitions, migrations, context read/write functions
-
-**Why second:** Tools and agents need somewhere to write traces and context. Building this early means all subsequent phases can use it.
-
-**Dependencies:** Phase 1 (types from runtime)
-
-**Key files:**
-- `packages/agents/src/db/schema.ts` (new)
-- `packages/agents/src/db/migrations/001_agents_schema.sql` (new)
-- `packages/agents/src/shared/agent-loop/context.ts` (new)
-
-### Phase 3: Tool Library
-
-**Build:** All tool definitions -- codebase tools, MCP bridges, git tools, spawn_agent
-
-**Why third:** Depends on runtime (Phase 1) for types. Depends on DB (Phase 2) for traces.
-
-**Dependencies:** Phase 1, Phase 2
-
-**Key files:**
-- `packages/agents/src/shared/tools/codebase.ts` (new)
-- `packages/agents/src/shared/tools/integration.ts` (new)
-- `packages/agents/src/shared/tools/git.ts` (new)
-- `packages/agents/src/shared/tools/coordination.ts` (new -- spawn_agent)
-- `packages/agents/src/shared/tools/toolkits/*.ts` (new -- per-agent sets)
-
-**Validation:** Each tool independently tested. MCP bridges tested against running integration services.
-
-### Phase 4: Dev Agent Orchestrator
-
-**Build:** Orchestrator system prompts, sub-agent configs, new Temporal activities, workflow update
-
-**Why fourth:** This is the largest and most complex agent. Depends on all prior phases.
-
-**Dependencies:** Phase 1, 2, 3
-
-**Key files:**
-- `packages/agents/src/dev-agent/orchestrator/prompts.ts` (new)
-- `packages/agents/src/dev-agent/orchestrator/sub-agents.ts` (new)
-- `packages/agents/src/shared/temporal/activities/dev-agent-activities.ts` (modified)
-- `packages/agents/src/shared/temporal/workflows/dev-agent-workflow.ts` (modified)
-- `packages/agents/src/dev-agent/worker.ts` (modified)
-
-**Validation:** Full issue -> research -> plan -> approval -> execute -> PR flow.
-
-### Phase 5: Product Agent
-
-**Build:** Product agent agentic loop, new activity, workflow simplification
-
-**Why fifth:** Smaller agent, benefits from patterns established in Phase 4.
-
-**Dependencies:** Phase 1, 2, 3
-
-**Key files:**
-- `packages/agents/src/product-agent/agent/prompts.ts` (new)
-- `packages/agents/src/shared/temporal/activities/product-agent-activity.ts` (modified)
-- `packages/agents/src/shared/temporal/workflows/product-agent-workflow.ts` (modified)
-
-**Validation:** Slack message -> clarification -> issue creation.
-
-### Phase 6: Smart Router
-
-**Build:** LLM-based event classification, hybrid fast/slow path, workflow management tools
-
-**Why sixth:** Can be built after agents work. Current hardcoded routing works in the interim.
-
-**Dependencies:** Phase 1, Phase 4 (needs working dev agent to route to)
-
-**Key files:**
-- `packages/agents/src/shared/router/router.ts` (new)
-- `packages/agents/src/shared/router/tools.ts` (new)
-- `packages/agents/src/dev-agent/api/events.ts` (modified to use router)
-- `packages/agents/src/product-agent/api/events.ts` (modified to use router)
-
-### Phase 7: Guardrails, Cleanup, Hardening
-
-**Build:** Cost tracking, escalation policies, LangGraph removal, dependency cleanup
-
-**Why last:** Polish phase. All functionality works. Remove old code, add safety features.
-
-**Dependencies:** All prior phases
-
-**Key actions:**
-- Delete `workflow/graph.ts`, `workflow/nodes/`, `workflow/state.ts`, `code-workflow/`
-- Remove `@langchain/*` from package.json
-- Remove `PostgresSaver` initialization
-- Add cost budget enforcement
-- Add escalation policies
-- E2E validation
-
-### Phase 8: End-to-End Validation
-
-**Build:** Full flow testing, regression testing, performance baselines
+**Recommendation:** Use default pglz for v2.3 launch. Monitor TOAST sizes via `pg_column_size()`. Switch to lz4 if write latency becomes an issue. This is a DBA-level change, not a code change.
 
 ---
 
-## 11. Sources and Confidence Assessment
+## 7. Migration Sequence: Temporal to Custom Orchestration
+
+### 7.1 Drain Strategy
+
+Temporal workflows in Aesir are short-lived relative to most Temporal deployments:
+
+| Workflow | Typical Duration | Max Duration |
+|----------|-----------------|--------------|
+| Dev agent (with approval) | 1-72 hours | 7 days (feedback timeout) |
+| Dev agent (autonomous) | 5-30 minutes | 45 minutes (activity timeout) |
+| Product agent | 5-60 minutes | 24 hours (conversation timeout) |
+
+**Drain approach:**
+1. Stop routing NEW events to Temporal workflows (redirect to v2.3 executor)
+2. Let existing workflows complete naturally (max 7 days)
+3. After drain period, verify no running workflows via Temporal UI
+4. Remove Temporal infrastructure
+
+**This is straightforward because:**
+- No long-running workflows (everything completes within 7 days)
+- No workflow dependencies (workflows don't spawn other workflows)
+- Feature flag on the event router: `USE_V23_EXECUTOR=true` switches all new events
+
+### 7.2 Gotchas
+
+| Gotcha | Impact | Mitigation |
+|--------|--------|------------|
+| In-flight workflows during cutover | Existing workflows need Temporal to complete | Keep Temporal running for drain period (7 days) |
+| Temporal DB shares PostgreSQL | Temporal's `temporal` database shares the same Postgres instance | Temporal stores data in its own schemas; dropping Temporal services doesn't affect Aesir schemas |
+| Signal handlers registered at workflow start | Can't change signal routing mid-workflow | Only affects draining workflows; new conversations use executor |
+| Temporal worker shutdown | Must gracefully finish current activity before stopping | Docker Compose `stop_grace_period: 60s` gives activity time to complete |
+| Database migration timing | Old tables must exist for drain period, new tables for v2.3 | Create new tables first, drop old tables after drain completes |
+
+### 7.3 Phase Sequence
+
+```
+Phase A: Build framework (parallel with v2.2 running)
+  - All new code in src/framework/ and definitions/
+  - New DB tables created alongside old ones
+  - Nothing breaks, nothing changes for v2.2
+
+Phase B: Wire and validate
+  - Build single main.ts that can run alongside old services
+  - Integration test: start -> pause -> signal -> resume
+  - Smoke test with real LLM calls
+
+Phase C: Cut over
+  - Set USE_V23_EXECUTOR=true
+  - New events go through v2.3 executor
+  - Monitor both systems during drain period
+  - After 7 days: verify Temporal is empty
+
+Phase D: Clean up
+  - Remove Temporal services from Docker Compose
+  - Remove @temporalio/* from package.json
+  - Delete packages/agents/src/shared/temporal/
+  - Delete per-agent main.ts and worker.ts
+  - Drop old DB tables (tasks, context_snapshots, execution_traces)
+  - Update CLAUDE.md
+```
+
+**Effort estimates per phase:**
+
+| Phase | Duration | Risk | Blockers |
+|-------|----------|------|----------|
+| A: Build | 3-5 days | LOW | None -- greenfield |
+| B: Wire | 2-3 days | MEDIUM | Integration testing requires all services running |
+| C: Cut over | 1 day + 7-day drain | LOW | Just a flag flip |
+| D: Clean up | 1-2 days | LOW | Mechanical deletion |
+
+---
+
+## 8. Data Flow: Full Pause/Resume Cycle
+
+### 8.1 Complete Trace: Webhook to wait_for to Resume
+
+```
+PHASE 1: Initial Start
+=======================
+
+1. Linear webhook fires (issue.agent_session.created)
+   -> POST /events on agent-service:3004
+
+2. Adapter normalizes:
+   IncomingEvent { type: "linear.agent_session.created", correlationKey: "{issueId}", ... }
+
+3. EventRouter checks start rules:
+   - dev-agent definition has trigger: { event: "linear.agent_session.created" }
+   - Construct conversation ID: "dev-agent-{issueId}"
+
+4. executor.start({
+     agentDefinitionId: "dev-agent",
+     conversationId: "dev-agent-{issueId}",
+     message: "Resolve Linear issue AES-42: 'Add /healthz endpoint'",
+   })
+
+5. Executor creates conversation record:
+   INSERT INTO conversations (id, status, messages, ...)
+   VALUES ("dev-agent-{issueId}", "queued", '[{"role":"user","content":"..."}]', ...)
+
+6. Executor appends event:
+   EventLog.append({ type: "agent.started", conversationId: "dev-agent-{issueId}" })
+
+7. HTTP handler returns 200 to webhook (non-blocking)
+
+PHASE 2: Agent Execution
+=========================
+
+8. Worker polling loop picks up queued conversation:
+   SELECT ... FROM conversations WHERE status = 'queued' FOR UPDATE SKIP LOCKED
+
+9. Worker updates: status = "running", last_heartbeat_at = NOW()
+
+10. Worker loads AgentDefinition from registry:
+    registry.get("dev-agent", "1")
+
+11. Worker resolves tools:
+    toolRegistry.resolve(definition.tools, { containerManager, agentId, ... })
+
+12. Worker calls runAgentLoop({
+      systemPrompt: definition.systemPrompt,
+      tools: resolvedTools,
+      messages: conversation.messages,  // <-- NEW: pre-populated history
+      maxIterations: definition.maxIterations,
+      tokenBudget: ...,
+      onToolCall: (call) => eventLog.append({ type: "tool.called", ... }),
+    })
+
+13. Agent loop runs:
+    - LLM reasons, calls tools
+    - EventLog records tool.called / tool.succeeded events
+    - Session projection updates reactively (artifacts)
+    - Heartbeat fires every 30s (onHeartbeat callback)
+
+PHASE 3: Pause via wait_for
+=============================
+
+14. Agent decides it needs approval:
+    LLM returns: tool_use { name: "wait_for", input: { type: "approval", reason: "..." } }
+
+15. Framework intercepts wait_for:
+    a. Returns tool_result to conversation: "Conversation paused. Waiting for: approval"
+    b. Sets exit flag
+
+16. Agent loop exits (returns AgentLoopResult)
+
+17. Executor persists:
+    UPDATE conversations
+    SET status = 'paused',
+        messages = $fullHistory,  -- includes wait_for call + result
+        pending_wait = '{"type":"approval","metadata":{...}}',
+        updated_at = NOW()
+    WHERE id = "dev-agent-{issueId}"
+
+18. EventLog.append({ type: "agent.paused", ... })
+19. EventLog.flush()  -- guarantee events are persisted
+
+PHASE 4: Signal Arrives (hours/days later)
+==========================================
+
+20. Slack webhook fires (block_actions.approve button click)
+    -> POST /events on agent-service:3004
+
+21. Adapter normalizes:
+    IncomingEvent {
+      type: "approval",
+      data: { approved: true, feedback: "Looks good" },
+      correlationKey: "{issueId}",
+      message: "Plan approved by John Smith. Feedback: 'Looks good.'"
+    }
+
+22. EventRouter resolves:
+    - Construct conversation ID: "dev-agent-{issueId}"
+    - Load conversation: status = "paused", pendingWait.type = "approval"
+    - Signal type "approval" matches pendingWait.type
+
+23. executor.signal("dev-agent-{issueId}", {
+      type: "approval",
+      data: { approved: true, feedback: "Looks good" },
+    })
+
+24. Executor updates conversation:
+    UPDATE conversations
+    SET status = 'queued',
+        messages = messages || '[{"role":"user","content":"Plan approved by..."}]',
+        pending_wait = NULL,
+        updated_at = NOW()
+    WHERE id = "dev-agent-{issueId}"
+
+25. EventLog.append({ type: "signal.received", ... })
+26. EventLog.append({ type: "agent.resumed", ... })
+
+27. HTTP handler returns 200 to webhook
+
+PHASE 5: Resumed Execution
+===========================
+
+28. Worker polling loop picks up queued conversation (same as step 8)
+
+29. Worker applies history compaction if needed (definition.history config)
+
+30. runAgentLoop({ messages: compactedHistory })
+    - Agent sees EVERYTHING: prior research, plan, wait_for, approval message
+    - Continues naturally from where it left off
+
+31. Agent completes (no more wait_for calls, final text output)
+
+32. Executor updates:
+    UPDATE conversations SET status = 'completed', messages = $final, updated_at = NOW()
+
+33. EventLog.append({ type: "agent.completed", ... })
+```
+
+### 8.2 Failure Points in the Flow
+
+| Step | Failure | Consequence | Recovery |
+|------|---------|-------------|----------|
+| 5 | DB write fails | Conversation never created | Webhook retry delivers same event; executor.start() idempotent |
+| 9 | Worker crashes after claiming | Conversation stuck in "running" | Heartbeat sweep re-enqueues after 5 min |
+| 16 | Agent loop errors (LLM failure) | Conversation in "running" with partial trace | Heartbeat sweep re-enqueues; agent loop has retry-backoff |
+| 17 | DB write fails on pause | Conversation state lost | Agent loop must re-run from last persisted state |
+| 24 | DB write fails on signal | Signal not delivered | Webhook retry re-delivers signal |
+| 29 | History compaction fails | Conversation too large for context window | Fallback: aggressive pruning or error with escalation |
+
+### 8.3 Signal Queueing: Race Condition Fix
+
+The product agent currently has a retry-with-backoff hack for signals that arrive before the workflow starts. The `orchestrator-workflow.ts` also has timing-sensitive signal handling.
+
+v2.3 fixes this structurally:
+
+```
+Signal arrives for conversation "product-agent-{threadTs}":
+  Case 1: Conversation doesn't exist yet
+    -> Router creates conversation via executor.start() with the event as initial message
+    -> No signal needed -- the message IS the conversation starter
+
+  Case 2: Conversation exists, status = "running"
+    -> Append to queued_signals JSONB column
+    -> When agent calls wait_for, executor checks queued_signals BEFORE pausing
+    -> If matching signal exists: pop from queue, append as user message, continue running
+
+  Case 3: Conversation exists, status = "paused", matching wait type
+    -> Normal resume flow (steps 22-27 above)
+```
+
+This eliminates all timing-dependent retries. The signal is either the conversation starter, queued for later, or delivered immediately.
+
+---
+
+## 9. Suggested Build Order
+
+Based on dependency analysis and risk mitigation:
+
+### Phase A: Framework Core (no existing code changes)
+
+| Step | Component | Dependencies | Effort | Risk |
+|------|-----------|-------------|--------|------|
+| A1 | DB schema + migrations | None | 0.5 day | LOW |
+| A2 | EventLog (append, query, flush) | A1 | 1 day | LOW |
+| A3 | SessionProjection | A1, A2 | 0.5 day | LOW |
+| A4 | AgentRegistry + definition loading | None | 1 day | LOW |
+| A5 | ToolRegistry (factory registration, resolve) | None | 0.5 day | LOW |
+| A6 | HistoryManager (pruning + summarization) | None | 1.5 days | MEDIUM |
+| A7 | ConversationExecutor (start, signal, cancel, worker loop) | A1-A5 | 2 days | MEDIUM |
+| A8 | wait_for tool | A7 | 0.5 day | LOW |
+
+**Critical path:** A1 -> A2 -> A7. Everything else can be built in parallel.
+
+### Phase B: Integration (wiring to existing infrastructure)
+
+| Step | Component | Dependencies | Effort | Risk |
+|------|-----------|-------------|--------|------|
+| B1 | Agent definition files (YAML + prompt.md) | A4 | 1 day | LOW |
+| B2 | Event adapters (Slack, GitHub, Linear) | None | 1 day | LOW |
+| B3 | Event router (adapted from current router module) | A4, A7 | 1.5 days | MEDIUM |
+| B4 | Single main.ts service | A1-A8, B1-B3 | 1 day | LOW |
+| B5 | Integration tests (start -> pause -> signal -> resume) | B4 | 1 day | MEDIUM |
+
+### Phase C: Cut Over
+
+| Step | Action | Dependencies | Effort | Risk |
+|------|--------|-------------|--------|------|
+| C1 | Feature flag: new events -> v2.3 executor | B5 passing | 0.5 day | LOW |
+| C2 | Drain Temporal workflows (monitor for 7 days) | C1 | 0 (calendar time) | LOW |
+| C3 | Smoke test: full dev-agent + product-agent flows | C1 | 1 day | MEDIUM |
+
+### Phase D: Cleanup
+
+| Step | Action | Dependencies | Effort | Risk |
+|------|--------|-------------|--------|------|
+| D1 | Delete Temporal code (shared/temporal/) | C2 verified empty | 0.5 day | LOW |
+| D2 | Delete per-agent services (main.ts, worker.ts, api/) | D1 | 0.5 day | LOW |
+| D3 | Remove @temporalio/* from package.json | D1, D2 | 0.5 day | LOW |
+| D4 | Drop old DB tables, update Docker Compose | D1-D3 | 0.5 day | LOW |
+
+**Total estimated effort:** 15-18 days of development + 7 days drain period.
+
+---
+
+## 10. Component Interface Summary
+
+### New Components
+
+| Component | Interface | Creates | Consumes |
+|-----------|-----------|---------|----------|
+| `ConversationExecutor` | start(), signal(), get(), cancel(), list(), close() | Conversations, events | AgentRegistry, ToolRegistry, EventLog |
+| `EventLog` | append(), query(), subscribe(), flush(), close() | agent_events rows | DB connection |
+| `SessionProjection` | get(), list() | agent_sessions rows | EventLog subscription |
+| `AgentRegistry` | get(), list() | In-memory cache | Definition files (YAML + MD) |
+| `ToolRegistry` | register(), resolve() | ToolDefinition arrays | Tool factory functions |
+| `EventRouter` | handle() | RouteResult | AgentRegistry (triggers), ConversationExecutor |
+| `HistoryManager` | compact() | Compacted message array | AgentDefinition.history config |
+| Event Adapters (x3) | transform() | IncomingEvent | Raw webhook payloads |
+
+### Modified Components
+
+| Component | Current | Change |
+|-----------|---------|--------|
+| `runAgentLoop()` | Accepts `initialMessage` + `context` | Add optional `messages` parameter for pre-populated history |
+| `spawn_agent` tool | Inline sub-agent configs | Uses AgentRegistry + ToolRegistry to resolve sub-agent definitions |
+| Smart router module | Uses `workflowClient` (Temporal) | Uses `ConversationExecutor` instead |
+| Docker Compose | 10 services | 5 services (remove Temporal, consolidate agents) |
+
+### Unchanged Components
+
+| Component | Why Unchanged |
+|-----------|---------------|
+| `runAgentLoop()` (core loop) | The agent loop runtime is the foundation; only the entry point changes |
+| All tool implementations | Tools are execution logic; their definitions move to ToolRegistry but implementations stay |
+| MCP client (`callMcpTool`) | Integration communication protocol unchanged |
+| Integration packages (x3) | Independent services, no Temporal dependency |
+| DevContainerManager | Container lifecycle management unchanged |
+| Platform package | Config, logging, DB connection unchanged |
+
+---
+
+## 11. Performance Implications
+
+### 11.1 Expected Load Profile
+
+Based on current system metrics (from `cost-tracking.ts` comments and Temporal workflow observations):
+
+| Metric | Current (v2.2) | Expected (v2.3) | Change |
+|--------|----------------|------------------|--------|
+| Concurrent conversations | 1-5 | 1-5 | Same |
+| Events per conversation | 100-500 | 100-500 | Same (event log replaces traces) |
+| Conversation persistence writes | 3-5 per task (activity boundaries) | 2 per task (pause + complete) | Fewer writes |
+| Signal routing latency | 100-500ms (Temporal scheduling) | <50ms (direct DB update + poll) | Faster |
+| Agent loop startup | 200ms (Temporal activity scheduling) | <10ms (in-process) | Much faster |
+
+### 11.2 Bottleneck Analysis
+
+| Operation | Current Bottleneck | v2.3 Bottleneck | Assessment |
+|-----------|-------------------|-----------------|------------|
+| Webhook -> agent start | Temporal workflow scheduling (100-500ms) | DB insert + poll interval (30s worst case) | Trade-off: higher worst-case latency, but simpler |
+| Signal delivery | Temporal signal + condition wake (100ms) | DB update + poll interval (30s worst case) | Worse worst-case; mitigate with LISTEN/NOTIFY later |
+| Agent resume | Fresh agent loop + context summary read | Full history load from JSONB | Better (richer context), but larger payload |
+| Event recording | Buffered batch INSERT (current pattern) | Same pattern (unchanged) | Same |
+
+**The 30-second polling interval** is the main performance regression. Temporal's signal delivery is near-instant; polling adds up to 30 seconds of latency. For Aesir's use case (approval responses take minutes to hours), this is acceptable. For more time-sensitive use cases, LISTEN/NOTIFY can be added later.
+
+**Recommendation:** Start with 5-second polling interval for the worker loop (not 30 seconds). This gives responsive signal delivery (5s worst case) at the cost of slightly more DB queries. At 1 query per 5 seconds, this is ~12 queries/minute -- trivial for Postgres.
+
+### 11.3 Scaling Considerations
+
+| Scale | Approach |
+|-------|----------|
+| 1-10 concurrent conversations | Single worker, 5s polling. Current setup. |
+| 10-50 concurrent conversations | Multiple workers (same process, concurrent loops). `FOR UPDATE SKIP LOCKED` distributes. |
+| 50-200 concurrent conversations | Multiple worker processes. Same DB, same pattern. |
+| 200+ concurrent conversations | LISTEN/NOTIFY for event-driven wakeup. Consider SQS/EventBridge. |
+
+Aesir is currently at 1-5 concurrent conversations. The Postgres-backed approach is appropriate for 10-100x current scale without architectural changes.
+
+---
+
+## 12. Sources and Confidence Assessment
 
 ### Sources Used
 
 | Source | Type | Confidence | Used For |
 |--------|------|------------|----------|
-| Codebase analysis (all files read) | Primary | HIGH | Current architecture understanding |
-| v2.2 spec (2.2-spec.md) | Primary | HIGH | Target architecture |
-| [Temporal: Dynamic AI Agents](https://temporal.io/blog/of-course-you-can-build-dynamic-ai-agents-with-temporal) | Official blog | HIGH | Activity boundary pattern |
-| [Temporal AI Cookbook: Agentic Loop](https://docs.temporal.io/ai-cookbook/agentic-loop-tool-call-openai-python) | Official docs | HIGH | Tool-use loop in Temporal |
-| [Anthropic Multi-Agent Research System](https://www.anthropic.com/engineering/multi-agent-research-system) | Official blog | HIGH | Sub-agent spawning, context boundaries |
-| [Anthropic SDK TypeScript](https://github.com/anthropics/anthropic-sdk-typescript) | Official repo | HIGH | betaZodTool, tool runner |
-| [Claude Agent SDK TypeScript](https://github.com/anthropics/claude-agent-sdk-typescript) | Official repo | MEDIUM | Agent SDK patterns (separate from base SDK) |
-| [Temporal: OpenAI Agents SDK Integration](https://temporal.io/blog/announcing-openai-agents-sdk-integration) | Official blog | MEDIUM | Patterns (OpenAI-specific but applicable) |
-| [Google ADK Multi-Agent Docs](https://google.github.io/adk-docs/agents/multi-agents/) | Official docs | MEDIUM | Sub-agent patterns |
-| [OpenAI Agents SDK Multi-Agent](https://openai.github.io/openai-agents-python/multi_agent/) | Official docs | MEDIUM | Multi-agent orchestration |
-| Various WebSearch results | Community | LOW | Ecosystem survey, validation |
+| Codebase analysis (orchestrator-workflow.ts, run-agent-loop.ts, schema.ts, task-store.ts, docker-compose.yml, all main.ts files) | Primary | HIGH | Current architecture understanding |
+| v2.3 spec (2.3-spec.md, 1712 lines) | Primary | HIGH | Target architecture |
+| [DBOS: Postgres for Everything](https://www.dbos.dev/blog/postgres-durable-execution) | Official blog | HIGH | SELECT FOR UPDATE SKIP LOCKED pattern |
+| [Armin Ronacher: Absurd Postgres Workflows](https://lucumr.pocoo.org/2024/11/18/absurd-workflows/) | Blog | MEDIUM | Postgres-as-job-queue patterns |
+| [PgBoss: Postgres job queue](https://github.com/timgit/pg-boss) | Open source | HIGH | Polling + SKIP LOCKED implementation |
+| [Solid Queue (Rails)](https://github.com/rails/solid_queue) | Open source | MEDIUM | Postgres job queue patterns |
+| Drizzle ORM documentation | Official | HIGH | LISTEN/NOTIFY gap, batch insert patterns |
+| PostgreSQL TOAST documentation | Official | HIGH | JSONB performance characteristics |
 
 ### Confidence Assessment
 
 | Area | Confidence | Reason |
 |------|-----------|--------|
-| Temporal + agentic loop integration | HIGH | Temporal's official docs explicitly describe this pattern. Codex uses it in production. |
-| Sub-agent spawning (in-process) | HIGH | Anthropic's own multi-agent system uses this pattern. Multiple frameworks converge on it. |
-| Context boundary design | MEDIUM-HIGH | Logical extension of Temporal activity boundaries. No contradicting sources, but specific to Aesir's needs. |
-| Tool definition architecture | HIGH | `@anthropic-ai/sdk` betaZodTool is documented. Per-agent toolkits are standard practice. |
-| MCP-to-tool bridging | HIGH | Direct application of existing `callMcpTool()` with Zod wrapper. Straightforward. |
-| Database schema | MEDIUM | Schema design is standard PostgreSQL. No direct precedent for this exact structure, but follows established patterns. |
-| Migration path | MEDIUM | Activity boundary isolation is the key enabler. No direct LangGraph-to-native migration references found, but the pattern is sound. |
-| Smart router hybrid approach | MEDIUM | Recommendation based on risk analysis, not external precedent. |
+| ConversationExecutor pattern | HIGH | `FOR UPDATE SKIP LOCKED` is battle-tested across PgBoss, Solid Queue, DBOS |
+| Event log design | HIGH | Direct application of existing trace-recorder pattern with fixes for known gaps |
+| Single service consolidation | HIGH | Mechanical change -- all services already use same `createServer()` pattern |
+| Agent registry | HIGH | Simple file loading + mtime caching, well-established pattern |
+| JSONB performance | MEDIUM | Theoretical analysis backed by Postgres documentation, but no load testing on Aesir's actual data |
+| Migration sequence | MEDIUM | Drain strategy is sound but depends on no long-running workflows being stuck |
+| Polling vs LISTEN/NOTIFY | MEDIUM | Polling is correct for v2.3 scale; LISTEN/NOTIFY gap in Drizzle is a real constraint |
 
 ### Open Questions
 
-1. **Anthropic SDK tool runner vs. manual loop:** The SDK provides `toolRunner()` that automates the loop. Should Aesir use it or implement a manual loop? Manual gives more control (token tracking, custom tracing, abort). Recommend manual loop with the SDK as the LLM client only.
+1. **Worker polling interval:** 5 seconds recommended, but needs tuning based on actual webhook delivery patterns. Too frequent = wasted queries. Too infrequent = noticeable signal delivery latency.
 
-2. **Context window management for long tasks:** What happens when a sub-agent's conversation history exceeds the context window? The SDK supports automatic compaction (summarizing history when tokens exceed threshold). Need to evaluate if this is needed for Aesir's use case (sub-agents are typically < 50 iterations, unlikely to exceed 200K context).
+2. **History compaction trigger:** The spec says 80K tokens for pruning threshold. Needs empirical validation with real dev-agent conversations to confirm this is the right threshold.
 
-3. **Streaming vs. non-streaming LLM calls:** The spec does not mention streaming. For long-running tool calls, streaming provides earlier feedback. But it adds complexity. Recommend non-streaming for v2.2, add streaming later for UX improvements.
+3. **Conversation cleanup policy:** When should completed conversations be archived? The spec mentions retention but doesn't specify a policy. Without cleanup, the conversations table grows indefinitely.
 
-4. **Smart router: when should it be LLM-based vs. deterministic?** The spec proposes fully LLM-based. Research suggests hybrid is safer. Need to define the exact boundary during Phase 6 implementation.
+4. **Multiple workers in single process:** The spec implies a single worker loop, but for resilience, the service should support concurrent conversation processing. Needs a worker pool design (e.g., `Promise.allSettled` with N concurrent workers).
+
+5. **Error escalation path:** When a conversation fails repeatedly (agent loop errors on every attempt), what is the escalation mechanism? Temporal has retry policies with max attempts. The executor needs equivalent logic.
