@@ -9,16 +9,10 @@
  * agent_sessions instead of scanning the full event log.
  */
 
-import type { PinoLogger } from "@aesir/platform";
 import { eq, sql } from "drizzle-orm";
 import type { AgentEvent } from "../shared/db/schema.js";
 import { agentSessions } from "../shared/db/schema.js";
-import type {
-  ArtifactExtractionConfig,
-  EventLog,
-  SessionProjection,
-  SessionProjectionOptions,
-} from "./types.js";
+import type { SessionProjection, SessionProjectionOptions } from "./types.js";
 
 // ─── Helper ─────────────────────────────────────────────────────────────────
 
@@ -36,9 +30,7 @@ export function getNestedValue(
     .split(".")
     .reduce<unknown>(
       (current, key) =>
-        current !== null &&
-        current !== undefined &&
-        typeof current === "object"
+        current !== null && current !== undefined && typeof current === "object"
           ? (current as Record<string, unknown>)[key]
           : undefined,
       obj,
@@ -93,8 +85,9 @@ export function createSessionProjection(
   }
 
   async function handleAgentCompleted(event: AgentEvent): Promise<void> {
-    const status =
-      (event.payload as Record<string, unknown>)?.error ? "failed" : "completed";
+    const status = (event.payload as Record<string, unknown>)?.error
+      ? "failed"
+      : "completed";
 
     await db
       .update(agentSessions)
@@ -132,8 +125,9 @@ export function createSessionProjection(
   }
 
   async function handleToolSucceeded(event: AgentEvent): Promise<void> {
-    const toolName = (event.payload as Record<string, unknown>)
-      ?.toolName as string | undefined;
+    const toolName = (event.payload as Record<string, unknown>)?.toolName as
+      | string
+      | undefined;
     if (!toolName) return;
 
     const extractor = artifactConfig.get(toolName);
