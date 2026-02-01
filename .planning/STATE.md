@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 37 of 47 (Database Schema + Event Log Core)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-01 — Completed 37-01-PLAN.md (schema, migration, framework types)
+Last activity: 2026-02-01 — Completed 37-02-PLAN.md (EventLog service implementation + unit tests)
 
-Progress: [█░░░░░░░░░] ~3% (1/~30 estimated plans)
+Progress: [██░░░░░░░░] ~7% (2/~30 estimated plans)
 
 ## Milestone History
 
@@ -28,15 +28,15 @@ Progress: [█░░░░░░░░░] ~3% (1/~30 estimated plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1 (v2.3)
-- Average duration: 4m39s
-- Total execution time: 4m39s
+- Total plans completed: 2 (v2.3)
+- Average duration: 5m58s
+- Total execution time: 11m55s
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 37 | 1/3 | 4m39s | 4m39s |
+| 37 | 2/3 | 11m55s | 5m58s |
 
 *Updated after each plan completion*
 
@@ -53,6 +53,8 @@ v2.3 decisions:
 - Gapless sequences per conversation (MAX(sequence) + 1) -- one loop at a time per conversation makes this safe
 - Executor columns (claimed_by, claimed_at, last_heartbeat_at) added to conversations table in 37-01 migration -- avoids second migration in Phase 40
 - ArtifactExtractionConfig uses Map<string, ArtifactExtractor> with payloadPath -- keeps Phase 37 independent of Phase 38 ToolRegistry
+- Copy truncateJsonPayload into event-log.ts rather than shared utility -- avoids cross-module dependency for small helper
+- Fire-and-forget subscriber notification via void handler().catch() -- errors must never block append()
 
 ### Pending Todos
 
@@ -70,9 +72,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: Completed 37-01-PLAN.md (schema, migration, framework types)
+Stopped at: Completed 37-02-PLAN.md (EventLog service implementation + 44 unit tests)
 Resume file: None
-Next action: Execute 37-02-PLAN.md (EventLog service implementation)
+Next action: Execute 37-03-PLAN.md (SessionProjection implementation)
 
 ---
-*Updated: 2026-02-01 — Completed plan 37-01*
+*Updated: 2026-02-01 — Completed plan 37-02*
