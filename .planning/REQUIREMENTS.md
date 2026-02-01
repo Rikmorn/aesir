@@ -9,23 +9,23 @@ Requirements for v2.3 milestone. Each maps to roadmap phases starting at Phase 3
 
 ### Agent Definition
 
-- [ ] **DEF-01**: Agents defined via YAML config + prompt.md files (not hardcoded orchestrator code)
-- [ ] **DEF-02**: YAML schema validated with Zod on load (fail fast on invalid definitions)
-- [ ] **DEF-03**: System prompt loaded from separate Markdown file referenced in YAML
-- [ ] **DEF-04**: Agent definition includes model, tools, maxIterations, tokenBudget, history config
-- [ ] **DEF-05**: Agent definition includes trigger rules for event routing (which events start this agent)
-- [ ] **DEF-06**: Sub-agent definitions referenced by ID in parent agent config
-- [ ] **DEF-07**: dev-agent and product-agent converted from hardcoded code to declarative definitions
-- [ ] **DEF-08**: Sub-agents (researcher, coder, tester) converted to declarative definitions
+- [x] **DEF-01**: Agents defined via YAML config + prompt.md files (not hardcoded orchestrator code)
+- [x] **DEF-02**: YAML schema validated with Zod on load (fail fast on invalid definitions)
+- [x] **DEF-03**: System prompt loaded from separate Markdown file referenced in YAML
+- [x] **DEF-04**: Agent definition includes model, tools, maxIterations, tokenBudget, history config
+- [x] **DEF-05**: Agent definition includes trigger rules for event routing (which events start this agent)
+- [x] **DEF-06**: Sub-agent definitions referenced by ID in parent agent config
+- [x] **DEF-07**: dev-agent and product-agent converted from hardcoded code to declarative definitions
+- [x] **DEF-08**: Sub-agents (researcher, coder, tester) converted to declarative definitions
 
 ### Event Log
 
-- [ ] **EVT-01**: Append-only agent_events table with conversation-scoped gapless sequences
-- [ ] **EVT-02**: Event types: tool.called, tool.succeeded, tool.failed, llm.response, agent.started, agent.completed, agent.paused, agent.resumed, signal.received
-- [ ] **EVT-03**: Buffered writes with configurable flush interval
-- [ ] **EVT-04**: Synchronous flush at lifecycle boundaries (pause, complete, fail) — no data loss on crash
-- [ ] **EVT-05**: agent_sessions projection table reactively updated from events (artifacts, status, timing)
-- [ ] **EVT-06**: Session projection extracts ground-truth artifacts (PR URLs, branch names) from tool.succeeded events
+- [x] **EVT-01**: Append-only agent_events table with conversation-scoped gapless sequences
+- [x] **EVT-02**: Event types: tool.called, tool.succeeded, tool.failed, llm.response, agent.started, agent.completed, agent.paused, agent.resumed, signal.received
+- [x] **EVT-03**: Buffered writes with configurable flush interval
+- [x] **EVT-04**: Synchronous flush at lifecycle boundaries (pause, complete, fail) — no data loss on crash
+- [x] **EVT-05**: agent_sessions projection table reactively updated from events (artifacts, status, timing)
+- [x] **EVT-06**: Session projection extracts ground-truth artifacts (PR URLs, branch names) from tool.succeeded events
 - [ ] **EVT-07**: Replaces three disconnected stores: execution_traces, tasks, context_snapshots
 
 ### Conversation Executor
@@ -53,12 +53,12 @@ Requirements for v2.3 milestone. Each maps to roadmap phases starting at Phase 3
 
 ### Registries
 
-- [ ] **REG-01**: AgentRegistry loads definitions from definitions/ directory with lazy loading
-- [ ] **REG-02**: AgentRegistry uses mtime-based cache invalidation for definition changes
-- [ ] **REG-03**: ToolRegistry with factory-based registration and namespace:tool_name resolution
-- [ ] **REG-04**: Tool factories receive ToolContext (agentId, correlationId, containerManager) and return configured tools
-- [ ] **REG-05**: Running conversations pinned to definition version they started with
-- [ ] **REG-06**: New agent = new definition directory — zero code changes, zero infrastructure changes
+- [x] **REG-01**: AgentRegistry loads definitions from definitions/ directory with lazy loading
+- [x] **REG-02**: AgentRegistry uses mtime-based cache invalidation for definition changes
+- [x] **REG-03**: ToolRegistry with factory-based registration and namespace:tool_name resolution
+- [x] **REG-04**: Tool factories receive ToolContext (agentId, correlationId, containerManager) and return configured tools
+- [x] **REG-05**: Running conversations pinned to definition version they started with
+- [x] **REG-06**: New agent = new definition directory — zero code changes, zero infrastructure changes
 
 ### Signal Handling
 
@@ -132,27 +132,27 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| EVT-01 | Phase 37 | Pending |
-| EVT-02 | Phase 37 | Pending |
-| EVT-03 | Phase 37 | Pending |
-| EVT-04 | Phase 37 | Pending |
-| EVT-05 | Phase 37 | Pending |
-| EVT-06 | Phase 37 | Pending |
+| EVT-01 | Phase 37 | Complete |
+| EVT-02 | Phase 37 | Complete |
+| EVT-03 | Phase 37 | Complete |
+| EVT-04 | Phase 37 | Complete |
+| EVT-05 | Phase 37 | Complete |
+| EVT-06 | Phase 37 | Complete |
 | EVT-07 | Phase 47 | Pending |
-| DEF-01 | Phase 38 | Pending |
-| DEF-02 | Phase 38 | Pending |
-| DEF-03 | Phase 38 | Pending |
-| DEF-04 | Phase 38 | Pending |
-| DEF-05 | Phase 38 | Pending |
-| DEF-06 | Phase 38 | Pending |
-| DEF-07 | Phase 38 | Pending |
-| DEF-08 | Phase 38 | Pending |
-| REG-01 | Phase 38 | Pending |
-| REG-02 | Phase 38 | Pending |
-| REG-03 | Phase 38 | Pending |
-| REG-04 | Phase 38 | Pending |
-| REG-05 | Phase 38 | Pending |
-| REG-06 | Phase 38 | Pending |
+| DEF-01 | Phase 38 | Complete |
+| DEF-02 | Phase 38 | Complete |
+| DEF-03 | Phase 38 | Complete |
+| DEF-04 | Phase 38 | Complete |
+| DEF-05 | Phase 38 | Complete |
+| DEF-06 | Phase 38 | Complete |
+| DEF-07 | Phase 38 | Complete |
+| DEF-08 | Phase 38 | Complete |
+| REG-01 | Phase 38 | Complete |
+| REG-02 | Phase 38 | Complete |
+| REG-03 | Phase 38 | Complete |
+| REG-04 | Phase 38 | Complete |
+| REG-05 | Phase 38 | Complete |
+| REG-06 | Phase 38 | Complete |
 | HIST-01 | Phase 39 | Pending |
 | HIST-02 | Phase 39 | Pending |
 | HIST-03 | Phase 39 | Pending |
