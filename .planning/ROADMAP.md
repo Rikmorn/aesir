@@ -75,7 +75,7 @@ v2.3 replaces Temporal workflow orchestration, per-agent services, and fragmente
 **Research**: needs-research (heartbeat mechanism, atomic claiming, signal queueing, race condition prevention)
 **Success Criteria** (what must be TRUE):
   1. ConversationExecutor exposes start(), signal(), get(), cancel(), list() API and worker loop claims queued conversations with concurrency-safe locking
-  2. Conversation messages persisted only at lifecycle boundaries (pause/complete/fail), not per tool call -- avoiding write amplification
+  2. Conversation messages persisted by the executor -- persistence strategy is an implementation decision behind the interface
   3. wait_for tool pauses the conversation and registers the expected signal type; signals arriving while conversation is running are queued and checked on next wait_for
   4. Heartbeat mechanism (last_heartbeat_at updated during execution) detects stale conversations and re-enqueues them; concurrency invariant enforced so exactly one agent loop runs per conversation at any time
   5. Deterministic conversation IDs from agent definition + correlation key; duplicate start() calls for the same conversation ID are idempotent no-ops; failed/crashed conversations are re-enqueued for at-least-once execution

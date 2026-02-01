@@ -32,7 +32,7 @@ Requirements for v2.3 milestone. Each maps to roadmap phases starting at Phase 3
 
 - [ ] **EXEC-01**: ConversationExecutor with start(), signal(), get(), cancel(), list() API
 - [ ] **EXEC-02**: Worker loop claims queued conversations with concurrency-safe locking (exactly one claimer per conversation)
-- [ ] **EXEC-03**: Conversation messages persisted only at lifecycle boundaries (pause/complete/fail), not per tool call
+- [ ] **EXEC-03**: Conversation messages persisted by the executor — persistence strategy is an implementation decision behind the ConversationExecutor interface
 - [ ] **EXEC-04**: Heartbeat mechanism detects running conversations during agent loop execution
 - [ ] **EXEC-05**: Stale conversation detection — re-enqueue conversations with expired heartbeats
 - [ ] **EXEC-06**: Concurrency invariant: exactly one agent loop per conversation at any time
