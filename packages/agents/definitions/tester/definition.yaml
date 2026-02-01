@@ -1,0 +1,22 @@
+id: tester
+name: Test Runner
+description: >
+  Runs tests, analyzes failures, and provides clear diagnoses with
+  categorized root cause analysis.
+version: "1"
+
+model: claude-haiku-4-5-20251001
+
+tools:
+  - codebase:read_file
+  - codebase:search_codebase
+  - codebase:run_command
+
+maxIterations: 20
+tokenBudget: 100000
+
+history:
+  pruneThreshold: 40000
+  protectedMessages: 10
+  summaryThreshold: 60000
+  summaryModel: claude-haiku-4-5-20251001
