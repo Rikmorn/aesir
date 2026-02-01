@@ -6,6 +6,16 @@
 
 export { createAgentRegistry } from "./agent-registry.js";
 export { createEventLog } from "./event-log.js";
+export type {
+  CompactionResult,
+  HistoryConfig,
+  HistoryManager,
+} from "./history-manager.js";
+export {
+  createHistoryManager,
+  estimateMessageTokens,
+  estimateTokens,
+} from "./history-manager.js";
 export { createSessionProjection } from "./session-projection.js";
 export { registerAllTools } from "./tool-factories.js";
 export { createToolRegistry } from "./tool-registry.js";
