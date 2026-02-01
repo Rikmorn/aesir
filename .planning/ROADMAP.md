@@ -16,7 +16,7 @@ v2.3 replaces Temporal workflow orchestration, per-agent services, and fragmente
 
 - [x] **Phase 37: Database Schema + Event Log Core** - Persistence layer for conversations, events, and session projections
 - [x] **Phase 38: Agent and Tool Registries** - Declarative agent definitions loaded from YAML + prompt.md with factory-based tool resolution
-- [ ] **Phase 39: History Manager** - Three-phase conversation compaction with tool pruning and structured summarization
+- [x] **Phase 39: History Manager** - Three-phase conversation compaction with tool pruning and structured summarization
 - [ ] **Phase 40: Conversation Executor** - Postgres-backed durable executor replacing Temporal workflows
 - [ ] **Phase 41: Timeout Scheduling** - pg-boss integration for delayed signal delivery
 - [ ] **Phase 42: Event Router + Adapters** - Webhook normalization to domain events with correlation-based signal routing
@@ -76,8 +76,8 @@ Plans:
   3. History config (protectedMessages, pruningThreshold, summaryThreshold) is set per agent definition, and every agent gets compaction through config without custom code
 **Plans**: 2 plans
 Plans:
-- [ ] 39-01-PLAN.md -- Phase 1 pruning (token estimation, dedup, head+tail, descriptors, protected boundary) + tests
-- [ ] 39-02-PLAN.md -- Phase 2 summarization (LLM summary, artifact grounding, summary merge, pipeline) + tests
+- [x] 39-01-PLAN.md -- Phase 1 pruning (token estimation, dedup, head+tail, descriptors, protected boundary) + tests
+- [x] 39-02-PLAN.md -- Phase 2 summarization (LLM summary, artifact grounding, summary merge, pipeline) + tests
 
 ### Phase 40: Conversation Executor
 **Goal**: Durable conversation executor that replaces Temporal workflows -- worker loop claims conversations with concurrency-safe locking, agents pause via wait_for tool, signals resume matching conversations, with at-least-once execution and crash recovery
@@ -190,7 +190,7 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 |-------|---------------|--------|-----------|
 | 37. Database Schema + Event Log Core | 3/3 | Complete | 2026-02-01 |
 | 38. Agent and Tool Registries | 4/4 | Complete | 2026-02-01 |
-| 39. History Manager | 0/2 | Not started | - |
+| 39. History Manager | 2/2 | Complete | 2026-02-01 |
 | 40. Conversation Executor | 0/TBD | Not started | - |
 | 41. Timeout Scheduling | 0/TBD | Not started | - |
 | 42. Event Router + Adapters | 0/TBD | Not started | - |
@@ -202,4 +202,4 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 
 ---
 *Roadmap created: 2026-02-01*
-*Last updated: 2026-02-01 -- Phase 39 planned (2 plans in 2 waves)*
+*Last updated: 2026-02-01 -- Phase 39 complete (2/2 plans)*

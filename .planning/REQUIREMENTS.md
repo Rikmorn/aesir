@@ -44,12 +44,12 @@ Requirements for v2.3 milestone. Each maps to roadmap phases starting at Phase 3
 
 ### History Management
 
-- [ ] **HIST-01**: Phase 1 pruning: protect last N messages, replace old tool results with descriptors
-- [ ] **HIST-02**: Phase 1 pruning: deduplicate consecutive same-file reads, head+tail preservation for large outputs
-- [ ] **HIST-03**: Phase 2 structured summarization: replace oldest section with anchored summary
-- [ ] **HIST-04**: Phase 2 summaries inject ground-truth artifacts from session projection (not LLM memory)
-- [ ] **HIST-05**: History config per agent definition (protectedMessages, pruningThreshold, summaryThreshold)
-- [ ] **HIST-06**: Framework-level compaction (not per-agent custom code) — all agents get compaction via config
+- [x] **HIST-01**: Phase 1 pruning: protect last N messages, replace old tool results with descriptors
+- [x] **HIST-02**: Phase 1 pruning: deduplicate consecutive same-file reads, head+tail preservation for large outputs
+- [x] **HIST-03**: Phase 2 structured summarization: replace oldest section with anchored summary
+- [x] **HIST-04**: Phase 2 summaries inject ground-truth artifacts from session projection (not LLM memory)
+- [x] **HIST-05**: History config per agent definition (protectedMessages, pruningThreshold, summaryThreshold)
+- [x] **HIST-06**: Framework-level compaction (not per-agent custom code) — all agents get compaction via config
 
 ### Registries
 
@@ -153,12 +153,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REG-04 | Phase 38 | Complete |
 | REG-05 | Phase 38 | Complete |
 | REG-06 | Phase 38 | Complete |
-| HIST-01 | Phase 39 | Pending |
-| HIST-02 | Phase 39 | Pending |
-| HIST-03 | Phase 39 | Pending |
-| HIST-04 | Phase 39 | Pending |
-| HIST-05 | Phase 39 | Pending |
-| HIST-06 | Phase 39 | Pending |
+| HIST-01 | Phase 39 | Complete |
+| HIST-02 | Phase 39 | Complete |
+| HIST-03 | Phase 39 | Complete |
+| HIST-04 | Phase 39 | Complete |
+| HIST-05 | Phase 39 | Complete |
+| HIST-06 | Phase 39 | Complete |
 | EXEC-01 | Phase 40 | Pending |
 | EXEC-02 | Phase 40 | Pending |
 | EXEC-03 | Phase 40 | Pending |
@@ -201,4 +201,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-01*
-*Last updated: 2026-02-01 after initial definition*
+*Last updated: 2026-02-01 -- Phase 39 complete (HIST-01 through HIST-06)*
