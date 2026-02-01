@@ -6,8 +6,10 @@
  * implementations live in separate modules (event-log.ts, session-projection.ts).
  */
 
-import type { PinoLogger } from "@aesir/platform";
+import type { DevContainerManager, PinoLogger } from "@aesir/platform";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { z } from "zod";
+import type { ToolDefinition } from "../shared/agent-loop/types.js";
 import type * as agentsSchemaModule from "../shared/db/schema.js";
 import type {
   AgentEvent,
@@ -187,4 +189,171 @@ export interface SessionProjection {
    * Stop listening for events and clean up.
    */
   close(): void;
+}
+
+// ─── Agent Definition Schema ────────────────────────────────────────────────
+
+/**
+ * Zod schema for tool reference strings.
+ * Format: namespace:tool_name (lowercase letters only, separated by colon).
+ * Examples: "linear:get_issue", "github:create_branch", "codebase:read_file"
+ */
+const toolRefSchema = z
+  .string()
+  .regex(
+    /^[a-z]+:[a-z_]+$/,
+    "Tool reference must be namespace:tool_name (lowercase, colon-separated)",
+  );
+
+/**
+ * Zod schema for agent definition YAML files.
+ *
+ * Validates parsed YAML into a typed object. The `version` field is a string
+ * because YAML coerces unquoted numbers (e.g., `version: 1.0` becomes a float).
+ * Keeping it as a string avoids lossy conversions.
+ *
+ * The `systemPrompt` field is NOT in this schema -- it is loaded separately
+ * from prompt.md and added to the AgentDefinition at load time.
+ */
+export const AgentDefinitionYamlSchema = z.object({
+  /** Unique agent identifier (e.g., "dev-agent", "researcher") */
+  id: z.string().min(1),
+  /** Human-readable agent name */
+  name: z.string().min(1),
+  /** Description of what this agent does */
+  description: z.string().min(1),
+  /** Version string (MUST be string -- YAML coerces unquoted numbers) */
+  version: z.string().min(1),
+
+  /** LLM model identifier (e.g., "claude-sonnet-4-20250514") */
+  model: z.string().min(1),
+  /** LLM temperature (0-2), optional */
+  temperature: z.number().min(0).max(2).optional(),
+
+  /** Tool references in namespace:tool_name format */
+  tools: z.array(toolRefSchema).min(1),
+  /** Sub-agent mappings: role -> agent definition ID */
+  subAgents: z.record(z.string(), z.string()).optional(),
+
+  /** Maximum agent loop iterations before forced stop */
+  maxIterations: z.number().int().positive(),
+  /** Total token budget for the agent (input + output) */
+  tokenBudget: z.number().int().min(0),
+
+  /** History management configuration */
+  history: z.object({
+    /** Message count threshold to trigger pruning */
+    pruneThreshold: z.number().int().positive(),
+    /** Number of initial messages to protect from pruning */
+    protectedMessages: z.number().int().positive(),
+    /** Message count threshold to trigger summarization */
+    summaryThreshold: z.number().int().positive(),
+    /** Model to use for summary generation */
+    summaryModel: z.string().min(1),
+  }),
+
+  /** Event triggers that start this agent */
+  triggers: z
+    .array(
+      z.object({
+        /** Event name that triggers this agent (e.g., "linear.issue.assigned") */
+        event: z.string().min(1),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * Type inferred from AgentDefinitionYamlSchema.
+ * Represents the shape of a parsed and validated YAML definition file.
+ */
+export type AgentDefinitionYaml = z.infer<typeof AgentDefinitionYamlSchema>;
+
+/**
+ * Full agent definition combining YAML config with loaded prompt.
+ *
+ * The YAML schema provides all configuration fields. The systemPrompt is
+ * loaded from the companion prompt.md file and added at load time by
+ * the AgentRegistry.
+ */
+export interface AgentDefinition extends AgentDefinitionYaml {
+  /** System prompt loaded from prompt.md (not part of YAML) */
+  systemPrompt: string;
+}
+
+// ─── Tool Context & Factory ─────────────────────────────────────────────────
+
+/**
+ * Context provided to tool factories when resolving tool references.
+ *
+ * Contains the runtime information tools need to operate: which agent
+ * is calling, correlation ID for tracing, optional container manager
+ * for codebase tools, and a logger.
+ */
+export interface ToolContext {
+  /** ID of the agent using this tool */
+  agentId: string;
+  /** Correlation ID for distributed tracing */
+  correlationId: string;
+  /** Container manager for codebase tools (optional -- not all agents use containers) */
+  containerManager?: DevContainerManager | undefined;
+  /** Task ID identifying which dev container to use (optional) */
+  taskId?: string | undefined;
+  /** Logger instance */
+  logger: PinoLogger;
+}
+
+/**
+ * Factory function that creates a ToolDefinition from a ToolContext.
+ *
+ * Tool factories are registered in the ToolRegistry keyed by namespace:tool_name.
+ * When an agent's tool references are resolved, each factory is called with the
+ * current ToolContext to produce a ToolDefinition bound to that context.
+ */
+export type ToolFactory = (context: ToolContext) => ToolDefinition;
+
+// ─── Registry Interfaces ────────────────────────────────────────────────────
+
+/**
+ * ToolRegistry - Maps tool reference strings to factory functions.
+ *
+ * Tool references use namespace:tool_name format (e.g., "linear:get_issue").
+ * Factories are called at resolve time with a ToolContext, producing
+ * ToolDefinition objects that the agent loop can execute.
+ */
+export interface ToolRegistry {
+  /**
+   * Register a tool factory for a tool reference.
+   * @throws Error if ref format is invalid or ref is already registered.
+   */
+  register(ref: string, factory: ToolFactory): void;
+
+  /**
+   * Resolve tool references to ToolDefinitions using the provided context.
+   * @throws Error if any refs are not registered (lists ALL missing refs).
+   */
+  resolve(toolRefs: string[], context: ToolContext): ToolDefinition[];
+
+  /** Check if a tool reference is registered. */
+  has(ref: string): boolean;
+
+  /** List all registered tool references, sorted alphabetically. */
+  listRegistered(): string[];
+}
+
+/**
+ * AgentRegistry - Loads and caches agent definitions from definition files.
+ *
+ * Definitions are loaded from YAML files on disk, validated with Zod,
+ * and cached in memory with mtime-based invalidation.
+ */
+export interface AgentRegistry {
+  /**
+   * Get an agent definition by ID, optionally at a specific version.
+   * Returns null if the agent is not found.
+   */
+  get(id: string, version?: string): Promise<AgentDefinition | null>;
+
+  /** List all available agent definitions. */
+  list(): Promise<AgentDefinition[]>;
 }
