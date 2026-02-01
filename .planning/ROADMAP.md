@@ -39,7 +39,11 @@ v2.3 replaces Temporal workflow orchestration, per-agent services, and fragmente
   2. EventLog appends events with gapless per-conversation sequences and correct event types (tool.called, tool.succeeded, tool.failed, llm.response, agent.started, agent.completed, agent.paused, agent.resumed, signal.received)
   3. Buffered writes flush events at configurable intervals, with synchronous flush at lifecycle boundaries (pause, complete, fail)
   4. agent_sessions projection reactively updates status, timing, and ground-truth artifacts (PR URLs, branch names) extracted from tool.succeeded events
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 37-01-PLAN.md -- Database schema (3 tables), migration, ID prefixes, framework type interfaces
+- [ ] 37-02-PLAN.md -- EventLog service (buffered writes, gapless sequences, subscribe) + tests
+- [ ] 37-03-PLAN.md -- SessionProjection service (reactive event subscription, artifact extraction) + tests
 
 ### Phase 38: Agent and Tool Registries
 **Goal**: Agents defined as YAML config + prompt.md files loaded by registries, with factory-based tool resolution -- adding a new agent requires only a new definition directory
@@ -176,7 +180,7 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
-| 37. Database Schema + Event Log Core | 0/TBD | Not started | - |
+| 37. Database Schema + Event Log Core | 0/3 | Planned | - |
 | 38. Agent and Tool Registries | 0/TBD | Not started | - |
 | 39. History Manager | 0/TBD | Not started | - |
 | 40. Conversation Executor | 0/TBD | Not started | - |
