@@ -1,5 +1,34 @@
 # Project Milestones: Aesir
 
+## v2.2 Agentic Architecture (Shipped: 2026-01-31)
+
+**Delivered:** Replaced LangGraph state machine architecture with agentic tool-use loops where LLMs make control flow decisions — agents reason, act, observe, and adapt instead of following predetermined graphs
+
+**Phases completed:** 28-36 (9 phases, 30 plans total)
+
+**Key accomplishments:**
+- Core `runAgentLoop()` runtime with @anthropic-ai/sdk native tool-use powering all agents
+- Dev agent orchestrator with sub-agents (researcher, coder, tester) replacing 13-node LangGraph graph
+- Product agent as single adaptive agentic loop replacing 6-node LangGraph graph
+- Smart router: hybrid deterministic + LLM event classification replacing hardcoded switches
+- 25 typed tool definitions in 4 role-specific toolkits with error-as-data pattern
+- Database-backed context snapshots and execution tracing with parent/child agent correlation
+- All @langchain/* dependencies removed, 51 LangGraph files deleted
+- Full guardrails: sandbox enforcement, merge protection, token budgets, cost tracking
+
+**Stats:**
+- 359 files modified (+27,586 net lines)
+- 83,110 lines of TypeScript total
+- 9 phases, 30 plans, 78 requirements (78/78 satisfied)
+- 157 commits over 3 days (2026-01-29 → 2026-01-31)
+- 926 tests passing across 56 test files
+
+**Git range:** `dd26368` → `cbbb004`
+
+**What's next:** Production readiness (CI/CD, monitoring, multi-environment) or new agent capabilities
+
+---
+
 ## v2.1 Agents That Ship (Shipped: 2026-01-28)
 
 **Delivered:** End-to-end automated development workflow where Slack messages become mergeable PRs through agent collaboration with human-in-the-loop approvals
