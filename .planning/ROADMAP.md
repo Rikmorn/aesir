@@ -107,7 +107,10 @@ Plans:
   1. Delayed signal delivery (e.g., timeout after 72 hours) wakes paused conversations
   2. Timeout signals are delivered through the same signal pathway as external events (no separate handling)
   3. Timeouts are cancelled when a conversation resumes before the timeout fires (preventing stale timeout signals)
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 41-01-PLAN.md -- TimeoutScheduler service (pg-boss wrapper, IDatabase adapter, duration parser) + tests
+- [ ] 41-02-PLAN.md -- Wire TimeoutScheduler into executor and worker loop (schedule on pause, cancel on resume/cancel) + tests
 
 ### Phase 42: Event Router + Adapters
 **Goal**: Adapter pattern normalizes raw webhook payloads from Slack, GitHub, and Linear into domain-language IncomingEvent types, and the EventRouter matches events against agent trigger rules for start or correlation-based signal delivery
@@ -196,7 +199,7 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 | 38. Agent and Tool Registries | 4/4 | Complete | 2026-02-01 |
 | 39. History Manager | 2/2 | Complete | 2026-02-01 |
 | 40. Conversation Executor | 3/3 | Complete | 2026-02-02 |
-| 41. Timeout Scheduling | 0/TBD | Not started | - |
+| 41. Timeout Scheduling | 0/2 | Not started | - |
 | 42. Event Router + Adapters | 0/TBD | Not started | - |
 | 43. Smart Router Adaptation | 0/TBD | Not started | - |
 | 44. Single Service Consolidation | 0/TBD | Not started | - |
@@ -206,4 +209,4 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 
 ---
 *Roadmap created: 2026-02-01*
-*Last updated: 2026-02-02 -- Phase 40 complete (3 plans, 86 tests, verified)*
+*Last updated: 2026-02-02 -- Phase 41 planned (2 plans in 2 waves)*
