@@ -18,7 +18,7 @@ v2.3 replaces Temporal workflow orchestration, per-agent services, and fragmente
 - [x] **Phase 38: Agent and Tool Registries** - Declarative agent definitions loaded from YAML + prompt.md with factory-based tool resolution
 - [x] **Phase 39: History Manager** - Three-phase conversation compaction with tool pruning and structured summarization
 - [x] **Phase 40: Conversation Executor** - Postgres-backed durable executor replacing Temporal workflows
-- [ ] **Phase 41: Timeout Scheduling** - pg-boss integration for delayed signal delivery
+- [x] **Phase 41: Timeout Scheduling** - pg-boss integration for delayed signal delivery
 - [ ] **Phase 42: Event Router + Adapters** - Webhook normalization to domain events with correlation-based signal routing
 - [ ] **Phase 43: Smart Router Adaptation** - Adapt existing smart router from Temporal client to ConversationExecutor
 - [ ] **Phase 44: Single Service Consolidation** - One HTTP service replacing dev-agent, product-agent, and router services
@@ -109,8 +109,8 @@ Plans:
   3. Timeouts are cancelled when a conversation resumes before the timeout fires (preventing stale timeout signals)
 **Plans**: 2 plans
 Plans:
-- [ ] 41-01-PLAN.md -- TimeoutScheduler service (pg-boss wrapper, IDatabase adapter, duration parser) + tests
-- [ ] 41-02-PLAN.md -- Wire TimeoutScheduler into executor and worker loop (schedule on pause, cancel on resume/cancel) + tests
+- [x] 41-01-PLAN.md -- TimeoutScheduler service (pg-boss wrapper, IDatabase adapter, duration parser) + tests
+- [x] 41-02-PLAN.md -- Wire TimeoutScheduler into executor and worker loop (schedule on pause, cancel on resume/cancel) + tests
 
 ### Phase 42: Event Router + Adapters
 **Goal**: Adapter pattern normalizes raw webhook payloads from Slack, GitHub, and Linear into domain-language IncomingEvent types, and the EventRouter matches events against agent trigger rules for start or correlation-based signal delivery
@@ -199,7 +199,7 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 | 38. Agent and Tool Registries | 4/4 | Complete | 2026-02-01 |
 | 39. History Manager | 2/2 | Complete | 2026-02-01 |
 | 40. Conversation Executor | 3/3 | Complete | 2026-02-02 |
-| 41. Timeout Scheduling | 0/2 | Not started | - |
+| 41. Timeout Scheduling | 2/2 | Complete | 2026-02-02 |
 | 42. Event Router + Adapters | 0/TBD | Not started | - |
 | 43. Smart Router Adaptation | 0/TBD | Not started | - |
 | 44. Single Service Consolidation | 0/TBD | Not started | - |
@@ -209,4 +209,4 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 
 ---
 *Roadmap created: 2026-02-01*
-*Last updated: 2026-02-02 -- Phase 41 planned (2 plans in 2 waves)*
+*Last updated: 2026-02-02 -- Phase 41 complete (2 plans, 32 tests, verified)*

@@ -81,9 +81,9 @@ Requirements for v2.3 milestone. Each maps to roadmap phases starting at Phase 3
 
 ### Timeout Scheduling
 
-- [ ] **TMO-01**: Delayed signal delivery for timeout enforcement (e.g., "wake in 72 hours")
-- [ ] **TMO-02**: Timeout cancellation on conversation resume (prevent stale timeout signals)
-- [ ] **TMO-03**: Timeout signals delivered through same signal pathway as external events
+- [x] **TMO-01**: Delayed signal delivery for timeout enforcement (e.g., "wake in 72 hours")
+- [x] **TMO-02**: Timeout cancellation on conversation resume (prevent stale timeout signals)
+- [x] **TMO-03**: Timeout signals delivered through same signal pathway as external events
 
 ### Migration
 
@@ -170,9 +170,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXEC-09 | Phase 40 | Complete |
 | EXEC-10 | Phase 40 | Complete |
 | EXEC-11 | Phase 40 | Complete |
-| TMO-01 | Phase 41 | Pending |
-| TMO-02 | Phase 41 | Pending |
-| TMO-03 | Phase 41 | Pending |
+| TMO-01 | Phase 41 | Complete |
+| TMO-02 | Phase 41 | Complete |
+| TMO-03 | Phase 41 | Complete |
 | SIG-01 | Phase 42 | Pending |
 | SIG-02 | Phase 42 | Pending |
 | SIG-03 | Phase 42 | Pending |
@@ -201,4 +201,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-01*
-*Last updated: 2026-02-01 -- Phase 39 complete (HIST-01 through HIST-06)*
+*Last updated: 2026-02-02 -- Phase 41 complete (TMO-01 through TMO-03)*
