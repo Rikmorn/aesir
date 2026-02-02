@@ -9,6 +9,7 @@
 import type { DevContainerManager, PinoLogger } from "@aesir/platform";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { z } from "zod";
+import type { IncomingEvent } from "../adapters/types.js";
 import type { ToolDefinition } from "../shared/agent-loop/types.js";
 import type * as agentsSchemaModule from "../shared/db/schema.js";
 import type {
@@ -574,4 +575,58 @@ export class AgentAbortedError extends Error {
     super(message ?? "Agent aborted");
     this.name = "AgentAbortedError";
   }
+}
+
+// ─── EventRouter ────────────────────────────────────────────────────────────
+
+/**
+ * Route result from EventRouter.handle().
+ * Discriminated union on the `action` field.
+ */
+export type EventRouterRouteResult =
+  | {
+      action: "start";
+      agentDefinitionId: string;
+      conversationId: string;
+      correlationKey: string;
+      message: string;
+      event: IncomingEvent;
+    }
+  | {
+      action: "signal";
+      conversationId: string;
+      signal: Signal;
+      event: IncomingEvent;
+    }
+  | { action: "slow_path"; event: IncomingEvent }
+  | { action: "ignore"; reason: string };
+
+/**
+ * Options for creating an EventRouter.
+ */
+export interface EventRouterOptions {
+  /** Agent registry for loading trigger rules */
+  agentRegistry: AgentRegistry;
+  /** Logger instance */
+  logger: PinoLogger;
+}
+
+/**
+ * EventRouter - Matches IncomingEvents against agent trigger rules.
+ *
+ * Produces routing decisions (start, signal, ignore, slow_path) without
+ * executing them. The caller is responsible for executing the decision
+ * via ConversationExecutor, enrichment, or slow-path LLM routing.
+ */
+export interface EventRouter {
+  /**
+   * Initialize the router by loading start rules from AgentRegistry.
+   * Must be called before handle(). Can be called again to refresh rules.
+   */
+  loadStartRules(): Promise<void>;
+
+  /**
+   * Route an IncomingEvent to a routing decision.
+   */
+  handle(event: IncomingEvent): EventRouterRouteResult;
 }
