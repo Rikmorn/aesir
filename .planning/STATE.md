@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.3 Unified Agent Framework — Phase 40 in progress
+**Current focus:** v2.3 Unified Agent Framework -- Phase 40 complete, Phase 41 next
 
 ## Current Position
 
-Phase: 40 of 47 (Conversation Executor)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-02 — Completed 40-02-PLAN.md (ConversationExecutor core implementation)
+Phase: 40 of 47 (Conversation Executor) -- COMPLETE
+Plan: 3 of 3 in current phase -- COMPLETE
+Status: Phase complete
+Last activity: 2026-02-02 -- Completed 40-03-PLAN.md (Worker loop, wait_for wiring, tests)
 
-Progress: [████░░░░░░] ~37% (11/~30 estimated plans)
+Progress: [█████░░░░░] ~43% (14/~30 estimated plans)
 
 ## Milestone History
 
@@ -28,9 +28,9 @@ Progress: [████░░░░░░] ~37% (11/~30 estimated plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11 (v2.3)
-- Average duration: 6m29s
-- Total execution time: 71m27s
+- Total plans completed: 14 (v2.3)
+- Average duration: ~6m30s
+- Total execution time: ~86m
 
 **By Phase:**
 
@@ -39,7 +39,7 @@ Progress: [████░░░░░░] ~37% (11/~30 estimated plans)
 | 37 | 3/3 | 20m09s | 6m43s |
 | 38 | 4/4 | 20m59s | 5m15s |
 | 39 | 2/2 | 16m50s | 8m25s |
-| 40 | 2/3 | 13m28s | 6m44s |
+| 40 | 3/3 | ~28m | ~9m20s |
 
 *Updated after each plan completion*
 
@@ -80,6 +80,9 @@ v2.3 decisions:
 - FOR UPDATE locking via Drizzle .for("update") rather than raw SQL -- keeps queries type-safe
 - Previous attempt context injected from SessionProjection into re-trigger initial message -- gives agent awareness of prior work
 - Signal validation via SignalSchema.safeParse before transaction -- fail fast on invalid payloads
+- Context-serialization for resumed conversations -- serializes prior messages as context parameter to runAgentLoop rather than modifying its signature
+- Raw SQL CTE for SKIP LOCKED claiming -- Drizzle query builder cannot compose CTEs with FOR UPDATE SKIP LOCKED
+- Ownership verification after agent loop before persisting results -- prevents split-brain writes from stale detection race
 
 ### Pending Todos
 
@@ -97,9 +100,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 40-02-PLAN.md (ConversationExecutor core -- 41 tests, 787 total passing)
+Stopped at: Completed 40-03-PLAN.md (Worker loop -- 32 tests, 1175 total passing, Phase 40 complete)
 Resume file: None
-Next action: Phase 40 Plan 03 (Worker loop, spawn_agent, signal delivery)
+Next action: Phase 41 (Timeout Scheduling) -- plan needed
 
 ---
-*Updated: 2026-02-02 — Completed plan 40-02, Phase 40 (Conversation Executor) in progress*
+*Updated: 2026-02-02 -- Completed plan 40-03, Phase 40 (Conversation Executor) complete*

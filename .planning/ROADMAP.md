@@ -17,7 +17,7 @@ v2.3 replaces Temporal workflow orchestration, per-agent services, and fragmente
 - [x] **Phase 37: Database Schema + Event Log Core** - Persistence layer for conversations, events, and session projections
 - [x] **Phase 38: Agent and Tool Registries** - Declarative agent definitions loaded from YAML + prompt.md with factory-based tool resolution
 - [x] **Phase 39: History Manager** - Three-phase conversation compaction with tool pruning and structured summarization
-- [ ] **Phase 40: Conversation Executor** - Postgres-backed durable executor replacing Temporal workflows
+- [x] **Phase 40: Conversation Executor** - Postgres-backed durable executor replacing Temporal workflows
 - [ ] **Phase 41: Timeout Scheduling** - pg-boss integration for delayed signal delivery
 - [ ] **Phase 42: Event Router + Adapters** - Webhook normalization to domain events with correlation-based signal routing
 - [ ] **Phase 43: Smart Router Adaptation** - Adapt existing smart router from Temporal client to ConversationExecutor
@@ -93,9 +93,9 @@ Plans:
   5. Deterministic conversation IDs from agent definition + correlation key; duplicate start() calls for the same conversation ID are idempotent no-ops; failed/crashed conversations are re-enqueued for at-least-once execution
 **Plans**: 3 plans
 Plans:
-- [ ] 40-01-PLAN.md -- Migration 0002 (executor columns, LZ4), ConversationExecutor interface, wait_for tool
-- [ ] 40-02-PLAN.md -- ConversationExecutor core implementation (start, signal, get, cancel, list) + tests
-- [ ] 40-03-PLAN.md -- Worker loop (claim, heartbeat, execute, stale recovery, graceful shutdown) + tool factory wiring + tests
+- [x] 40-01-PLAN.md -- Migration 0002 (executor columns, LZ4), ConversationExecutor interface, wait_for tool
+- [x] 40-02-PLAN.md -- ConversationExecutor core implementation (start, signal, get, cancel, list) + tests
+- [x] 40-03-PLAN.md -- Worker loop (claim, heartbeat, execute, stale recovery, graceful shutdown) + tool factory wiring + tests
 
 ### Phase 41: Timeout Scheduling
 **Goal**: Delayed signal delivery to conversations (e.g., "wake in 72 hours") through the same signal pathway as external events
