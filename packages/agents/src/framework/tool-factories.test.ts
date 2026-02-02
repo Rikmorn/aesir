@@ -183,19 +183,23 @@ describe("registerAllTools", () => {
   // ── Placeholders ─────────────────────────────────────────────────────────
 
   describe("placeholders", () => {
-    it("should resolve coordination:wait_for to placeholder that returns isError", async () => {
+    it("should resolve coordination:wait_for to real tool that returns confirmation", async () => {
       const { registry } = setupRegistry();
       const ctx = createMockContext();
 
       const tools = registry.resolve(["coordination:wait_for"], ctx);
       expect(tools).toHaveLength(1);
+      expect(tools[0]?.name).toBe("wait_for");
 
       const result = await tools[0]?.execute({
-        signalType: "approval",
+        type: "approval",
+        reason: "Need human review",
       });
 
-      expect(result?.isError).toBe(true);
-      expect(result?.content).toContain("Phase 40");
+      // Real tool returns a confirmation message (not an error)
+      expect(result?.isError).toBeUndefined();
+      expect(result?.content).toContain("Conversation paused");
+      expect(result?.content).toContain("approval");
     });
 
     it("should resolve coordination:spawn_agent to placeholder that returns isError", async () => {

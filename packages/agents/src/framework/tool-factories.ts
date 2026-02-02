@@ -35,6 +35,10 @@ import type { McpToolDeps } from "../shared/tools/integration/mcp-wrapper.js";
 import { createSlackTools } from "../shared/tools/integration/slack-tools.js";
 import type { CodebaseToolDeps } from "../shared/tools/types.js";
 import type { AgentRegistry, ToolContext, ToolRegistry } from "./types.js";
+import {
+  createDefaultWaitForState,
+  createWaitForTool,
+} from "./wait-for-tool.js";
 
 // ─── Options ─────────────────────────────────────────────────────────────────
 
@@ -266,29 +270,15 @@ export function registerAllTools(options: RegisterAllToolsOptions): void {
     },
   }));
 
-  // wait_for -- placeholder for Phase 40 (pause/resume semantics)
-  registry.register("coordination:wait_for", () => ({
-    name: "wait_for",
-    description:
-      "Pause conversation and wait for an external signal. " +
-      "Specify the signal type to wait for (e.g., 'approval', 'pr_review'). " +
-      "The conversation will resume when the signal arrives.",
-    inputSchema: z.object({
-      signalType: z.string().describe("Type of signal to wait for"),
-      timeoutMs: z
-        .number()
-        .optional()
-        .describe("Optional timeout in milliseconds"),
-    }),
-    async execute(): Promise<{ content: string; isError: boolean }> {
-      return {
-        content:
-          "wait_for tool is not yet implemented. " +
-          "Phase 40 (ConversationExecutor) will implement pause/resume semantics.",
-        isError: true,
-      };
-    },
-  }));
+  // wait_for -- real implementation from Phase 40
+  // Creates a default WaitForState so the tool resolves correctly in the registry.
+  // When the executor runs, it replaces the execute function with one bound to
+  // a per-conversation WaitForState. Outside the executor, the tool still works
+  // but the state goes nowhere useful.
+  registry.register("coordination:wait_for", (_ctx: ToolContext) => {
+    const defaultState = createDefaultWaitForState();
+    return createWaitForTool(defaultState);
+  });
 
   // ── Summary ────────────────────────────────────────────────────────────
 
