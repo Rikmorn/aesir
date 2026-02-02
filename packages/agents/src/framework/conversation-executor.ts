@@ -22,6 +22,8 @@ import type {
   StartConversationParams,
 } from "./types.js";
 import { SignalSchema } from "./types.js";
+import type { WorkerLoop } from "./worker-loop.js";
+import { createWorkerLoop } from "./worker-loop.js";
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
@@ -90,6 +92,33 @@ export function createConversationExecutor(
     throw new Error("logger is required for ConversationExecutor");
 
   const logger = parentLogger.child({ component: "conversation-executor" });
+
+  // Create the worker loop for executing queued conversations
+  let workerLoop: WorkerLoop | null = null;
+
+  function getOrCreateWorkerLoop(): WorkerLoop {
+    if (!workerLoop) {
+      const loopOpts: Parameters<typeof createWorkerLoop>[0] = {
+        db,
+        eventLog,
+        sessionProjection,
+        agentRegistry,
+        toolRegistry,
+        logger: parentLogger,
+      };
+      if (options.pollIntervalMs !== undefined)
+        loopOpts.pollIntervalMs = options.pollIntervalMs;
+      if (options.concurrencyLimit !== undefined)
+        loopOpts.concurrencyLimit = options.concurrencyLimit;
+      if (options.heartbeatIntervalMs !== undefined)
+        loopOpts.heartbeatIntervalMs = options.heartbeatIntervalMs;
+      if (options.staleThresholdMs !== undefined)
+        loopOpts.staleThresholdMs = options.staleThresholdMs;
+      if (options.workerId !== undefined) loopOpts.workerId = options.workerId;
+      workerLoop = createWorkerLoop(loopOpts);
+    }
+    return workerLoop;
+  }
 
   // Terminal statuses where re-trigger creates a new conversation
   const TERMINAL_STATUSES: ConversationStatus[] = [
@@ -533,6 +562,18 @@ export function createConversationExecutor(
               .limit(limit);
 
       return rows.map(toConversationInfo);
+    },
+
+    startWorker(): void {
+      const loop = getOrCreateWorkerLoop();
+      loop.start();
+    },
+
+    async stopWorker(): Promise<void> {
+      if (workerLoop) {
+        await workerLoop.close();
+        workerLoop = null;
+      }
     },
   };
 }

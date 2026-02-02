@@ -502,6 +502,18 @@ export interface ConversationExecutor {
     agentDefinitionId?: string;
     limit?: number;
   }): Promise<ConversationInfo[]>;
+
+  /**
+   * Start the worker loop that polls for and executes queued conversations.
+   * Idempotent: calling when already started is a no-op.
+   */
+  startWorker(): void;
+
+  /**
+   * Stop the worker loop gracefully: stops accepting new work,
+   * waits for running conversations to finish, and flushes resources.
+   */
+  stopWorker(): Promise<void>;
 }
 
 /**
