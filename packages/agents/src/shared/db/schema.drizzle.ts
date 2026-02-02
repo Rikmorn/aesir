@@ -209,6 +209,11 @@ export const conversations = agentsSchema.table(
     claimed_by: text("claimed_by"),
     claimed_at: timestamp("claimed_at", { withTimezone: true }),
     last_heartbeat_at: timestamp("last_heartbeat_at", { withTimezone: true }),
+    retry_count: integer("retry_count").notNull().default(0),
+    max_retries: integer("max_retries").notNull().default(2),
+    error_message: text("error_message"),
+    delivered_signal_ids: jsonb("delivered_signal_ids").notNull().default([]),
+    parent_conversation_id: text("parent_conversation_id"),
     created_at: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -219,6 +224,7 @@ export const conversations = agentsSchema.table(
   (table) => [
     index("idx_conversations_status").on(table.status),
     index("idx_conversations_definition").on(table.agent_definition_id),
+    index("idx_conversations_parent").on(table.parent_conversation_id),
   ],
 );
 

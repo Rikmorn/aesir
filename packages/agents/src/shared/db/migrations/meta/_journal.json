@@ -15,6 +15,13 @@
       "when": 1738368000000,
       "tag": "0001_add_v23_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1738540800000,
+      "tag": "0002_add_executor_columns",
+      "breakpoints": true
     }
   ]
 }
