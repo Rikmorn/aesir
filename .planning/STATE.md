@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.3 Unified Agent Framework -- Phase 42 in progress
+**Current focus:** v2.3 Unified Agent Framework -- Phase 42 complete, ready for Phase 43
 
 ## Current Position
 
-Phase: 42 of 47 (Event Router + Adapters)
-Plan: 2 of 3 in current phase -- COMPLETE
-Status: In progress
-Last activity: 2026-02-02 -- Completed 42-02-PLAN.md (router tool adapters, conversation-based slow-path)
+Phase: 42 of 47 (Event Router + Adapters) -- COMPLETE
+Plan: 3 of 3 in current phase -- COMPLETE
+Status: Phase complete
+Last activity: 2026-02-02 -- Completed 42-03-PLAN.md (EventRouter entry point)
 
-Progress: [████████░░] ~60% (18/~30 estimated plans)
+Progress: [████████░░] ~63% (19/~30 estimated plans)
 
 ## Milestone History
 
@@ -28,9 +28,9 @@ Progress: [████████░░] ~60% (18/~30 estimated plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18 (v2.3)
-- Average duration: ~5m50s
-- Total execution time: ~105m
+- Total plans completed: 19 (v2.3)
+- Average duration: ~5m47s
+- Total execution time: ~110m
 
 **By Phase:**
 
@@ -41,7 +41,7 @@ Progress: [████████░░] ~60% (18/~30 estimated plans)
 | 39 | 2/2 | 16m50s | 8m25s |
 | 40 | 3/3 | ~28m | ~9m20s |
 | 41 | 2/2 | 12m | 6m |
-| 42 | 2/3 | 7m | 3m30s |
+| 42 | 3/3 | 12m05s | 4m02s |
 
 *Updated after each plan completion*
 
@@ -97,6 +97,10 @@ v2.3 decisions:
 - Domain-language signal types (approval, pr_review, pr_merged, pr_closed) instead of Temporal signal names (planApproval, prFeedback, prCompletion)
 - Split prCompletion into pr_merged and pr_closed -- more precise signal semantics
 - createSendMessageTool reused with type cast in routeViaAgentLoopV2 -- _deps parameter is unused
+- SIGNAL_AGENT_MAP as static Record for signal-to-agent resolution -- simple, sufficient for current 2-agent system
+- EventRouter.handle() is synchronous (no I/O) -- all async work in loadStartRules()
+- Missing correlationKey on start/signal events falls to slow_path (not error) -- graceful degradation
+- Duplicate trigger registrations log warning and first-wins -- deterministic behavior
 
 ### Pending Todos
 
@@ -114,9 +118,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 42-02-PLAN.md (router tool adapters, conversation-based slow-path)
+Stopped at: Completed 42-03-PLAN.md (EventRouter entry point) -- Phase 42 complete
 Resume file: None
-Next action: Phase 42 Plan 03 (EventRouter entry point)
+Next action: Phase 43 (next phase)
 
 ---
-*Updated: 2026-02-02 -- Phase 42 Plan 02 (Router Tool Adapters) complete*
+*Updated: 2026-02-02 -- Phase 42 complete (Event Router + Adapters)*
