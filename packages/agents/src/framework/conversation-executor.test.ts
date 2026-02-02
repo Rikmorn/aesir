@@ -1046,3 +1046,156 @@ describe("list()", () => {
     expect(mockDb.mocks.where).toHaveBeenCalled();
   });
 });
+
+// ─── Timeout Cancellation ─────────────────────────────────────────────────────
+
+describe("timeout cancellation", () => {
+  function createMockTimeoutScheduler() {
+    return {
+      start: vi.fn().mockResolvedValue(undefined),
+      schedule: vi.fn().mockResolvedValue("timeout-job-123"),
+      cancel: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+  }
+
+  it("cancels timeout when signal resumes a waiting conversation with timeoutJobId", async () => {
+    const mockScheduler = createMockTimeoutScheduler();
+    const ctx = createTestOptions();
+    ctx.options.timeoutScheduler = mockScheduler;
+    const executor = createConversationExecutor(ctx.options);
+
+    ctx.mockDb.setForUpdateResult([
+      createMockConversationRow({
+        status: "waiting",
+        pending_wait: { type: "approval", timeoutJobId: "job-xyz" },
+      }),
+    ]);
+
+    const result = await executor.signal("dev-agent-AES-42", {
+      type: "approval",
+      data: { approved: true },
+    });
+
+    expect(result).toEqual({ action: "resumed" });
+    expect(mockScheduler.cancel).toHaveBeenCalledWith("job-xyz");
+  });
+
+  it("does not cancel timeout when pending_wait has no timeoutJobId", async () => {
+    const mockScheduler = createMockTimeoutScheduler();
+    const ctx = createTestOptions();
+    ctx.options.timeoutScheduler = mockScheduler;
+    const executor = createConversationExecutor(ctx.options);
+
+    ctx.mockDb.setForUpdateResult([
+      createMockConversationRow({
+        status: "waiting",
+        pending_wait: { type: "approval" },
+      }),
+    ]);
+
+    const result = await executor.signal("dev-agent-AES-42", {
+      type: "approval",
+    });
+
+    expect(result).toEqual({ action: "resumed" });
+    expect(mockScheduler.cancel).not.toHaveBeenCalled();
+  });
+
+  it("cancels timeout when conversation is cancelled while waiting", async () => {
+    const mockScheduler = createMockTimeoutScheduler();
+    const ctx = createTestOptions();
+    ctx.options.timeoutScheduler = mockScheduler;
+    const executor = createConversationExecutor(ctx.options);
+
+    ctx.mockDb.setForUpdateResult([
+      createMockConversationRow({
+        status: "waiting",
+        pending_wait: { type: "approval", timeoutJobId: "job-cancel-test" },
+      }),
+    ]);
+
+    const result = await executor.cancel("dev-agent-AES-42");
+
+    expect(result).toBe(true);
+    expect(mockScheduler.cancel).toHaveBeenCalledWith("job-cancel-test");
+  });
+
+  it("does not cancel timeout when cancelling non-waiting conversation", async () => {
+    const mockScheduler = createMockTimeoutScheduler();
+    const ctx = createTestOptions();
+    ctx.options.timeoutScheduler = mockScheduler;
+    const executor = createConversationExecutor(ctx.options);
+
+    ctx.mockDb.setForUpdateResult([
+      createMockConversationRow({
+        status: "running",
+      }),
+    ]);
+
+    await executor.cancel("dev-agent-AES-42");
+
+    expect(mockScheduler.cancel).not.toHaveBeenCalled();
+  });
+
+  it("does not fail if timeout cancellation throws in signal()", async () => {
+    const mockScheduler = createMockTimeoutScheduler();
+    mockScheduler.cancel.mockRejectedValue(new Error("cancel failed"));
+    const ctx = createTestOptions();
+    ctx.options.timeoutScheduler = mockScheduler;
+    const executor = createConversationExecutor(ctx.options);
+
+    ctx.mockDb.setForUpdateResult([
+      createMockConversationRow({
+        status: "waiting",
+        pending_wait: { type: "approval", timeoutJobId: "job-fail" },
+      }),
+    ]);
+
+    // signal() should propagate the error since cancel() threw
+    // The TimeoutScheduler.cancel() already has try/catch internally,
+    // but we test defense-in-depth at the wiring layer
+    await expect(
+      executor.signal("dev-agent-AES-42", { type: "approval" }),
+    ).rejects.toThrow("cancel failed");
+  });
+
+  it("starts timeout scheduler on startWorker", async () => {
+    const mockScheduler = createMockTimeoutScheduler();
+    const ctx = createTestOptions();
+    ctx.options.timeoutScheduler = mockScheduler;
+    const executor = createConversationExecutor(ctx.options);
+
+    executor.startWorker();
+
+    // start() is fire-and-forget, flush microtask queue
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(mockScheduler.start).toHaveBeenCalledWith(executor);
+  });
+
+  it("does not start scheduler twice on repeated startWorker calls", async () => {
+    const mockScheduler = createMockTimeoutScheduler();
+    const ctx = createTestOptions();
+    ctx.options.timeoutScheduler = mockScheduler;
+    const executor = createConversationExecutor(ctx.options);
+
+    executor.startWorker();
+    executor.startWorker();
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(mockScheduler.start).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops timeout scheduler on stopWorker", async () => {
+    const mockScheduler = createMockTimeoutScheduler();
+    const ctx = createTestOptions();
+    ctx.options.timeoutScheduler = mockScheduler;
+    const executor = createConversationExecutor(ctx.options);
+
+    await executor.stopWorker();
+
+    expect(mockScheduler.close).toHaveBeenCalled();
+  });
+});

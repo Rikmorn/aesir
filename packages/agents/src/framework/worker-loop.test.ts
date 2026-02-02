@@ -1102,6 +1102,187 @@ describe("createWorkerLoop", () => {
     });
   });
 
+  // ── Timeout Scheduling ────────────────────────────────────────────────
+
+  describe("timeout scheduling", () => {
+    function createMockTimeoutScheduler() {
+      return {
+        start: vi.fn().mockResolvedValue(undefined),
+        schedule: vi.fn().mockResolvedValue("timeout-job-123"),
+        cancel: vi.fn().mockResolvedValue(undefined),
+        close: vi.fn().mockResolvedValue(undefined),
+      };
+    }
+
+    function setupWaitForTest(
+      testOptions: ReturnType<typeof createTestOptions>,
+      waitForInput: Record<string, unknown>,
+    ) {
+      testOptions.mockToolRegistry.resolve.mockReturnValue([
+        {
+          name: "wait_for",
+          description: "Wait",
+          inputSchema: { parse: (v: unknown) => v },
+          execute: vi.fn(),
+        },
+      ]);
+
+      mockRunAgentLoop.mockImplementation(
+        async (opts: {
+          tools: Array<{
+            name: string;
+            execute: (input: unknown) => Promise<unknown>;
+          }>;
+        }) => {
+          const wf = opts.tools.find((t) => t.name === "wait_for");
+          if (wf) await wf.execute(waitForInput);
+          return createDefaultLoopResult();
+        },
+      );
+    }
+
+    it("should schedule timeout when waitForState has timeout", async () => {
+      const testOpts = createTestOptions();
+      const mockScheduler = createMockTimeoutScheduler();
+      testOpts.options.timeoutScheduler = mockScheduler;
+
+      const conv = createMockConversationRow();
+      testOpts.mockDb.setExecuteResult([conv]);
+      testOpts.mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+
+      setupWaitForTest(testOpts, {
+        type: "approval",
+        reason: "Review needed",
+        timeout: "72h",
+      });
+
+      const loop = createWorkerLoop(testOpts.options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      expect(mockScheduler.schedule).toHaveBeenCalledWith(
+        "dev-agent-AES-42",
+        "72h",
+        "approval",
+        "Review needed",
+      );
+
+      // Verify pending_wait includes timeoutJobId
+      const setCalls = testOpts.mockDb.mocks.updateSet.mock.calls;
+      const waitingCall = setCalls.find(
+        (call: unknown[]) =>
+          call[0] && (call[0] as Record<string, unknown>).status === "waiting",
+      );
+      expect(waitingCall).toBeDefined();
+      const pw = (waitingCall?.[0] as Record<string, unknown>)
+        ?.pending_wait as Record<string, unknown>;
+      expect(pw.timeoutJobId).toBe("timeout-job-123");
+    });
+
+    it("should not schedule timeout when waitForState has no timeout", async () => {
+      const testOpts = createTestOptions();
+      const mockScheduler = createMockTimeoutScheduler();
+      testOpts.options.timeoutScheduler = mockScheduler;
+
+      const conv = createMockConversationRow();
+      testOpts.mockDb.setExecuteResult([conv]);
+      testOpts.mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+
+      setupWaitForTest(testOpts, {
+        type: "approval",
+        reason: "Review needed",
+        // No timeout specified
+      });
+
+      const loop = createWorkerLoop(testOpts.options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      expect(mockScheduler.schedule).not.toHaveBeenCalled();
+
+      // Verify pending_wait does NOT include timeoutJobId
+      const setCalls = testOpts.mockDb.mocks.updateSet.mock.calls;
+      const waitingCall = setCalls.find(
+        (call: unknown[]) =>
+          call[0] && (call[0] as Record<string, unknown>).status === "waiting",
+      );
+      expect(waitingCall).toBeDefined();
+      const pw = (waitingCall?.[0] as Record<string, unknown>)
+        ?.pending_wait as Record<string, unknown>;
+      expect(pw.timeoutJobId).toBeUndefined();
+    });
+
+    it("should handle timeout scheduling failure gracefully", async () => {
+      const testOpts = createTestOptions();
+      const mockScheduler = createMockTimeoutScheduler();
+      mockScheduler.schedule.mockRejectedValue(new Error("pg-boss error"));
+      testOpts.options.timeoutScheduler = mockScheduler;
+
+      const conv = createMockConversationRow();
+      testOpts.mockDb.setExecuteResult([conv]);
+      testOpts.mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+
+      setupWaitForTest(testOpts, {
+        type: "approval",
+        reason: "Review needed",
+        timeout: "72h",
+      });
+
+      const loop = createWorkerLoop(testOpts.options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      // Should still transition to waiting (non-fatal error)
+      const setCalls = testOpts.mockDb.mocks.updateSet.mock.calls;
+      const waitingCall = setCalls.find(
+        (call: unknown[]) =>
+          call[0] && (call[0] as Record<string, unknown>).status === "waiting",
+      );
+      expect(waitingCall).toBeDefined();
+
+      // pending_wait should NOT include timeoutJobId (schedule failed)
+      const pw = (waitingCall?.[0] as Record<string, unknown>)
+        ?.pending_wait as Record<string, unknown>;
+      expect(pw.timeoutJobId).toBeUndefined();
+    });
+
+    it("should not schedule timeout when no timeoutScheduler provided", async () => {
+      const testOpts = createTestOptions();
+      // No timeoutScheduler in options (default)
+
+      const conv = createMockConversationRow();
+      testOpts.mockDb.setExecuteResult([conv]);
+      testOpts.mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+
+      setupWaitForTest(testOpts, {
+        type: "approval",
+        reason: "Review needed",
+        timeout: "72h",
+      });
+
+      const loop = createWorkerLoop(testOpts.options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      // Should still transition to waiting normally
+      const setCalls = testOpts.mockDb.mocks.updateSet.mock.calls;
+      const waitingCall = setCalls.find(
+        (call: unknown[]) =>
+          call[0] && (call[0] as Record<string, unknown>).status === "waiting",
+      );
+      expect(waitingCall).toBeDefined();
+
+      // pending_wait should NOT include timeoutJobId
+      const pw = (waitingCall?.[0] as Record<string, unknown>)
+        ?.pending_wait as Record<string, unknown>;
+      expect(pw.timeoutJobId).toBeUndefined();
+    });
+  });
+
   // ── Lifecycle Events ──────────────────────────────────────────────────
 
   describe("lifecycle events", () => {
