@@ -84,14 +84,18 @@ Plans:
 **Depends on**: Phase 37 (database), Phase 38 (registries), Phase 39 (history manager)
 **Requirements**: EXEC-01, EXEC-02, EXEC-03, EXEC-04, EXEC-05, EXEC-06, EXEC-07, EXEC-08, EXEC-09, EXEC-10, EXEC-11
 **Risk**: HIGH (critical path, most complex component, most pitfalls -- write amplification, stale detection, signal races)
-**Research**: needs-research (heartbeat mechanism, atomic claiming, signal queueing, race condition prevention)
+**Research**: complete
 **Success Criteria** (what must be TRUE):
   1. ConversationExecutor exposes start(), signal(), get(), cancel(), list() API and worker loop claims queued conversations with concurrency-safe locking
   2. Conversation messages persisted by the executor -- persistence strategy is an implementation decision behind the interface
   3. wait_for tool pauses the conversation and registers the expected signal type; signals arriving while conversation is running are queued and checked on next wait_for
   4. Heartbeat mechanism (last_heartbeat_at updated during execution) detects stale conversations and re-enqueues them; concurrency invariant enforced so exactly one agent loop runs per conversation at any time
   5. Deterministic conversation IDs from agent definition + correlation key; duplicate start() calls for the same conversation ID are idempotent no-ops; failed/crashed conversations are re-enqueued for at-least-once execution
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 40-01-PLAN.md -- Migration 0002 (executor columns, LZ4), ConversationExecutor interface, wait_for tool
+- [ ] 40-02-PLAN.md -- ConversationExecutor core implementation (start, signal, get, cancel, list) + tests
+- [ ] 40-03-PLAN.md -- Worker loop (claim, heartbeat, execute, stale recovery, graceful shutdown) + tool factory wiring + tests
 
 ### Phase 41: Timeout Scheduling
 **Goal**: Delayed signal delivery to conversations (e.g., "wake in 72 hours") through the same signal pathway as external events
@@ -191,7 +195,7 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 | 37. Database Schema + Event Log Core | 3/3 | Complete | 2026-02-01 |
 | 38. Agent and Tool Registries | 4/4 | Complete | 2026-02-01 |
 | 39. History Manager | 2/2 | Complete | 2026-02-01 |
-| 40. Conversation Executor | 0/TBD | Not started | - |
+| 40. Conversation Executor | 0/3 | Not started | - |
 | 41. Timeout Scheduling | 0/TBD | Not started | - |
 | 42. Event Router + Adapters | 0/TBD | Not started | - |
 | 43. Smart Router Adaptation | 0/TBD | Not started | - |
@@ -202,4 +206,4 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 
 ---
 *Roadmap created: 2026-02-01*
-*Last updated: 2026-02-01 -- Phase 39 complete (2/2 plans)*
+*Last updated: 2026-02-02 -- Phase 40 planned (3 plans in 3 waves)*
