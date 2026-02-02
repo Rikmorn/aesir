@@ -7,6 +7,7 @@
 export { createAgentRegistry } from "./agent-registry.js";
 export { createConversationExecutor } from "./conversation-executor.js";
 export { createEventLog } from "./event-log.js";
+export { createEventRouter } from "./event-router.js";
 export type {
   CompactionResult,
   HistoryConfig,
