@@ -22,3 +22,7 @@ export { createSessionProjection } from "./session-projection.js";
 export { registerAllTools } from "./tool-factories.js";
 export { createToolRegistry } from "./tool-registry.js";
 export * from "./types.js";
+export {
+  createDefaultWaitForState,
+  createWaitForTool,
+} from "./wait-for-tool.js";
