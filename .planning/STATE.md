@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.3 Unified Agent Framework -- Phase 40 complete, Phase 41 next
+**Current focus:** v2.3 Unified Agent Framework -- Phase 41 in progress
 
 ## Current Position
 
-Phase: 40 of 47 (Conversation Executor) -- COMPLETE
-Plan: 3 of 3 in current phase -- COMPLETE
-Status: Phase complete
-Last activity: 2026-02-02 -- Completed 40-03-PLAN.md (Worker loop, wait_for wiring, tests)
+Phase: 41 of 47 (Timeout Scheduling)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-02 -- Completed 41-01-PLAN.md (TimeoutScheduler service)
 
-Progress: [█████░░░░░] ~43% (14/~30 estimated plans)
+Progress: [██████░░░░] ~47% (15/~30 estimated plans)
 
 ## Milestone History
 
@@ -28,9 +28,9 @@ Progress: [█████░░░░░] ~43% (14/~30 estimated plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14 (v2.3)
-- Average duration: ~6m30s
-- Total execution time: ~86m
+- Total plans completed: 15 (v2.3)
+- Average duration: ~6m16s
+- Total execution time: ~94m
 
 **By Phase:**
 
@@ -40,6 +40,7 @@ Progress: [█████░░░░░] ~43% (14/~30 estimated plans)
 | 38 | 4/4 | 20m59s | 5m15s |
 | 39 | 2/2 | 16m50s | 8m25s |
 | 40 | 3/3 | ~28m | ~9m20s |
+| 41 | 1/2 | 8m | 8m |
 
 *Updated after each plan completion*
 
@@ -83,6 +84,9 @@ v2.3 decisions:
 - Context-serialization for resumed conversations -- serializes prior messages as context parameter to runAgentLoop rather than modifying its signature
 - Raw SQL CTE for SKIP LOCKED claiming -- Drizzle query builder cannot compose CTEs with FOR UPDATE SKIP LOCKED
 - Ownership verification after agent loop before persisting results -- prevents split-brain writes from stale detection race
+- pg-boss PgBoss class is named export in v12.8.0 -- import as { PgBoss } not default
+- pg-boss cancel() requires queue name + job ID -- cancel(TIMEOUT_QUEUE, jobId) not cancel(jobId)
+- Duration parser supports 'm' (minutes) for testing convenience -- "30m" is useful for development
 
 ### Pending Todos
 
@@ -100,9 +104,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 40-03-PLAN.md (Worker loop -- 32 tests, 1175 total passing, Phase 40 complete)
+Stopped at: Completed 41-01-PLAN.md (TimeoutScheduler service -- 20 tests, 1195 total passing)
 Resume file: None
-Next action: Phase 41 (Timeout Scheduling) -- plan needed
+Next action: Phase 41 Plan 02 (Executor wiring)
 
 ---
-*Updated: 2026-02-02 -- Completed plan 40-03, Phase 40 (Conversation Executor) complete*
+*Updated: 2026-02-02 -- Completed plan 41-01, TimeoutScheduler service with pg-boss*
