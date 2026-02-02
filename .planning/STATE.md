@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.3 Unified Agent Framework -- Phase 41 in progress
+**Current focus:** v2.3 Unified Agent Framework -- Phase 41 complete, Phase 42 next
 
 ## Current Position
 
 Phase: 41 of 47 (Timeout Scheduling)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-02 -- Completed 41-01-PLAN.md (TimeoutScheduler service)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-02 -- Completed 41-02-PLAN.md (Executor wiring)
 
-Progress: [██████░░░░] ~47% (15/~30 estimated plans)
+Progress: [███████░░░] ~53% (16/~30 estimated plans)
 
 ## Milestone History
 
@@ -28,9 +28,9 @@ Progress: [██████░░░░] ~47% (15/~30 estimated plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15 (v2.3)
-- Average duration: ~6m16s
-- Total execution time: ~94m
+- Total plans completed: 16 (v2.3)
+- Average duration: ~6m08s
+- Total execution time: ~98m
 
 **By Phase:**
 
@@ -40,7 +40,7 @@ Progress: [██████░░░░] ~47% (15/~30 estimated plans)
 | 38 | 4/4 | 20m59s | 5m15s |
 | 39 | 2/2 | 16m50s | 8m25s |
 | 40 | 3/3 | ~28m | ~9m20s |
-| 41 | 1/2 | 8m | 8m |
+| 41 | 2/2 | 12m | 6m |
 
 *Updated after each plan completion*
 
@@ -87,6 +87,9 @@ v2.3 decisions:
 - pg-boss PgBoss class is named export in v12.8.0 -- import as { PgBoss } not default
 - pg-boss cancel() requires queue name + job ID -- cancel(TIMEOUT_QUEUE, jobId) not cancel(jobId)
 - Duration parser supports 'm' (minutes) for testing convenience -- "30m" is useful for development
+- Executor factory refactored to named const variable -- enables closure access from startWorker for timeoutScheduler.start(executor)
+- Timeout scheduling failure is non-fatal -- conversation still pauses without timeout job
+- timeoutJobId stored in pending_wait JSONB -- optional field for cancellation lookup
 
 ### Pending Todos
 
@@ -104,9 +107,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 41-01-PLAN.md (TimeoutScheduler service -- 20 tests, 1195 total passing)
+Stopped at: Completed 41-02-PLAN.md (Executor wiring -- 12 new tests, 1207 total passing)
 Resume file: None
-Next action: Phase 41 Plan 02 (Executor wiring)
+Next action: Phase 42 (API Layer)
 
 ---
-*Updated: 2026-02-02 -- Completed plan 41-01, TimeoutScheduler service with pg-boss*
+*Updated: 2026-02-02 -- Completed Phase 41 (Timeout Scheduling), both plans complete*
