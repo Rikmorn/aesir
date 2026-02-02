@@ -62,10 +62,10 @@ Requirements for v2.3 milestone. Each maps to roadmap phases starting at Phase 3
 
 ### Signal Handling
 
-- [ ] **SIG-01**: Event adapters normalize webhook payloads to domain-language IncomingEvent types
-- [ ] **SIG-02**: Three adapters: Slack, GitHub, Linear (transform raw webhooks to approval, pr_merged, etc.)
-- [ ] **SIG-03**: EventRouter loads start rules from registered agent definitions
-- [ ] **SIG-04**: Correlation-based signal routing resolves conversation ID from correlation key
+- [x] **SIG-01**: Event adapters normalize webhook payloads to domain-language IncomingEvent types
+- [x] **SIG-02**: Three adapters: Slack, GitHub, Linear (transform raw webhooks to approval, pr_merged, etc.)
+- [x] **SIG-03**: EventRouter loads start rules from registered agent definitions
+- [x] **SIG-04**: Correlation-based signal routing resolves conversation ID from correlation key
 - [ ] **SIG-05**: Fast-path routing preserved for unambiguous events (deterministic, no LLM needed)
 - [ ] **SIG-06**: Smart router adapted from Temporal workflowClient to ConversationExecutor
 - [ ] **SIG-07**: Signal deduplication — duplicate signals (webhook retries) are no-ops, tracked by source + delivery ID on conversation
@@ -173,10 +173,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TMO-01 | Phase 41 | Complete |
 | TMO-02 | Phase 41 | Complete |
 | TMO-03 | Phase 41 | Complete |
-| SIG-01 | Phase 42 | Pending |
-| SIG-02 | Phase 42 | Pending |
-| SIG-03 | Phase 42 | Pending |
-| SIG-04 | Phase 42 | Pending |
+| SIG-01 | Phase 42 | Complete |
+| SIG-02 | Phase 42 | Complete |
+| SIG-03 | Phase 42 | Complete |
+| SIG-04 | Phase 42 | Complete |
 | SIG-05 | Phase 43 | Pending |
 | SIG-06 | Phase 43 | Pending |
 | SIG-07 | Phase 40 | Pending |
@@ -201,4 +201,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-01*
-*Last updated: 2026-02-02 -- Phase 41 complete (TMO-01 through TMO-03)*
+*Last updated: 2026-02-02 -- Phase 42 complete (SIG-01 through SIG-04)*

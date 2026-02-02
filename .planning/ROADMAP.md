@@ -19,7 +19,7 @@ v2.3 replaces Temporal workflow orchestration, per-agent services, and fragmente
 - [x] **Phase 39: History Manager** - Three-phase conversation compaction with tool pruning and structured summarization
 - [x] **Phase 40: Conversation Executor** - Postgres-backed durable executor replacing Temporal workflows
 - [x] **Phase 41: Timeout Scheduling** - pg-boss integration for delayed signal delivery
-- [ ] **Phase 42: Event Router + Adapters** - Webhook normalization to domain events with correlation-based signal routing
+- [x] **Phase 42: Event Router + Adapters** - Webhook normalization to domain events with correlation-based signal routing
 - [ ] **Phase 43: Smart Router Adaptation** - Adapt existing smart router from Temporal client to ConversationExecutor
 - [ ] **Phase 44: Single Service Consolidation** - One HTTP service replacing dev-agent, product-agent, and router services
 - [ ] **Phase 45: Integration Testing + Validation** - Full lifecycle testing of start, pause, signal, resume, complete flows
@@ -124,9 +124,9 @@ Plans:
   3. Correlation-based signal routing resolves conversation ID from correlation key and delivers signals to paused conversations
 **Plans**: 3 plans
 Plans:
-- [ ] 42-01-PLAN.md -- IncomingEvent type, three adapter pure functions (Slack, GitHub, Linear) + tests
-- [ ] 42-02-PLAN.md -- Adapted slow-path router tools (Temporal -> ConversationExecutor) + system prompt v2
-- [ ] 42-03-PLAN.md -- EventRouter implementation (start rules, signal routing, ignore, slow-path fallback) + tests
+- [x] 42-01-PLAN.md -- IncomingEvent type, three adapter pure functions (Slack, GitHub, Linear) + tests
+- [x] 42-02-PLAN.md -- Adapted slow-path router tools (Temporal -> ConversationExecutor) + system prompt v2
+- [x] 42-03-PLAN.md -- EventRouter implementation (start rules, signal routing, ignore, slow-path fallback) + tests
 
 ### Phase 43: Smart Router Adaptation
 **Goal**: Existing smart router works against ConversationExecutor instead of Temporal workflowClient, preserving fast-path deterministic routing and slow-path LLM classification
@@ -204,7 +204,7 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 | 39. History Manager | 2/2 | Complete | 2026-02-01 |
 | 40. Conversation Executor | 3/3 | Complete | 2026-02-02 |
 | 41. Timeout Scheduling | 2/2 | Complete | 2026-02-02 |
-| 42. Event Router + Adapters | 0/3 | Not started | - |
+| 42. Event Router + Adapters | 3/3 | Complete | 2026-02-02 |
 | 43. Smart Router Adaptation | 0/TBD | Not started | - |
 | 44. Single Service Consolidation | 0/TBD | Not started | - |
 | 45. Integration Testing + Validation | 0/TBD | Not started | - |
@@ -213,4 +213,4 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 
 ---
 *Roadmap created: 2026-02-01*
-*Last updated: 2026-02-02 -- Phase 42 planned (3 plans in 2 waves)*
+*Last updated: 2026-02-02 -- Phase 42 complete (3 plans, 2 waves)*
