@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.3 Unified Agent Framework — Phase 39 complete, Phase 40 next
+**Current focus:** v2.3 Unified Agent Framework — Phase 40 in progress
 
 ## Current Position
 
-Phase: 39 of 47 (History Manager)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-01 — Completed 39-02-PLAN.md (Phase 2 summarization)
+Phase: 40 of 47 (Conversation Executor)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-02 — Completed 40-01-PLAN.md (Schema, types, wait_for tool)
 
-Progress: [████░░░░░░] ~30% (9/~30 estimated plans)
+Progress: [████░░░░░░] ~33% (10/~30 estimated plans)
 
 ## Milestone History
 
@@ -28,9 +28,9 @@ Progress: [████░░░░░░] ~30% (9/~30 estimated plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9 (v2.3)
-- Average duration: 6m26s
-- Total execution time: 57m59s
+- Total plans completed: 10 (v2.3)
+- Average duration: 6m14s
+- Total execution time: 62m24s
 
 **By Phase:**
 
@@ -39,6 +39,7 @@ Progress: [████░░░░░░] ~30% (9/~30 estimated plans)
 | 37 | 3/3 | 20m09s | 6m43s |
 | 38 | 4/4 | 20m59s | 5m15s |
 | 39 | 2/2 | 16m50s | 8m25s |
+| 40 | 1/3 | 4m25s | 4m25s |
 
 *Updated after each plan completion*
 
@@ -72,6 +73,10 @@ v2.3 decisions:
 - Summary wrapped in <summary></summary> tags for detection -- simple regex parsing, unambiguous in message content
 - Single-summary-block-with-merge strategy -- prevents summaries-of-summaries degradation
 - Phase 2 error handling falls back to Phase 1 pruned result -- history manager is optimization, not safety mechanism
+- WaitForState uses mutable flag pattern (not exceptions) for executor interception -- allows LLM to see confirmation and generate clean end_turn
+- Signal schema uses optional deduplicationId stored in delivered_signal_ids JSONB array -- simple query path for dedup checks
+- ConversationExecutor.signal() returns discriminated action union (resumed/queued/rejected/deduplicated) -- precise caller feedback
+- Non-retryable errors as distinct classes (TokenBudgetExhaustedError, AgentAbortedError) -- enables instanceof checks in retry logic
 
 ### Pending Todos
 
@@ -88,10 +93,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-01
-Stopped at: Completed 39-02-PLAN.md (Phase 2 summarization -- 41 tests, 998 lines)
+Last session: 2026-02-02
+Stopped at: Completed 40-01-PLAN.md (Schema, types, wait_for tool -- 13 tests, migration 0002)
 Resume file: None
-Next action: Phase 40 (Conversation Executor)
+Next action: Phase 40 Plan 02 (ConversationExecutor core implementation)
 
 ---
-*Updated: 2026-02-01 — Completed plan 39-02, Phase 39 (History Manager) complete*
+*Updated: 2026-02-02 — Completed plan 40-01, Phase 40 (Conversation Executor) in progress*
