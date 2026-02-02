@@ -15,13 +15,20 @@ import type {
   AgentEvent,
   AgentEventType,
   AgentSession,
+  ConversationStatus,
   NewAgentEvent,
 } from "../shared/db/schema.js";
 
 export { agentEventTypeValues } from "../shared/db/schema.js";
 
 // Re-export for convenience
-export type { AgentEvent, AgentEventType, AgentSession, NewAgentEvent };
+export type {
+  AgentEvent,
+  AgentEventType,
+  AgentSession,
+  ConversationStatus,
+  NewAgentEvent,
+};
 
 // ─── Event Append Input ──────────────────────────────────────────────────────
 
@@ -356,4 +363,200 @@ export interface AgentRegistry {
 
   /** List all available agent definitions. */
   list(): Promise<AgentDefinition[]>;
+}
+
+// ─── Signal Schema ──────────────────────────────────────────────────────────
+
+/**
+ * Zod schema for incoming signal payloads.
+ *
+ * Signals wake a paused conversation. The `type` field must match the
+ * wait_for type the agent specified. The optional `deduplicationId` prevents
+ * duplicate delivery (stored in conversations.delivered_signal_ids).
+ */
+export const SignalSchema = z.object({
+  /** Signal type (must match the wait_for type). E.g., "approval", "pr_review" */
+  type: z.string().min(1),
+  /** Arbitrary data payload delivered to the agent when it resumes */
+  data: z.record(z.unknown()).optional(),
+  /** Human-readable message included when resuming the agent */
+  message: z.string().optional(),
+  /** Source identifier (e.g., "slack", "github-webhook") for observability */
+  source: z.string().optional(),
+  /** Idempotency key to prevent duplicate signal delivery */
+  deduplicationId: z.string().optional(),
+});
+
+/** Validated signal payload type */
+export type Signal = z.infer<typeof SignalSchema>;
+
+// ─── WaitForState ───────────────────────────────────────────────────────────
+
+/**
+ * Mutable state object for executor interception of wait_for tool calls.
+ *
+ * The executor creates a fresh WaitForState before each agent loop run
+ * and passes it to createWaitForTool(). When the agent calls wait_for,
+ * the tool sets `triggered = true` and populates the other fields.
+ * The executor checks `triggered` after the loop exits to decide
+ * whether to transition the conversation to "waiting" status.
+ */
+export interface WaitForState {
+  /** Whether the wait_for tool was called during this loop run */
+  triggered: boolean;
+  /** Signal type the agent is waiting for (e.g., "approval", "pr_review") */
+  waitType: string | null;
+  /** Human-readable reason for pausing */
+  reason: string | null;
+  /** Timeout duration string (e.g., "72h", "7d") or null for no timeout */
+  timeout: string | null;
+  /** Additional metadata stored with the pause */
+  metadata: Record<string, unknown> | null;
+}
+
+// ─── ConversationExecutor ───────────────────────────────────────────────────
+
+/**
+ * Parameters for starting a new conversation.
+ */
+export interface StartConversationParams {
+  /** Agent definition ID (e.g., "dev-agent", "researcher") */
+  agentDefinitionId: string;
+  /** Correlation key for deterministic conversation ID generation */
+  correlationKey: string;
+  /** Initial message to send to the agent */
+  initialMessage: string;
+  /** Additional context prepended to the initial message */
+  context?: string;
+  /** Parent conversation ID for sub-agent tracking */
+  parentConversationId?: string;
+}
+
+/**
+ * Information about a conversation (return type for get/list).
+ */
+export interface ConversationInfo {
+  /** Deterministic conversation ID */
+  id: string;
+  /** Agent definition ID */
+  agentDefinitionId: string;
+  /** Agent definition version at creation time */
+  agentDefinitionVersion: string;
+  /** Current conversation status */
+  status: ConversationStatus;
+  /** When the conversation was created */
+  createdAt: Date;
+  /** When the conversation was last updated */
+  updatedAt: Date;
+}
+
+/**
+ * ConversationExecutor - Manages the lifecycle of agent conversations.
+ *
+ * The executor is the core runtime for v2.3 agents. It:
+ * - Creates and claims conversations using SKIP LOCKED
+ * - Runs the agent loop with tool resolution and history management
+ * - Handles wait_for pauses and signal-based resumption
+ * - Manages retry logic for transient failures
+ * - Tracks sub-agent relationships via parent_conversation_id
+ *
+ * Requirement: EXEC-01
+ */
+export interface ConversationExecutor {
+  /**
+   * Start a new conversation. Creates a row in conversations table
+   * with status "queued" and returns the conversation ID.
+   */
+  start(params: StartConversationParams): Promise<string>;
+
+  /**
+   * Deliver a signal to a conversation. Depending on conversation state:
+   * - "waiting": resumes the conversation (returns "resumed")
+   * - "queued"/"running": queues signal for later delivery (returns "queued")
+   * - "completed"/"failed"/"cancelled": rejects signal (returns "rejected")
+   * - Duplicate deduplicationId: skips delivery (returns "deduplicated")
+   */
+  signal(
+    conversationId: string,
+    signal: Signal,
+  ): Promise<{
+    action: "resumed" | "queued" | "rejected" | "deduplicated";
+  }>;
+
+  /**
+   * Get information about a conversation. Returns null if not found.
+   */
+  get(conversationId: string): Promise<ConversationInfo | null>;
+
+  /**
+   * Cancel a conversation. Returns true if successfully cancelled,
+   * false if the conversation was already in a terminal state.
+   */
+  cancel(conversationId: string): Promise<boolean>;
+
+  /**
+   * List conversations with optional filters.
+   */
+  list(options?: {
+    status?: ConversationStatus;
+    agentDefinitionId?: string;
+    limit?: number;
+  }): Promise<ConversationInfo[]>;
+}
+
+/**
+ * Options for creating a ConversationExecutor instance.
+ */
+export interface ConversationExecutorOptions {
+  /** Database client for conversation persistence */
+  db: NodePgDatabase<typeof agentsSchemaModule>;
+  /** Event log for recording agent events */
+  eventLog: EventLog;
+  /** Session projection for tracking agent sessions */
+  sessionProjection: SessionProjection;
+  /** Agent registry for loading agent definitions */
+  agentRegistry: AgentRegistry;
+  /** Tool registry for resolving tool references */
+  toolRegistry: ToolRegistry;
+  /** Logger instance */
+  logger: PinoLogger;
+  /** Anthropic API key for LLM calls (optional, can use env default) */
+  anthropicApiKey?: string;
+  /** How often to poll for claimable conversations (default: 1000ms) */
+  pollIntervalMs?: number;
+  /** Maximum concurrent conversations per worker (default: 5) */
+  concurrencyLimit?: number;
+  /** How often to update heartbeat timestamp (default: 10000ms) */
+  heartbeatIntervalMs?: number;
+  /** How long before a heartbeat is considered stale (default: 30000ms) */
+  staleThresholdMs?: number;
+  /** Unique identifier for this worker instance */
+  workerId?: string;
+}
+
+// ─── Non-Retryable Error Classes ────────────────────────────────────────────
+
+/**
+ * Thrown when the agent's token budget is exhausted.
+ *
+ * Non-retryable: the conversation has consumed its allocation and
+ * cannot continue without external intervention (budget increase).
+ */
+export class TokenBudgetExhaustedError extends Error {
+  constructor(message?: string) {
+    super(message ?? "Token budget exhausted");
+    this.name = "TokenBudgetExhaustedError";
+  }
+}
+
+/**
+ * Thrown when the agent explicitly aborts (e.g., via AbortSignal).
+ *
+ * Non-retryable: the abort was intentional, not a transient failure.
+ */
+export class AgentAbortedError extends Error {
+  constructor(message?: string) {
+    super(message ?? "Agent aborted");
+    this.name = "AgentAbortedError";
+  }
 }
