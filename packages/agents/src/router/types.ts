@@ -14,6 +14,7 @@
 import type { PinoLogger } from "@aesir/platform";
 import type { NormalizedEvent } from "@aesir/types";
 import type { Client } from "@temporalio/client";
+import type { ConversationExecutor } from "../framework/types.js";
 
 // ---------------------------------------------------------------------------
 // Router Dependencies
@@ -134,4 +135,24 @@ export interface RoutingRule {
   match: (event: NormalizedEvent) => boolean;
   /** Action factory: produce the action for a matched event */
   action: (event: NormalizedEvent) => FastPathAction;
+}
+
+// ---------------------------------------------------------------------------
+// v2.3 Event Router Dependencies
+// ---------------------------------------------------------------------------
+
+/**
+ * Dependencies for the v2.3 EventRouter and adapted slow-path tools.
+ * Replaces RouterDeps (which uses Temporal Client) with ConversationExecutor.
+ * Both types coexist until Phase 47 cleanup.
+ */
+export interface EventRouterDeps {
+  /** ConversationExecutor for start/signal/list operations */
+  executor: ConversationExecutor;
+  /** Pino logger instance */
+  logger: PinoLogger;
+  /** Slack channel ID for ROUT-06 fallback alerts (optional) */
+  alertsChannel?: string | undefined;
+  /** Linear team ID for product-agent starts (optional) */
+  linearTeamId?: string | undefined;
 }
