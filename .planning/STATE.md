@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.3 Unified Agent Framework -- Phase 41 complete, Phase 42 next
+**Current focus:** v2.3 Unified Agent Framework -- Phase 42 in progress
 
 ## Current Position
 
-Phase: 41 of 47 (Timeout Scheduling) -- COMPLETE
-Plan: 2 of 2 in current phase -- COMPLETE
-Status: Phase complete, verified
-Last activity: 2026-02-02 -- Phase 41 verified (10/10 must-haves, 32 new tests, 1207 total)
+Phase: 42 of 47 (Event Router + Adapters)
+Plan: 1 of 3 in current phase -- COMPLETE
+Status: In progress
+Last activity: 2026-02-02 -- Completed 42-01-PLAN.md (adapter functions, 22 new tests, 1229 total)
 
-Progress: [███████░░░] ~53% (16/~30 estimated plans)
+Progress: [████████░░] ~57% (17/~30 estimated plans)
 
 ## Milestone History
 
@@ -28,9 +28,9 @@ Progress: [███████░░░] ~53% (16/~30 estimated plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16 (v2.3)
-- Average duration: ~6m08s
-- Total execution time: ~98m
+- Total plans completed: 17 (v2.3)
+- Average duration: ~5m56s
+- Total execution time: ~101m
 
 **By Phase:**
 
@@ -41,6 +41,7 @@ Progress: [███████░░░] ~53% (16/~30 estimated plans)
 | 39 | 2/2 | 16m50s | 8m25s |
 | 40 | 3/3 | ~28m | ~9m20s |
 | 41 | 2/2 | 12m | 6m |
+| 42 | 1/3 | 3m | 3m |
 
 *Updated after each plan completion*
 
@@ -90,6 +91,9 @@ v2.3 decisions:
 - Executor factory refactored to named const variable -- enables closure access from startWorker for timeoutScheduler.start(executor)
 - Timeout scheduling failure is non-fatal -- conversation still pauses without timeout job
 - timeoutJobId stored in pending_wait JSONB -- optional field for cancellation lookup
+- Start events preserve original dotted type for trigger matching; signal events use domain-language types for wait_for matching
+- GitHub adapter returns null on non-matching branch names -- unresolvable correlation falls through to slow-path
+- Linear issue.created/updated adapted (not null) so EventRouter can match IGNORE_EVENT_TYPES
 
 ### Pending Todos
 
@@ -107,9 +111,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Phase 41 complete and verified (10/10 must-haves, 32 new tests, 1207 total passing)
+Stopped at: Completed 42-01-PLAN.md (adapter functions, 22 new tests, 1229 total passing)
 Resume file: None
-Next action: Phase 42 (Event Router + Adapters) -- plan needed
+Next action: Phase 42 Plan 02 (EventRouter)
 
 ---
-*Updated: 2026-02-02 -- Phase 41 (Timeout Scheduling) complete and verified*
+*Updated: 2026-02-02 -- Phase 42 Plan 01 (Adapter Functions) complete*
