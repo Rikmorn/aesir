@@ -15,12 +15,18 @@
 
 import type { NormalizedEvent } from "@aesir/types";
 import { runAgentLoop } from "../shared/agent-loop/index.js";
-import { ROUTER_SYSTEM_PROMPT } from "./system-prompt.js";
+import {
+  ROUTER_SYSTEM_PROMPT,
+  ROUTER_SYSTEM_PROMPT_V2,
+} from "./system-prompt.js";
+import { createQueryConversationsTool } from "./tools/query-conversations.js";
 import { createQueryWorkflowsTool } from "./tools/query-workflows.js";
 import { createSendMessageTool } from "./tools/send-message.js";
+import { createSignalConversationTool } from "./tools/signal-conversation.js";
 import { createSignalWorkflowTool } from "./tools/signal-workflow.js";
+import { createStartConversationTool } from "./tools/start-conversation.js";
 import { createStartWorkflowTool } from "./tools/start-workflow.js";
-import type { RouteResult, RouterDeps } from "./types.js";
+import type { EventRouterDeps, RouteResult, RouterDeps } from "./types.js";
 
 // ---------------------------------------------------------------------------
 // Event Formatting
@@ -143,6 +149,111 @@ export async function routeViaAgentLoop(
   logger.error(
     { eventId: event.id, status: result.status, output: result.output },
     "Slow-path: router LLM error",
+  );
+  return {
+    status: "failed",
+    error: result.output || "Router LLM error",
+  };
+}
+
+// ---------------------------------------------------------------------------
+// v2.3 Slow-Path Router (Conversation-based)
+// ---------------------------------------------------------------------------
+
+/**
+ * Route an event via the v2.3 conversation-based LLM agentic loop.
+ *
+ * Adapted from routeViaAgentLoop with these changes:
+ * - Uses conversation-based tools (start_conversation, signal_conversation,
+ *   query_conversations) instead of Temporal-based tools
+ * - Uses ROUTER_SYSTEM_PROMPT_V2 with domain-language signal types
+ * - Takes EventRouterDeps (ConversationExecutor) instead of RouterDeps (Temporal Client)
+ *
+ * Both this function and routeViaAgentLoop coexist until Phase 47 cleanup.
+ *
+ * @param event - The normalized event to route
+ * @param deps - Event router dependencies (ConversationExecutor, logger)
+ * @returns RouteResult indicating routing outcome
+ */
+export async function routeViaAgentLoopV2(
+  event: NormalizedEvent,
+  deps: EventRouterDeps,
+): Promise<RouteResult> {
+  const { logger } = deps;
+
+  // Create v2.3 conversation-based router tools
+  // Note: createSendMessageTool accepts RouterDeps but doesn't use any deps
+  // fields (it calls callMcpTool directly). Safe to cast since _deps is unused.
+  const routerTools = [
+    createQueryConversationsTool(deps),
+    createStartConversationTool(deps),
+    createSignalConversationTool(deps),
+    createSendMessageTool(deps as unknown as RouterDeps),
+  ];
+
+  // Format the event for the LLM (same formatting as v1)
+  const formattedEvent = formatEventForLLM(event);
+
+  logger.info(
+    { eventId: event.id, eventType: event.type },
+    "Slow-path v2: routing via LLM agent loop (conversation-based)",
+  );
+
+  // Run the agentic loop with Haiku (fast, cheap model for routing)
+  const result = await runAgentLoop({
+    systemPrompt: ROUTER_SYSTEM_PROMPT_V2,
+    tools: routerTools,
+    initialMessage: formattedEvent,
+    model: "claude-haiku-4-5-20251001",
+    maxIterations: 10,
+    logger,
+    onToolCall: (call) =>
+      logger.info(
+        { toolName: call.name, toolInput: call.input },
+        "Router v2 tool call",
+      ),
+  });
+
+  logger.info(
+    {
+      eventId: event.id,
+      status: result.status,
+      toolCallCount: result.toolCallCount,
+      tokenCount: result.tokenCount,
+    },
+    "Slow-path v2: agent loop completed",
+  );
+
+  // Parse result into RouteResult
+  if (result.status === "completed" && result.toolCallCount > 0) {
+    return {
+      status: "routed",
+      action: result.output || "LLM routed via tool calls",
+    };
+  }
+
+  if (result.status === "completed" && result.toolCallCount === 0) {
+    return {
+      status: "ignored",
+      action: result.output || "LLM decided no action needed",
+    };
+  }
+
+  if (result.status === "max_iterations") {
+    logger.warn(
+      { eventId: event.id },
+      "Slow-path v2: router hit iteration limit",
+    );
+    return {
+      status: "failed",
+      error: "Router hit iteration limit",
+    };
+  }
+
+  // error or aborted
+  logger.error(
+    { eventId: event.id, status: result.status, output: result.output },
+    "Slow-path v2: router LLM error",
   );
   return {
     status: "failed",
