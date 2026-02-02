@@ -20,6 +20,15 @@ export {
   formatArtifacts,
 } from "./history-manager.js";
 export { createSessionProjection } from "./session-projection.js";
+export type {
+  TimeoutScheduler,
+  TimeoutSchedulerOptions,
+} from "./timeout-scheduler.js";
+export {
+  createPgBossAdapter,
+  createTimeoutScheduler,
+  parseTimeoutDuration,
+} from "./timeout-scheduler.js";
 export { registerAllTools } from "./tool-factories.js";
 export { createToolRegistry } from "./tool-registry.js";
 export * from "./types.js";
