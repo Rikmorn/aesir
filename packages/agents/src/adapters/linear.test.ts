@@ -1,0 +1,124 @@
+import type { NormalizedEvent } from "@aesir/types";
+import { describe, expect, it } from "vitest";
+import { adaptLinearEvent } from "./linear.js";
+import { IncomingEventSchema } from "./types.js";
+
+// ---------------------------------------------------------------------------
+// Helper
+// ---------------------------------------------------------------------------
+
+function makeEvent(overrides: Partial<NormalizedEvent>): NormalizedEvent {
+  return {
+    id: "evt_test789",
+    type: "test.event.type",
+    source: "linear",
+    timestamp: new Date().toISOString(),
+    correlationId: "corr_test789",
+    payload: {},
+    ...overrides,
+  } as NormalizedEvent;
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+describe("adaptLinearEvent", () => {
+  it("returns null for non-linear source", () => {
+    const event = makeEvent({
+      source: "slack",
+      type: "slack.app_mention.created",
+    });
+    expect(adaptLinearEvent(event)).toBeNull();
+  });
+
+  it("returns null for unrecognized linear event type (slow-path)", () => {
+    const event = makeEvent({ type: "linear.comment.created" });
+    expect(adaptLinearEvent(event)).toBeNull();
+  });
+
+  // --- Agent Session Created (Start Trigger) ---
+
+  describe("agent_session.created", () => {
+    it("preserves original dotted type for start-rule matching", () => {
+      const event = makeEvent({
+        type: "linear.agent_session.created",
+        payload: { issueId: "PROJ-42" },
+      });
+
+      const result = adaptLinearEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe("linear.agent_session.created");
+      expect(result?.data).toEqual({ issueId: "PROJ-42" });
+      expect(result?.source).toBe("linear:webhook");
+      expect(result?.correlationKey).toBe("PROJ-42");
+      expect(result?.deduplicationId).toBe("corr_test789");
+      expect(result?.message).toBe(
+        "New agent session created for issue PROJ-42",
+      );
+
+      expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+  });
+
+  // --- Issue Created (Ignore Event) ---
+
+  describe("issue.created", () => {
+    it("adapts with no correlationKey for IGNORE_EVENT_TYPES matching", () => {
+      const event = makeEvent({
+        type: "linear.issue.created",
+        payload: { id: "issue_abc", title: "New issue" },
+      });
+
+      const result = adaptLinearEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe("linear.issue.created");
+      expect(result?.data).toEqual({ id: "issue_abc", title: "New issue" });
+      expect(result?.source).toBe("linear:webhook");
+      expect(result?.correlationKey).toBeUndefined();
+      expect(result?.deduplicationId).toBe("corr_test789");
+
+      expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+  });
+
+  // --- Issue Updated (Ignore Event) ---
+
+  describe("issue.updated", () => {
+    it("adapts with no correlationKey for IGNORE_EVENT_TYPES matching", () => {
+      const event = makeEvent({
+        type: "linear.issue.updated",
+        payload: { id: "issue_def", status: "In Progress" },
+      });
+
+      const result = adaptLinearEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe("linear.issue.updated");
+      expect(result?.data).toEqual({
+        id: "issue_def",
+        status: "In Progress",
+      });
+      expect(result?.source).toBe("linear:webhook");
+      expect(result?.correlationKey).toBeUndefined();
+      expect(result?.deduplicationId).toBe("corr_test789");
+
+      expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+  });
+
+  // --- Unhandled Event ---
+
+  describe("comment.created", () => {
+    it("returns null for slow-path LLM classification", () => {
+      const event = makeEvent({
+        type: "linear.comment.created",
+        payload: { body: "Looks good!" },
+      });
+
+      expect(adaptLinearEvent(event)).toBeNull();
+    });
+  });
+});
