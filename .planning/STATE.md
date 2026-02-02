@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 42 of 47 (Event Router + Adapters)
-Plan: 1 of 3 in current phase -- COMPLETE
+Plan: 2 of 3 in current phase -- COMPLETE
 Status: In progress
-Last activity: 2026-02-02 -- Completed 42-01-PLAN.md (adapter functions, 22 new tests, 1229 total)
+Last activity: 2026-02-02 -- Completed 42-02-PLAN.md (router tool adapters, conversation-based slow-path)
 
-Progress: [████████░░] ~57% (17/~30 estimated plans)
+Progress: [████████░░] ~60% (18/~30 estimated plans)
 
 ## Milestone History
 
@@ -28,9 +28,9 @@ Progress: [████████░░] ~57% (17/~30 estimated plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17 (v2.3)
-- Average duration: ~5m56s
-- Total execution time: ~101m
+- Total plans completed: 18 (v2.3)
+- Average duration: ~5m50s
+- Total execution time: ~105m
 
 **By Phase:**
 
@@ -41,7 +41,7 @@ Progress: [████████░░] ~57% (17/~30 estimated plans)
 | 39 | 2/2 | 16m50s | 8m25s |
 | 40 | 3/3 | ~28m | ~9m20s |
 | 41 | 2/2 | 12m | 6m |
-| 42 | 1/3 | 3m | 3m |
+| 42 | 2/3 | 7m | 3m30s |
 
 *Updated after each plan completion*
 
@@ -94,6 +94,9 @@ v2.3 decisions:
 - Start events preserve original dotted type for trigger matching; signal events use domain-language types for wait_for matching
 - GitHub adapter returns null on non-matching branch names -- unresolvable correlation falls through to slow-path
 - Linear issue.created/updated adapted (not null) so EventRouter can match IGNORE_EVENT_TYPES
+- Domain-language signal types (approval, pr_review, pr_merged, pr_closed) instead of Temporal signal names (planApproval, prFeedback, prCompletion)
+- Split prCompletion into pr_merged and pr_closed -- more precise signal semantics
+- createSendMessageTool reused with type cast in routeViaAgentLoopV2 -- _deps parameter is unused
 
 ### Pending Todos
 
@@ -111,9 +114,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 42-01-PLAN.md (adapter functions, 22 new tests, 1229 total passing)
+Stopped at: Completed 42-02-PLAN.md (router tool adapters, conversation-based slow-path)
 Resume file: None
-Next action: Phase 42 Plan 02 (EventRouter)
+Next action: Phase 42 Plan 03 (EventRouter entry point)
 
 ---
-*Updated: 2026-02-02 -- Phase 42 Plan 01 (Adapter Functions) complete*
+*Updated: 2026-02-02 -- Phase 42 Plan 02 (Router Tool Adapters) complete*
