@@ -30,17 +30,17 @@ Requirements for v2.3 milestone. Each maps to roadmap phases starting at Phase 3
 
 ### Conversation Executor
 
-- [ ] **EXEC-01**: ConversationExecutor with start(), signal(), get(), cancel(), list() API
-- [ ] **EXEC-02**: Worker loop claims queued conversations with concurrency-safe locking (exactly one claimer per conversation)
-- [ ] **EXEC-03**: Conversation messages persisted by the executor — persistence strategy is an implementation decision behind the ConversationExecutor interface
-- [ ] **EXEC-04**: Heartbeat mechanism detects running conversations during agent loop execution
-- [ ] **EXEC-05**: Stale conversation detection — re-enqueue conversations with expired heartbeats
-- [ ] **EXEC-06**: Concurrency invariant: exactly one agent loop per conversation at any time
-- [ ] **EXEC-07**: wait_for tool that pauses conversation and registers expected signal type
-- [ ] **EXEC-08**: Signal queueing — signals arriving while conversation is running are queued and checked on next wait_for
-- [ ] **EXEC-09**: Deterministic conversation IDs from agent definition + correlation key
-- [ ] **EXEC-10**: Idempotent start — duplicate start calls for same conversation ID are no-ops
-- [ ] **EXEC-11**: At-least-once execution guarantee (failed/crashed conversations re-enqueued)
+- [x] **EXEC-01**: ConversationExecutor with start(), signal(), get(), cancel(), list() API
+- [x] **EXEC-02**: Worker loop claims queued conversations with concurrency-safe locking (exactly one claimer per conversation)
+- [x] **EXEC-03**: Conversation messages persisted by the executor — persistence strategy is an implementation decision behind the ConversationExecutor interface
+- [x] **EXEC-04**: Heartbeat mechanism detects running conversations during agent loop execution
+- [x] **EXEC-05**: Stale conversation detection — re-enqueue conversations with expired heartbeats
+- [x] **EXEC-06**: Concurrency invariant: exactly one agent loop per conversation at any time
+- [x] **EXEC-07**: wait_for tool that pauses conversation and registers expected signal type
+- [x] **EXEC-08**: Signal queueing — signals arriving while conversation is running are queued and checked on next wait_for
+- [x] **EXEC-09**: Deterministic conversation IDs from agent definition + correlation key
+- [x] **EXEC-10**: Idempotent start — duplicate start calls for same conversation ID are no-ops
+- [x] **EXEC-11**: At-least-once execution guarantee (failed/crashed conversations re-enqueued)
 
 ### History Management
 
@@ -159,17 +159,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HIST-04 | Phase 39 | Complete |
 | HIST-05 | Phase 39 | Complete |
 | HIST-06 | Phase 39 | Complete |
-| EXEC-01 | Phase 40 | Pending |
-| EXEC-02 | Phase 40 | Pending |
-| EXEC-03 | Phase 40 | Pending |
-| EXEC-04 | Phase 40 | Pending |
-| EXEC-05 | Phase 40 | Pending |
-| EXEC-06 | Phase 40 | Pending |
-| EXEC-07 | Phase 40 | Pending |
-| EXEC-08 | Phase 40 | Pending |
-| EXEC-09 | Phase 40 | Pending |
-| EXEC-10 | Phase 40 | Pending |
-| EXEC-11 | Phase 40 | Pending |
+| EXEC-01 | Phase 40 | Complete |
+| EXEC-02 | Phase 40 | Complete |
+| EXEC-03 | Phase 40 | Complete |
+| EXEC-04 | Phase 40 | Complete |
+| EXEC-05 | Phase 40 | Complete |
+| EXEC-06 | Phase 40 | Complete |
+| EXEC-07 | Phase 40 | Complete |
+| EXEC-08 | Phase 40 | Complete |
+| EXEC-09 | Phase 40 | Complete |
+| EXEC-10 | Phase 40 | Complete |
+| EXEC-11 | Phase 40 | Complete |
 | TMO-01 | Phase 41 | Pending |
 | TMO-02 | Phase 41 | Pending |
 | TMO-03 | Phase 41 | Pending |
