@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 40 of 47 (Conversation Executor)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-02 — Completed 40-01-PLAN.md (Schema, types, wait_for tool)
+Last activity: 2026-02-02 — Completed 40-02-PLAN.md (ConversationExecutor core implementation)
 
-Progress: [████░░░░░░] ~33% (10/~30 estimated plans)
+Progress: [████░░░░░░] ~37% (11/~30 estimated plans)
 
 ## Milestone History
 
@@ -28,9 +28,9 @@ Progress: [████░░░░░░] ~33% (10/~30 estimated plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10 (v2.3)
-- Average duration: 6m14s
-- Total execution time: 62m24s
+- Total plans completed: 11 (v2.3)
+- Average duration: 6m29s
+- Total execution time: 71m27s
 
 **By Phase:**
 
@@ -39,7 +39,7 @@ Progress: [████░░░░░░] ~33% (10/~30 estimated plans)
 | 37 | 3/3 | 20m09s | 6m43s |
 | 38 | 4/4 | 20m59s | 5m15s |
 | 39 | 2/2 | 16m50s | 8m25s |
-| 40 | 1/3 | 4m25s | 4m25s |
+| 40 | 2/3 | 13m28s | 6m44s |
 
 *Updated after each plan completion*
 
@@ -77,6 +77,9 @@ v2.3 decisions:
 - Signal schema uses optional deduplicationId stored in delivered_signal_ids JSONB array -- simple query path for dedup checks
 - ConversationExecutor.signal() returns discriminated action union (resumed/queued/rejected/deduplicated) -- precise caller feedback
 - Non-retryable errors as distinct classes (TokenBudgetExhaustedError, AgentAbortedError) -- enables instanceof checks in retry logic
+- FOR UPDATE locking via Drizzle .for("update") rather than raw SQL -- keeps queries type-safe
+- Previous attempt context injected from SessionProjection into re-trigger initial message -- gives agent awareness of prior work
+- Signal validation via SignalSchema.safeParse before transaction -- fail fast on invalid payloads
 
 ### Pending Todos
 
@@ -94,9 +97,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 40-01-PLAN.md (Schema, types, wait_for tool -- 13 tests, migration 0002)
+Stopped at: Completed 40-02-PLAN.md (ConversationExecutor core -- 41 tests, 787 total passing)
 Resume file: None
-Next action: Phase 40 Plan 02 (ConversationExecutor core implementation)
+Next action: Phase 40 Plan 03 (Worker loop, spawn_agent, signal delivery)
 
 ---
-*Updated: 2026-02-02 — Completed plan 40-01, Phase 40 (Conversation Executor) in progress*
+*Updated: 2026-02-02 — Completed plan 40-02, Phase 40 (Conversation Executor) in progress*
