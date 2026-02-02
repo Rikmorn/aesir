@@ -25,6 +25,7 @@ import type * as agentsSchemaModule from "../shared/db/schema.js";
 import type { Conversation } from "../shared/db/schema.js";
 import { conversations } from "../shared/db/schema.js";
 import { createHistoryManager } from "./history-manager.js";
+import type { TimeoutScheduler } from "./timeout-scheduler.js";
 import type {
   AgentRegistry,
   EventLog,
@@ -67,6 +68,8 @@ export interface WorkerLoopOptions {
   staleThresholdMs?: number;
   /** Unique identifier for this worker instance */
   workerId?: string;
+  /** Optional timeout scheduler for delayed signal delivery (Phase 41) */
+  timeoutScheduler?: TimeoutScheduler;
 }
 
 /**
@@ -107,6 +110,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
     heartbeatIntervalMs = 30000,
     staleThresholdMs = 300000,
     workerId = `wrkr_${nanoid(12)}`,
+    timeoutScheduler,
   } = options;
 
   const logger = parentLogger.child({ component: "worker-loop", workerId });
@@ -449,18 +453,42 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
 
       // 13. Handle result based on waitForState and loop status
       if (waitForState.triggered) {
+        // Schedule timeout if specified
+        let timeoutJobId: string | undefined;
+        if (timeoutScheduler && waitForState.timeout) {
+          try {
+            timeoutJobId = await timeoutScheduler.schedule(
+              conv.id,
+              waitForState.timeout,
+              waitForState.waitType ?? "unknown",
+              waitForState.reason ?? "Agent paused",
+            );
+          } catch (scheduleError) {
+            childLogger.error(
+              { err: scheduleError },
+              "Failed to schedule timeout (non-fatal)",
+            );
+          }
+        }
+
+        // Build pending_wait with optional timeoutJobId
+        const pendingWaitValue: Record<string, unknown> = {
+          type: waitForState.waitType,
+          reason: waitForState.reason,
+          timeout: waitForState.timeout,
+          metadata: waitForState.metadata,
+        };
+        if (timeoutJobId) {
+          pendingWaitValue.timeoutJobId = timeoutJobId;
+        }
+
         // Pause: transition to waiting
         await db
           .update(conversations)
           .set({
             status: "waiting",
             messages: finalMessages as unknown[],
-            pending_wait: {
-              type: waitForState.waitType,
-              reason: waitForState.reason,
-              timeout: waitForState.timeout,
-              metadata: waitForState.metadata,
-            },
+            pending_wait: pendingWaitValue,
             claimed_by: null,
             claimed_at: null,
             last_heartbeat_at: null,

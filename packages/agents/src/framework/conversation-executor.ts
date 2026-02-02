@@ -95,6 +95,7 @@ export function createConversationExecutor(
 
   // Create the worker loop for executing queued conversations
   let workerLoop: WorkerLoop | null = null;
+  let schedulerStarted = false;
 
   function getOrCreateWorkerLoop(): WorkerLoop {
     if (!workerLoop) {
@@ -115,6 +116,8 @@ export function createConversationExecutor(
       if (options.staleThresholdMs !== undefined)
         loopOpts.staleThresholdMs = options.staleThresholdMs;
       if (options.workerId !== undefined) loopOpts.workerId = options.workerId;
+      if (options.timeoutScheduler !== undefined)
+        loopOpts.timeoutScheduler = options.timeoutScheduler;
       workerLoop = createWorkerLoop(loopOpts);
     }
     return workerLoop;
@@ -178,7 +181,7 @@ export function createConversationExecutor(
 
   // ─── ConversationExecutor Interface ──────────────────────────────────
 
-  return {
+  const executor: ConversationExecutor = {
     async start(params: StartConversationParams): Promise<string> {
       const baseId = `${params.agentDefinitionId}-${params.correlationKey}`;
 
@@ -360,6 +363,16 @@ export function createConversationExecutor(
             return { action: "rejected" };
           }
 
+          // Cancel pending timeout if one exists
+          if (options.timeoutScheduler) {
+            if (
+              pendingWait?.timeoutJobId &&
+              typeof pendingWait.timeoutJobId === "string"
+            ) {
+              await options.timeoutScheduler.cancel(pendingWait.timeoutJobId);
+            }
+          }
+
           // Build signal message
           const signalContent =
             signal.message ??
@@ -486,6 +499,20 @@ export function createConversationExecutor(
           return false;
         }
 
+        // Cancel pending timeout if conversation was waiting
+        if (options.timeoutScheduler && status === "waiting") {
+          const pendingWait = row.pending_wait as Record<
+            string,
+            unknown
+          > | null;
+          if (
+            pendingWait?.timeoutJobId &&
+            typeof pendingWait.timeoutJobId === "string"
+          ) {
+            await options.timeoutScheduler.cancel(pendingWait.timeoutJobId);
+          }
+        }
+
         // Transition to cancelled
         await tx
           .update(conversations)
@@ -567,6 +594,12 @@ export function createConversationExecutor(
     startWorker(): void {
       const loop = getOrCreateWorkerLoop();
       loop.start();
+      if (options.timeoutScheduler && !schedulerStarted) {
+        schedulerStarted = true;
+        void options.timeoutScheduler.start(executor).catch((err: unknown) => {
+          logger.error({ err }, "Failed to start timeout scheduler");
+        });
+      }
     },
 
     async stopWorker(): Promise<void> {
@@ -574,6 +607,11 @@ export function createConversationExecutor(
         await workerLoop.close();
         workerLoop = null;
       }
+      if (options.timeoutScheduler) {
+        await options.timeoutScheduler.close();
+      }
     },
   };
+
+  return executor;
 }

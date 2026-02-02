@@ -18,6 +18,7 @@ import type {
   ConversationStatus,
   NewAgentEvent,
 } from "../shared/db/schema.js";
+import type { TimeoutScheduler } from "./timeout-scheduler.js";
 
 export { agentEventTypeValues } from "../shared/db/schema.js";
 
@@ -544,6 +545,8 @@ export interface ConversationExecutorOptions {
   staleThresholdMs?: number;
   /** Unique identifier for this worker instance */
   workerId?: string;
+  /** Optional timeout scheduler for delayed signal delivery (Phase 41) */
+  timeoutScheduler?: TimeoutScheduler;
 }
 
 // ─── Non-Retryable Error Classes ────────────────────────────────────────────
