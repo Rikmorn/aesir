@@ -6,9 +6,13 @@
  * Handles:
  * - pull_request.merged -> "pr_merged" (fast-path signal)
  * - pull_request.closed -> "pr_closed" (fast-path signal)
+ * - pull_request.review_submitted -> "pr_review" (domain-language)
+ * - pull_request.review_approved -> "pr_review" (domain-language)
+ * - pull_request.review_changes_requested -> "pr_review" (domain-language)
+ * - pull_request.review_commented -> "pr_review" (domain-language)
+ * - pull_request.review_dismissed -> "pr_review" (domain-language)
  *
  * Returns null for:
- * - pull_request.review_submitted -> slow-path LLM (PR reviews carry nuance)
  * - PR events with non-matching branch names (can't extract task ID)
  * - Any unrecognized GitHub event type
  */
@@ -63,7 +67,27 @@ export function adaptGitHubEvent(event: NormalizedEvent): IncomingEvent | null {
       };
     }
 
-    // github.pull_request.review_submitted -> return null for slow-path
+    case "github.pull_request.review_submitted":
+    case "github.pull_request.review_approved":
+    case "github.pull_request.review_changes_requested":
+    case "github.pull_request.review_commented":
+    case "github.pull_request.review_dismissed": {
+      const prNumber = payload.prNumber as number;
+      return {
+        type: "pr_review",
+        data: {
+          reviewState: payload.reviewState,
+          reviewBody: payload.reviewBody,
+          reviewerLogin: payload.reviewerLogin,
+          prNumber,
+        },
+        source: "github:webhook",
+        // No correlationKey -- PR reviews don't include branchName, always goes to slow_path
+        deduplicationId: event.correlationId,
+        message: `PR #${prNumber} review (${payload.reviewState}): ${(payload.reviewBody as string) || "(no comment)"}`,
+      };
+    }
+
     default:
       return null;
   }

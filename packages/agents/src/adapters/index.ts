@@ -7,6 +7,7 @@
 
 export { adaptGitHubEvent } from "./github.js";
 export { adaptLinearEvent } from "./linear.js";
+export { adaptPassThrough } from "./pass-through.js";
 export { adaptSlackEvent } from "./slack.js";
 export * from "./types.js";
 

@@ -7,9 +7,10 @@
  * - agent_session.created -> "linear.agent_session.created" (start trigger, preserves original type)
  * - issue.created -> "linear.issue.created" (adapted for IGNORE_EVENT_TYPES matching)
  * - issue.updated -> "linear.issue.updated" (adapted for IGNORE_EVENT_TYPES matching)
+ * - comment.created -> "issue_comment" (domain-language)
+ * - agent_session.prompted -> "agent_prompt" (domain-language)
  *
  * Returns null for:
- * - comment.created -> slow-path LLM (comments need intent classification)
  * - Any unrecognized Linear event type
  */
 
@@ -56,7 +57,37 @@ export function adaptLinearEvent(event: NormalizedEvent): IncomingEvent | null {
         // No correlationKey -- this is an ignore event
       };
 
-    // linear.comment.created -> return null for slow-path
+    case "linear.comment.created": {
+      const issueId = payload.issueId as string;
+      return {
+        type: "issue_comment",
+        data: {
+          body: payload.body,
+          userId: payload.userId,
+          issueId,
+        },
+        source: "linear:webhook",
+        correlationKey: issueId,
+        deduplicationId: event.correlationId,
+        message: payload.body as string,
+      };
+    }
+
+    case "linear.agent_session.prompted": {
+      const issueId = payload.issueId as string;
+      return {
+        type: "agent_prompt",
+        data: {
+          issueId,
+          prompt: (payload.prompt ?? payload.body) as string,
+        },
+        source: "linear:webhook",
+        correlationKey: issueId,
+        deduplicationId: event.correlationId,
+        message: (payload.prompt ?? payload.body) as string,
+      };
+    }
+
     default:
       return null;
   }

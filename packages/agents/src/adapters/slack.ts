@@ -9,9 +9,9 @@
  * - block_actions.escalation_retry -> "escalation_resolved" (fast-path signal)
  * - block_actions.escalation_abort -> "escalation_resolved" (fast-path signal)
  * - app_mention.created -> "slack.app_mention.created" (start trigger, preserves original type)
+ * - message.created -> "thread_reply" or "channel_message" (domain-language)
  *
  * Returns null for:
- * - message.created (thread replies) -> slow-path LLM
  * - Any unrecognized Slack event type
  */
 
@@ -99,7 +99,23 @@ export function adaptSlackEvent(event: NormalizedEvent): IncomingEvent | null {
       };
     }
 
-    // slack.message.created (thread replies) -> return null for slow-path
+    case "slack.message.created": {
+      const threadTs = payload.threadTs as string | undefined;
+      return {
+        type: threadTs ? "thread_reply" : "channel_message",
+        data: {
+          text: payload.text,
+          userId: payload.user,
+          channelId: payload.channel,
+          threadTs: threadTs ?? (payload.ts as string),
+        },
+        source: "slack:webhook",
+        correlationKey: threadTs,
+        deduplicationId: event.correlationId,
+        message: payload.text as string,
+      };
+    }
+
     default:
       return null;
   }
