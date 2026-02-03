@@ -169,7 +169,11 @@ Plans:
   2. Integration test demonstrates full product-agent lifecycle: Slack message starts conversation, agent gathers requirements, creates Linear issue, completes
   3. Edge case tests pass: signal arriving while conversation is running is queued and delivered on next wait_for; stale conversation with expired heartbeat is re-enqueued; timeout fires and wakes paused conversation
   4. All existing test suites continue to pass (no regressions from v2.2)
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 45-01-PLAN.md -- Test infrastructure setup (supertest, migration SQL, setup.ts, helpers.ts) + legacy test marking
+- [ ] 45-02-PLAN.md -- Framework layer integration tests (8 lifecycle flows with real PostgreSQL)
+- [ ] 45-03-PLAN.md -- HTTP layer integration tests (supertest) + manual E2E validation checklist
 
 ### Phase 46: Temporal Migration + Cutover
 **Goal**: Feature flag routes new events to ConversationExecutor while existing Temporal workflows drain naturally over a 7-day window
@@ -213,10 +217,10 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 | 42. Event Router + Adapters | 3/3 | Complete | 2026-02-02 |
 | 43. Smart Router Adaptation | 2/2 | Complete | 2026-02-03 |
 | 44. Single Service Consolidation | 2/2 | Complete | 2026-02-03 |
-| 45. Integration Testing + Validation | 0/TBD | Not started | - |
+| 45. Integration Testing + Validation | 0/3 | Not started | - |
 | 46. Temporal Migration + Cutover | 0/TBD | Not started | - |
 | 47. Cleanup + Documentation | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-01*
-*Last updated: 2026-02-03 -- Phase 44 complete (2 plans, 2 waves)*
+*Last updated: 2026-02-03 -- Phase 45 planned (3 plans, 2 waves)*
