@@ -21,7 +21,17 @@ process.env.SLACK_CHANNEL_ID = process.env.SLACK_CHANNEL_ID || "C000TEST";
 process.env.NODE_ENV = "test";
 
 import type { PinoLogger } from "@aesir/platform";
-import type { Mock } from "vitest";
+
+// Use a structural type alias instead of vitest's Mock to avoid
+// Mock<Procedure | Constructable> vs Mock assignability issues in vitest 4.x.
+// Both vi.fn() return values and ReturnType<typeof vi.fn> satisfy this shape.
+interface MockFn {
+  mockResolvedValue: (val: unknown) => void;
+  // biome-ignore lint/suspicious/noExplicitAny: Mock implementation accepts any function signature
+  mockImplementation: (fn: (...args: any[]) => any) => void;
+  mockReset: () => void;
+}
+
 import type {
   AgentLoopResult,
   ToolDefinition,
@@ -77,7 +87,7 @@ function makeErrorResult(
  * @param mockFn - The vi.fn() mock for runAgentLoop
  * @param output - Optional output text (default: "Task completed successfully.")
  */
-export function mockAgentLoopCompletes(mockFn: Mock, output?: string): void {
+export function mockAgentLoopCompletes(mockFn: MockFn, output?: string): void {
   mockFn.mockResolvedValue(makeCompletedResult(output));
 }
 
@@ -93,7 +103,7 @@ export function mockAgentLoopCompletes(mockFn: Mock, output?: string): void {
  * @param timeout - Timeout duration (default: "72h")
  */
 export function mockAgentLoopPauses(
-  mockFn: Mock,
+  mockFn: MockFn,
   waitType = "approval",
   reason = "Waiting for approval",
   timeout = "72h",
@@ -122,7 +132,10 @@ export function mockAgentLoopPauses(
  * @param mockFn - The vi.fn() mock for runAgentLoop
  * @param errorMessage - Error message (default: "Agent encountered an error.")
  */
-export function mockAgentLoopErrors(mockFn: Mock, errorMessage?: string): void {
+export function mockAgentLoopErrors(
+  mockFn: MockFn,
+  errorMessage?: string,
+): void {
   mockFn.mockResolvedValue(makeErrorResult(errorMessage));
 }
 
@@ -141,8 +154,8 @@ export function mockAgentLoopErrors(mockFn: Mock, errorMessage?: string): void {
  * ```
  */
 export function mockAgentLoopSequence(
-  mockFn: Mock,
-  sequence: Array<(mock: Mock) => void>,
+  mockFn: MockFn,
+  sequence: Array<(mock: MockFn) => void>,
 ): void {
   let callIndex = 0;
 
@@ -170,7 +183,7 @@ export function mockAgentLoopSequence(
       ) => {
         implFn = fn;
       },
-    } as unknown as Mock;
+    } as unknown as MockFn;
 
     configurator(captureMock);
 

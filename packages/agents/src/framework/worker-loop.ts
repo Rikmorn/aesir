@@ -453,66 +453,128 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
 
       // 13. Handle result based on waitForState and loop status
       if (waitForState.triggered) {
-        // Schedule timeout if specified
-        let timeoutJobId: string | undefined;
-        if (timeoutScheduler && waitForState.timeout) {
-          try {
-            timeoutJobId = await timeoutScheduler.schedule(
-              conv.id,
-              waitForState.timeout,
-              waitForState.waitType ?? "unknown",
-              waitForState.reason ?? "Agent paused",
-            );
-          } catch (scheduleError) {
-            childLogger.error(
-              { err: scheduleError },
-              "Failed to schedule timeout (non-fatal)",
-            );
-          }
-        }
-
-        // Build pending_wait with optional timeoutJobId
-        const pendingWaitValue: Record<string, unknown> = {
-          type: waitForState.waitType,
-          reason: waitForState.reason,
-          timeout: waitForState.timeout,
-          metadata: waitForState.metadata,
-        };
-        if (timeoutJobId) {
-          pendingWaitValue.timeoutJobId = timeoutJobId;
-        }
-
-        // Pause: transition to waiting
-        await db
-          .update(conversations)
-          .set({
-            status: "waiting",
-            messages: finalMessages as unknown[],
-            pending_wait: pendingWaitValue,
-            claimed_by: null,
-            claimed_at: null,
-            last_heartbeat_at: null,
-            updated_at: new Date(),
+        // Before transitioning to waiting, check if a signal was queued
+        // during execution that can immediately satisfy the wait_for.
+        // Re-read from DB since signals may have arrived while the loop ran.
+        const freshRow = await db
+          .select({
+            queued_signals: conversations.queued_signals,
+            delivered_signal_ids: conversations.delivered_signal_ids,
           })
-          .where(eq(conversations.id, conv.id));
+          .from(conversations)
+          .where(
+            sql`${conversations.id} = ${conv.id} AND ${conversations.claimed_by} = ${workerId}`,
+          );
 
-        eventLog.append({
-          conversationId: conv.id,
-          agentDefinitionId: conv.agent_definition_id,
-          agentDefinitionVersion: conv.agent_definition_version,
-          agentInstanceId: instanceId,
-          type: "agent.paused",
-          payload: {
-            waitType: waitForState.waitType,
-            reason: waitForState.reason,
-          },
-        });
-        await eventLog.flush();
+        const freshSignals = (freshRow[0]?.queued_signals ?? []) as Array<{
+          type: string;
+          data?: Record<string, unknown>;
+          message?: string;
+        }>;
 
-        childLogger.info(
-          { waitType: waitForState.waitType },
-          "Conversation paused, waiting for signal",
+        const matchIdx = freshSignals.findIndex(
+          (sig) => sig.type === waitForState.waitType,
         );
+        const matchedQueuedSignal =
+          matchIdx >= 0 ? freshSignals[matchIdx] : undefined;
+
+        if (matchedQueuedSignal) {
+          // Consume the queued signal and re-enqueue instead of pausing
+          const signalContent =
+            matchedQueuedSignal.message ??
+            `Signal received: ${matchedQueuedSignal.type}. Data: ${JSON.stringify(matchedQueuedSignal.data ?? {})}`;
+
+          const updatedMessages = [
+            ...(finalMessages as unknown[]),
+            { role: "user", content: signalContent },
+          ];
+
+          const updatedSignals = [
+            ...freshSignals.slice(0, matchIdx),
+            ...freshSignals.slice(matchIdx + 1),
+          ];
+
+          await db
+            .update(conversations)
+            .set({
+              status: "queued",
+              messages: updatedMessages,
+              pending_wait: null,
+              queued_signals: updatedSignals,
+              claimed_by: null,
+              claimed_at: null,
+              last_heartbeat_at: null,
+              updated_at: new Date(),
+            })
+            .where(eq(conversations.id, conv.id));
+
+          childLogger.info(
+            { signalType: matchedQueuedSignal.type },
+            "Consumed queued signal at pause point, re-enqueuing conversation",
+          );
+        } else {
+          // No matching queued signal -- transition to waiting
+          // Schedule timeout if specified
+          let timeoutJobId: string | undefined;
+          if (timeoutScheduler && waitForState.timeout) {
+            try {
+              timeoutJobId = await timeoutScheduler.schedule(
+                conv.id,
+                waitForState.timeout,
+                waitForState.waitType ?? "unknown",
+                waitForState.reason ?? "Agent paused",
+              );
+            } catch (scheduleError) {
+              childLogger.error(
+                { err: scheduleError },
+                "Failed to schedule timeout (non-fatal)",
+              );
+            }
+          }
+
+          // Build pending_wait with optional timeoutJobId
+          const pendingWaitValue: Record<string, unknown> = {
+            type: waitForState.waitType,
+            reason: waitForState.reason,
+            timeout: waitForState.timeout,
+            metadata: waitForState.metadata,
+          };
+          if (timeoutJobId) {
+            pendingWaitValue.timeoutJobId = timeoutJobId;
+          }
+
+          // Pause: transition to waiting
+          await db
+            .update(conversations)
+            .set({
+              status: "waiting",
+              messages: finalMessages as unknown[],
+              pending_wait: pendingWaitValue,
+              claimed_by: null,
+              claimed_at: null,
+              last_heartbeat_at: null,
+              updated_at: new Date(),
+            })
+            .where(eq(conversations.id, conv.id));
+
+          eventLog.append({
+            conversationId: conv.id,
+            agentDefinitionId: conv.agent_definition_id,
+            agentDefinitionVersion: conv.agent_definition_version,
+            agentInstanceId: instanceId,
+            type: "agent.paused",
+            payload: {
+              waitType: waitForState.waitType,
+              reason: waitForState.reason,
+            },
+          });
+          await eventLog.flush();
+
+          childLogger.info(
+            { waitType: waitForState.waitType },
+            "Conversation paused, waiting for signal",
+          );
+        }
       } else if (result.status === "completed") {
         // Completed successfully
         await db
