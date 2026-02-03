@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.3 Unified Agent Framework -- Phase 42 complete, ready for Phase 43
+**Current focus:** v2.3 Unified Agent Framework -- Phase 43 in progress
 
 ## Current Position
 
-Phase: 42 of 47 (Event Router + Adapters) -- COMPLETE
-Plan: 3 of 3 in current phase -- COMPLETE
-Status: Phase complete
-Last activity: 2026-02-02 -- Completed 42-03-PLAN.md (EventRouter entry point)
+Phase: 43 of 47 (Smart Router Adaptation)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-03 -- Completed 43-01-PLAN.md (Missing adapters + pass-through)
 
-Progress: [████████░░] ~65% (21/~30 estimated plans)
+Progress: [████████░░] ~68% (22/~32 estimated plans)
 
 ## Milestone History
 
@@ -28,9 +28,9 @@ Progress: [████████░░] ~65% (21/~30 estimated plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 21 (v2.3)
-- Average duration: ~5m35s
-- Total execution time: ~117m
+- Total plans completed: 22 (v2.3)
+- Average duration: ~5m28s
+- Total execution time: ~121m
 
 **By Phase:**
 
@@ -42,6 +42,7 @@ Progress: [████████░░] ~65% (21/~30 estimated plans)
 | 40 | 3/3 | ~28m | ~9m20s |
 | 41 | 2/2 | 12m | 6m |
 | 42 | 3/3 | 12m05s | 4m02s |
+| 43 | 1/2 | 3m39s | 3m39s |
 
 *Updated after each plan completion*
 
@@ -101,6 +102,9 @@ v2.3 decisions:
 - EventRouter.handle() is synchronous (no I/O) -- all async work in loadStartRules()
 - Missing correlationKey on start/signal events falls to slow_path (not error) -- graceful degradation
 - Duplicate trigger registrations log warning and first-wins -- deterministic behavior
+- PR review events have no correlationKey (branchName not in review payloads) -- always routes to slow_path
+- slack.message.created differentiates thread_reply vs channel_message based on threadTs presence
+- linear.agent_session.prompted falls back to payload.body when payload.prompt is absent
 
 ### Pending Todos
 
@@ -117,10 +121,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-02
-Stopped at: Completed 42-03-PLAN.md (EventRouter entry point) -- Phase 42 complete
+Last session: 2026-02-03
+Stopped at: Completed 43-01-PLAN.md (Missing adapters + pass-through)
 Resume file: None
-Next action: Phase 43 (next phase)
+Next action: 43-02-PLAN.md (next plan in phase)
 
 ---
-*Updated: 2026-02-02 -- Phase 42 complete (Event Router + Adapters)*
+*Updated: 2026-02-03 -- Phase 43 plan 01 complete (Smart Router Adaptation)*
