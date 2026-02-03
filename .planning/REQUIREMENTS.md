@@ -68,7 +68,7 @@ Requirements for v2.3 milestone. Each maps to roadmap phases starting at Phase 3
 - [x] **SIG-04**: Correlation-based signal routing resolves conversation ID from correlation key
 - [x] **SIG-05**: Fast-path routing preserved for unambiguous events (deterministic, no LLM needed)
 - [x] **SIG-06**: Smart router adapted from Temporal workflowClient to ConversationExecutor
-- [ ] **SIG-07**: Signal deduplication — duplicate signals (webhook retries) are no-ops, tracked by source + delivery ID on conversation
+- [x] **SIG-07**: Signal deduplication — duplicate signals (webhook retries) are no-ops, tracked by source + delivery ID on conversation
 
 ### Service Consolidation
 
@@ -179,7 +179,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SIG-04 | Phase 42 | Complete |
 | SIG-05 | Phase 43 | Complete |
 | SIG-06 | Phase 43 | Complete |
-| SIG-07 | Phase 40 | Pending |
+| SIG-07 | Phase 40 | Complete |
 | SVC-01 | Phase 44 | Complete |
 | SVC-02 | Phase 44 | Complete |
 | SVC-03 | Phase 44 | Complete |
