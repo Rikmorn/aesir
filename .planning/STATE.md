@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 47 of 47 (Cleanup & Documentation)
-Plan: 2 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-03 -- Completed 47-02-PLAN.md (Phase B: delete dead files and directories)
+Last activity: 2026-02-03 -- Completed 47-03-PLAN.md (Phase C: remove dependencies, config cleanup, migration consolidation)
 
-Progress: [█████████░] ~98% (33/~35 estimated plans)
+Progress: [█████████░] ~99% (34/~35 estimated plans)
 
 ## Milestone History
 
@@ -28,9 +28,9 @@ Progress: [█████████░] ~98% (33/~35 estimated plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 33 (v2.3)
+- Total plans completed: 34 (v2.3)
 - Average duration: ~5m24s
-- Total execution time: ~179m
+- Total execution time: ~184m
 
 **By Phase:**
 
@@ -46,7 +46,7 @@ Progress: [█████████░] ~98% (33/~35 estimated plans)
 | 44 | 2/2 | 6m | 3m |
 | 45 | 3/3 | 32m36s | 10m52s |
 | 46 | 2/2 | ~11m | ~5m30s |
-| 47 | 2/4 | 14m29s | 7m15s |
+| 47 | 3/4 | 19m25s | 6m28s |
 
 *Updated after each plan completion*
 
@@ -112,7 +112,7 @@ v2.3 decisions:
 - Idempotent start detection via conversation ID comparison -- no executor interface changes needed
 - Helper functions use deps.logger instead of child logger parameter -- avoids Pino Logger<never> vs Logger<string> type mismatch
 - DEFINITIONS_DIR resolved via fileURLToPath + path.resolve instead of __dirname (Biome naming convention rejects double-underscore prefixed variables)
-- Volume name temporal-postgresql kept unchanged to preserve existing PostgreSQL data across service consolidation
+- Volume name temporal-postgresql kept unchanged to preserve existing PostgreSQL data across service consolidation (subsequently renamed to aesir-postgresql in 47-03)
 - PRODUCT_AGENT_URL removed from .env.example -- events route through unified agent-service
 - Test Express app replicates service/main.ts routes rather than importing it -- production main.ts calls process.exit on env validation failure
 - Structural MockFn interface replaces vitest Mock import in helpers.ts -- avoids Mock<Procedure | Constructable> assignability issue in vitest 4.x
@@ -130,6 +130,9 @@ v2.3 decisions:
 - createSendMessageTool now uses EventRouterDeps directly -- no more unsafe RouterDeps cast in routeViaAgentLoopV2
 - Temporal logger export removed from platform logging barrel -- only consumer was dead platform/temporal/worker.ts
 - schema.drizzle.ts left unchanged during schema.ts cleanup -- migration source of truth must retain old table definitions to prevent destructive DROP TABLE migrations
+- Consolidated migrations create clean-slate v2.3 schema -- fresh clones get only conversations, agent_events, agent_sessions (no legacy context_snapshots/tasks/execution_traces)
+- Volume renamed temporal-postgresql -> aesir-postgresql -- existing devs must docker compose down -v
+- Pre-existing lint errors (3) and test failures (10) documented but not fixed in 47-03 -- not introduced by cleanup plans
 
 ### Pending Todos
 
@@ -147,9 +150,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-03
-Stopped at: Completed 47-02-PLAN.md (Phase B: delete dead files and directories)
+Stopped at: Completed 47-03-PLAN.md (Phase C: remove dependencies, config cleanup, migration consolidation)
 Resume file: None
-Next action: Execute plan 47-03 (Phase C: remove dead dependencies)
+Next action: Execute plan 47-04 (Phase D: update CLAUDE.md documentation)
 
 ---
-*Updated: 2026-02-03 -- Phase 47 plan 02 complete (86 dead files deleted, 21,590 lines removed)*
+*Updated: 2026-02-03 -- Phase 47 plan 03 complete (@temporalio removed, credentials renamed temporal->aesir, migrations consolidated)*
