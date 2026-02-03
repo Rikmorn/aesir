@@ -204,7 +204,12 @@ Plans:
   3. Old database tables (tasks, context_snapshots, execution_traces) dropped via migration; three disconnected stores replaced by unified event log
   4. Docker Compose updated -- Temporal server, Temporal UI, and per-agent services removed; single agent service added
   5. CLAUDE.md updated to reflect v2.3 architecture (no Temporal/LangGraph references remain)
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 47-01-PLAN.md -- Phase A: Refactor live-to-dead references (barrel cleanups, router refactoring, send-message.ts fix)
+- [ ] 47-02-PLAN.md -- Phase B: Delete dead files and directories (~80+ files, schema.ts cleanup, test surgery)
+- [ ] 47-03-PLAN.md -- Phase C: Remove @temporalio deps, credential rename, migration consolidation, config cleanup
+- [ ] 47-04-PLAN.md -- Documentation: Full CLAUDE.md rewrite + README.md update for v2.3
 
 ## Progress
 
@@ -224,8 +229,8 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 | 44. Single Service Consolidation | 2/2 | Complete | 2026-02-03 |
 | 45. Integration Testing + Validation | 3/3 | Complete | 2026-02-03 |
 | 46. Pre-Cleanup Verification & Dependency Audit | 2/2 | Complete | 2026-02-03 |
-| 47. Cleanup + Documentation | 0/TBD | Not started | - |
+| 47. Cleanup + Documentation | 0/4 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-01*
-*Last updated: 2026-02-03 -- Phase 46 complete (2 plans executed, verification passed)*
+*Last updated: 2026-02-03 -- Phase 47 planned (4 plans in 3 waves)*
