@@ -38,6 +38,14 @@ export function createReadFileTool(deps: CodebaseToolDeps): ToolDefinition {
 
       const { path } = parsed.data;
 
+      if (!containerManager) {
+        return {
+          content:
+            "No dev container available. This tool requires a running dev container.",
+          isError: true,
+        };
+      }
+
       try {
         const result = await containerManager.execute(taskId, {
           command: ["cat", path],

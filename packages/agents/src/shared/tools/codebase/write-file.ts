@@ -40,6 +40,14 @@ export function createWriteFileTool(deps: CodebaseToolDeps): ToolDefinition {
 
       const { path, content } = parsed.data;
 
+      if (!containerManager) {
+        return {
+          content:
+            "No dev container available. This tool requires a running dev container.",
+          isError: true,
+        };
+      }
+
       try {
         // Create parent directories if path has directories
         const lastSlash = path.lastIndexOf("/");

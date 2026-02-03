@@ -45,6 +45,14 @@ export function createListDirectoryTool(
 
       const dirPath = parsed.data.path ?? ".";
 
+      if (!containerManager) {
+        return {
+          content:
+            "No dev container available. This tool requires a running dev container.",
+          isError: true,
+        };
+      }
+
       try {
         const result = await containerManager.execute(taskId, {
           command: ["ls", "-la", dirPath],

@@ -49,6 +49,14 @@ export function createSearchCodebaseTool(
 
       const { pattern, glob, path } = parsed.data;
 
+      if (!containerManager) {
+        return {
+          content:
+            "No dev container available. This tool requires a running dev container.",
+          isError: true,
+        };
+      }
+
       try {
         const command = [
           "rg",

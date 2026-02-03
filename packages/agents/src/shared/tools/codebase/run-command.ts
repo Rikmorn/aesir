@@ -51,6 +51,14 @@ export function createRunCommandTool(deps: CodebaseToolDeps): ToolDefinition {
       const { command, timeoutMs } = parsed.data;
       const timeout = timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
+      if (!containerManager) {
+        return {
+          content:
+            "No dev container available. This tool requires a running dev container.",
+          isError: true,
+        };
+      }
+
       try {
         const result = await containerManager.execute(taskId, {
           command: ["sh", "-c", command],
