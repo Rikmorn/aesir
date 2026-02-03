@@ -20,6 +20,7 @@ import { eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { nanoid } from "nanoid";
 import { runAgentLoop } from "../shared/agent-loop/run-agent-loop.js";
+import { createTokenBudget } from "../shared/agent-loop/token-budget.js";
 import type { AgentLoopResult } from "../shared/agent-loop/types.js";
 import type * as agentsSchemaModule from "../shared/db/schema.js";
 import type { Conversation } from "../shared/db/schema.js";
@@ -345,6 +346,31 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         return;
       }
 
+      // 1b. Validate sub-agent definitions exist (fail fast)
+      if (definition.subAgents) {
+        for (const [role, agentId] of Object.entries(definition.subAgents)) {
+          const subDef = await agentRegistry.get(agentId);
+          if (!subDef) {
+            childLogger.error(
+              { role, agentId },
+              "Sub-agent definition not found, marking conversation failed",
+            );
+            await db
+              .update(conversations)
+              .set({
+                status: "failed",
+                error_message: `Sub-agent definition not found: ${agentId} (role: ${role})`,
+                claimed_by: null,
+                claimed_at: null,
+                last_heartbeat_at: null,
+                updated_at: new Date(),
+              })
+              .where(eq(conversations.id, conv.id));
+            return;
+          }
+        }
+      }
+
       // 2. Initialize event log sequence
       await eventLog.initSequence(conv.id);
 
@@ -377,6 +403,14 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
       }
 
       // 5. Resolve tools
+      // 5a. Create shared token budget if agent can spawn sub-agents
+      const hasSpawnAgent = definition.tools.includes(
+        "coordination:spawn_agent",
+      );
+      const tokenBudget = hasSpawnAgent
+        ? createTokenBudget(definition.tokenBudget)
+        : undefined;
+
       const toolContext: ToolContext = {
         agentId: conv.agent_definition_id,
         correlationId: conv.id,
@@ -385,6 +419,20 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
           sandboxManager && {
             containerManager: sandboxManager,
             taskId: conv.id,
+          }),
+        ...(hasSpawnAgent &&
+          tokenBudget && {
+            spawnDeps: {
+              agentRegistry,
+              toolRegistry,
+              tokenBudget,
+              eventLog,
+              parentDefinition: definition,
+              parentInstanceId: instanceId,
+              abortSignal,
+              currentDepth: 0,
+              maxSpawnDepth: 3,
+            },
           }),
       };
       const resolvedTools = toolRegistry.resolve(definition.tools, toolContext);
@@ -522,6 +570,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         onHeartbeat,
         abortSignal,
         logger: childLogger,
+        ...(tokenBudget && { tokenBudget }),
       };
       if (context !== undefined) {
         loopOptions.context = context;

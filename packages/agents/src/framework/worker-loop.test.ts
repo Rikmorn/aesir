@@ -1596,4 +1596,148 @@ describe("createWorkerLoop", () => {
       expect(resumedEvent).toBeDefined();
     });
   });
+
+  // ── Sub-agent Spawn Wiring ───────────────────────────────────────────
+
+  describe("sub-agent spawn wiring", () => {
+    it("should populate spawnDeps when agent has coordination:spawn_agent", async () => {
+      const { options, mockDb, mockToolRegistry, mockAgentRegistry } =
+        createTestOptions();
+
+      mockAgentRegistry.get.mockResolvedValue(
+        createMockAgentDefinition({
+          tools: ["codebase:read_file", "coordination:spawn_agent"],
+          subAgents: { researcher: "researcher" },
+          tokenBudget: 200000,
+        }),
+      );
+
+      const conv = createMockConversationRow();
+      mockDb.setExecuteResult([conv]);
+      mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+
+      const loop = createWorkerLoop(options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      // Check the ToolContext passed to toolRegistry.resolve
+      const resolveCall = mockToolRegistry.resolve.mock.calls[0];
+      const toolContext = resolveCall?.[1] as Record<string, unknown>;
+      expect(toolContext.spawnDeps).toBeDefined();
+
+      const spawnDeps = toolContext.spawnDeps as Record<string, unknown>;
+      expect(spawnDeps.agentRegistry).toBeDefined();
+      expect(spawnDeps.toolRegistry).toBeDefined();
+      expect(spawnDeps.tokenBudget).toBeDefined();
+      expect(spawnDeps.eventLog).toBeDefined();
+      expect(spawnDeps.currentDepth).toBe(0);
+      expect(spawnDeps.maxSpawnDepth).toBe(3);
+    });
+
+    it("should not populate spawnDeps when agent lacks coordination:spawn_agent", async () => {
+      const { options, mockDb, mockToolRegistry } = createTestOptions();
+
+      const conv = createMockConversationRow();
+      mockDb.setExecuteResult([conv]);
+      mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+
+      const loop = createWorkerLoop(options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      // Check the ToolContext passed to toolRegistry.resolve
+      const resolveCall = mockToolRegistry.resolve.mock.calls[0];
+      const toolContext = resolveCall?.[1] as Record<string, unknown>;
+      expect(toolContext.spawnDeps).toBeUndefined();
+    });
+
+    it("should fail fast when sub-agent definition not found", async () => {
+      const { options, mockDb, mockAgentRegistry } = createTestOptions();
+
+      // First call returns parent definition with subAgents
+      // Second call (for sub-agent) returns null
+      mockAgentRegistry.get
+        .mockResolvedValueOnce(
+          createMockAgentDefinition({
+            tools: ["codebase:read_file", "coordination:spawn_agent"],
+            subAgents: { researcher: "researcher", coder: "coder" },
+          }),
+        )
+        .mockResolvedValueOnce(null); // researcher not found
+
+      const conv = createMockConversationRow();
+      mockDb.setExecuteResult([conv]);
+
+      const loop = createWorkerLoop(options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      const setCalls = mockDb.mocks.updateSet.mock.calls;
+      const failCall = setCalls.find(
+        (call: unknown[]) =>
+          call[0] &&
+          (call[0] as Record<string, unknown>).status === "failed" &&
+          (
+            (call[0] as Record<string, unknown>).error_message as string
+          )?.includes("Sub-agent definition not found"),
+      );
+      expect(failCall).toBeDefined();
+      const errorMessage = (failCall?.[0] as Record<string, unknown>)
+        ?.error_message as string;
+      expect(errorMessage).toContain("researcher");
+    });
+
+    it("should create token budget from definition.tokenBudget when agent has spawn_agent", async () => {
+      const { options, mockDb, mockAgentRegistry } = createTestOptions();
+
+      mockAgentRegistry.get.mockResolvedValue(
+        createMockAgentDefinition({
+          tools: ["codebase:read_file", "coordination:spawn_agent"],
+          subAgents: { researcher: "researcher" },
+          tokenBudget: 250000,
+        }),
+      );
+
+      const conv = createMockConversationRow();
+      mockDb.setExecuteResult([conv]);
+      mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+
+      const loop = createWorkerLoop(options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      // Verify tokenBudget was passed to runAgentLoop
+      const loopCall = mockRunAgentLoop.mock.calls[0];
+      const loopOpts = loopCall?.[0] as Record<string, unknown>;
+      expect(loopOpts.tokenBudget).toBeDefined();
+      const budget = loopOpts.tokenBudget as {
+        total: number;
+        remaining: number;
+      };
+      expect(budget.total).toBe(250000);
+      expect(budget.remaining).toBe(250000);
+    });
+
+    it("should not create token budget when agent lacks spawn_agent", async () => {
+      const { options, mockDb } = createTestOptions();
+
+      const conv = createMockConversationRow();
+      mockDb.setExecuteResult([conv]);
+      mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+
+      const loop = createWorkerLoop(options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      // Verify tokenBudget was NOT passed to runAgentLoop
+      const loopCall = mockRunAgentLoop.mock.calls[0];
+      const loopOpts = loopCall?.[0] as Record<string, unknown>;
+      expect(loopOpts.tokenBudget).toBeUndefined();
+    });
+  });
 });
