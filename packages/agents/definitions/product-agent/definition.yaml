@@ -9,6 +9,7 @@ version: "1"
 model: claude-sonnet-4-20250514
 
 tools:
+  - coordination:wait_for
   - linear:create_issue
   - linear:get_issue
   - linear:list_labels

@@ -26,6 +26,12 @@ vi.mock("../shared/agent-loop/run-agent-loop.js", () => ({
   runAgentLoop: vi.fn(),
 }));
 
+// Mock @aesir/platform to intercept createDevContainerGit (sandbox tests)
+vi.mock("@aesir/platform", () => ({
+  createDevContainerGit: vi.fn(),
+}));
+
+import { createDevContainerGit } from "@aesir/platform";
 import { runAgentLoop } from "../shared/agent-loop/run-agent-loop.js";
 import type { AgentLoopResult } from "../shared/agent-loop/types.js";
 import type {
@@ -38,6 +44,7 @@ import type {
 import { createWorkerLoop, type WorkerLoopOptions } from "./worker-loop.js";
 
 const mockRunAgentLoop = runAgentLoop as Mock;
+const mockCreateDevContainerGit = createDevContainerGit as unknown as Mock;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -203,6 +210,19 @@ function createMockToolRegistry() {
   } satisfies ToolRegistry;
 }
 
+function createMockSandboxManager() {
+  return {
+    spawn: vi.fn().mockResolvedValue(undefined) as Mock,
+    execute: vi
+      .fn()
+      .mockResolvedValue({ exitCode: 1, stdout: "", stderr: "" }) as Mock,
+    findByTaskId: vi.fn().mockResolvedValue(null) as Mock,
+    isRunning: vi.fn().mockResolvedValue(false) as Mock,
+    health: vi.fn().mockResolvedValue({ healthy: true, containers: 0 }) as Mock,
+    close: vi.fn().mockResolvedValue(undefined) as Mock,
+  };
+}
+
 function createDefaultLoopResult(
   overrides?: Partial<AgentLoopResult>,
 ): AgentLoopResult {
@@ -212,6 +232,7 @@ function createDefaultLoopResult(
     toolCallCount: 3,
     tokenCount: { input: 1000, output: 500 },
     trace: [],
+    messages: [],
     ...overrides,
   };
 }
@@ -257,6 +278,13 @@ describe("createWorkerLoop", () => {
   beforeEach(() => {
     mockRunAgentLoop.mockReset();
     mockRunAgentLoop.mockResolvedValue(createDefaultLoopResult());
+    mockCreateDevContainerGit.mockReset();
+    mockCreateDevContainerGit.mockReturnValue({
+      configureCredentials: vi.fn().mockResolvedValue(undefined),
+      cloneRepository: vi
+        .fn()
+        .mockResolvedValue({ success: true, stdout: "", stderr: "" }),
+    });
   });
 
   afterEach(() => {
@@ -1280,6 +1308,243 @@ describe("createWorkerLoop", () => {
       const pw = (waitingCall?.[0] as Record<string, unknown>)
         ?.pending_wait as Record<string, unknown>;
       expect(pw.timeoutJobId).toBeUndefined();
+    });
+  });
+
+  // ── Sandbox Setup ────────────────────────────────────────────────────
+
+  describe("sandbox setup", () => {
+    it("should spawn sandbox container when agent has codebase tools", async () => {
+      const { options, mockDb } = createTestOptions();
+      const mockSandbox = createMockSandboxManager();
+      options.sandboxManager = mockSandbox;
+
+      const conv = createMockConversationRow();
+      mockDb.setExecuteResult([conv]);
+      mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+
+      const loop = createWorkerLoop(options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      expect(mockSandbox.spawn).toHaveBeenCalledWith({
+        taskId: "dev-agent-AES-42",
+      });
+    });
+
+    it("should skip sandbox setup when agent has no codebase tools", async () => {
+      const { options, mockDb, mockAgentRegistry } = createTestOptions();
+      const mockSandbox = createMockSandboxManager();
+      options.sandboxManager = mockSandbox;
+
+      mockAgentRegistry.get.mockResolvedValue(
+        createMockAgentDefinition({
+          tools: ["integration:slack:send_message"],
+        }),
+      );
+
+      const conv = createMockConversationRow();
+      mockDb.setExecuteResult([conv]);
+      mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+
+      const loop = createWorkerLoop(options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      expect(mockSandbox.spawn).not.toHaveBeenCalled();
+    });
+
+    it("should not spawn sandbox when no sandboxManager configured", async () => {
+      const { options, mockDb } = createTestOptions();
+      // No sandboxManager in options (default)
+
+      const conv = createMockConversationRow();
+      mockDb.setExecuteResult([conv]);
+      mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+
+      const loop = createWorkerLoop(options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      // Should complete without error -- sandbox setup simply skipped
+      const setCalls = mockDb.mocks.updateSet.mock.calls;
+      const completedCall = setCalls.find(
+        (call: unknown[]) =>
+          call[0] &&
+          (call[0] as Record<string, unknown>).status === "completed",
+      );
+      expect(completedCall).toBeDefined();
+    });
+
+    it("should include containerManager and taskId in ToolContext when sandbox is available", async () => {
+      const { options, mockDb, mockToolRegistry } = createTestOptions();
+      const mockSandbox = createMockSandboxManager();
+      options.sandboxManager = mockSandbox;
+
+      const conv = createMockConversationRow();
+      mockDb.setExecuteResult([conv]);
+      mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+
+      const loop = createWorkerLoop(options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      // Check the ToolContext passed to toolRegistry.resolve
+      const resolveCall = mockToolRegistry.resolve.mock.calls[0];
+      const toolContext = resolveCall?.[1] as Record<string, unknown>;
+      expect(toolContext.containerManager).toBe(mockSandbox);
+      expect(toolContext.taskId).toBe("dev-agent-AES-42");
+    });
+
+    it("should not include containerManager in ToolContext when no sandboxManager configured", async () => {
+      const { options, mockDb, mockToolRegistry } = createTestOptions();
+      // No sandboxManager in options (default)
+
+      const conv = createMockConversationRow();
+      mockDb.setExecuteResult([conv]);
+      mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+
+      const loop = createWorkerLoop(options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      const resolveCall = mockToolRegistry.resolve.mock.calls[0];
+      const toolContext = resolveCall?.[1] as Record<string, unknown>;
+      expect(toolContext.containerManager).toBeUndefined();
+      expect(toolContext.taskId).toBeUndefined();
+    });
+
+    it("should clone repo when sandboxSetup is provided", async () => {
+      const { options, mockDb } = createTestOptions();
+      const mockSandbox = createMockSandboxManager();
+      options.sandboxManager = mockSandbox;
+      options.sandboxSetup = {
+        repoUrl: "https://github.com/org/repo.git",
+        githubToken: "ghp_test123",
+        baseBranch: "main",
+      };
+
+      const mockGit = {
+        configureCredentials: vi.fn().mockResolvedValue(undefined),
+        cloneRepository: vi
+          .fn()
+          .mockResolvedValue({ success: true, stdout: "", stderr: "" }),
+      };
+      mockCreateDevContainerGit.mockReturnValue(mockGit);
+
+      const conv = createMockConversationRow();
+      mockDb.setExecuteResult([conv]);
+      mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+
+      const loop = createWorkerLoop(options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      expect(mockGit.configureCredentials).toHaveBeenCalledWith(
+        "dev-agent-AES-42",
+        "ghp_test123",
+      );
+      expect(mockGit.cloneRepository).toHaveBeenCalledWith(
+        "dev-agent-AES-42",
+        "https://github.com/org/repo.git",
+        { branch: "main" },
+      );
+    });
+
+    it("should skip repo clone when repo already exists in sandbox", async () => {
+      const { options, mockDb } = createTestOptions();
+      const mockSandbox = createMockSandboxManager();
+      // Return exitCode 0 = repo already exists
+      mockSandbox.execute.mockResolvedValue({
+        exitCode: 0,
+        stdout: "",
+        stderr: "",
+      });
+      options.sandboxManager = mockSandbox;
+      options.sandboxSetup = {
+        repoUrl: "https://github.com/org/repo.git",
+      };
+
+      const conv = createMockConversationRow();
+      mockDb.setExecuteResult([conv]);
+      mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+
+      const loop = createWorkerLoop(options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      expect(mockSandbox.spawn).toHaveBeenCalled();
+      expect(mockCreateDevContainerGit).not.toHaveBeenCalled();
+    });
+
+    it("should retry conversation when sandbox setup fails", async () => {
+      const { options, mockDb } = createTestOptions();
+      const mockSandbox = createMockSandboxManager();
+      mockSandbox.spawn.mockRejectedValue(
+        new Error("Docker daemon unavailable"),
+      );
+      options.sandboxManager = mockSandbox;
+
+      const conv = createMockConversationRow({
+        retry_count: 0,
+        max_retries: 2,
+      });
+      mockDb.setExecuteResult([conv]);
+      mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+
+      const loop = createWorkerLoop(options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      const setCalls = mockDb.mocks.updateSet.mock.calls;
+      const requeueCall = setCalls.find(
+        (call: unknown[]) =>
+          call[0] &&
+          (call[0] as Record<string, unknown>).status === "queued" &&
+          (call[0] as Record<string, unknown>).retry_count === 1,
+      );
+      expect(requeueCall).toBeDefined();
+    });
+
+    it("should fail conversation when sandbox setup fails and retries exhausted", async () => {
+      const { options, mockDb } = createTestOptions();
+      const mockSandbox = createMockSandboxManager();
+      mockSandbox.spawn.mockRejectedValue(
+        new Error("Docker daemon unavailable"),
+      );
+      options.sandboxManager = mockSandbox;
+
+      const conv = createMockConversationRow({
+        retry_count: 2,
+        max_retries: 2,
+      });
+      mockDb.setExecuteResult([conv]);
+      mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+
+      const loop = createWorkerLoop(options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      const setCalls = mockDb.mocks.updateSet.mock.calls;
+      // Find the specific sandbox error (not the stale recovery error)
+      const failCall = setCalls.find(
+        (call: unknown[]) =>
+          call[0] &&
+          (call[0] as Record<string, unknown>).status === "failed" &&
+          (
+            (call[0] as Record<string, unknown>).error_message as string
+          )?.includes("Docker daemon unavailable"),
+      );
+      expect(failCall).toBeDefined();
     });
   });
 

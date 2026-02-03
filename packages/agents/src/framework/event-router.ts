@@ -9,7 +9,7 @@
  * - handle() is synchronous -- pure routing logic with no I/O
  * - loadStartRules() is async -- loads triggers from AgentRegistry
  * - Conversation IDs follow the formula: {agentDefinitionId}-{correlationKey}
- * - No Temporal imports -- this is framework-level routing
+ * - Pure framework-level routing with no external dependencies
  */
 
 import type { IncomingEvent } from "../adapters/types.js";

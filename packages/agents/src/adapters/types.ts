@@ -50,11 +50,10 @@ export type EventAdapter = (event: NormalizedEvent) => IncomingEvent | null;
 // ---- Signal Type Map (Reference) -----------------------------------------
 
 /**
- * Canonical mapping from old Temporal signal names to v2.3 domain types.
+ * Canonical signal type mapping.
  *
- * This map documents the signal name migration for reference:
- * - Adapters produce IncomingEvent.type matching the v2.3 values
- * - Agents use wait_for({ type: ... }) matching the v2.3 values
+ * - Adapters produce IncomingEvent.type matching these domain values
+ * - Agents use wait_for({ type: ... }) matching these domain values
  * - EventRouter uses these types for signal routing
  */
 export const SIGNAL_TYPE_MAP = {

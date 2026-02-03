@@ -34,9 +34,9 @@ export const githubEnvSchema = z.object({
   // Database - use DB_* names (standard for all services)
   DB_HOST: z.string().default("localhost"),
   DB_PORT: z.coerce.number().default(5432),
-  DB_USER: z.string().default("temporal"),
-  DB_PASSWORD: z.string().default("temporal"),
-  DB_NAME: z.string().default("temporal"),
+  DB_USER: z.string().default("aesir"),
+  DB_PASSWORD: z.string().default("aesir"),
+  DB_NAME: z.string().default("aesir"),
   CREDENTIAL_ENCRYPTION_KEY: z.string().length(64).optional(),
 });
 

@@ -97,9 +97,9 @@ async function migrate(): Promise<void> {
   // Get database config from environment
   const dbHost = process.env.DB_HOST || "localhost";
   const dbPort = Number.parseInt(process.env.DB_PORT || "5432", 10);
-  const dbUser = process.env.DB_USER || "temporal";
-  const dbPassword = process.env.DB_PASSWORD || "temporal";
-  const dbName = process.env.DB_NAME || "temporal";
+  const dbUser = process.env.DB_USER || "aesir";
+  const dbPassword = process.env.DB_PASSWORD || "aesir";
+  const dbName = process.env.DB_NAME || "aesir";
 
   // Create direct database connection
   const pool = new Pool({

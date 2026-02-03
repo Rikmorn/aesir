@@ -30,9 +30,9 @@ Linear integration service for the Aesir platform. Provides OAuth authentication
 | LOG_LEVEL | info | Logging level |
 | DB_HOST | localhost | PostgreSQL host |
 | DB_PORT | 5432 | PostgreSQL port |
-| DB_USER | temporal | PostgreSQL user |
-| DB_PASSWORD | temporal | PostgreSQL password |
-| DB_NAME | temporal | PostgreSQL database |
+| DB_USER | aesir | PostgreSQL user |
+| DB_PASSWORD | aesir | PostgreSQL password |
+| DB_NAME | aesir | PostgreSQL database |
 | OAUTH_CALLBACK_URL | - | OAuth callback URL |
 
 ## Usage

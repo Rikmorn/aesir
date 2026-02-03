@@ -63,6 +63,7 @@ function makeCompletedResult(
     toolCallCount: 0,
     tokenCount: { input: 100, output: 50 },
     trace: [],
+    messages: [],
   };
 }
 
@@ -78,6 +79,7 @@ function makeErrorResult(
     toolCallCount: 0,
     tokenCount: { input: 100, output: 50 },
     trace: [],
+    messages: [],
   };
 }
 

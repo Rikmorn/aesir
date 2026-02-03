@@ -1,19 +1,18 @@
 # @aesir/platform
 
-Infrastructure layer for the Aesir platform. Provides database connections, logging, Temporal integration, and sandbox management.
+Infrastructure layer for the Aesir platform. Provides database connections, logging, and sandbox management.
 
 ## Purpose
 
-This package contains all infrastructure implementations that upper layers depend on. It has the "heavy" dependencies - database drivers, logging libraries, Temporal SDK, Docker APIs.
+This package contains all infrastructure implementations that upper layers depend on. It has the "heavy" dependencies - database drivers, logging libraries, Docker APIs.
 
 ## What belongs here
 
 - **Database** - Drizzle ORM setup, PostgreSQL connections, schema definitions, migrations
 - **Logging** - Pino logger implementation, HTTP request logging, correlation ID tracking
-- **Temporal** - Workflow client, worker setup, activity execution, signal handling
 - **Sandbox** - Docker container management for code execution (dev containers)
 - **Services** - Webhook idempotency, execution tracking, cleanup routines
-- **Errors** - Platform-specific error classes (DatabaseError, TemporalError, etc.)
+- **Errors** - Platform-specific error classes (DatabaseError, SandboxError, etc.)
 
 ## What does NOT belong here
 
@@ -35,11 +34,6 @@ import {
   db,
   createDatabaseConnection,
 
-  // Temporal
-  startApprovalWorkflow,
-  sendApprovalSignal,
-  createTemporalClient,
-
   // Sandbox
   createDevContainerManager,
   createDevContainerGit,
@@ -50,7 +44,7 @@ import {
 
   // Errors
   DatabaseError,
-  TemporalError,
+  SandboxError,
   WebhookError,
 } from "@aesir/platform";
 ```
@@ -61,18 +55,17 @@ This package has infrastructure dependencies:
 
 - `pg` / `drizzle-orm` - PostgreSQL database
 - `pino` / `pino-http` - Structured logging
-- `@temporalio/client` / `@temporalio/worker` - Workflow orchestration
 - `dockerode` - Container management
 
 ## Package Architecture
 
 ```
-Agents / Dashboard        (top-level applications)
-   ↓
+Agents                    (unified agent service)
+   |
 Integrations              (HTTP services for external APIs)
-   ↓
-Platform                  (infrastructure) ← you are here
-   ↓
+   |
+Platform                  (infrastructure) <- you are here
+   |
 Types                     (pure contracts and utilities)
 ```
 
@@ -82,11 +75,11 @@ Platform requires these environment variables:
 
 ```bash
 # Database
-DATABASE_URL=postgresql://user:pass@localhost:5432/aesir
-
-# Temporal
-TEMPORAL_ADDRESS=localhost:7233
-TEMPORAL_NAMESPACE=default
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=aesir
+DB_PASSWORD=aesir
+DB_NAME=aesir
 
 # Logging
 LOG_LEVEL=info  # debug, info, warn, error

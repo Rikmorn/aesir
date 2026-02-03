@@ -14,7 +14,7 @@
  * - Graceful shutdown stops accepting new work, lets running finish
  */
 
-import type { PinoLogger } from "@aesir/platform";
+import { createDevContainerGit, type PinoLogger } from "@aesir/platform";
 import type Anthropic from "@anthropic-ai/sdk";
 import { eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
@@ -29,6 +29,7 @@ import type { TimeoutScheduler } from "./timeout-scheduler.js";
 import type {
   AgentRegistry,
   EventLog,
+  SandboxManager,
   SessionProjection,
   ToolContext,
   ToolRegistry,
@@ -70,6 +71,16 @@ export interface WorkerLoopOptions {
   workerId?: string;
   /** Optional timeout scheduler for delayed signal delivery (Phase 41) */
   timeoutScheduler?: TimeoutScheduler;
+  /** Sandbox manager for codebase tool execution (optional -- Docker in dev, Fargate/Lambda in prod) */
+  sandboxManager?: SandboxManager;
+  /** Sandbox workspace setup config (optional -- repo clone + credentials) */
+  sandboxSetup?:
+    | {
+        repoUrl: string;
+        githubToken?: string | undefined;
+        baseBranch?: string | undefined;
+      }
+    | undefined;
 }
 
 /**
@@ -111,9 +122,77 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
     staleThresholdMs = 300000,
     workerId = `wrkr_${nanoid(12)}`,
     timeoutScheduler,
+    sandboxManager,
+    sandboxSetup,
   } = options;
 
   const logger = parentLogger.child({ component: "worker-loop", workerId });
+
+  // ─── Sandbox Setup ───────────────────────────────────────────────────
+
+  /**
+   * Spawn a sandbox container and clone the repo if needed.
+   * Reuses existing containers on resume (idempotent spawn).
+   * Skips repo clone if /workspace/repo/.git already exists.
+   */
+  async function setupSandbox(opts: {
+    manager: SandboxManager;
+    taskId: string;
+    setup?:
+      | {
+          repoUrl: string;
+          githubToken?: string | undefined;
+          baseBranch?: string | undefined;
+        }
+      | undefined;
+    logger: PinoLogger;
+  }): Promise<void> {
+    // 1. Spawn (reuses if already running)
+    await opts.manager.spawn({ taskId: opts.taskId });
+    opts.logger.info({ taskId: opts.taskId }, "Sandbox container ready");
+
+    // 2. Check if repo already cloned (resume case)
+    const check = await opts.manager.execute(opts.taskId, {
+      command: ["test", "-d", "/workspace/repo/.git"],
+      timeoutMs: 5000,
+    });
+    if (check.exitCode === 0) {
+      opts.logger.info({ taskId: opts.taskId }, "Sandbox repo already present");
+      return;
+    }
+
+    // 3. Clone repo if URL available
+    if (opts.setup?.repoUrl) {
+      const git = createDevContainerGit({
+        manager: opts.manager,
+        logger: opts.logger,
+      });
+      if (opts.setup.githubToken) {
+        await git.configureCredentials(opts.taskId, opts.setup.githubToken);
+      }
+      const cloneOpts: {
+        branch?: string;
+        gitUser?: { name: string; email: string };
+      } = {};
+      if (opts.setup.baseBranch) {
+        cloneOpts.branch = opts.setup.baseBranch;
+      }
+      const result = await git.cloneRepository(
+        opts.taskId,
+        opts.setup.repoUrl,
+        cloneOpts,
+      );
+      if (!result.success) {
+        throw new Error(
+          `Failed to clone repo: ${result.error || result.stderr}`,
+        );
+      }
+      opts.logger.info(
+        { taskId: opts.taskId, repoUrl: opts.setup.repoUrl },
+        "Repository cloned into sandbox",
+      );
+    }
+  }
 
   // State
   let draining = false;
@@ -284,11 +363,29 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         payload: { workerId },
       });
 
-      // 4. Resolve tools
+      // 4. Setup sandbox if agent uses codebase tools
+      const needsSandbox = definition.tools.some((t) =>
+        t.startsWith("codebase:"),
+      );
+      if (needsSandbox && sandboxManager) {
+        await setupSandbox({
+          manager: sandboxManager,
+          taskId: conv.id,
+          setup: sandboxSetup,
+          logger: childLogger,
+        });
+      }
+
+      // 5. Resolve tools
       const toolContext: ToolContext = {
         agentId: conv.agent_definition_id,
         correlationId: conv.id,
         logger: childLogger,
+        ...(needsSandbox &&
+          sandboxManager && {
+            containerManager: sandboxManager,
+            taskId: conv.id,
+          }),
       };
       const resolvedTools = toolRegistry.resolve(definition.tools, toolContext);
 
@@ -447,9 +544,10 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
       }
 
       // 12. Build final messages array (for persistence)
-      // The agent loop internally managed its own messages; we combine
-      // prior messages with the agent's output indication
-      const finalMessages = currentMessages;
+      // Combine pre-loop messages with new messages from the agent loop.
+      // slice(1) skips the loop's initial user message (already in currentMessages
+      // as the original initial message or context-wrapper for resumed conversations).
+      const finalMessages = [...currentMessages, ...result.messages.slice(1)];
 
       // 13. Handle result based on waitForState and loop status
       if (waitForState.triggered) {

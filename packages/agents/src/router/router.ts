@@ -73,10 +73,30 @@ export async function routeEvent(
     // 3. Dispatch based on routing decision
     switch (routeDecision.action) {
       case "start": {
+        // Enrich initial message with context block for Slack-originated events.
+        // Product agent prompt expects <slack_context> with channel, thread, team.
+        let initialMessage = routeDecision.message;
+        const eventData = routeDecision.event.data as Record<string, unknown>;
+        if (
+          routeDecision.event.source === "slack:webhook" &&
+          eventData?.channelId
+        ) {
+          const contextBlock = [
+            "<slack_context>",
+            `Channel: ${eventData.channelId}`,
+            `Thread: ${eventData.threadTs ?? ""}`,
+            ...(deps.linearTeamId
+              ? [`Linear Team ID: ${deps.linearTeamId}`]
+              : []),
+            "</slack_context>",
+          ].join("\n");
+          initialMessage = `${contextBlock}\n\n${routeDecision.message}`;
+        }
+
         const conversationId = await deps.executor.start({
           agentDefinitionId: routeDecision.agentDefinitionId,
           correlationKey: routeDecision.correlationKey,
-          initialMessage: routeDecision.message,
+          initialMessage,
         });
 
         // executor.start() is idempotent (EXEC-10): returns existing ID

@@ -2,12 +2,12 @@
  * Request Human Input Tool
  *
  * Coordination tool that returns a sentinel ToolResult with structured JSON.
- * The Temporal activity wrapper parses this marker to pause the workflow and
+ * The conversation executor parses this marker to pause the conversation and
  * await human input via Slack.
  *
  * This is a pure tool -- no external dependencies needed. It does NOT modify
- * the agent loop; instead, it uses a sentinel return value that the activity
- * wrapper recognizes.
+ * the agent loop; instead, it uses a sentinel return value that the executor
+ * recognizes.
  */
 
 import { z } from "zod";
@@ -17,7 +17,7 @@ import type { ToolDefinition, ToolResult } from "../../agent-loop/types.js";
 // Sentinel Marker
 // ---------------------------------------------------------------------------
 
-/** Sentinel marker for parsing in Temporal activity wrapper */
+/** Sentinel marker for parsing in conversation executor */
 export const HUMAN_INPUT_MARKER = "human_input_requested" as const;
 
 // ---------------------------------------------------------------------------
@@ -43,8 +43,8 @@ const requestHumanInputSchema = z.object({
 /**
  * Create the request_human_input tool.
  *
- * Returns a sentinel JSON result that the Temporal activity wrapper can parse
- * to pause the workflow. The tool instructs the LLM to stop after calling it.
+ * Returns a sentinel JSON result that the conversation executor can parse
+ * to pause the conversation. The tool instructs the LLM to stop after calling it.
  *
  * @returns ToolDefinition for the request_human_input tool
  */

@@ -44,9 +44,9 @@ const agentEnvSchema = z.object({
   // Database (using DB_* to match existing, with DATABASE_* as alternatives)
   DB_HOST: z.string().default("localhost"),
   DB_PORT: z.coerce.number().default(5432),
-  DB_USER: z.string().default("temporal"),
-  DB_PASSWORD: z.string().default("temporal"),
-  DB_NAME: z.string().default("temporal"),
+  DB_USER: z.string().default("aesir"),
+  DB_PASSWORD: z.string().default("aesir"),
+  DB_NAME: z.string().default("aesir"),
   CREDENTIAL_ENCRYPTION_KEY: z.string().length(64).optional(),
 
   // Observability
@@ -115,6 +115,10 @@ export const config = {
   },
   github: {
     repo: env.GITHUB_REPO,
+    repoUrl: env.GITHUB_REPO_URL,
+    token: env.GITHUB_TOKEN,
+    owner: env.GITHUB_OWNER,
+    baseBranch: env.GITHUB_BASE_BRANCH,
   },
   slack: {
     channelId: env.SLACK_CHANNEL_ID,

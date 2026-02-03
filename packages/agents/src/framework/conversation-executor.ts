@@ -118,6 +118,10 @@ export function createConversationExecutor(
       if (options.workerId !== undefined) loopOpts.workerId = options.workerId;
       if (options.timeoutScheduler !== undefined)
         loopOpts.timeoutScheduler = options.timeoutScheduler;
+      if (options.sandboxManager !== undefined)
+        loopOpts.sandboxManager = options.sandboxManager;
+      if (options.sandboxSetup !== undefined)
+        loopOpts.sandboxSetup = options.sandboxSetup;
       workerLoop = createWorkerLoop(loopOpts);
     }
     return workerLoop;

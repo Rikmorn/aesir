@@ -9,9 +9,10 @@
  * - block_actions.escalation_retry -> "escalation_resolved" (fast-path signal)
  * - block_actions.escalation_abort -> "escalation_resolved" (fast-path signal)
  * - app_mention.created -> "slack.app_mention.created" (start trigger, preserves original type)
- * - message.created -> "thread_reply" or "channel_message" (domain-language)
+ * - message.created (with threadTs) -> "thread_reply" (domain-language)
  *
  * Returns null for:
+ * - message.created without threadTs (top-level channel messages; @mentions handled by app_mention)
  * - Any unrecognized Slack event type
  */
 
@@ -101,13 +102,20 @@ export function adaptSlackEvent(event: NormalizedEvent): IncomingEvent | null {
 
     case "slack.message.created": {
       const threadTs = payload.threadTs as string | undefined;
+
+      // Top-level channel messages (no threadTs) are suppressed.
+      // @mentions are already handled by app_mention.created (fast-path),
+      // and non-@mention channel messages have no routing target.
+      // Only thread replies (with threadTs) need slow-path routing.
+      if (!threadTs) return null;
+
       return {
-        type: threadTs ? "thread_reply" : "channel_message",
+        type: "thread_reply",
         data: {
           text: payload.text,
           userId: payload.user,
           channelId: payload.channel,
-          threadTs: threadTs ?? (payload.ts as string),
+          threadTs,
         },
         source: "slack:webhook",
         correlationKey: threadTs,

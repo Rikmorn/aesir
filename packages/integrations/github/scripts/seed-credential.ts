@@ -45,7 +45,7 @@ async function main() {
 
   const connectionString =
     process.env.DATABASE_URL ||
-    `postgres://${process.env.DB_USER ?? "temporal"}:${process.env.DB_PASSWORD ?? "temporal"}@${process.env.DB_HOST ?? "localhost"}:${process.env.DB_PORT ?? "5432"}/${process.env.DB_NAME ?? "temporal"}`;
+    `postgres://${process.env.DB_USER ?? "aesir"}:${process.env.DB_PASSWORD ?? "aesir"}@${process.env.DB_HOST ?? "localhost"}:${process.env.DB_PORT ?? "5432"}/${process.env.DB_NAME ?? "aesir"}`;
 
   const client = postgres(connectionString, { max: 1 });
   const db = drizzle(client);

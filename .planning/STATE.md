@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.3 Unified Agent Framework -- Phase 47 complete
+**Current focus:** v2.3 Unified Agent Framework -- Phase 47.1 next
 
 ## Current Position
 
-Phase: 47 of 47 (Cleanup & Documentation)
-Plan: 4 of 4 in current phase
-Status: Phase complete
-Last activity: 2026-02-03 -- Completed 47-04-PLAN.md (CLAUDE.md + README.md rewrite)
+Phase: 47.1 (Sub Agent Spawn - INSERTED)
+Plan: 0 of 0 in current phase (not yet planned)
+Status: Not started
+Last activity: 2026-02-03 -- Phase 47.1 inserted
 
-Progress: [██████████] 100% (35/35 plans)
+Progress: [██████████] 97% (35/35 plans + Phase 47.1 pending)
 
 ## Milestone History
 
@@ -145,6 +145,10 @@ v2.3 decisions:
 5. **Add onToolResult callback to runAgentLoop()** (addressed by v2.3 event log)
 6. ~~**Add JSONB size limits to context_snapshots**~~ (done -- context_snapshots table removed in 47-02)
 
+### Roadmap Evolution
+
+- Phase 47.1 inserted after Phase 47: Sub Agent Spawn (URGENT)
+
 ### Blockers/Concerns
 
 None.
@@ -154,7 +158,7 @@ None.
 Last session: 2026-02-03
 Stopped at: Completed 47-04-PLAN.md (CLAUDE.md + README.md rewrite)
 Resume file: None
-Next action: v2.3 complete -- all 47 phases finished
+Next action: Plan Phase 47.1 (Sub Agent Spawn)
 
 ---
-*Updated: 2026-02-03 -- Phase 47 plan 04 complete (CLAUDE.md + README.md rewritten for v2.3, zero legacy references)*
+*Updated: 2026-02-03 -- Phase 47.1 inserted (Sub Agent Spawn)*

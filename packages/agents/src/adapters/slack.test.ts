@@ -218,7 +218,7 @@ describe("adaptSlackEvent", () => {
       expect(IncomingEventSchema.safeParse(result).success).toBe(true);
     });
 
-    it('returns "channel_message" with no correlationKey when threadTs is absent', () => {
+    it("returns null for channel messages without threadTs (handled by app_mention)", () => {
       const event = makeEvent({
         type: "slack.message.created",
         payload: {
@@ -231,20 +231,7 @@ describe("adaptSlackEvent", () => {
 
       const result = adaptSlackEvent(event);
 
-      expect(result).not.toBeNull();
-      expect(result?.type).toBe("channel_message");
-      expect(result?.data).toEqual({
-        text: "Hey team, new update!",
-        userId: "U789",
-        channelId: "C456",
-        threadTs: "9999999999.999999",
-      });
-      expect(result?.source).toBe("slack:webhook");
-      expect(result?.correlationKey).toBeUndefined();
-      expect(result?.deduplicationId).toBe("corr_test123");
-      expect(result?.message).toBe("Hey team, new update!");
-
-      expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+      expect(result).toBeNull();
     });
   });
 });

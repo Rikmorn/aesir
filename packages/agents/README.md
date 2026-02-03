@@ -1,71 +1,54 @@
 # @aesir/agents
 
-Autonomous agents that automate software development workflows.
+Unified agent service that automates software development workflows.
 
 ## Architecture
 
-The agents package contains two main agents and shared infrastructure:
+Single service with declarative agent definitions and a Postgres-backed conversation executor:
 
 ```
-packages/agents/src/
-├── dev-agent/       # Development automation agent
-├── product-agent/   # Product conversation agent
-└── shared/          # Common infrastructure (MCP, Temporal, tracing)
+packages/agents/
+├── definitions/     # Agent YAML + prompt.md files
+│   ├── dev-agent/   # Development automation agent
+│   ├── product-agent/ # Product conversation agent
+│   ├── coder/       # Code generation sub-agent
+│   ├── researcher/  # Codebase research sub-agent
+│   └── tester/      # Test execution sub-agent
+├── src/
+│   ├── adapters/    # Event normalization (Linear, GitHub, Slack)
+│   ├── framework/   # Core runtime (executor, worker, event log, history)
+│   ├── router/      # Event routing pipeline
+│   ├── service/     # Unified HTTP entry point
+│   └── shared/      # MCP client, agent loop, tools, config
 ```
 
-### Dev Agent
+### Agent Definitions
 
-Automates Linear issue resolution through a multi-phase workflow:
-1. Receives issue assignment via Linear webhook
-2. Researches codebase to understand context
-3. Creates execution plan
-4. Requests human approval (HITL)
-5. Executes plan in sandbox container
-6. Creates PR and handles feedback
+Agents are declared in YAML with a companion Markdown prompt:
 
-**Entry points:**
-- `main.ts` - HTTP server for receiving events
-- `worker.ts` - Temporal worker for workflow execution
+- `definition.yaml` -- model, tools, triggers, history config, sub-agents
+- `prompt.md` -- system prompt (raw LLM-visible text)
 
-### Product Agent
+New agent = new directory in `definitions/`. Zero code changes.
 
-Handles Slack conversations to gather requirements and create Linear issues:
-1. Receives @mention or DM in Slack
-2. Classifies intent (feature request, bug report, question)
-3. Gathers requirements through conversation
-4. Creates tasks in Linear
+### Conversation Executor
 
-**Entry points:**
-- `main.ts` - HTTP server for receiving events
-- `worker.ts` - Temporal worker for workflow execution
+Postgres-backed durable executor managing conversation lifecycle:
 
-### Shared Infrastructure
+- `start()` creates conversations (idempotent via correlation key)
+- Worker loop claims queued conversations with `FOR UPDATE SKIP LOCKED`
+- Agent loop runs LLM + tools until completion, pause, or error
+- `wait_for` tool pauses conversations; signals resume them
+- Heartbeats detect stale claims from crashed workers
 
-Common utilities used by all agents:
-- **mcp/** - MCP client for integration communication
-- **temporal/** - Workflows, activities, and signals
-- **tracing/** - LangGraph execution tracing
-- **config/** - Agent configuration
-- **state/** - Shared state schemas
-- **env/** - Environment validation
+### Event Routing
 
-## Usage
-
-### Docker Compose (Recommended)
-
-```bash
-docker compose up -d dev-agent product-agent
+```
+Webhook → NormalizedEvent → Adapter → IncomingEvent → EventRouter → start()/signal()
 ```
 
-### Local Development
-
-```bash
-# Start dev-agent
-pnpm --filter @aesir/agents dev-agent
-
-# Start product-agent
-pnpm --filter @aesir/agents product-agent
-```
+- **Fast path**: Deterministic routing for unambiguous events (e.g., `slack.app_mention` → product-agent)
+- **Slow path**: LLM-based classification for ambiguous events
 
 ## Communication Pattern
 
@@ -75,37 +58,16 @@ Agents communicate with integrations (Linear, GitHub, Slack) via MCP HTTP protoc
 Agent → callMcpTool() → HTTP POST → Integration MCP Server → SDK Call
 ```
 
-Agents do NOT import integration SDKs directly. All external communication goes through MCP.
+Agents do NOT import integration SDKs directly.
 
-## Workflows
-
-### HITL Workflow (Dev Agent)
-
-Uses Temporal for durable, human-in-the-loop execution:
-- `devAgentWorkflow` - Main orchestration workflow
-- Activities wrap LangGraph nodes for durability
-- Signals handle approvals and feedback
-
-### Code Workflow (Dev Agent)
-
-Lightweight LangGraph-only workflow for simple code generation:
-- No Temporal involvement
-- Direct task execution without approval gates
-
-### Conversation Workflow (Product Agent)
-
-Temporal workflow for multi-turn Slack conversations:
-- `productAgentConversationWorkflow` - Handles conversation lifecycle
-- Checkpointer persists conversation state across messages
-
-## Testing
+## Usage
 
 ```bash
+# Docker Compose (recommended)
+docker compose up agent-service
+
+# Run tests
 pnpm --filter @aesir/agents test
 ```
 
-## API Reference
-
-See individual agent READMEs for detailed API documentation:
-- [Dev Agent](./src/dev-agent/README.md)
-- [Product Agent](./src/product-agent/README.md)
+Entry point: `src/service/main.ts` -- single Express server with integrated worker loop.

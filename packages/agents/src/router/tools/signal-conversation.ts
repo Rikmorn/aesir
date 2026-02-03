@@ -2,13 +2,8 @@
  * Signal Conversation Tool
  *
  * Router tool that sends a signal to an existing conversation via
- * ConversationExecutor. Adapted from signal-workflow.ts for v2.3 --
- * replaces Temporal signal definitions with domain-language signal types.
- *
- * Uses the v2.3 Signal schema directly (type + data + message) instead
- * of mapping through Temporal signal definitions and SIGNAL_MAP.
- *
- * Both this file and signal-workflow.ts coexist until Phase 47 cleanup.
+ * ConversationExecutor. Uses domain-language signal types (approval,
+ * pr_review, pr_merged, etc.) with the Signal schema (type + data + message).
  */
 
 import { z } from "zod";

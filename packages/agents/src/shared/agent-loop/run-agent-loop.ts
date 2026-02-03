@@ -129,6 +129,7 @@ function buildResult(params: {
   totalInputTokens: number;
   totalOutputTokens: number;
   trace: TraceStep[];
+  messages: Anthropic.MessageParam[];
 }): AgentLoopResult {
   const structuredOutput = tryParseJson(params.output);
   return {
@@ -141,6 +142,7 @@ function buildResult(params: {
       output: params.totalOutputTokens,
     },
     trace: params.trace,
+    messages: params.messages,
   };
 }
 
@@ -189,7 +191,7 @@ export async function runAgentLoop(
   const maxTokensPerResponse = options.maxTokensPerResponse ?? 16384;
 
   // Create Anthropic client (reads ANTHROPIC_API_KEY from env)
-  // maxRetries: 0 disables SDK built-in retries -- let Temporal handle retries
+  // maxRetries: 0 disables SDK built-in retries -- the agent loop handles retries in-place
   const client = new Anthropic({ maxRetries: 0 });
 
   // Convert tools to Anthropic API format
@@ -224,6 +226,7 @@ export async function runAgentLoop(
         totalInputTokens,
         totalOutputTokens,
         trace,
+        messages: conversationMessages,
       });
     }
 
@@ -237,6 +240,7 @@ export async function runAgentLoop(
         totalInputTokens,
         totalOutputTokens,
         trace,
+        messages: conversationMessages,
       });
     }
 
@@ -291,6 +295,7 @@ export async function runAgentLoop(
           totalInputTokens,
           totalOutputTokens,
           trace,
+          messages: conversationMessages,
         });
       } catch {
         // If the wrap-up call fails, return with what we have
@@ -301,6 +306,7 @@ export async function runAgentLoop(
           totalInputTokens,
           totalOutputTokens,
           trace,
+          messages: conversationMessages,
         });
       }
     }
@@ -323,7 +329,7 @@ export async function runAgentLoop(
       }
 
       // Retry loop for rate limits (429) — avoids wasting work from prior
-      // iterations by retrying in-place instead of failing to Temporal.
+      // iterations by retrying in-place instead of failing the conversation.
       const RATE_LIMIT_MAX_RETRIES = 3;
       const RATE_LIMIT_BASE_DELAY_MS = 30_000; // 30s base, doubles each retry
       let rateLimitAttempt = 0;
@@ -381,6 +387,7 @@ export async function runAgentLoop(
           totalInputTokens,
           totalOutputTokens,
           trace,
+          messages: conversationMessages,
         });
       }
 
@@ -395,6 +402,7 @@ export async function runAgentLoop(
           totalInputTokens,
           totalOutputTokens,
           trace,
+          messages: conversationMessages,
         });
       }
 
@@ -411,6 +419,7 @@ export async function runAgentLoop(
         totalInputTokens,
         totalOutputTokens,
         trace,
+        messages: conversationMessages,
       });
     }
 
@@ -455,7 +464,7 @@ export async function runAgentLoop(
     // LOOP-07: Fire onResponse callback
     onResponse?.(response);
 
-    // Fire heartbeat callback after each LLM response (for Temporal activity heartbeats)
+    // Fire heartbeat callback after each LLM response (for conversation executor heartbeats)
     onHeartbeat?.();
 
     // LOOP-09: Handle non-tool-use stop reasons (terminal)
@@ -469,6 +478,7 @@ export async function runAgentLoop(
         totalInputTokens,
         totalOutputTokens,
         trace,
+        messages: conversationMessages,
       });
     }
 
@@ -496,6 +506,7 @@ export async function runAgentLoop(
           totalInputTokens,
           totalOutputTokens,
           trace,
+          messages: conversationMessages,
         });
       }
 
@@ -595,5 +606,6 @@ export async function runAgentLoop(
     totalInputTokens,
     totalOutputTokens,
     trace,
+    messages: conversationMessages,
   });
 }

@@ -34,9 +34,9 @@ Slack integration package for the Aesir platform. Provides Bolt app factory, Web
 | OAUTH_CALLBACK_URL | - | OAuth callback URL |
 | DB_HOST | localhost | PostgreSQL host |
 | DB_PORT | 5432 | PostgreSQL port |
-| DB_USER | temporal | PostgreSQL user |
-| DB_PASSWORD | temporal | PostgreSQL password |
-| DB_NAME | temporal | PostgreSQL database |
+| DB_USER | aesir | PostgreSQL user |
+| DB_PASSWORD | aesir | PostgreSQL password |
+| DB_NAME | aesir | PostgreSQL database |
 | CREDENTIAL_ENCRYPTION_KEY | - | 64-char hex key for token encryption |
 
 ## Connection Modes

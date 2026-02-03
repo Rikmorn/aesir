@@ -83,6 +83,16 @@ export function createPgBossAdapter(pool: Pool) {
   return {
     async executeSql(text: string, values?: unknown[]) {
       const result = await pool.query(text, values);
+      // pg returns an array of QueryResult for multi-statement SQL.
+      // pg-boss's unwrapSQLResult expects the raw array so it can flatMap .rows.
+      // The IDatabase type is too narrow (only declares { rows }) but the runtime
+      // handles arrays correctly -- cast to satisfy the interface.
+      if (Array.isArray(result)) {
+        return result.map((r) => ({
+          rows: r.rows,
+          rowCount: r.rowCount ?? 0,
+        })) as unknown as { rows: unknown[] };
+      }
       return { rows: result.rows, rowCount: result.rowCount ?? 0 };
     },
   };

@@ -2,8 +2,7 @@
  * Start Conversation Tool
  *
  * Router tool that starts a new conversation via ConversationExecutor.
- * Adapted from start-workflow.ts for v2.3 -- replaces Temporal workflowClient
- * with ConversationExecutor.start().
+ * Uses ConversationExecutor.start() for deterministic conversation creation.
  *
  * The executor generates a deterministic conversation ID from the correlation key,
  * and handles idempotency natively (same correlationKey returns existing ID).

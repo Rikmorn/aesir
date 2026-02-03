@@ -160,7 +160,7 @@ export interface AgentLoopOptions {
     remaining: number;
     usedPercent: number;
   }) => void;
-  /** Called after each LLM response (for Temporal activity heartbeats) */
+  /** Called after each LLM response (for conversation executor heartbeats) */
   onHeartbeat?: () => void;
   /** AbortSignal for clean cancellation of the loop and in-flight API calls */
   abortSignal?: AbortSignal;
@@ -186,4 +186,6 @@ export interface AgentLoopResult {
   tokenCount: { input: number; output: number };
   /** Full execution trace with timing and token data */
   trace: TraceStep[];
+  /** Accumulated conversation messages from the loop (for executor persistence) */
+  messages: Anthropic.MessageParam[];
 }

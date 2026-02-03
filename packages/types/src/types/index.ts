@@ -10,7 +10,7 @@
  * These are the common status names; actual values depend on team configuration
  *
  * This type is shared because:
- * - Used in temporal workflows (platform)
+ * - Used in agent conversation flows
  * - Used in linear integration (integrations)
  * - Needed by agents for status updates
  */

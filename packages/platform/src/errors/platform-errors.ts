@@ -3,7 +3,6 @@
  *
  * Error code convention: PLT_COMPONENT_ERROR
  * - PLT_DB_* for database errors
- * - PLT_TEMPORAL_* for Temporal errors
  * - PLT_SANDBOX_* for sandbox errors
  * - PLT_CLEANUP_* for cleanup service errors
  */
@@ -36,39 +35,6 @@ export class DatabaseError extends AppError {
   override get httpStatus(): number {
     switch (this.code) {
       case "PLT_DB_TIMEOUT":
-        return 504;
-      default:
-        return 500;
-    }
-  }
-}
-
-// Temporal error codes
-export type TemporalErrorCode =
-  | "PLT_TEMPORAL_CONNECTION"
-  | "PLT_TEMPORAL_TIMEOUT"
-  | "PLT_TEMPORAL_WORKFLOW"
-  | "PLT_TEMPORAL_SIGNAL";
-
-export class TemporalError extends AppError {
-  readonly code: TemporalErrorCode;
-
-  constructor(
-    code: TemporalErrorCode,
-    message: string,
-    options?: {
-      cause?: Error;
-      metadata?: ErrorMetadata;
-      recovery?: RecoveryHint;
-    },
-  ) {
-    super(message, options);
-    this.code = code;
-  }
-
-  override get httpStatus(): number {
-    switch (this.code) {
-      case "PLT_TEMPORAL_TIMEOUT":
         return 504;
       default:
         return 500;

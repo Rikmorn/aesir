@@ -25,6 +25,7 @@ v2.3 replaces Temporal workflow orchestration, per-agent services, and fragmente
 - [x] **Phase 45: Integration Testing + Validation** - Full lifecycle testing of start, pause, signal, resume, complete flows
 - [x] **Phase 46: Pre-Cleanup Verification & Dependency Audit** - Verify cutover completeness, produce ordered deletion manifest for Phase 47
 - [x] **Phase 47: Cleanup + Documentation** - Remove Temporal code, old persistence stores, and update documentation
+- [ ] **Phase 47.1: Sub Agent Spawn** (INSERTED) - [To be planned]
 
 ## Phase Details
 
@@ -211,9 +212,20 @@ Plans:
 - [x] 47-03-PLAN.md -- Phase C: Remove @temporalio deps, credential rename, migration consolidation, config cleanup
 - [x] 47-04-PLAN.md -- Documentation: Full CLAUDE.md rewrite + README.md update for v2.3
 
+### Phase 47.1: Sub Agent Spawn (INSERTED)
+**Goal**: [Urgent work - to be planned]
+**Depends on**: Phase 47
+**Plans**: 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 47.1 to break down)
+
+**Details:**
+[To be added during planning]
+
 ## Progress
 
-**Execution Order:** 37 -> 38 -> 39 -> 40 -> 41 -> 42 -> 43 -> 44 -> 45 -> 46 -> 47
+**Execution Order:** 37 -> 38 -> 39 -> 40 -> 41 -> 42 -> 43 -> 44 -> 45 -> 46 -> 47 -> 47.1
 
 Note: Phases 37 and 38 have no dependency on each other and could execute in parallel. Phase 39 depends only on Phase 37. All three feed into Phase 40 (the critical path).
 
@@ -230,7 +242,8 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 | 45. Integration Testing + Validation | 3/3 | Complete | 2026-02-03 |
 | 46. Pre-Cleanup Verification & Dependency Audit | 2/2 | Complete | 2026-02-03 |
 | 47. Cleanup + Documentation | 4/4 | Complete | 2026-02-03 |
+| 47.1. Sub Agent Spawn (INSERTED) | 0/0 | Not Started | - |
 
 ---
 *Roadmap created: 2026-02-01*
-*Last updated: 2026-02-03 -- Phase 47 complete (all 11 phases shipped)*
+*Last updated: 2026-02-03 -- Phase 47.1 inserted (Sub Agent Spawn)*

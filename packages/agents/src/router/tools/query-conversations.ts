@@ -2,12 +2,9 @@
  * Query Conversations Tool
  *
  * Router tool that queries running conversations via ConversationExecutor.
- * Adapted from query-workflows.ts for v2.3 -- replaces Temporal visibility
- * API queries with ConversationExecutor.list() and .get() calls.
+ * Uses ConversationExecutor.list() and .get() calls.
  *
  * Returns up to 20 conversation summaries with ID, status, and agent type.
- *
- * Both this file and query-workflows.ts coexist until Phase 47 cleanup.
  */
 
 import { z } from "zod";

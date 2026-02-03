@@ -25,7 +25,7 @@ import "../shared/env/config.js";
 
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createPinoLogger } from "@aesir/platform";
+import { createDevContainerManager, createPinoLogger } from "@aesir/platform";
 import { NormalizedEventSchema } from "@aesir/types";
 import { drizzle } from "drizzle-orm/node-postgres";
 import express from "express";
@@ -78,6 +78,9 @@ async function bootstrap(): Promise<void> {
 
   const db = drizzle(pool, { schema });
 
+  // Untyped Drizzle instance for platform schema ops (DevContainerStore)
+  const platformDb = drizzle(pool);
+
   // 3. AgentRegistry -- loads YAML definitions from disk
   const agentRegistry = createAgentRegistry({
     definitionsDir: DEFINITIONS_DIR,
@@ -112,6 +115,9 @@ async function bootstrap(): Promise<void> {
   // 7. TimeoutScheduler -- pg-boss delayed signal delivery
   const timeoutScheduler = createTimeoutScheduler({ pool, logger });
 
+  // 7b. SandboxManager -- Docker-backed dev containers (swap for Fargate/Lambda in prod)
+  const sandboxManager = createDevContainerManager({ db: platformDb, logger });
+
   // 8. ConversationExecutor -- SKIP LOCKED conversation lifecycle
   const executor = createConversationExecutor({
     db,
@@ -121,6 +127,16 @@ async function bootstrap(): Promise<void> {
     toolRegistry,
     logger,
     timeoutScheduler,
+    sandboxManager,
+    sandboxSetup: config.github.repoUrl
+      ? {
+          repoUrl: config.github.repoUrl,
+          ...(config.github.token && { githubToken: config.github.token }),
+          ...(config.github.baseBranch && {
+            baseBranch: config.github.baseBranch,
+          }),
+        }
+      : undefined,
     pollIntervalMs: config.service.workerPollIntervalMs,
     concurrencyLimit: config.service.maxConcurrentConversations,
     anthropicApiKey: config.anthropic.apiKey,
@@ -233,7 +249,10 @@ async function bootstrap(): Promise<void> {
     // 4. Close session projection subscriptions
     sessionProjection.close();
 
-    // 5. Close database pool
+    // 5. Close sandbox manager
+    await sandboxManager.close();
+
+    // 6. Close database pool
     await pool.end();
 
     logger.info("Graceful shutdown complete");

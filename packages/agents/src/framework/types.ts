@@ -23,6 +23,12 @@ import type { TimeoutScheduler } from "./timeout-scheduler.js";
 
 export { agentEventTypeValues } from "../shared/db/schema.js";
 
+/**
+ * Sandbox compute abstraction. Currently backed by DevContainerManager (Docker).
+ * Can be swapped to Fargate/Lambda by changing the factory in main.ts.
+ */
+export type SandboxManager = DevContainerManager;
+
 // Re-export for convenience
 export type {
   AgentEvent,
@@ -548,6 +554,16 @@ export interface ConversationExecutorOptions {
   workerId?: string;
   /** Optional timeout scheduler for delayed signal delivery (Phase 41) */
   timeoutScheduler?: TimeoutScheduler;
+  /** Sandbox manager for codebase tool execution (optional -- Docker in dev, Fargate/Lambda in prod) */
+  sandboxManager?: SandboxManager;
+  /** Sandbox workspace setup config (optional -- repo clone + credentials) */
+  sandboxSetup?:
+    | {
+        repoUrl: string;
+        githubToken?: string | undefined;
+        baseBranch?: string | undefined;
+      }
+    | undefined;
 }
 
 // ─── Non-Retryable Error Classes ────────────────────────────────────────────
