@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.3 Unified Agent Framework -- Phase 46 complete
+**Current focus:** v2.3 Unified Agent Framework -- Phase 47 cleanup in progress
 
 ## Current Position
 
-Phase: 46 of 47 (Pre-Cleanup Verification)
-Plan: 2 of 2 in current phase (all complete)
-Status: Phase complete
-Last activity: 2026-02-03 -- Phase 46 complete (both plans executed: audit + Docker validation)
+Phase: 47 of 47 (Cleanup & Documentation)
+Plan: 1 of 4 in current phase
+Status: In progress
+Last activity: 2026-02-03 -- Completed 47-01-PLAN.md (Phase A: refactor live-to-dead references)
 
-Progress: [█████████░] ~97% (31/~32 estimated plans)
+Progress: [█████████░] ~98% (32/~35 estimated plans)
 
 ## Milestone History
 
@@ -28,9 +28,9 @@ Progress: [█████████░] ~97% (31/~32 estimated plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 31 (v2.3)
-- Average duration: ~5m17s
-- Total execution time: ~164m
+- Total plans completed: 32 (v2.3)
+- Average duration: ~5m27s
+- Total execution time: ~174m
 
 **By Phase:**
 
@@ -46,6 +46,7 @@ Progress: [█████████░] ~97% (31/~32 estimated plans)
 | 44 | 2/2 | 6m | 3m |
 | 45 | 3/3 | 32m36s | 10m52s |
 | 46 | 2/2 | ~11m | ~5m30s |
+| 47 | 1/4 | 10m | 10m |
 
 *Updated after each plan completion*
 
@@ -125,6 +126,9 @@ v2.3 decisions:
 - trace-recorder.ts and cost-tracking.ts dead -- only imported by legacy orchestrators via Temporal activities
 - shared/tools/toolkits.ts dead -- only imported by legacy orchestrators, v2.3 uses framework/tool-factories.ts
 - Three-phase deletion order: refactor references -> delete files -> remove deps (prevents build breakage)
+- @ts-nocheck added to 14 dead files for pre-commit hook compatibility -- files still exist, will be deleted in Phase B (47-02)
+- createSendMessageTool now uses EventRouterDeps directly -- no more unsafe RouterDeps cast in routeViaAgentLoopV2
+- Temporal logger export removed from platform logging barrel -- only consumer was dead platform/temporal/worker.ts
 
 ### Pending Todos
 
@@ -142,9 +146,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-03
-Stopped at: Phase 46 complete -- all plans executed (audit report + Docker validation)
+Stopped at: Completed 47-01-PLAN.md (Phase A: refactor live-to-dead references)
 Resume file: None
-Next action: Phase 47 (Cleanup -- execute against 46-DELETION-MANIFEST.md)
+Next action: Execute plan 47-02 (Phase B: mass file deletion)
 
 ---
-*Updated: 2026-02-03 -- Phase 46 complete (plan 01: audit + manifest, plan 02: Docker validation)*
+*Updated: 2026-02-03 -- Phase 47 plan 01 complete (live-to-dead references refactored)*
