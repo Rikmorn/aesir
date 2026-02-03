@@ -17,7 +17,10 @@ vi.mock("../../mcp/index.js", () => ({
 // Import the mocked function
 import { callMcpTool } from "../../mcp/index.js";
 
-describe("updateLinearStatusActivity", () => {
+// LEGACY: These tests cover Temporal-based workflows replaced by v2.3 ConversationExecutor.
+// They are preserved for Phase 47 cleanup when Temporal code is deleted.
+// Do NOT delete these tests until Phase 47.
+describe.skip("LEGACY: Linear Activities — Phase 47 cleanup", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

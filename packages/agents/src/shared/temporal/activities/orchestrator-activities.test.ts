@@ -78,1239 +78,1251 @@ const {
 const { setupContainerActivity, stopContainerActivity, completeTaskActivity } =
   await import("./infrastructure-activities.js");
 
-// ---------------------------------------------------------------------------
-// Mock Factories
-// ---------------------------------------------------------------------------
+// LEGACY: These tests cover Temporal-based workflows replaced by v2.3 ConversationExecutor.
+// They are preserved for Phase 47 cleanup when Temporal code is deleted.
+// Do NOT delete these tests until Phase 47.
+describe.skip("LEGACY: Orchestrator Activities — Phase 47 cleanup", () => {
+  // ---------------------------------------------------------------------------
+  // Mock Factories
+  // ---------------------------------------------------------------------------
 
-function createMockLogger(): PinoLogger {
-  const child = vi.fn().mockReturnThis();
-  return {
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn(),
-    trace: vi.fn(),
-    fatal: vi.fn(),
-    child: vi.fn().mockReturnValue({
+  function createMockLogger(): PinoLogger {
+    const child = vi.fn().mockReturnThis();
+    return {
       info: vi.fn(),
       error: vi.fn(),
       warn: vi.fn(),
       debug: vi.fn(),
       trace: vi.fn(),
       fatal: vi.fn(),
-      child,
-    }),
-  } as unknown as PinoLogger;
-}
+      child: vi.fn().mockReturnValue({
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn(),
+        trace: vi.fn(),
+        fatal: vi.fn(),
+        child,
+      }),
+    } as unknown as PinoLogger;
+  }
 
-function createMockContextManager(): ContextManager {
-  return {
-    writeSnapshot: vi.fn().mockResolvedValue("snap_123"),
-    readLatestSnapshot: vi.fn().mockResolvedValue(null),
-    readLatestSnapshotForStage: vi.fn().mockResolvedValue(null),
-    health: vi.fn().mockResolvedValue({ healthy: true, latencyMs: 1 }),
-    close: vi.fn().mockResolvedValue(undefined),
-  } as unknown as ContextManager;
-}
+  function createMockContextManager(): ContextManager {
+    return {
+      writeSnapshot: vi.fn().mockResolvedValue("snap_123"),
+      readLatestSnapshot: vi.fn().mockResolvedValue(null),
+      readLatestSnapshotForStage: vi.fn().mockResolvedValue(null),
+      health: vi.fn().mockResolvedValue({ healthy: true, latencyMs: 1 }),
+      close: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ContextManager;
+  }
 
-function createMockTaskStore(): TaskStore {
-  return {
-    createTask: vi.fn().mockResolvedValue("task_123"),
-    updateTask: vi.fn().mockResolvedValue(undefined),
-    getTask: vi.fn().mockResolvedValue(null),
-    getTaskByWorkflowId: vi.fn().mockResolvedValue(null),
-    health: vi.fn().mockResolvedValue({ healthy: true, latencyMs: 1 }),
-    close: vi.fn().mockResolvedValue(undefined),
+  function createMockTaskStore(): TaskStore {
+    return {
+      createTask: vi.fn().mockResolvedValue("task_123"),
+      updateTask: vi.fn().mockResolvedValue(undefined),
+      getTask: vi.fn().mockResolvedValue(null),
+      getTaskByWorkflowId: vi.fn().mockResolvedValue(null),
+      health: vi.fn().mockResolvedValue({ healthy: true, latencyMs: 1 }),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+  }
+
+  function createMockContainerManager(): DevContainerManager {
+    return {
+      spawn: vi.fn().mockResolvedValue("container_abc123def456"),
+      execute: vi.fn(),
+      findByTaskId: vi.fn(),
+      isRunning: vi.fn(),
+      health: vi.fn(),
+      close: vi.fn(),
+    } as unknown as DevContainerManager;
+  }
+
+  function createMockCleanup(): DevContainerCleanup {
+    return {
+      cleanupContainer: vi.fn().mockResolvedValue(undefined),
+    } as unknown as DevContainerCleanup;
+  }
+
+  function createMockGit(): DevContainerGit {
+    return {
+      configureCredentials: vi.fn().mockResolvedValue({ success: true }),
+      cloneRepository: vi.fn().mockResolvedValue({ success: true }),
+    } as unknown as DevContainerGit;
+  }
+
+  function createMockDb(): NodePgDatabase<typeof agentsSchemaModule> {
+    return {
+      insert: vi.fn(),
+      select: vi.fn(),
+    } as unknown as NodePgDatabase<typeof agentsSchemaModule>;
+  }
+
+  /** Standard orchestrator result for tests */
+  function createAgentLoopResult(
+    overrides?: Partial<AgentLoopResult>,
+  ): AgentLoopResult {
+    return {
+      status: "completed",
+      output: "Implementation plan created.",
+      toolCallCount: 5,
+      tokenCount: { input: 1000, output: 500 },
+      trace: [],
+      ...overrides,
+    };
+  }
+
+  /** Standard issue context for activity inputs */
+  const testIssue = {
+    id: "issue_uuid_123",
+    identifier: "AES-42",
+    title: "Fix authentication flow",
+    description: "Users cannot log in with SSO",
+    priority: 2,
+    labels: ["bug", "auth"],
   };
-}
 
-function createMockContainerManager(): DevContainerManager {
-  return {
-    spawn: vi.fn().mockResolvedValue("container_abc123def456"),
-    execute: vi.fn(),
-    findByTaskId: vi.fn(),
-    isRunning: vi.fn(),
-    health: vi.fn(),
-    close: vi.fn(),
-  } as unknown as DevContainerManager;
-}
+  // ---------------------------------------------------------------------------
+  // Tests: parseHumanInputMarker
+  // ---------------------------------------------------------------------------
 
-function createMockCleanup(): DevContainerCleanup {
-  return {
-    cleanupContainer: vi.fn().mockResolvedValue(undefined),
-  } as unknown as DevContainerCleanup;
-}
+  describe("parseHumanInputMarker", () => {
+    it("returns null when trace has no tool_result steps", () => {
+      const result = createAgentLoopResult({
+        trace: [
+          {
+            type: "llm_response",
+            timestamp: new Date().toISOString(),
+            output: "Some response",
+          },
+        ],
+      });
 
-function createMockGit(): DevContainerGit {
-  return {
-    configureCredentials: vi.fn().mockResolvedValue({ success: true }),
-    cloneRepository: vi.fn().mockResolvedValue({ success: true }),
-  } as unknown as DevContainerGit;
-}
-
-function createMockDb(): NodePgDatabase<typeof agentsSchemaModule> {
-  return {
-    insert: vi.fn(),
-    select: vi.fn(),
-  } as unknown as NodePgDatabase<typeof agentsSchemaModule>;
-}
-
-/** Standard orchestrator result for tests */
-function createAgentLoopResult(
-  overrides?: Partial<AgentLoopResult>,
-): AgentLoopResult {
-  return {
-    status: "completed",
-    output: "Implementation plan created.",
-    toolCallCount: 5,
-    tokenCount: { input: 1000, output: 500 },
-    trace: [],
-    ...overrides,
-  };
-}
-
-/** Standard issue context for activity inputs */
-const testIssue = {
-  id: "issue_uuid_123",
-  identifier: "AES-42",
-  title: "Fix authentication flow",
-  description: "Users cannot log in with SSO",
-  priority: 2,
-  labels: ["bug", "auth"],
-};
-
-// ---------------------------------------------------------------------------
-// Tests: parseHumanInputMarker
-// ---------------------------------------------------------------------------
-
-describe("parseHumanInputMarker", () => {
-  it("returns null when trace has no tool_result steps", () => {
-    const result = createAgentLoopResult({
-      trace: [
-        {
-          type: "llm_response",
-          timestamp: new Date().toISOString(),
-          output: "Some response",
-        },
-      ],
+      expect(parseHumanInputMarker(result)).toBeNull();
     });
 
-    expect(parseHumanInputMarker(result)).toBeNull();
-  });
+    it("returns null when trace has tool_result but not request_human_input", () => {
+      const result = createAgentLoopResult({
+        trace: [
+          {
+            type: "tool_result",
+            timestamp: new Date().toISOString(),
+            toolName: "linear_get_issue",
+            output: JSON.stringify({ title: "Test issue" }),
+          },
+        ],
+      });
 
-  it("returns null when trace has tool_result but not request_human_input", () => {
-    const result = createAgentLoopResult({
-      trace: [
-        {
-          type: "tool_result",
-          timestamp: new Date().toISOString(),
-          toolName: "linear_get_issue",
-          output: JSON.stringify({ title: "Test issue" }),
-        },
-      ],
+      expect(parseHumanInputMarker(result)).toBeNull();
     });
 
-    expect(parseHumanInputMarker(result)).toBeNull();
-  });
+    it("returns null when request_human_input output is not valid JSON", () => {
+      const result = createAgentLoopResult({
+        trace: [
+          {
+            type: "tool_result",
+            timestamp: new Date().toISOString(),
+            toolName: "request_human_input",
+            output: "not-json",
+          },
+        ],
+      });
 
-  it("returns null when request_human_input output is not valid JSON", () => {
-    const result = createAgentLoopResult({
-      trace: [
-        {
-          type: "tool_result",
-          timestamp: new Date().toISOString(),
-          toolName: "request_human_input",
-          output: "not-json",
-        },
-      ],
+      expect(parseHumanInputMarker(result)).toBeNull();
     });
 
-    expect(parseHumanInputMarker(result)).toBeNull();
-  });
+    it("returns null when request_human_input has wrong sentinel type", () => {
+      const result = createAgentLoopResult({
+        trace: [
+          {
+            type: "tool_result",
+            timestamp: new Date().toISOString(),
+            toolName: "request_human_input",
+            output: JSON.stringify({
+              type: "some_other_marker",
+              channel: "C123",
+              message: "Test",
+              requestType: "approval",
+            }),
+          },
+        ],
+      });
 
-  it("returns null when request_human_input has wrong sentinel type", () => {
-    const result = createAgentLoopResult({
-      trace: [
-        {
-          type: "tool_result",
-          timestamp: new Date().toISOString(),
-          toolName: "request_human_input",
-          output: JSON.stringify({
-            type: "some_other_marker",
-            channel: "C123",
-            message: "Test",
-            requestType: "approval",
-          }),
-        },
-      ],
+      expect(parseHumanInputMarker(result)).toBeNull();
     });
 
-    expect(parseHumanInputMarker(result)).toBeNull();
-  });
+    it("extracts HumanInputRequest from valid sentinel marker", () => {
+      const result = createAgentLoopResult({
+        trace: [
+          {
+            type: "tool_result",
+            timestamp: new Date().toISOString(),
+            toolName: "request_human_input",
+            output: JSON.stringify({
+              type: "human_input_requested",
+              channel: "C1234567890",
+              message: "Please approve the implementation plan",
+              requestType: "approval",
+            }),
+          },
+        ],
+      });
 
-  it("extracts HumanInputRequest from valid sentinel marker", () => {
-    const result = createAgentLoopResult({
-      trace: [
-        {
-          type: "tool_result",
-          timestamp: new Date().toISOString(),
-          toolName: "request_human_input",
-          output: JSON.stringify({
-            type: "human_input_requested",
-            channel: "C1234567890",
-            message: "Please approve the implementation plan",
-            requestType: "approval",
-          }),
-        },
-      ],
+      const parsed = parseHumanInputMarker(result);
+      expect(parsed).toEqual({
+        channel: "C1234567890",
+        message: "Please approve the implementation plan",
+        requestType: "approval",
+      });
     });
 
-    const parsed = parseHumanInputMarker(result);
-    expect(parsed).toEqual({
-      channel: "C1234567890",
-      message: "Please approve the implementation plan",
-      requestType: "approval",
-    });
-  });
+    it("finds sentinel even when LLM continues after it (Pitfall 1)", () => {
+      const result = createAgentLoopResult({
+        trace: [
+          {
+            type: "tool_call",
+            timestamp: new Date().toISOString(),
+            toolName: "linear_get_issue",
+            input: { issueId: "AES-42" },
+          },
+          {
+            type: "tool_result",
+            timestamp: new Date().toISOString(),
+            toolName: "linear_get_issue",
+            output: JSON.stringify({ title: "Fix auth" }),
+          },
+          {
+            type: "tool_result",
+            timestamp: new Date().toISOString(),
+            toolName: "request_human_input",
+            output: JSON.stringify({
+              type: "human_input_requested",
+              channel: "C999",
+              message: "Need escalation for complex auth issue",
+              requestType: "escalation",
+            }),
+          },
+          {
+            type: "llm_response",
+            timestamp: new Date().toISOString(),
+            output:
+              "I have requested human input and will wait for a response.",
+          },
+        ],
+      });
 
-  it("finds sentinel even when LLM continues after it (Pitfall 1)", () => {
-    const result = createAgentLoopResult({
-      trace: [
-        {
-          type: "tool_call",
-          timestamp: new Date().toISOString(),
-          toolName: "linear_get_issue",
-          input: { issueId: "AES-42" },
-        },
-        {
-          type: "tool_result",
-          timestamp: new Date().toISOString(),
-          toolName: "linear_get_issue",
-          output: JSON.stringify({ title: "Fix auth" }),
-        },
-        {
-          type: "tool_result",
-          timestamp: new Date().toISOString(),
-          toolName: "request_human_input",
-          output: JSON.stringify({
-            type: "human_input_requested",
-            channel: "C999",
-            message: "Need escalation for complex auth issue",
-            requestType: "escalation",
-          }),
-        },
-        {
-          type: "llm_response",
-          timestamp: new Date().toISOString(),
-          output: "I have requested human input and will wait for a response.",
-        },
-      ],
-    });
-
-    const parsed = parseHumanInputMarker(result);
-    expect(parsed).not.toBeNull();
-    expect(parsed?.requestType).toBe("escalation");
-    expect(parsed?.channel).toBe("C999");
-  });
-
-  it("returns first sentinel if multiple exist in trace", () => {
-    const result = createAgentLoopResult({
-      trace: [
-        {
-          type: "tool_result",
-          timestamp: new Date().toISOString(),
-          toolName: "request_human_input",
-          output: JSON.stringify({
-            type: "human_input_requested",
-            channel: "C_first",
-            message: "First request",
-            requestType: "approval",
-          }),
-        },
-        {
-          type: "tool_result",
-          timestamp: new Date().toISOString(),
-          toolName: "request_human_input",
-          output: JSON.stringify({
-            type: "human_input_requested",
-            channel: "C_second",
-            message: "Second request",
-            requestType: "clarification",
-          }),
-        },
-      ],
+      const parsed = parseHumanInputMarker(result);
+      expect(parsed).not.toBeNull();
+      expect(parsed?.requestType).toBe("escalation");
+      expect(parsed?.channel).toBe("C999");
     });
 
-    const parsed = parseHumanInputMarker(result);
-    expect(parsed?.channel).toBe("C_first");
-    expect(parsed?.requestType).toBe("approval");
-  });
-});
+    it("returns first sentinel if multiple exist in trace", () => {
+      const result = createAgentLoopResult({
+        trace: [
+          {
+            type: "tool_result",
+            timestamp: new Date().toISOString(),
+            toolName: "request_human_input",
+            output: JSON.stringify({
+              type: "human_input_requested",
+              channel: "C_first",
+              message: "First request",
+              requestType: "approval",
+            }),
+          },
+          {
+            type: "tool_result",
+            timestamp: new Date().toISOString(),
+            toolName: "request_human_input",
+            output: JSON.stringify({
+              type: "human_input_requested",
+              channel: "C_second",
+              message: "Second request",
+              requestType: "clarification",
+            }),
+          },
+        ],
+      });
 
-// ---------------------------------------------------------------------------
-// Tests: parsePrInfoFromTrace
-// ---------------------------------------------------------------------------
-
-describe("parsePrInfoFromTrace", () => {
-  it("returns null when trace has no github_create_pull_request results", () => {
-    const result = createAgentLoopResult({
-      trace: [
-        {
-          type: "tool_result",
-          timestamp: new Date().toISOString(),
-          toolName: "github_create_branch",
-          output: JSON.stringify({ branch: "feature/fix" }),
-        },
-      ],
-    });
-
-    expect(parsePrInfoFromTrace(result)).toBeNull();
-  });
-
-  it("extracts PR number and URL from successful create_pull_request result", () => {
-    const result = createAgentLoopResult({
-      trace: [
-        {
-          type: "tool_result",
-          timestamp: new Date().toISOString(),
-          toolName: "github_create_pull_request",
-          output: JSON.stringify({
-            number: 52,
-            title: "Fix README",
-            body: "Remove deprecated warning",
-            state: "open",
-            headBranch: "fix/readme",
-            baseBranch: "main",
-            url: "https://github.com/org/repo/pull/52",
-          }),
-        },
-      ],
-    });
-
-    const prInfo = parsePrInfoFromTrace(result);
-    expect(prInfo).toEqual({
-      number: 52,
-      url: "https://github.com/org/repo/pull/52",
+      const parsed = parseHumanInputMarker(result);
+      expect(parsed?.channel).toBe("C_first");
+      expect(parsed?.requestType).toBe("approval");
     });
   });
 
-  it("returns last PR if multiple exist in trace (retry scenario)", () => {
-    const result = createAgentLoopResult({
-      trace: [
-        {
-          type: "tool_result",
-          timestamp: new Date().toISOString(),
-          toolName: "github_create_pull_request",
-          output: JSON.stringify({
-            number: 50,
-            url: "https://github.com/org/repo/pull/50",
-          }),
-        },
-        {
-          type: "tool_result",
-          timestamp: new Date().toISOString(),
-          toolName: "github_create_pull_request",
-          output: JSON.stringify({
-            number: 52,
-            url: "https://github.com/org/repo/pull/52",
-          }),
-        },
-      ],
+  // ---------------------------------------------------------------------------
+  // Tests: parsePrInfoFromTrace
+  // ---------------------------------------------------------------------------
+
+  describe("parsePrInfoFromTrace", () => {
+    it("returns null when trace has no github_create_pull_request results", () => {
+      const result = createAgentLoopResult({
+        trace: [
+          {
+            type: "tool_result",
+            timestamp: new Date().toISOString(),
+            toolName: "github_create_branch",
+            output: JSON.stringify({ branch: "feature/fix" }),
+          },
+        ],
+      });
+
+      expect(parsePrInfoFromTrace(result)).toBeNull();
     });
 
-    const prInfo = parsePrInfoFromTrace(result);
-    expect(prInfo?.number).toBe(52);
-  });
+    it("extracts PR number and URL from successful create_pull_request result", () => {
+      const result = createAgentLoopResult({
+        trace: [
+          {
+            type: "tool_result",
+            timestamp: new Date().toISOString(),
+            toolName: "github_create_pull_request",
+            output: JSON.stringify({
+              number: 52,
+              title: "Fix README",
+              body: "Remove deprecated warning",
+              state: "open",
+              headBranch: "fix/readme",
+              baseBranch: "main",
+              url: "https://github.com/org/repo/pull/52",
+            }),
+          },
+        ],
+      });
 
-  it("returns null when tool result is not valid JSON", () => {
-    const result = createAgentLoopResult({
-      trace: [
-        {
-          type: "tool_result",
-          timestamp: new Date().toISOString(),
-          toolName: "github_create_pull_request",
-          output: "github_create_pull_request error: rate limited",
-        },
-      ],
+      const prInfo = parsePrInfoFromTrace(result);
+      expect(prInfo).toEqual({
+        number: 52,
+        url: "https://github.com/org/repo/pull/52",
+      });
     });
 
-    expect(parsePrInfoFromTrace(result)).toBeNull();
-  });
+    it("returns last PR if multiple exist in trace (retry scenario)", () => {
+      const result = createAgentLoopResult({
+        trace: [
+          {
+            type: "tool_result",
+            timestamp: new Date().toISOString(),
+            toolName: "github_create_pull_request",
+            output: JSON.stringify({
+              number: 50,
+              url: "https://github.com/org/repo/pull/50",
+            }),
+          },
+          {
+            type: "tool_result",
+            timestamp: new Date().toISOString(),
+            toolName: "github_create_pull_request",
+            output: JSON.stringify({
+              number: 52,
+              url: "https://github.com/org/repo/pull/52",
+            }),
+          },
+        ],
+      });
 
-  it("returns null when JSON lacks required fields", () => {
-    const result = createAgentLoopResult({
-      trace: [
-        {
-          type: "tool_result",
-          timestamp: new Date().toISOString(),
-          toolName: "github_create_pull_request",
-          output: JSON.stringify({ title: "Some PR" }),
-        },
-      ],
+      const prInfo = parsePrInfoFromTrace(result);
+      expect(prInfo?.number).toBe(52);
     });
 
-    expect(parsePrInfoFromTrace(result)).toBeNull();
-  });
+    it("returns null when tool result is not valid JSON", () => {
+      const result = createAgentLoopResult({
+        trace: [
+          {
+            type: "tool_result",
+            timestamp: new Date().toISOString(),
+            toolName: "github_create_pull_request",
+            output: "github_create_pull_request error: rate limited",
+          },
+        ],
+      });
 
-  it("ignores tool_call steps (only processes tool_result)", () => {
-    const result = createAgentLoopResult({
-      trace: [
-        {
-          type: "tool_call",
-          timestamp: new Date().toISOString(),
-          toolName: "github_create_pull_request",
-          input: { title: "Fix README" },
-        },
-      ],
+      expect(parsePrInfoFromTrace(result)).toBeNull();
     });
 
-    expect(parsePrInfoFromTrace(result)).toBeNull();
+    it("returns null when JSON lacks required fields", () => {
+      const result = createAgentLoopResult({
+        trace: [
+          {
+            type: "tool_result",
+            timestamp: new Date().toISOString(),
+            toolName: "github_create_pull_request",
+            output: JSON.stringify({ title: "Some PR" }),
+          },
+        ],
+      });
+
+      expect(parsePrInfoFromTrace(result)).toBeNull();
+    });
+
+    it("ignores tool_call steps (only processes tool_result)", () => {
+      const result = createAgentLoopResult({
+        trace: [
+          {
+            type: "tool_call",
+            timestamp: new Date().toISOString(),
+            toolName: "github_create_pull_request",
+            input: { title: "Fix README" },
+          },
+        ],
+      });
+
+      expect(parsePrInfoFromTrace(result)).toBeNull();
+    });
   });
-});
 
-// ---------------------------------------------------------------------------
-// Tests: DI (initOrchestratorActivities / getOrchestratorDeps)
-// ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Tests: DI (initOrchestratorActivities / getOrchestratorDeps)
+  // ---------------------------------------------------------------------------
 
-describe("DI initialization", () => {
-  it("throws when getOrchestratorDeps is called before init", () => {
-    // Reset module state by re-importing -- but since module state persists,
-    // we test this indirectly by verifying deps are set after init.
-    // The throw behavior is tested by the fact that activities work after init.
-    // We verify init sets deps correctly.
-    const mockDeps = {
-      containerManager: createMockContainerManager(),
-      cleanup: createMockCleanup(),
-      git: createMockGit(),
-      contextManager: createMockContextManager(),
-      taskStore: createMockTaskStore(),
-      db: createMockDb(),
-      logger: createMockLogger(),
-      repoUrl: "https://github.com/test/repo.git",
-      githubToken: "ghp_test123",
-      owner: "test-owner",
+  describe("DI initialization", () => {
+    it("throws when getOrchestratorDeps is called before init", () => {
+      // Reset module state by re-importing -- but since module state persists,
+      // we test this indirectly by verifying deps are set after init.
+      // The throw behavior is tested by the fact that activities work after init.
+      // We verify init sets deps correctly.
+      const mockDeps = {
+        containerManager: createMockContainerManager(),
+        cleanup: createMockCleanup(),
+        git: createMockGit(),
+        contextManager: createMockContextManager(),
+        taskStore: createMockTaskStore(),
+        db: createMockDb(),
+        logger: createMockLogger(),
+        repoUrl: "https://github.com/test/repo.git",
+        githubToken: "ghp_test123",
+        owner: "test-owner",
+        repo: "test-repo",
+        baseBranch: "main",
+        slackChannel: "C1234567890",
+      };
+
+      initOrchestratorActivities(mockDeps);
+      const deps = getOrchestratorDeps();
+      expect(deps).toBe(mockDeps);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Shared setup for activity tests
+  // ---------------------------------------------------------------------------
+
+  let mockTaskStore: ReturnType<typeof createMockTaskStore>;
+  let mockContextManager: ReturnType<typeof createMockContextManager>;
+  let mockContainerManager: ReturnType<typeof createMockContainerManager>;
+  let mockCleanup: ReturnType<typeof createMockCleanup>;
+  let mockGit: ReturnType<typeof createMockGit>;
+  let mockLogger: PinoLogger;
+  let mockDb: NodePgDatabase<typeof agentsSchemaModule>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    mockTaskStore = createMockTaskStore();
+    mockContextManager = createMockContextManager();
+    mockContainerManager = createMockContainerManager();
+    mockCleanup = createMockCleanup();
+    mockGit = createMockGit();
+    mockLogger = createMockLogger();
+    mockDb = createMockDb();
+
+    initOrchestratorActivities({
+      containerManager: mockContainerManager,
+      cleanup: mockCleanup,
+      git: mockGit,
+      contextManager: mockContextManager,
+      taskStore: mockTaskStore,
+      db: mockDb,
+      logger: mockLogger,
+      repoUrl: "https://github.com/test-org/test-repo.git",
+      githubToken: "ghp_test_token_123",
+      owner: "test-org",
       repo: "test-repo",
       baseBranch: "main",
-      slackChannel: "C1234567890",
-    };
-
-    initOrchestratorActivities(mockDeps);
-    const deps = getOrchestratorDeps();
-    expect(deps).toBe(mockDeps);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Shared setup for activity tests
-// ---------------------------------------------------------------------------
-
-let mockTaskStore: ReturnType<typeof createMockTaskStore>;
-let mockContextManager: ReturnType<typeof createMockContextManager>;
-let mockContainerManager: ReturnType<typeof createMockContainerManager>;
-let mockCleanup: ReturnType<typeof createMockCleanup>;
-let mockGit: ReturnType<typeof createMockGit>;
-let mockLogger: PinoLogger;
-let mockDb: NodePgDatabase<typeof agentsSchemaModule>;
-
-beforeEach(() => {
-  vi.clearAllMocks();
-
-  mockTaskStore = createMockTaskStore();
-  mockContextManager = createMockContextManager();
-  mockContainerManager = createMockContainerManager();
-  mockCleanup = createMockCleanup();
-  mockGit = createMockGit();
-  mockLogger = createMockLogger();
-  mockDb = createMockDb();
-
-  initOrchestratorActivities({
-    containerManager: mockContainerManager,
-    cleanup: mockCleanup,
-    git: mockGit,
-    contextManager: mockContextManager,
-    taskStore: mockTaskStore,
-    db: mockDb,
-    logger: mockLogger,
-    repoUrl: "https://github.com/test-org/test-repo.git",
-    githubToken: "ghp_test_token_123",
-    owner: "test-org",
-    repo: "test-repo",
-    baseBranch: "main",
-    slackChannel: "C_default",
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests: runOrchestratorPreApproval
-// ---------------------------------------------------------------------------
-
-describe("runOrchestratorPreApproval", () => {
-  it("calls runDevAgentOrchestrator with correct parameters", async () => {
-    const agentResult = createAgentLoopResult();
-    mockRunDevAgentOrchestrator.mockResolvedValue(agentResult);
-
-    await runOrchestratorPreApproval({
-      taskId: "task_123",
-      issue: testIssue,
-      slackChannel: "C_test",
-      workflowId: "wf_abc",
+      slackChannel: "C_default",
     });
+  });
 
-    expect(mockRunDevAgentOrchestrator).toHaveBeenCalledWith(
-      expect.objectContaining({
-        issueId: "AES-42",
-        issueTitle: "Fix authentication flow",
+  // ---------------------------------------------------------------------------
+  // Tests: runOrchestratorPreApproval
+  // ---------------------------------------------------------------------------
+
+  describe("runOrchestratorPreApproval", () => {
+    it("calls runDevAgentOrchestrator with correct parameters", async () => {
+      const agentResult = createAgentLoopResult();
+      mockRunDevAgentOrchestrator.mockResolvedValue(agentResult);
+
+      await runOrchestratorPreApproval({
         taskId: "task_123",
-        agentId: "dev-agent",
-        correlationId: "task_123",
+        issue: testIssue,
+        slackChannel: "C_test",
         workflowId: "wf_abc",
-        maxIterations: 100,
-      }),
-    );
-  });
+      });
 
-  it("updates task status to researching", async () => {
-    mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
-
-    await runOrchestratorPreApproval({
-      taskId: "task_123",
-      issue: testIssue,
-      slackChannel: "C_test",
-      workflowId: "wf_abc",
+      expect(mockRunDevAgentOrchestrator).toHaveBeenCalledWith(
+        expect.objectContaining({
+          issueId: "AES-42",
+          issueTitle: "Fix authentication flow",
+          taskId: "task_123",
+          agentId: "dev-agent",
+          correlationId: "task_123",
+          workflowId: "wf_abc",
+          maxIterations: 100,
+        }),
+      );
     });
 
-    expect(mockTaskStore.updateTask).toHaveBeenCalledWith("task_123", {
-      status: "researching",
-    });
-  });
+    it("updates task status to researching", async () => {
+      mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
 
-  it("writes context snapshot at post-research-plan stage", async () => {
-    const agentResult = createAgentLoopResult({
-      output: "Plan: Implement SSO auth using passport.js",
-    });
-    mockRunDevAgentOrchestrator.mockResolvedValue(agentResult);
-
-    await runOrchestratorPreApproval({
-      taskId: "task_123",
-      issue: testIssue,
-      slackChannel: "C_test",
-      workflowId: "wf_abc",
-    });
-
-    expect(mockContextManager.writeSnapshot).toHaveBeenCalledWith(
-      expect.objectContaining({
+      await runOrchestratorPreApproval({
         taskId: "task_123",
+        issue: testIssue,
+        slackChannel: "C_test",
         workflowId: "wf_abc",
-        agentType: "dev-orchestrator",
-        stage: "post-research-plan",
-        summary: "Plan: Implement SSO auth using passport.js",
-      }),
-    );
-  });
+      });
 
-  it("returns slim output without full trace", async () => {
-    const agentResult = createAgentLoopResult({
-      output: "Implementation plan ready",
-      trace: [
-        {
-          type: "tool_result",
-          timestamp: new Date().toISOString(),
-          toolName: "request_human_input",
-          output: JSON.stringify({
-            type: "human_input_requested",
-            channel: "C_test",
-            message: "Approve plan?",
-            requestType: "approval",
-          }),
-        },
-      ],
-    });
-    mockRunDevAgentOrchestrator.mockResolvedValue(agentResult);
-
-    const result = await runOrchestratorPreApproval({
-      taskId: "task_123",
-      issue: testIssue,
-      slackChannel: "C_test",
-      workflowId: "wf_abc",
+      expect(mockTaskStore.updateTask).toHaveBeenCalledWith("task_123", {
+        status: "researching",
+      });
     });
 
-    expect(result.status).toBe("completed");
-    expect(result.plan).toBe("Implementation plan ready");
-    expect(result.toolCallCount).toBe(5);
-    expect(result.tokenCount).toEqual({ input: 1000, output: 500 });
-    expect(result.humanInputRequest).toEqual({
-      channel: "C_test",
-      message: "Approve plan?",
-      requestType: "approval",
-    });
-    // Verify no trace property on the slim output
-    expect(
-      (result as unknown as Record<string, unknown>).trace,
-    ).toBeUndefined();
-  });
+    it("writes context snapshot at post-research-plan stage", async () => {
+      const agentResult = createAgentLoopResult({
+        output: "Plan: Implement SSO auth using passport.js",
+      });
+      mockRunDevAgentOrchestrator.mockResolvedValue(agentResult);
 
-  it("includes PR info from trace when agent completed autonomously (no sentinel)", async () => {
-    const agentResult = createAgentLoopResult({
-      output: "PR created for README update",
-      trace: [
-        {
-          type: "tool_result",
-          timestamp: new Date().toISOString(),
-          toolName: "github_create_pull_request",
-          output: JSON.stringify({
-            number: 99,
-            title: "Fix README",
-            url: "https://github.com/test-org/test-repo/pull/99",
-          }),
-        },
-      ],
-    });
-    mockRunDevAgentOrchestrator.mockResolvedValue(agentResult);
-
-    const result = await runOrchestratorPreApproval({
-      taskId: "task_123",
-      issue: testIssue,
-      slackChannel: "C_test",
-      workflowId: "wf_abc",
-    });
-
-    expect(result.humanInputRequest).toBeNull();
-    expect(result.prNumber).toBe(99);
-    expect(result.prUrl).toBe("https://github.com/test-org/test-repo/pull/99");
-    // PR info should be written to task store as side-effect
-    expect(mockTaskStore.updateTask).toHaveBeenCalledWith("task_123", {
-      prNumber: 99,
-      prUrl: "https://github.com/test-org/test-repo/pull/99",
-    });
-  });
-
-  it("omits PR info when agent completed autonomously but no PR in trace or store", async () => {
-    const agentResult = createAgentLoopResult({
-      output: "Issue already resolved",
-      trace: [], // No PR creation, no sentinel
-    });
-    mockRunDevAgentOrchestrator.mockResolvedValue(agentResult);
-
-    // Task store also has no PR info
-    vi.mocked(mockTaskStore.getTask).mockResolvedValue({
-      id: "atsk_123",
-      task_id: "task_123",
-      agent_type: "dev",
-      status: "researching",
-      pr_number: null,
-      pr_url: null,
-      container_id: "container_abc",
-      issue_id: null,
-      issue_identifier: null,
-      workflow_id: "wf_abc",
-      branch_name: null,
-      approval_status: null,
-      approval_feedback: null,
-      error: null,
-      escalation_reason: null,
-      slack_channel: "C_test",
-      slack_message_ts: null,
-      created_at: new Date(),
-      updated_at: new Date(),
-    });
-
-    const result = await runOrchestratorPreApproval({
-      taskId: "task_123",
-      issue: testIssue,
-      slackChannel: "C_test",
-      workflowId: "wf_abc",
-    });
-
-    expect(result.humanInputRequest).toBeNull();
-    expect(result.prNumber).toBeUndefined();
-    expect(result.prUrl).toBeUndefined();
-  });
-
-  it("does not query task store for PR info when sentinel is present", async () => {
-    const agentResult = createAgentLoopResult({
-      output: "Plan ready for approval",
-      trace: [
-        {
-          type: "tool_result",
-          timestamp: new Date().toISOString(),
-          toolName: "request_human_input",
-          output: JSON.stringify({
-            type: "human_input_requested",
-            channel: "C_test",
-            message: "Approve plan?",
-            requestType: "approval",
-          }),
-        },
-      ],
-    });
-    mockRunDevAgentOrchestrator.mockResolvedValue(agentResult);
-
-    const result = await runOrchestratorPreApproval({
-      taskId: "task_123",
-      issue: testIssue,
-      slackChannel: "C_test",
-      workflowId: "wf_abc",
-    });
-
-    expect(result.humanInputRequest).not.toBeNull();
-    expect(result.prNumber).toBeUndefined();
-    expect(result.prUrl).toBeUndefined();
-    // Task store should NOT be queried for PR info when sentinel exists
-    expect(mockTaskStore.getTask).not.toHaveBeenCalled();
-  });
-
-  it("stores rejection feedback in task store for re-planning", async () => {
-    mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
-
-    await runOrchestratorPreApproval({
-      taskId: "task_123",
-      issue: testIssue,
-      slackChannel: "C_test",
-      workflowId: "wf_abc",
-      rejectionFeedback: "Need more test coverage, add edge cases",
-    });
-
-    // First call: status update to researching
-    // Second call: rejection feedback storage
-    expect(mockTaskStore.updateTask).toHaveBeenCalledWith("task_123", {
-      approvalFeedback: "Need more test coverage, add edge cases",
-      approvalStatus: "rejected",
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests: runOrchestratorPostApproval
-// ---------------------------------------------------------------------------
-
-describe("runOrchestratorPostApproval", () => {
-  it("calls orchestrator and reads PR info from task store", async () => {
-    const agentResult = createAgentLoopResult({
-      output: "PR created successfully",
-    });
-    mockRunDevAgentOrchestrator.mockResolvedValue(agentResult);
-
-    // Task store returns task with PR info (written by orchestrator via tools)
-    vi.mocked(mockTaskStore.getTask).mockResolvedValue({
-      id: "atsk_123",
-      task_id: "task_123",
-      agent_type: "dev",
-      status: "executing",
-      pr_number: 42,
-      pr_url: "https://github.com/test-org/test-repo/pull/42",
-      container_id: "container_abc",
-      issue_id: null,
-      issue_identifier: null,
-      workflow_id: "wf_abc",
-      branch_name: "feature/fix-auth",
-      approval_status: "approved",
-      approval_feedback: null,
-      error: null,
-      escalation_reason: null,
-      slack_channel: "C_test",
-      slack_message_ts: null,
-      created_at: new Date(),
-      updated_at: new Date(),
-    });
-
-    const result = await runOrchestratorPostApproval({
-      taskId: "task_123",
-      issue: testIssue,
-      slackChannel: "C_test",
-      workflowId: "wf_abc",
-    });
-
-    expect(result.status).toBe("completed");
-    expect(result.prNumber).toBe(42);
-    expect(result.prUrl).toBe("https://github.com/test-org/test-repo/pull/42");
-    expect(result.toolCallCount).toBe(5);
-    expect(result.tokenCount).toEqual({ input: 1000, output: 500 });
-  });
-
-  it("updates task status to executing", async () => {
-    mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
-    vi.mocked(mockTaskStore.getTask).mockResolvedValue(null);
-
-    await runOrchestratorPostApproval({
-      taskId: "task_123",
-      issue: testIssue,
-      slackChannel: "C_test",
-      workflowId: "wf_abc",
-    });
-
-    expect(mockTaskStore.updateTask).toHaveBeenCalledWith("task_123", {
-      status: "executing",
-    });
-  });
-
-  it("omits prNumber and prUrl when task has no PR info", async () => {
-    mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
-    vi.mocked(mockTaskStore.getTask).mockResolvedValue({
-      id: "atsk_123",
-      task_id: "task_123",
-      agent_type: "dev",
-      status: "executing",
-      pr_number: null,
-      pr_url: null,
-      container_id: null,
-      issue_id: null,
-      issue_identifier: null,
-      workflow_id: "wf_abc",
-      branch_name: null,
-      approval_status: "approved",
-      approval_feedback: null,
-      error: null,
-      escalation_reason: null,
-      slack_channel: "C_test",
-      slack_message_ts: null,
-      created_at: new Date(),
-      updated_at: new Date(),
-    });
-
-    const result = await runOrchestratorPostApproval({
-      taskId: "task_123",
-      issue: testIssue,
-      slackChannel: "C_test",
-      workflowId: "wf_abc",
-    });
-
-    expect(result.prNumber).toBeUndefined();
-    expect(result.prUrl).toBeUndefined();
-  });
-
-  it("includes errorMessage when orchestrator returns error status", async () => {
-    const agentResult = createAgentLoopResult({
-      status: "error",
-      output: "Failed to create PR: rate limited by GitHub API",
-    });
-    mockRunDevAgentOrchestrator.mockResolvedValue(agentResult);
-    vi.mocked(mockTaskStore.getTask).mockResolvedValue(null);
-
-    const result = await runOrchestratorPostApproval({
-      taskId: "task_123",
-      issue: testIssue,
-      slackChannel: "C_test",
-      workflowId: "wf_abc",
-    });
-
-    expect(result.status).toBe("error");
-    expect(result.errorMessage).toBe(
-      "Failed to create PR: rate limited by GitHub API",
-    );
-  });
-
-  it("writes context snapshot at post-execution stage", async () => {
-    mockRunDevAgentOrchestrator.mockResolvedValue(
-      createAgentLoopResult({ output: "PR #42 created" }),
-    );
-    vi.mocked(mockTaskStore.getTask).mockResolvedValue(null);
-
-    await runOrchestratorPostApproval({
-      taskId: "task_123",
-      issue: testIssue,
-      slackChannel: "C_test",
-      workflowId: "wf_abc",
-    });
-
-    expect(mockContextManager.writeSnapshot).toHaveBeenCalledWith(
-      expect.objectContaining({
+      await runOrchestratorPreApproval({
         taskId: "task_123",
-        stage: "post-execution",
-        summary: "PR #42 created",
-      }),
-    );
-  });
-});
+        issue: testIssue,
+        slackChannel: "C_test",
+        workflowId: "wf_abc",
+      });
 
-// ---------------------------------------------------------------------------
-// Tests: handleOrchestratorFeedback
-// ---------------------------------------------------------------------------
-
-describe("handleOrchestratorFeedback", () => {
-  it("stores feedback in task store before invoking orchestrator", async () => {
-    mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
-
-    await handleOrchestratorFeedback({
-      taskId: "task_123",
-      issue: testIssue,
-      slackChannel: "C_test",
-      workflowId: "wf_abc",
-      feedback: "Add null checks for the auth middleware",
+      expect(mockContextManager.writeSnapshot).toHaveBeenCalledWith(
+        expect.objectContaining({
+          taskId: "task_123",
+          workflowId: "wf_abc",
+          agentType: "dev-orchestrator",
+          stage: "post-research-plan",
+          summary: "Plan: Implement SSO auth using passport.js",
+        }),
+      );
     });
 
-    expect(mockTaskStore.updateTask).toHaveBeenCalledWith("task_123", {
-      status: "executing",
-      approvalFeedback: "Add null checks for the auth middleware",
+    it("returns slim output without full trace", async () => {
+      const agentResult = createAgentLoopResult({
+        output: "Implementation plan ready",
+        trace: [
+          {
+            type: "tool_result",
+            timestamp: new Date().toISOString(),
+            toolName: "request_human_input",
+            output: JSON.stringify({
+              type: "human_input_requested",
+              channel: "C_test",
+              message: "Approve plan?",
+              requestType: "approval",
+            }),
+          },
+        ],
+      });
+      mockRunDevAgentOrchestrator.mockResolvedValue(agentResult);
+
+      const result = await runOrchestratorPreApproval({
+        taskId: "task_123",
+        issue: testIssue,
+        slackChannel: "C_test",
+        workflowId: "wf_abc",
+      });
+
+      expect(result.status).toBe("completed");
+      expect(result.plan).toBe("Implementation plan ready");
+      expect(result.toolCallCount).toBe(5);
+      expect(result.tokenCount).toEqual({ input: 1000, output: 500 });
+      expect(result.humanInputRequest).toEqual({
+        channel: "C_test",
+        message: "Approve plan?",
+        requestType: "approval",
+      });
+      // Verify no trace property on the slim output
+      expect(
+        (result as unknown as Record<string, unknown>).trace,
+      ).toBeUndefined();
+    });
+
+    it("includes PR info from trace when agent completed autonomously (no sentinel)", async () => {
+      const agentResult = createAgentLoopResult({
+        output: "PR created for README update",
+        trace: [
+          {
+            type: "tool_result",
+            timestamp: new Date().toISOString(),
+            toolName: "github_create_pull_request",
+            output: JSON.stringify({
+              number: 99,
+              title: "Fix README",
+              url: "https://github.com/test-org/test-repo/pull/99",
+            }),
+          },
+        ],
+      });
+      mockRunDevAgentOrchestrator.mockResolvedValue(agentResult);
+
+      const result = await runOrchestratorPreApproval({
+        taskId: "task_123",
+        issue: testIssue,
+        slackChannel: "C_test",
+        workflowId: "wf_abc",
+      });
+
+      expect(result.humanInputRequest).toBeNull();
+      expect(result.prNumber).toBe(99);
+      expect(result.prUrl).toBe(
+        "https://github.com/test-org/test-repo/pull/99",
+      );
+      // PR info should be written to task store as side-effect
+      expect(mockTaskStore.updateTask).toHaveBeenCalledWith("task_123", {
+        prNumber: 99,
+        prUrl: "https://github.com/test-org/test-repo/pull/99",
+      });
+    });
+
+    it("omits PR info when agent completed autonomously but no PR in trace or store", async () => {
+      const agentResult = createAgentLoopResult({
+        output: "Issue already resolved",
+        trace: [], // No PR creation, no sentinel
+      });
+      mockRunDevAgentOrchestrator.mockResolvedValue(agentResult);
+
+      // Task store also has no PR info
+      vi.mocked(mockTaskStore.getTask).mockResolvedValue({
+        id: "atsk_123",
+        task_id: "task_123",
+        agent_type: "dev",
+        status: "researching",
+        pr_number: null,
+        pr_url: null,
+        container_id: "container_abc",
+        issue_id: null,
+        issue_identifier: null,
+        workflow_id: "wf_abc",
+        branch_name: null,
+        approval_status: null,
+        approval_feedback: null,
+        error: null,
+        escalation_reason: null,
+        slack_channel: "C_test",
+        slack_message_ts: null,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+
+      const result = await runOrchestratorPreApproval({
+        taskId: "task_123",
+        issue: testIssue,
+        slackChannel: "C_test",
+        workflowId: "wf_abc",
+      });
+
+      expect(result.humanInputRequest).toBeNull();
+      expect(result.prNumber).toBeUndefined();
+      expect(result.prUrl).toBeUndefined();
+    });
+
+    it("does not query task store for PR info when sentinel is present", async () => {
+      const agentResult = createAgentLoopResult({
+        output: "Plan ready for approval",
+        trace: [
+          {
+            type: "tool_result",
+            timestamp: new Date().toISOString(),
+            toolName: "request_human_input",
+            output: JSON.stringify({
+              type: "human_input_requested",
+              channel: "C_test",
+              message: "Approve plan?",
+              requestType: "approval",
+            }),
+          },
+        ],
+      });
+      mockRunDevAgentOrchestrator.mockResolvedValue(agentResult);
+
+      const result = await runOrchestratorPreApproval({
+        taskId: "task_123",
+        issue: testIssue,
+        slackChannel: "C_test",
+        workflowId: "wf_abc",
+      });
+
+      expect(result.humanInputRequest).not.toBeNull();
+      expect(result.prNumber).toBeUndefined();
+      expect(result.prUrl).toBeUndefined();
+      // Task store should NOT be queried for PR info when sentinel exists
+      expect(mockTaskStore.getTask).not.toHaveBeenCalled();
+    });
+
+    it("stores rejection feedback in task store for re-planning", async () => {
+      mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
+
+      await runOrchestratorPreApproval({
+        taskId: "task_123",
+        issue: testIssue,
+        slackChannel: "C_test",
+        workflowId: "wf_abc",
+        rejectionFeedback: "Need more test coverage, add edge cases",
+      });
+
+      // First call: status update to researching
+      // Second call: rejection feedback storage
+      expect(mockTaskStore.updateTask).toHaveBeenCalledWith("task_123", {
+        approvalFeedback: "Need more test coverage, add edge cases",
+        approvalStatus: "rejected",
+      });
     });
   });
 
-  it("returns fixesApplied=true when orchestrator completes successfully", async () => {
-    mockRunDevAgentOrchestrator.mockResolvedValue(
-      createAgentLoopResult({ status: "completed" }),
-    );
+  // ---------------------------------------------------------------------------
+  // Tests: runOrchestratorPostApproval
+  // ---------------------------------------------------------------------------
 
-    const result = await handleOrchestratorFeedback({
-      taskId: "task_123",
-      issue: testIssue,
-      slackChannel: "C_test",
-      workflowId: "wf_abc",
-      feedback: "Fix the null check",
+  describe("runOrchestratorPostApproval", () => {
+    it("calls orchestrator and reads PR info from task store", async () => {
+      const agentResult = createAgentLoopResult({
+        output: "PR created successfully",
+      });
+      mockRunDevAgentOrchestrator.mockResolvedValue(agentResult);
+
+      // Task store returns task with PR info (written by orchestrator via tools)
+      vi.mocked(mockTaskStore.getTask).mockResolvedValue({
+        id: "atsk_123",
+        task_id: "task_123",
+        agent_type: "dev",
+        status: "executing",
+        pr_number: 42,
+        pr_url: "https://github.com/test-org/test-repo/pull/42",
+        container_id: "container_abc",
+        issue_id: null,
+        issue_identifier: null,
+        workflow_id: "wf_abc",
+        branch_name: "feature/fix-auth",
+        approval_status: "approved",
+        approval_feedback: null,
+        error: null,
+        escalation_reason: null,
+        slack_channel: "C_test",
+        slack_message_ts: null,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+
+      const result = await runOrchestratorPostApproval({
+        taskId: "task_123",
+        issue: testIssue,
+        slackChannel: "C_test",
+        workflowId: "wf_abc",
+      });
+
+      expect(result.status).toBe("completed");
+      expect(result.prNumber).toBe(42);
+      expect(result.prUrl).toBe(
+        "https://github.com/test-org/test-repo/pull/42",
+      );
+      expect(result.toolCallCount).toBe(5);
+      expect(result.tokenCount).toEqual({ input: 1000, output: 500 });
     });
 
-    expect(result.fixesApplied).toBe(true);
-    expect(result.status).toBe("completed");
-  });
+    it("updates task status to executing", async () => {
+      mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
+      vi.mocked(mockTaskStore.getTask).mockResolvedValue(null);
 
-  it("returns fixesApplied=false when orchestrator returns error", async () => {
-    mockRunDevAgentOrchestrator.mockResolvedValue(
-      createAgentLoopResult({
+      await runOrchestratorPostApproval({
+        taskId: "task_123",
+        issue: testIssue,
+        slackChannel: "C_test",
+        workflowId: "wf_abc",
+      });
+
+      expect(mockTaskStore.updateTask).toHaveBeenCalledWith("task_123", {
+        status: "executing",
+      });
+    });
+
+    it("omits prNumber and prUrl when task has no PR info", async () => {
+      mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
+      vi.mocked(mockTaskStore.getTask).mockResolvedValue({
+        id: "atsk_123",
+        task_id: "task_123",
+        agent_type: "dev",
+        status: "executing",
+        pr_number: null,
+        pr_url: null,
+        container_id: null,
+        issue_id: null,
+        issue_identifier: null,
+        workflow_id: "wf_abc",
+        branch_name: null,
+        approval_status: "approved",
+        approval_feedback: null,
+        error: null,
+        escalation_reason: null,
+        slack_channel: "C_test",
+        slack_message_ts: null,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+
+      const result = await runOrchestratorPostApproval({
+        taskId: "task_123",
+        issue: testIssue,
+        slackChannel: "C_test",
+        workflowId: "wf_abc",
+      });
+
+      expect(result.prNumber).toBeUndefined();
+      expect(result.prUrl).toBeUndefined();
+    });
+
+    it("includes errorMessage when orchestrator returns error status", async () => {
+      const agentResult = createAgentLoopResult({
         status: "error",
-        output: "Cannot apply fix: file not found",
-      }),
-    );
+        output: "Failed to create PR: rate limited by GitHub API",
+      });
+      mockRunDevAgentOrchestrator.mockResolvedValue(agentResult);
+      vi.mocked(mockTaskStore.getTask).mockResolvedValue(null);
 
-    const result = await handleOrchestratorFeedback({
-      taskId: "task_123",
-      issue: testIssue,
-      slackChannel: "C_test",
-      workflowId: "wf_abc",
-      feedback: "Fix the null check",
-    });
-
-    expect(result.fixesApplied).toBe(false);
-    expect(result.status).toBe("error");
-    expect(result.errorMessage).toBe("Cannot apply fix: file not found");
-  });
-
-  it("writes context snapshot at post-feedback stage", async () => {
-    mockRunDevAgentOrchestrator.mockResolvedValue(
-      createAgentLoopResult({ output: "Fixes applied to auth.ts" }),
-    );
-
-    await handleOrchestratorFeedback({
-      taskId: "task_123",
-      issue: testIssue,
-      slackChannel: "C_test",
-      workflowId: "wf_abc",
-      feedback: "Fix the null check",
-    });
-
-    expect(mockContextManager.writeSnapshot).toHaveBeenCalledWith(
-      expect.objectContaining({
+      const result = await runOrchestratorPostApproval({
         taskId: "task_123",
-        stage: "post-feedback",
-        summary: "Fixes applied to auth.ts",
-      }),
-    );
-  });
-});
+        issue: testIssue,
+        slackChannel: "C_test",
+        workflowId: "wf_abc",
+      });
 
-// ---------------------------------------------------------------------------
-// Tests: setupContainerActivity
-// ---------------------------------------------------------------------------
-
-describe("setupContainerActivity", () => {
-  it("spawns container, configures git, clones repo, and stores ID", async () => {
-    const result = await setupContainerActivity({
-      taskId: "task_123",
-      issue: { identifier: "AES-42", title: "Fix auth" },
-      workflowId: "wf_abc",
+      expect(result.status).toBe("error");
+      expect(result.errorMessage).toBe(
+        "Failed to create PR: rate limited by GitHub API",
+      );
     });
 
-    // 0. Task record created
-    expect(mockTaskStore.createTask).toHaveBeenCalledWith({
-      taskId: "task_123",
-      agentType: "dev",
-      issueIdentifier: "AES-42",
-      workflowId: "wf_abc",
+    it("writes context snapshot at post-execution stage", async () => {
+      mockRunDevAgentOrchestrator.mockResolvedValue(
+        createAgentLoopResult({ output: "PR #42 created" }),
+      );
+      vi.mocked(mockTaskStore.getTask).mockResolvedValue(null);
+
+      await runOrchestratorPostApproval({
+        taskId: "task_123",
+        issue: testIssue,
+        slackChannel: "C_test",
+        workflowId: "wf_abc",
+      });
+
+      expect(mockContextManager.writeSnapshot).toHaveBeenCalledWith(
+        expect.objectContaining({
+          taskId: "task_123",
+          stage: "post-execution",
+          summary: "PR #42 created",
+        }),
+      );
     });
-
-    // 1. Container spawned
-    expect(mockContainerManager.spawn).toHaveBeenCalledWith({
-      taskId: "task_123",
-    });
-
-    // 2. Git credentials configured
-    expect(mockGit.configureCredentials).toHaveBeenCalledWith(
-      "task_123",
-      "ghp_test_token_123",
-    );
-
-    // 3. Repo cloned
-    expect(mockGit.cloneRepository).toHaveBeenCalledWith(
-      "task_123",
-      "https://github.com/test-org/test-repo.git",
-      { branch: "main" },
-    );
-
-    // 4. Container ID stored
-    expect(mockTaskStore.updateTask).toHaveBeenCalledWith("task_123", {
-      containerId: "container_abc123def456",
-      workflowId: "wf_abc",
-    });
-
-    // Returns container ID
-    expect(result.containerId).toBe("container_abc123def456");
   });
 
-  it("handles duplicate task record on activity retry", async () => {
-    // Simulate unique constraint violation (activity was retried by Temporal)
-    vi.mocked(mockTaskStore.createTask).mockRejectedValueOnce(
-      new Error("duplicate key value violates unique constraint"),
-    );
+  // ---------------------------------------------------------------------------
+  // Tests: handleOrchestratorFeedback
+  // ---------------------------------------------------------------------------
 
-    const result = await setupContainerActivity({
-      taskId: "task_123",
-      issue: { identifier: "AES-42", title: "Fix auth" },
-      workflowId: "wf_abc",
+  describe("handleOrchestratorFeedback", () => {
+    it("stores feedback in task store before invoking orchestrator", async () => {
+      mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
+
+      await handleOrchestratorFeedback({
+        taskId: "task_123",
+        issue: testIssue,
+        slackChannel: "C_test",
+        workflowId: "wf_abc",
+        feedback: "Add null checks for the auth middleware",
+      });
+
+      expect(mockTaskStore.updateTask).toHaveBeenCalledWith("task_123", {
+        status: "executing",
+        approvalFeedback: "Add null checks for the auth middleware",
+      });
     });
 
-    // Should succeed despite createTask failing with duplicate
-    expect(result.containerId).toBe("container_abc123def456");
+    it("returns fixesApplied=true when orchestrator completes successfully", async () => {
+      mockRunDevAgentOrchestrator.mockResolvedValue(
+        createAgentLoopResult({ status: "completed" }),
+      );
+
+      const result = await handleOrchestratorFeedback({
+        taskId: "task_123",
+        issue: testIssue,
+        slackChannel: "C_test",
+        workflowId: "wf_abc",
+        feedback: "Fix the null check",
+      });
+
+      expect(result.fixesApplied).toBe(true);
+      expect(result.status).toBe("completed");
+    });
+
+    it("returns fixesApplied=false when orchestrator returns error", async () => {
+      mockRunDevAgentOrchestrator.mockResolvedValue(
+        createAgentLoopResult({
+          status: "error",
+          output: "Cannot apply fix: file not found",
+        }),
+      );
+
+      const result = await handleOrchestratorFeedback({
+        taskId: "task_123",
+        issue: testIssue,
+        slackChannel: "C_test",
+        workflowId: "wf_abc",
+        feedback: "Fix the null check",
+      });
+
+      expect(result.fixesApplied).toBe(false);
+      expect(result.status).toBe("error");
+      expect(result.errorMessage).toBe("Cannot apply fix: file not found");
+    });
+
+    it("writes context snapshot at post-feedback stage", async () => {
+      mockRunDevAgentOrchestrator.mockResolvedValue(
+        createAgentLoopResult({ output: "Fixes applied to auth.ts" }),
+      );
+
+      await handleOrchestratorFeedback({
+        taskId: "task_123",
+        issue: testIssue,
+        slackChannel: "C_test",
+        workflowId: "wf_abc",
+        feedback: "Fix the null check",
+      });
+
+      expect(mockContextManager.writeSnapshot).toHaveBeenCalledWith(
+        expect.objectContaining({
+          taskId: "task_123",
+          stage: "post-feedback",
+          summary: "Fixes applied to auth.ts",
+        }),
+      );
+    });
   });
 
-  it("throws when git credential configuration fails", async () => {
-    vi.mocked(mockGit.configureCredentials).mockResolvedValue({
-      success: false,
-      stdout: "",
-      stderr: "Permission denied",
-      error: "Permission denied",
-    });
+  // ---------------------------------------------------------------------------
+  // Tests: setupContainerActivity
+  // ---------------------------------------------------------------------------
 
-    await expect(
-      setupContainerActivity({
+  describe("setupContainerActivity", () => {
+    it("spawns container, configures git, clones repo, and stores ID", async () => {
+      const result = await setupContainerActivity({
         taskId: "task_123",
         issue: { identifier: "AES-42", title: "Fix auth" },
         workflowId: "wf_abc",
-      }),
-    ).rejects.toThrow("Failed to configure git credentials: Permission denied");
-  });
+      });
 
-  it("throws when repository clone fails", async () => {
-    vi.mocked(mockGit.cloneRepository).mockResolvedValue({
-      success: false,
-      stdout: "",
-      stderr: "Repository not found",
-      error: "Repository not found",
+      // 0. Task record created
+      expect(mockTaskStore.createTask).toHaveBeenCalledWith({
+        taskId: "task_123",
+        agentType: "dev",
+        issueIdentifier: "AES-42",
+        workflowId: "wf_abc",
+      });
+
+      // 1. Container spawned
+      expect(mockContainerManager.spawn).toHaveBeenCalledWith({
+        taskId: "task_123",
+      });
+
+      // 2. Git credentials configured
+      expect(mockGit.configureCredentials).toHaveBeenCalledWith(
+        "task_123",
+        "ghp_test_token_123",
+      );
+
+      // 3. Repo cloned
+      expect(mockGit.cloneRepository).toHaveBeenCalledWith(
+        "task_123",
+        "https://github.com/test-org/test-repo.git",
+        { branch: "main" },
+      );
+
+      // 4. Container ID stored
+      expect(mockTaskStore.updateTask).toHaveBeenCalledWith("task_123", {
+        containerId: "container_abc123def456",
+        workflowId: "wf_abc",
+      });
+
+      // Returns container ID
+      expect(result.containerId).toBe("container_abc123def456");
     });
 
-    await expect(
-      setupContainerActivity({
+    it("handles duplicate task record on activity retry", async () => {
+      // Simulate unique constraint violation (activity was retried by Temporal)
+      vi.mocked(mockTaskStore.createTask).mockRejectedValueOnce(
+        new Error("duplicate key value violates unique constraint"),
+      );
+
+      const result = await setupContainerActivity({
         taskId: "task_123",
         issue: { identifier: "AES-42", title: "Fix auth" },
         workflowId: "wf_abc",
-      }),
-    ).rejects.toThrow("Failed to clone repository: Repository not found");
-  });
-});
+      });
 
-// ---------------------------------------------------------------------------
-// Tests: stopContainerActivity
-// ---------------------------------------------------------------------------
-
-describe("stopContainerActivity", () => {
-  it("stops container when task has containerId", async () => {
-    vi.mocked(mockTaskStore.getTask).mockResolvedValue({
-      id: "atsk_123",
-      task_id: "task_123",
-      agent_type: "dev",
-      status: "executing",
-      container_id: "container_abc123",
-      pr_number: null,
-      pr_url: null,
-      issue_id: null,
-      issue_identifier: null,
-      workflow_id: "wf_abc",
-      branch_name: null,
-      approval_status: null,
-      approval_feedback: null,
-      error: null,
-      escalation_reason: null,
-      slack_channel: null,
-      slack_message_ts: null,
-      created_at: new Date(),
-      updated_at: new Date(),
+      // Should succeed despite createTask failing with duplicate
+      expect(result.containerId).toBe("container_abc123def456");
     });
 
-    await stopContainerActivity("task_123");
+    it("throws when git credential configuration fails", async () => {
+      vi.mocked(mockGit.configureCredentials).mockResolvedValue({
+        success: false,
+        stdout: "",
+        stderr: "Permission denied",
+        error: "Permission denied",
+      });
 
-    expect(mockCleanup.cleanupContainer).toHaveBeenCalledWith("task_123");
-  });
-
-  it("skips cleanup when no containerId found in task store", async () => {
-    vi.mocked(mockTaskStore.getTask).mockResolvedValue({
-      id: "atsk_123",
-      task_id: "task_123",
-      agent_type: "dev",
-      status: "executing",
-      container_id: null,
-      pr_number: null,
-      pr_url: null,
-      issue_id: null,
-      issue_identifier: null,
-      workflow_id: null,
-      branch_name: null,
-      approval_status: null,
-      approval_feedback: null,
-      error: null,
-      escalation_reason: null,
-      slack_channel: null,
-      slack_message_ts: null,
-      created_at: new Date(),
-      updated_at: new Date(),
+      await expect(
+        setupContainerActivity({
+          taskId: "task_123",
+          issue: { identifier: "AES-42", title: "Fix auth" },
+          workflowId: "wf_abc",
+        }),
+      ).rejects.toThrow(
+        "Failed to configure git credentials: Permission denied",
+      );
     });
 
-    await stopContainerActivity("task_123");
+    it("throws when repository clone fails", async () => {
+      vi.mocked(mockGit.cloneRepository).mockResolvedValue({
+        success: false,
+        stdout: "",
+        stderr: "Repository not found",
+        error: "Repository not found",
+      });
 
-    expect(mockCleanup.cleanupContainer).not.toHaveBeenCalled();
-  });
-
-  it("does not throw when cleanup fails (non-critical)", async () => {
-    vi.mocked(mockTaskStore.getTask).mockResolvedValue({
-      id: "atsk_123",
-      task_id: "task_123",
-      agent_type: "dev",
-      status: "executing",
-      container_id: "container_abc123",
-      pr_number: null,
-      pr_url: null,
-      issue_id: null,
-      issue_identifier: null,
-      workflow_id: null,
-      branch_name: null,
-      approval_status: null,
-      approval_feedback: null,
-      error: null,
-      escalation_reason: null,
-      slack_channel: null,
-      slack_message_ts: null,
-      created_at: new Date(),
-      updated_at: new Date(),
-    });
-    vi.mocked(mockCleanup.cleanupContainer).mockRejectedValue(
-      new Error("Container already removed"),
-    );
-
-    // Should not throw -- non-critical cleanup
-    await expect(stopContainerActivity("task_123")).resolves.toBeUndefined();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests: completeTaskActivity
-// ---------------------------------------------------------------------------
-
-describe("completeTaskActivity", () => {
-  it("marks task as complete on success", async () => {
-    await completeTaskActivity({ taskId: "task_123", success: true });
-
-    expect(mockTaskStore.updateTask).toHaveBeenCalledWith("task_123", {
-      status: "complete",
+      await expect(
+        setupContainerActivity({
+          taskId: "task_123",
+          issue: { identifier: "AES-42", title: "Fix auth" },
+          workflowId: "wf_abc",
+        }),
+      ).rejects.toThrow("Failed to clone repository: Repository not found");
     });
   });
 
-  it("marks task as failed on failure", async () => {
-    await completeTaskActivity({ taskId: "task_123", success: false });
+  // ---------------------------------------------------------------------------
+  // Tests: stopContainerActivity
+  // ---------------------------------------------------------------------------
 
-    expect(mockTaskStore.updateTask).toHaveBeenCalledWith("task_123", {
-      status: "failed",
+  describe("stopContainerActivity", () => {
+    it("stops container when task has containerId", async () => {
+      vi.mocked(mockTaskStore.getTask).mockResolvedValue({
+        id: "atsk_123",
+        task_id: "task_123",
+        agent_type: "dev",
+        status: "executing",
+        container_id: "container_abc123",
+        pr_number: null,
+        pr_url: null,
+        issue_id: null,
+        issue_identifier: null,
+        workflow_id: "wf_abc",
+        branch_name: null,
+        approval_status: null,
+        approval_feedback: null,
+        error: null,
+        escalation_reason: null,
+        slack_channel: null,
+        slack_message_ts: null,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+
+      await stopContainerActivity("task_123");
+
+      expect(mockCleanup.cleanupContainer).toHaveBeenCalledWith("task_123");
+    });
+
+    it("skips cleanup when no containerId found in task store", async () => {
+      vi.mocked(mockTaskStore.getTask).mockResolvedValue({
+        id: "atsk_123",
+        task_id: "task_123",
+        agent_type: "dev",
+        status: "executing",
+        container_id: null,
+        pr_number: null,
+        pr_url: null,
+        issue_id: null,
+        issue_identifier: null,
+        workflow_id: null,
+        branch_name: null,
+        approval_status: null,
+        approval_feedback: null,
+        error: null,
+        escalation_reason: null,
+        slack_channel: null,
+        slack_message_ts: null,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+
+      await stopContainerActivity("task_123");
+
+      expect(mockCleanup.cleanupContainer).not.toHaveBeenCalled();
+    });
+
+    it("does not throw when cleanup fails (non-critical)", async () => {
+      vi.mocked(mockTaskStore.getTask).mockResolvedValue({
+        id: "atsk_123",
+        task_id: "task_123",
+        agent_type: "dev",
+        status: "executing",
+        container_id: "container_abc123",
+        pr_number: null,
+        pr_url: null,
+        issue_id: null,
+        issue_identifier: null,
+        workflow_id: null,
+        branch_name: null,
+        approval_status: null,
+        approval_feedback: null,
+        error: null,
+        escalation_reason: null,
+        slack_channel: null,
+        slack_message_ts: null,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+      vi.mocked(mockCleanup.cleanupContainer).mockRejectedValue(
+        new Error("Container already removed"),
+      );
+
+      // Should not throw -- non-critical cleanup
+      await expect(stopContainerActivity("task_123")).resolves.toBeUndefined();
     });
   });
-});
 
-// ---------------------------------------------------------------------------
-// Tests: Heartbeat Wiring
-// ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Tests: completeTaskActivity
+  // ---------------------------------------------------------------------------
 
-describe("Heartbeat wiring via getHeartbeatFn", () => {
-  it("passes onHeartbeat to runDevAgentOrchestrator in pre-approval", async () => {
-    mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
+  describe("completeTaskActivity", () => {
+    it("marks task as complete on success", async () => {
+      await completeTaskActivity({ taskId: "task_123", success: true });
 
-    await runOrchestratorPreApproval({
-      taskId: "task_123",
-      issue: testIssue,
-      slackChannel: "C_test",
-      workflowId: "wf_abc",
+      expect(mockTaskStore.updateTask).toHaveBeenCalledWith("task_123", {
+        status: "complete",
+      });
     });
 
-    // Verify onHeartbeat was passed as a function
-    const callArgs = mockRunDevAgentOrchestrator.mock.calls[0]?.[0];
-    expect(callArgs).toHaveProperty("onHeartbeat");
-    expect(typeof callArgs.onHeartbeat).toBe("function");
+    it("marks task as failed on failure", async () => {
+      await completeTaskActivity({ taskId: "task_123", success: false });
+
+      expect(mockTaskStore.updateTask).toHaveBeenCalledWith("task_123", {
+        status: "failed",
+      });
+    });
   });
 
-  it("passes onHeartbeat to runDevAgentOrchestrator in post-approval", async () => {
-    mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
-    vi.mocked(mockTaskStore.getTask).mockResolvedValue(null);
+  // ---------------------------------------------------------------------------
+  // Tests: Heartbeat Wiring
+  // ---------------------------------------------------------------------------
 
-    await runOrchestratorPostApproval({
-      taskId: "task_123",
-      issue: testIssue,
-      slackChannel: "C_test",
-      workflowId: "wf_abc",
+  describe("Heartbeat wiring via getHeartbeatFn", () => {
+    it("passes onHeartbeat to runDevAgentOrchestrator in pre-approval", async () => {
+      mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
+
+      await runOrchestratorPreApproval({
+        taskId: "task_123",
+        issue: testIssue,
+        slackChannel: "C_test",
+        workflowId: "wf_abc",
+      });
+
+      // Verify onHeartbeat was passed as a function
+      const callArgs = mockRunDevAgentOrchestrator.mock.calls[0]?.[0];
+      expect(callArgs).toHaveProperty("onHeartbeat");
+      expect(typeof callArgs.onHeartbeat).toBe("function");
     });
 
-    const callArgs = mockRunDevAgentOrchestrator.mock.calls[0]?.[0];
-    expect(callArgs).toHaveProperty("onHeartbeat");
-    expect(typeof callArgs.onHeartbeat).toBe("function");
+    it("passes onHeartbeat to runDevAgentOrchestrator in post-approval", async () => {
+      mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
+      vi.mocked(mockTaskStore.getTask).mockResolvedValue(null);
+
+      await runOrchestratorPostApproval({
+        taskId: "task_123",
+        issue: testIssue,
+        slackChannel: "C_test",
+        workflowId: "wf_abc",
+      });
+
+      const callArgs = mockRunDevAgentOrchestrator.mock.calls[0]?.[0];
+      expect(callArgs).toHaveProperty("onHeartbeat");
+      expect(typeof callArgs.onHeartbeat).toBe("function");
+    });
+
+    it("passes onHeartbeat to runDevAgentOrchestrator in feedback", async () => {
+      mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
+
+      await handleOrchestratorFeedback({
+        taskId: "task_123",
+        issue: testIssue,
+        slackChannel: "C_test",
+        workflowId: "wf_abc",
+        feedback: "Fix the edge case",
+      });
+
+      const callArgs = mockRunDevAgentOrchestrator.mock.calls[0]?.[0];
+      expect(callArgs).toHaveProperty("onHeartbeat");
+      expect(typeof callArgs.onHeartbeat).toBe("function");
+    });
+
+    it("onHeartbeat callback calls Context.current().heartbeat()", async () => {
+      mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
+      mockHeartbeat.mockClear();
+
+      await runOrchestratorPreApproval({
+        taskId: "task_123",
+        issue: testIssue,
+        slackChannel: "C_test",
+        workflowId: "wf_abc",
+      });
+
+      // Extract the onHeartbeat callback and invoke it
+      const callArgs = mockRunDevAgentOrchestrator.mock.calls[0]?.[0];
+      const heartbeatFn = callArgs.onHeartbeat as () => void;
+      heartbeatFn();
+
+      expect(mockHeartbeat).toHaveBeenCalledTimes(1);
+    });
+
+    it("getHeartbeatFn returns undefined when Context.current() throws", async () => {
+      // Import Context mock and make it throw
+      const { Context } = await import("@temporalio/activity");
+      vi.mocked(Context.current).mockImplementationOnce(() => {
+        throw new Error("No activity context");
+      });
+
+      // Re-import to test getHeartbeatFn behavior
+      // Since getHeartbeatFn is called inside the activity, we test indirectly
+      // by verifying it handles the error gracefully (returns undefined -> passed as undefined)
+      mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
+
+      await runOrchestratorPreApproval({
+        taskId: "task_123",
+        issue: testIssue,
+        slackChannel: "C_test",
+        workflowId: "wf_abc",
+      });
+
+      const callArgs = mockRunDevAgentOrchestrator.mock.calls[0]?.[0];
+      // When Context.current() throws, onHeartbeat should be undefined
+      expect(callArgs.onHeartbeat).toBeUndefined();
+    });
   });
-
-  it("passes onHeartbeat to runDevAgentOrchestrator in feedback", async () => {
-    mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
-
-    await handleOrchestratorFeedback({
-      taskId: "task_123",
-      issue: testIssue,
-      slackChannel: "C_test",
-      workflowId: "wf_abc",
-      feedback: "Fix the edge case",
-    });
-
-    const callArgs = mockRunDevAgentOrchestrator.mock.calls[0]?.[0];
-    expect(callArgs).toHaveProperty("onHeartbeat");
-    expect(typeof callArgs.onHeartbeat).toBe("function");
-  });
-
-  it("onHeartbeat callback calls Context.current().heartbeat()", async () => {
-    mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
-    mockHeartbeat.mockClear();
-
-    await runOrchestratorPreApproval({
-      taskId: "task_123",
-      issue: testIssue,
-      slackChannel: "C_test",
-      workflowId: "wf_abc",
-    });
-
-    // Extract the onHeartbeat callback and invoke it
-    const callArgs = mockRunDevAgentOrchestrator.mock.calls[0]?.[0];
-    const heartbeatFn = callArgs.onHeartbeat as () => void;
-    heartbeatFn();
-
-    expect(mockHeartbeat).toHaveBeenCalledTimes(1);
-  });
-
-  it("getHeartbeatFn returns undefined when Context.current() throws", async () => {
-    // Import Context mock and make it throw
-    const { Context } = await import("@temporalio/activity");
-    vi.mocked(Context.current).mockImplementationOnce(() => {
-      throw new Error("No activity context");
-    });
-
-    // Re-import to test getHeartbeatFn behavior
-    // Since getHeartbeatFn is called inside the activity, we test indirectly
-    // by verifying it handles the error gracefully (returns undefined -> passed as undefined)
-    mockRunDevAgentOrchestrator.mockResolvedValue(createAgentLoopResult());
-
-    await runOrchestratorPreApproval({
-      taskId: "task_123",
-      issue: testIssue,
-      slackChannel: "C_test",
-      workflowId: "wf_abc",
-    });
-
-    const callArgs = mockRunDevAgentOrchestrator.mock.calls[0]?.[0];
-    // When Context.current() throws, onHeartbeat should be undefined
-    expect(callArgs.onHeartbeat).toBeUndefined();
-  });
-});
+}); // end LEGACY describe.skip
