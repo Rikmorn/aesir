@@ -137,7 +137,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Fast-path routing preserved for unambiguous events (deterministic, no LLM call needed)
   2. Smart router calls ConversationExecutor.start() and ConversationExecutor.signal() instead of Temporal workflowClient -- same classification logic, different target
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 43-01-PLAN.md -- Missing adapters (slack.message, github.pr_review, linear.comment/prompt) + pass-through adapter + tests
+- [ ] 43-02-PLAN.md -- routeEvent() pipeline rewrite (adapter -> EventRouter -> executor) + types + tests
 
 ### Phase 44: Single Service Consolidation
 **Goal**: One HTTP service replaces dev-agent:3004, product-agent:3005, and router:3006 -- with unified /events endpoint, management endpoints, integrated worker loop, and graceful shutdown
@@ -205,7 +208,7 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 | 40. Conversation Executor | 3/3 | Complete | 2026-02-02 |
 | 41. Timeout Scheduling | 2/2 | Complete | 2026-02-02 |
 | 42. Event Router + Adapters | 3/3 | Complete | 2026-02-02 |
-| 43. Smart Router Adaptation | 0/TBD | Not started | - |
+| 43. Smart Router Adaptation | 0/2 | Not started | - |
 | 44. Single Service Consolidation | 0/TBD | Not started | - |
 | 45. Integration Testing + Validation | 0/TBD | Not started | - |
 | 46. Temporal Migration + Cutover | 0/TBD | Not started | - |
@@ -213,4 +216,4 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 
 ---
 *Roadmap created: 2026-02-01*
-*Last updated: 2026-02-02 -- Phase 42 complete (3 plans, 2 waves)*
+*Last updated: 2026-02-03 -- Phase 43 planned (2 plans, 2 waves)*
