@@ -9,9 +9,9 @@ export default defineConfig({
   dbCredentials: {
     host: process.env.DB_HOST ?? "localhost",
     port: Number(process.env.DB_PORT ?? 5432),
-    user: process.env.DB_USER ?? "temporal",
-    password: process.env.DB_PASSWORD ?? "temporal",
-    database: process.env.DB_NAME ?? "temporal",
+    user: process.env.DB_USER ?? "aesir",
+    password: process.env.DB_PASSWORD ?? "aesir",
+    database: process.env.DB_NAME ?? "aesir",
     ssl: false,
   },
   migrations: {

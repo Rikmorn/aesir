@@ -51,15 +51,15 @@ services:
     image: postgres:15-alpine
     container_name: aesir-postgresql
     environment:
-      POSTGRES_USER: temporal
-      POSTGRES_PASSWORD: temporal
-      POSTGRES_DB: temporal
+      POSTGRES_USER: aesir
+      POSTGRES_PASSWORD: aesir
+      POSTGRES_DB: aesir
     volumes:
-      - temporal-postgresql:/var/lib/postgresql/data
+      - aesir-postgresql:/var/lib/postgresql/data
     ports:
       - "5432:5432" # Expose for LangGraph checkpointer
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "temporal"]
+      test: ["CMD", "pg_isready", "-U", "aesir"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -108,9 +108,9 @@ services:
       # Database connection
       - DB_HOST=postgresql
       - DB_PORT=5432
-      - DB_USER=temporal
-      - DB_PASSWORD=temporal
-      - DB_NAME=temporal
+      - DB_USER=aesir
+      - DB_PASSWORD=aesir
+      - DB_NAME=aesir
       - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
       # Linear configuration
       - LINEAR_WEBHOOK_SECRET=${LINEAR_WEBHOOK_SECRET}
@@ -157,9 +157,9 @@ services:
       # Database connection
       - DB_HOST=postgresql
       - DB_PORT=5432
-      - DB_USER=temporal
-      - DB_PASSWORD=temporal
-      - DB_NAME=temporal
+      - DB_USER=aesir
+      - DB_PASSWORD=aesir
+      - DB_NAME=aesir
       - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
       # GitHub configuration
       - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
@@ -208,9 +208,9 @@ services:
       # Database connection
       - DB_HOST=postgresql
       - DB_PORT=5432
-      - DB_USER=temporal
-      - DB_PASSWORD=temporal
-      - DB_NAME=temporal
+      - DB_USER=aesir
+      - DB_PASSWORD=aesir
+      - DB_NAME=aesir
       - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
       # Slack configuration
       - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}
@@ -271,9 +271,9 @@ services:
       # Database
       - DB_HOST=postgresql
       - DB_PORT=5432
-      - DB_USER=temporal
-      - DB_PASSWORD=temporal
-      - DB_NAME=temporal
+      - DB_USER=aesir
+      - DB_PASSWORD=aesir
+      - DB_NAME=aesir
       - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
       # LLM
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
@@ -373,8 +373,8 @@ services:
       - tunnel
 
 volumes:
-  temporal-postgresql:
-    name: aesir-temporal-postgresql
+  aesir-postgresql:
+    name: aesir-postgresql
 
 networks:
   aesir-network:
