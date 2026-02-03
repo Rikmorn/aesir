@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 47 of 47 (Cleanup & Documentation)
-Plan: 1 of 4 in current phase
+Plan: 2 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-03 -- Completed 47-01-PLAN.md (Phase A: refactor live-to-dead references)
+Last activity: 2026-02-03 -- Completed 47-02-PLAN.md (Phase B: delete dead files and directories)
 
-Progress: [█████████░] ~98% (32/~35 estimated plans)
+Progress: [█████████░] ~98% (33/~35 estimated plans)
 
 ## Milestone History
 
@@ -28,9 +28,9 @@ Progress: [█████████░] ~98% (32/~35 estimated plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 32 (v2.3)
-- Average duration: ~5m27s
-- Total execution time: ~174m
+- Total plans completed: 33 (v2.3)
+- Average duration: ~5m24s
+- Total execution time: ~179m
 
 **By Phase:**
 
@@ -46,7 +46,7 @@ Progress: [█████████░] ~98% (32/~35 estimated plans)
 | 44 | 2/2 | 6m | 3m |
 | 45 | 3/3 | 32m36s | 10m52s |
 | 46 | 2/2 | ~11m | ~5m30s |
-| 47 | 1/4 | 10m | 10m |
+| 47 | 2/4 | 14m29s | 7m15s |
 
 *Updated after each plan completion*
 
@@ -129,15 +129,16 @@ v2.3 decisions:
 - @ts-nocheck added to 14 dead files for pre-commit hook compatibility -- files still exist, will be deleted in Phase B (47-02)
 - createSendMessageTool now uses EventRouterDeps directly -- no more unsafe RouterDeps cast in routeViaAgentLoopV2
 - Temporal logger export removed from platform logging barrel -- only consumer was dead platform/temporal/worker.ts
+- schema.drizzle.ts left unchanged during schema.ts cleanup -- migration source of truth must retain old table definitions to prevent destructive DROP TABLE migrations
 
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
 2. **Run dev-agent container as non-root** (infrastructure)
 3. **11 tests skipped pending infrastructure** (testing)
-4. **Delete dead code: dev-agent/classification/approval.ts** (addressed in Phase 47)
+4. ~~**Delete dead code: dev-agent/classification/approval.ts**~~ (done -- entire dev-agent/ deleted in 47-02)
 5. **Add onToolResult callback to runAgentLoop()** (addressed by v2.3 event log)
-6. **Add JSONB size limits to context_snapshots** (addressed by v2.3 replacing context_snapshots)
+6. ~~**Add JSONB size limits to context_snapshots**~~ (done -- context_snapshots table removed in 47-02)
 
 ### Blockers/Concerns
 
@@ -146,9 +147,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-03
-Stopped at: Completed 47-01-PLAN.md (Phase A: refactor live-to-dead references)
+Stopped at: Completed 47-02-PLAN.md (Phase B: delete dead files and directories)
 Resume file: None
-Next action: Execute plan 47-02 (Phase B: mass file deletion)
+Next action: Execute plan 47-03 (Phase C: remove dead dependencies)
 
 ---
-*Updated: 2026-02-03 -- Phase 47 plan 01 complete (live-to-dead references refactored)*
+*Updated: 2026-02-03 -- Phase 47 plan 02 complete (86 dead files deleted, 21,590 lines removed)*
