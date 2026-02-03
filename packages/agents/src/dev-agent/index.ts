@@ -6,18 +6,17 @@
  * orchestrator loop, wrapped in Temporal for durability.
  */
 
-// Orchestrator
-export {
-  ORCHESTRATOR_SYSTEM_PROMPT,
-  RESEARCHER_SYSTEM_PROMPT,
-  CODER_SYSTEM_PROMPT,
-  TESTER_SYSTEM_PROMPT,
-} from "./orchestrator/system-prompts.js";
-
 export {
   type OrchestratorOptions,
   runDevAgentOrchestrator,
 } from "./orchestrator/orchestrator.js";
+// Orchestrator
+export {
+  CODER_SYSTEM_PROMPT,
+  ORCHESTRATOR_SYSTEM_PROMPT,
+  RESEARCHER_SYSTEM_PROMPT,
+  TESTER_SYSTEM_PROMPT,
+} from "./orchestrator/system-prompts.js";
 
 // Worker
 export {

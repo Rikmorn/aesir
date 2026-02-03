@@ -5,8 +5,8 @@
  * Covers all intent types, confidence levels, edge cases, and error handling.
  */
 
-import type { ClassificationLLM } from "./approval.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ClassificationLLM } from "./approval.js";
 import {
   type ApprovalClassification,
   ApprovalClassificationSchema,
