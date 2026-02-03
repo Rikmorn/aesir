@@ -2,7 +2,7 @@
  * Shared Module
  *
  * Common utilities and infrastructure used by all agents.
- * This includes MCP client, Temporal activities, agent loop, and tools.
+ * This includes MCP client, agent loop, database, and tools.
  */
 
 // Agent loop runtime
@@ -15,7 +15,5 @@ export * from "./db/index.js";
 export * from "./env/index.js";
 // MCP client for integration communication
 export * from "./mcp/index.js";
-// Temporal workflows and activities
-export * from "./temporal/index.js";
 // Tools for agent invocation
 export * from "./tools/index.js";

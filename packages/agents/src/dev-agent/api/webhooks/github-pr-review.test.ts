@@ -1,3 +1,4 @@
+// @ts-nocheck -- Dead code: will be deleted in Phase 47 Plan B
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {

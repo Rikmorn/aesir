@@ -26,12 +26,6 @@ export {
 } from "./pino-logger.js";
 // Redaction configuration
 export { createRedactionConfig, REDACTION_PATHS } from "./redaction.js";
-// Temporal adapter
-export {
-  createTemporalLogger,
-  type TemporalLoggerInterface,
-  type TemporalLogLevel,
-} from "./temporal-logger.js";
 // TraceEntry types for workflow debugging
 export type {
   TraceContext,

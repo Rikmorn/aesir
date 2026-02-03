@@ -1,12 +1,8 @@
 /**
  * Agents Module Public API
  *
- * Exports agent definitions and utilities for dev-agent and product-agent.
+ * Exports shared infrastructure for the v2.3 unified agent framework.
  */
 
-// Dev Agent exports
-export * from "./dev-agent/index.js";
-// Product Agent exports
-export * from "./product-agent/index.js";
-// Shared infrastructure (MCP, Temporal, Tracing, Config, State)
+// Shared infrastructure (MCP, Agent Loop, Config, State, Tools)
 export * from "./shared/index.js";

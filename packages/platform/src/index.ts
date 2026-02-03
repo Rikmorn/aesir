@@ -1,4 +1,4 @@
-// @aesir/platform - temporal, sandbox, logging, testing
+// @aesir/platform - sandbox, logging, testing, services
 
 // Errors
 export * from "./errors/index.js";
@@ -8,7 +8,5 @@ export * from "./logging/index.js";
 export * from "./sandbox/index.js";
 // Services
 export * from "./services/index.js";
-// Temporal
-export * from "./temporal/index.js";
 // Testing utilities
 export * from "./testing/index.js";

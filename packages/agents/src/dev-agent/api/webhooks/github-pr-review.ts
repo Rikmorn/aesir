@@ -1,3 +1,4 @@
+// @ts-nocheck -- Dead code: will be deleted in Phase 47 Plan B
 /**
  * GitHub PR Review Webhook Handler
  *

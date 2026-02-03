@@ -1,8 +1,8 @@
 /**
  * Agent Tools
  *
- * Barrel export for all tool types, factories, and toolkits.
- * Exports codebase, integration, coordination tools, and per-agent toolkit factories.
+ * Barrel export for all tool types, factories, and coordination tools.
+ * Exports codebase, integration, and coordination tools.
  */
 
 // Codebase tools
@@ -12,8 +12,6 @@ export * from "./coordination/index.js";
 
 // Integration tools
 export * from "./integration/index.js";
-// Toolkits
-export * from "./toolkits.js";
 // Tool types
 export {
   type CodebaseToolDeps,

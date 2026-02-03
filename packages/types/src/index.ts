@@ -8,8 +8,6 @@ export * from "./errors/index.js";
 export * from "./events/index.js";
 // MCP (Model Context Protocol)
 export * from "./mcp/index.js";
-// Temporal types (workflow-activity contracts)
-export * from "./temporal/index.js";
 // Shared types (cross-layer contracts)
 export * from "./types/index.js";
 // Utilities
