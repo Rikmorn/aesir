@@ -34,7 +34,7 @@ describe("adaptGitHubEvent", () => {
 
   it("returns null for unrecognized github event type (slow-path)", () => {
     const event = makeEvent({
-      type: "github.pull_request.review_submitted",
+      type: "github.some_unknown.type",
     });
     expect(adaptGitHubEvent(event)).toBeNull();
   });
@@ -145,6 +145,139 @@ describe("adaptGitHubEvent", () => {
 
       const result = adaptGitHubEvent(event);
       expect(result).toBeNull();
+    });
+  });
+
+  // --- PR Reviews ---
+
+  describe("pull_request.review_submitted", () => {
+    it('produces "pr_review" with no correlationKey', () => {
+      const event = makeEvent({
+        type: "github.pull_request.review_submitted",
+        payload: {
+          prNumber: 42,
+          reviewState: "commented",
+          reviewBody: "Needs a few changes",
+          reviewerLogin: "reviewer1",
+        },
+      });
+
+      const result = adaptGitHubEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe("pr_review");
+      expect(result?.data).toEqual({
+        reviewState: "commented",
+        reviewBody: "Needs a few changes",
+        reviewerLogin: "reviewer1",
+        prNumber: 42,
+      });
+      expect(result?.source).toBe("github:webhook");
+      expect(result?.correlationKey).toBeUndefined();
+      expect(result?.deduplicationId).toBe("corr_test456");
+      expect(result?.message).toBe(
+        "PR #42 review (commented): Needs a few changes",
+      );
+
+      expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+  });
+
+  describe("pull_request.review_approved", () => {
+    it('produces "pr_review" with approved state', () => {
+      const event = makeEvent({
+        type: "github.pull_request.review_approved",
+        payload: {
+          prNumber: 50,
+          reviewState: "approved",
+          reviewBody: "LGTM!",
+          reviewerLogin: "lead-dev",
+        },
+      });
+
+      const result = adaptGitHubEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe("pr_review");
+      expect(result?.data.reviewState).toBe("approved");
+      expect(result?.data.prNumber).toBe(50);
+      expect(result?.message).toBe("PR #50 review (approved): LGTM!");
+
+      expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+  });
+
+  describe("pull_request.review_changes_requested", () => {
+    it('produces "pr_review" with changes_requested state', () => {
+      const event = makeEvent({
+        type: "github.pull_request.review_changes_requested",
+        payload: {
+          prNumber: 60,
+          reviewState: "changes_requested",
+          reviewBody: "Please fix the types",
+          reviewerLogin: "senior-dev",
+        },
+      });
+
+      const result = adaptGitHubEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe("pr_review");
+      expect(result?.data.reviewState).toBe("changes_requested");
+      expect(result?.data.prNumber).toBe(60);
+      expect(result?.message).toBe(
+        "PR #60 review (changes_requested): Please fix the types",
+      );
+
+      expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+  });
+
+  describe("pull_request.review_commented", () => {
+    it('produces "pr_review" with commented state', () => {
+      const event = makeEvent({
+        type: "github.pull_request.review_commented",
+        payload: {
+          prNumber: 70,
+          reviewState: "commented",
+          reviewBody: "",
+          reviewerLogin: "contributor",
+        },
+      });
+
+      const result = adaptGitHubEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe("pr_review");
+      expect(result?.data.reviewState).toBe("commented");
+      expect(result?.data.prNumber).toBe(70);
+      expect(result?.message).toBe("PR #70 review (commented): (no comment)");
+
+      expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+  });
+
+  describe("pull_request.review_dismissed", () => {
+    it('produces "pr_review" with dismissed state', () => {
+      const event = makeEvent({
+        type: "github.pull_request.review_dismissed",
+        payload: {
+          prNumber: 80,
+          reviewState: "dismissed",
+          reviewBody: "Stale review",
+          reviewerLogin: "admin",
+        },
+      });
+
+      const result = adaptGitHubEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe("pr_review");
+      expect(result?.data.reviewState).toBe("dismissed");
+      expect(result?.data.prNumber).toBe(80);
+      expect(result?.message).toBe("PR #80 review (dismissed): Stale review");
+
+      expect(IncomingEventSchema.safeParse(result).success).toBe(true);
     });
   });
 });

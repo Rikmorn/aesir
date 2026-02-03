@@ -33,7 +33,7 @@ describe("adaptSlackEvent", () => {
   });
 
   it("returns null for unrecognized slack event type (slow-path)", () => {
-    const event = makeEvent({ type: "slack.message.created" });
+    const event = makeEvent({ type: "slack.some_unknown.type" });
     expect(adaptSlackEvent(event)).toBeNull();
   });
 
@@ -182,6 +182,69 @@ describe("adaptSlackEvent", () => {
       expect(result).not.toBeNull();
       expect(result?.correlationKey).toBe("9999999999.999999");
       expect(result?.data.threadTs).toBe("9999999999.999999");
+    });
+  });
+
+  // --- Message Created ---
+
+  describe("message.created", () => {
+    it('returns "thread_reply" with correlationKey = threadTs when threadTs exists', () => {
+      const event = makeEvent({
+        type: "slack.message.created",
+        payload: {
+          text: "Looks good, ship it!",
+          user: "U456",
+          channel: "C123",
+          ts: "1234567890.123456",
+          threadTs: "1234567890.000000",
+        },
+      });
+
+      const result = adaptSlackEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe("thread_reply");
+      expect(result?.data).toEqual({
+        text: "Looks good, ship it!",
+        userId: "U456",
+        channelId: "C123",
+        threadTs: "1234567890.000000",
+      });
+      expect(result?.source).toBe("slack:webhook");
+      expect(result?.correlationKey).toBe("1234567890.000000");
+      expect(result?.deduplicationId).toBe("corr_test123");
+      expect(result?.message).toBe("Looks good, ship it!");
+
+      expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+
+    it('returns "channel_message" with no correlationKey when threadTs is absent', () => {
+      const event = makeEvent({
+        type: "slack.message.created",
+        payload: {
+          text: "Hey team, new update!",
+          user: "U789",
+          channel: "C456",
+          ts: "9999999999.999999",
+        },
+      });
+
+      const result = adaptSlackEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe("channel_message");
+      expect(result?.data).toEqual({
+        text: "Hey team, new update!",
+        userId: "U789",
+        channelId: "C456",
+        threadTs: "9999999999.999999",
+      });
+      expect(result?.source).toBe("slack:webhook");
+      expect(result?.correlationKey).toBeUndefined();
+      expect(result?.deduplicationId).toBe("corr_test123");
+      expect(result?.message).toBe("Hey team, new update!");
+
+      expect(IncomingEventSchema.safeParse(result).success).toBe(true);
     });
   });
 });

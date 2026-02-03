@@ -33,7 +33,7 @@ describe("adaptLinearEvent", () => {
   });
 
   it("returns null for unrecognized linear event type (slow-path)", () => {
-    const event = makeEvent({ type: "linear.comment.created" });
+    const event = makeEvent({ type: "linear.some_unknown.type" });
     expect(adaptLinearEvent(event)).toBeNull();
   });
 
@@ -109,16 +109,80 @@ describe("adaptLinearEvent", () => {
     });
   });
 
-  // --- Unhandled Event ---
+  // --- Comment Created ---
 
   describe("comment.created", () => {
-    it("returns null for slow-path LLM classification", () => {
+    it('produces "issue_comment" with correlationKey = issueId', () => {
       const event = makeEvent({
         type: "linear.comment.created",
-        payload: { body: "Looks good!" },
+        payload: {
+          body: "Looks good!",
+          userId: "user_abc",
+          issueId: "PROJ-99",
+        },
       });
 
-      expect(adaptLinearEvent(event)).toBeNull();
+      const result = adaptLinearEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe("issue_comment");
+      expect(result?.data).toEqual({
+        body: "Looks good!",
+        userId: "user_abc",
+        issueId: "PROJ-99",
+      });
+      expect(result?.source).toBe("linear:webhook");
+      expect(result?.correlationKey).toBe("PROJ-99");
+      expect(result?.deduplicationId).toBe("corr_test789");
+      expect(result?.message).toBe("Looks good!");
+
+      expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+  });
+
+  // --- Agent Session Prompted ---
+
+  describe("agent_session.prompted", () => {
+    it('produces "agent_prompt" with correlationKey = issueId', () => {
+      const event = makeEvent({
+        type: "linear.agent_session.prompted",
+        payload: {
+          issueId: "PROJ-55",
+          prompt: "Please add error handling",
+        },
+      });
+
+      const result = adaptLinearEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe("agent_prompt");
+      expect(result?.data).toEqual({
+        issueId: "PROJ-55",
+        prompt: "Please add error handling",
+      });
+      expect(result?.source).toBe("linear:webhook");
+      expect(result?.correlationKey).toBe("PROJ-55");
+      expect(result?.deduplicationId).toBe("corr_test789");
+      expect(result?.message).toBe("Please add error handling");
+
+      expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+
+    it("falls back to body when prompt is absent", () => {
+      const event = makeEvent({
+        type: "linear.agent_session.prompted",
+        payload: {
+          issueId: "PROJ-77",
+          body: "Fix the flaky test",
+        },
+      });
+
+      const result = adaptLinearEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe("agent_prompt");
+      expect(result?.data.prompt).toBe("Fix the flaky test");
+      expect(result?.message).toBe("Fix the flaky test");
     });
   });
 });
