@@ -6,16 +6,13 @@
 # Basic Usage:
 #   docker compose up -d                    # Start all services in background
 #   docker compose up                       # Start all services with logs
-#   docker compose logs -f dev-agent        # View agent logs
+#   docker compose logs -f agent-service    # View agent logs
 #   docker compose down                     # Stop all services
 #
 # Hot Reload (Watch Mode):
 #   docker compose watch                    # Watch all services for file changes
 #                                           # Rebuilds containers when source changes
 #   docker compose up -d && docker compose watch  # Start then watch
-#
-# Infrastructure Only:
-#   docker compose up -d postgresql temporal temporal-ui  # Start infra without agents
 #
 # Tunnel (Cloudflare):
 #   docker compose --profile tunnel up      # Start with webhook tunnel
@@ -25,19 +22,15 @@
 #   - http://localhost/linear/*   → Linear integration (webhooks, OAuth, MCP)
 #   - http://localhost/github/*   → GitHub integration (webhooks, OAuth, MCP)
 #   - http://localhost/slack/*    → Slack integration (events, OAuth, MCP)
-#   - http://localhost/router/*   → Router (event classification)
-#   - http://localhost/agent/*    → Dev agent
+#   - http://localhost/agent/*    → Agent service (events, conversations, health)
 #   - http://localhost/health     → Nginx health check
 #
 # Direct Access (bypass nginx):
 #   - PostgreSQL: localhost:5432
-#   - Temporal gRPC: localhost:7233
-#   - Temporal UI: http://localhost:8080
 #   - Linear Integration: http://localhost:3001
 #   - GitHub Integration: http://localhost:3002
 #   - Slack Integration: http://localhost:3003
-#   - Router: http://localhost:3006
-#   - Dev Agent: http://localhost:3004
+#   - Agent Service: http://localhost:3004
 #
 # Webhook URLs (configure in each service):
 #   - Linear:  https://<tunnel>/linear/webhook
@@ -73,48 +66,8 @@ services:
     networks:
       - aesir-network
 
-  temporal:
-    image: temporalio/auto-setup:1.24.2
-    container_name: aesir-temporal
-    depends_on:
-      postgresql:
-        condition: service_healthy
-    environment:
-      - DB=postgres12
-      - DB_PORT=5432
-      - POSTGRES_USER=temporal
-      - POSTGRES_PWD=temporal
-      - POSTGRES_SEEDS=postgresql
-      - DYNAMIC_CONFIG_FILE_PATH=/etc/temporal/dynamic_config.yml
-    ports:
-      - "7233:7233" # gRPC Frontend
-    volumes:
-      - ./docker-config/temporal-dynamic-config.yml:/etc/temporal/dynamic_config.yml:ro
-    networks:
-      - aesir-network
-    healthcheck:
-      test: ["CMD-SHELL", "tctl --address $(hostname -i):7233 cluster health"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 60s
-
-  temporal-ui:
-    image: temporalio/ui:2.26.2
-    container_name: aesir-temporal-ui
-    depends_on:
-      - temporal
-    environment:
-      - TEMPORAL_ADDRESS=temporal:7233
-      - TEMPORAL_CORS_ORIGINS=http://localhost:3000,http://localhost:8080
-      - TEMPORAL_CSRF_COOKIE_INSECURE=true
-    ports:
-      - "8080:8080"
-    networks:
-      - aesir-network
-
   # Nginx Reverse Proxy - unified entry point for all services
-  # Routes: /linear/*, /github/*, /slack/*, /router/*, /agent/*
+  # Routes: /linear/*, /github/*, /slack/*, /agent/*
   nginx:
     image: nginx:1.25-alpine
     container_name: aesir-nginx
@@ -129,11 +82,7 @@ services:
         condition: service_healthy
       slack-integration:
         condition: service_healthy
-      router:
-        condition: service_healthy
-      dev-agent:
-        condition: service_healthy
-      product-agent:
+      agent-service:
         condition: service_healthy
     networks:
       - aesir-network
@@ -145,7 +94,7 @@ services:
     restart: unless-stopped
 
   # Linear Integration - handles Linear webhooks and MCP tools
-  # Dispatches normalized events to router for classification
+  # Dispatches normalized events to agent-service for routing
   linear-integration:
     build:
       context: .
@@ -169,7 +118,7 @@ services:
       - LINEAR_CLIENT_SECRET=${LINEAR_CLIENT_SECRET}
       - LINEAR_OAUTH_CALLBACK_URL=${LINEAR_OAUTH_CALLBACK_URL:-}
       # Event dispatch (Docker network)
-      - ROUTER_URL=http://router:3006/events
+      - ROUTER_URL=http://agent-service:3004/events
       # Server configuration
       - PORT=3001
       - NODE_ENV=${NODE_ENV:-production}
@@ -194,7 +143,7 @@ services:
           path: ./packages/types/src
 
   # GitHub Integration - handles GitHub webhooks and MCP tools
-  # Dispatches normalized events to router for classification
+  # Dispatches normalized events to agent-service for routing
   github-integration:
     build:
       context: .
@@ -218,7 +167,7 @@ services:
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
       - GITHUB_OAUTH_CALLBACK_URL=${GITHUB_OAUTH_CALLBACK_URL:-}
       # Event dispatch (Docker network)
-      - ROUTER_URL=http://router:3006/events
+      - ROUTER_URL=http://agent-service:3004/events
       # Server configuration
       - PORT=3002
       - NODE_ENV=${NODE_ENV:-production}
@@ -272,7 +221,7 @@ services:
       - SLACK_MODE=${SLACK_MODE:-socket}
       - SLACK_OAUTH_CALLBACK_URL=${SLACK_OAUTH_CALLBACK_URL:-}
       # Event dispatch (Docker network)
-      - ROUTER_URL=http://router:3006/events
+      - ROUTER_URL=http://agent-service:3004/events
       # Server configuration
       - PORT=3003
       - NODE_ENV=${NODE_ENV:-production}
@@ -296,67 +245,20 @@ services:
         - action: rebuild
           path: ./packages/types/src
 
-  # Smart Router - unified event classification and routing
-  # All integration dispatchers send events here instead of directly to agents.
-  # Deterministic rules handle obvious events; LLM reasons about ambiguous ones.
-  router:
+  # Agent Service - unified agent runtime replacing dev-agent, product-agent, and router
+  # Handles all event routing, conversation execution, and worker polling in a single process.
+  # Events: POST /events (from integration dispatchers)
+  # Management: GET /conversations/:id, POST /conversations/:id/cancel
+  # Health: GET /health
+  agent-service:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: aesir-router
-    depends_on:
-      temporal:
-        condition: service_started
-    environment:
-      # Temporal (internal Docker network)
-      - TEMPORAL_ADDRESS=temporal:7233
-      - TEMPORAL_NAMESPACE=default
-      # LLM (for slow-path routing)
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      # MCP URLs (for send_message tool and agent session enrichment)
-      - LINEAR_MCP_URL=http://linear-integration:3001
-      - SLACK_MCP_URL=http://slack-integration:3003
-      # Router configuration
-      - ROUTER_PORT=3006
-      - ROUTER_ALERTS_CHANNEL=${ROUTER_ALERTS_CHANNEL:-}
-      - LINEAR_TEAM_ID=${LINEAR_TEAM_ID}
-      - NODE_ENV=${NODE_ENV:-production}
-    ports:
-      - "3006:3006"
-    command: ["node", "dist/router/main.js"]
-    healthcheck:
-      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3006/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))\""]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-    networks:
-      - aesir-network
-    restart: unless-stopped
-    develop:
-      watch:
-        - action: rebuild
-          path: ./packages/agents/src
-        - action: rebuild
-          path: ./packages/agents/package.json
-        - action: rebuild
-          path: ./packages/types/src
-        - action: rebuild
-          path: ./packages/platform/src
-
-  # Dev Agent - handles Linear task automation via MCP
-  # HTTP service for receiving events from router
-  dev-agent:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: aesir-dev-agent
-    # Run as root to access Docker socket for sandbox execution
+    container_name: aesir-agent-service
+    # Run as root to access Docker socket for DevContainerManager
     # The container is already isolated; Docker access is required for code sandboxing
     user: root
     depends_on:
-      temporal:
-        condition: service_started # Temporal binds to network IP, not localhost
       postgresql:
         condition: service_healthy
       linear-integration:
@@ -366,49 +268,50 @@ services:
       slack-integration:
         condition: service_healthy
     environment:
-      # Database (internal Docker network)
-      - DATABASE_URL=postgresql://temporal:temporal@postgresql:5432/temporal
+      # Database
       - DB_HOST=postgresql
       - DB_PORT=5432
       - DB_USER=temporal
       - DB_PASSWORD=temporal
       - DB_NAME=temporal
       - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
-      # Temporal (internal Docker network)
-      - TEMPORAL_ADDRESS=temporal:7233
-      - TEMPORAL_NAMESPACE=default
-      # LLM (only API key needed by agents)
+      # LLM
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      # GitHub configuration (for DevContainerManager git operations)
+      # Workspace config
+      - LINEAR_TEAM_ID=${LINEAR_TEAM_ID}
+      - GITHUB_REPO=${GITHUB_REPO}
+      - GITHUB_OWNER=${GITHUB_OWNER}
       - GITHUB_REPO_URL=${GITHUB_REPO_URL}
       - GITHUB_TOKEN=${GITHUB_TOKEN}
-      - GITHUB_OWNER=${GITHUB_OWNER}
-      - GITHUB_REPO=${GITHUB_REPO}
       - GITHUB_BASE_BRANCH=${GITHUB_BASE_BRANCH:-main}
-      # Workspace configuration (passed to MCP calls)
-      - LINEAR_TEAM_ID=${LINEAR_TEAM_ID}
       - SLACK_CHANNEL_ID=${SLACK_CHANNEL_ID}
       - DEV_AGENT_SLACK_CHANNEL=${DEV_AGENT_SLACK_CHANNEL}
-      # MCP service URLs (Docker network names)
+      - PRODUCT_AGENT_ALLOWED_CHANNELS=${PRODUCT_AGENT_ALLOWED_CHANNELS:-}
+      # MCP URLs
       - LINEAR_MCP_URL=http://linear-integration:3001
       - GITHUB_MCP_URL=http://github-integration:3002
       - SLACK_MCP_URL=http://slack-integration:3003
-      # Server configuration
-      - DEV_AGENT_PORT=3004
-      - PORT=3004
-      # Observability (optional)
+      # Service config
+      - AGENT_SERVICE_PORT=3004
+      - MAX_CONCURRENT_CONVERSATIONS=${MAX_CONCURRENT_CONVERSATIONS:-5}
+      - WORKER_POLL_INTERVAL_MS=${WORKER_POLL_INTERVAL_MS:-5000}
+      - FORCE_SHUTDOWN_TIMEOUT_MS=${FORCE_SHUTDOWN_TIMEOUT_MS:-30000}
+      # Router config
+      - ROUTER_ALERTS_CHANNEL=${ROUTER_ALERTS_CHANNEL:-}
+      # Observability
       - NODE_ENV=${NODE_ENV:-production}
       - LANGSMITH_TRACING=${LANGSMITH_TRACING:-false}
       - LANGSMITH_API_KEY=${LANGSMITH_API_KEY:-}
       - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-aesir-agents}
     ports:
-      - "3004:3004" # HTTP endpoint for receiving events
+      - "3004:3004"
     volumes:
       # Mount Docker socket for DevContainerManager
       - /var/run/docker.sock:/var/run/docker.sock
-      # macOS alternative path (both paths work, Docker uses first available)
+      # macOS alternative path
       - ${HOME}/.docker/run/docker.sock:/var/run/docker.sock:ro
-    command: ["node", "dist/dev-agent/main.js"]
+    command: ["node", "dist/service/main.js"]
+    stop_grace_period: 35s
     healthcheck:
       test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3004/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))\""]
       interval: 10s
@@ -425,142 +328,7 @@ services:
         - action: rebuild
           path: ./packages/agents/package.json
         - action: rebuild
-          path: ./packages/types/src
-        - action: rebuild
-          path: ./packages/platform/src
-
-  # Dev Agent Worker - Temporal worker for executing workflows
-  # Separate service allows independent scaling of HTTP endpoint vs workflow processing
-  dev-agent-worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: aesir-dev-agent-worker
-    user: root # Need Docker socket access for DevContainerManager
-    depends_on:
-      postgresql:
-        condition: service_healthy
-      temporal:
-        condition: service_healthy
-      dev-agent:
-        condition: service_healthy # Wait for HTTP service to be ready
-    environment:
-      # Database (internal Docker network)
-      - DATABASE_URL=postgresql://temporal:temporal@postgresql:5432/temporal
-      - DB_HOST=postgresql
-      - DB_PORT=5432
-      - DB_USER=temporal
-      - DB_PASSWORD=temporal
-      - DB_NAME=temporal
-      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
-      # Temporal (internal Docker network)
-      - TEMPORAL_ADDRESS=temporal:7233
-      - TEMPORAL_NAMESPACE=default
-      # LLM (only API key needed by agents)
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      # GitHub configuration (for DevContainerManager git operations)
-      - GITHUB_REPO_URL=${GITHUB_REPO_URL}
-      - GITHUB_TOKEN=${GITHUB_TOKEN}
-      - GITHUB_OWNER=${GITHUB_OWNER}
-      - GITHUB_REPO=${GITHUB_REPO}
-      - GITHUB_BASE_BRANCH=${GITHUB_BASE_BRANCH:-main}
-      # Workspace configuration (passed to MCP calls)
-      - LINEAR_TEAM_ID=${LINEAR_TEAM_ID}
-      - SLACK_CHANNEL_ID=${SLACK_CHANNEL_ID}
-      - DEV_AGENT_SLACK_CHANNEL=${DEV_AGENT_SLACK_CHANNEL}
-      # MCP service URLs (Docker network names)
-      - LINEAR_MCP_URL=http://linear-integration:3001
-      - GITHUB_MCP_URL=http://github-integration:3002
-      - SLACK_MCP_URL=http://slack-integration:3003
-      # Observability (optional)
-      - NODE_ENV=${NODE_ENV:-production}
-      - LANGSMITH_TRACING=${LANGSMITH_TRACING:-false}
-      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY:-}
-      - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-aesir-agents}
-    volumes:
-      # Mount Docker socket for DevContainerManager
-      - /var/run/docker.sock:/var/run/docker.sock
-      # macOS alternative path
-      - ${HOME}/.docker/run/docker.sock:/var/run/docker.sock:ro
-    command: ["node", "dist/dev-agent/worker.js"]
-    networks:
-      - aesir-network
-    restart: unless-stopped
-    develop:
-      watch:
-        - action: rebuild
-          path: ./packages/agents/src
-        - action: rebuild
-          path: ./packages/agents/package.json
-        - action: rebuild
-          path: ./packages/types/src
-        - action: rebuild
-          path: ./packages/platform/src
-
-  # Product Agent - handles Slack conversations via MCP
-  # Receives events from Slack dispatcher and uses Temporal for workflow orchestration
-  product-agent:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: aesir-product-agent
-    depends_on:
-      temporal:
-        condition: service_started
-      postgresql:
-        condition: service_healthy
-      linear-integration:
-        condition: service_healthy
-      slack-integration:
-        condition: service_healthy
-    environment:
-      # Database (internal Docker network)
-      - DATABASE_URL=postgresql://temporal:temporal@postgresql:5432/temporal
-      - DB_HOST=postgresql
-      - DB_PORT=5432
-      - DB_USER=temporal
-      - DB_PASSWORD=temporal
-      - DB_NAME=temporal
-      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
-      # Temporal (internal Docker network)
-      - TEMPORAL_ADDRESS=temporal:7233
-      - TEMPORAL_NAMESPACE=default
-      # LLM (only API key needed by agents)
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      # Workspace configuration (passed to MCP calls)
-      - LINEAR_TEAM_ID=${LINEAR_TEAM_ID}
-      - GITHUB_REPO=${GITHUB_REPO}
-      - SLACK_CHANNEL_ID=${SLACK_CHANNEL_ID}
-      # Product-agent specific config
-      - PORT=3005
-      - PRODUCT_AGENT_ALLOWED_CHANNELS=${PRODUCT_AGENT_ALLOWED_CHANNELS:-}
-      # MCP service URLs (Docker network names)
-      - LINEAR_MCP_URL=http://linear-integration:3001
-      - GITHUB_MCP_URL=http://github-integration:3002
-      - SLACK_MCP_URL=http://slack-integration:3003
-      # Observability (optional)
-      - NODE_ENV=${NODE_ENV:-production}
-      - LANGSMITH_TRACING=${LANGSMITH_TRACING:-false}
-      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY:-}
-      - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-aesir-agents}
-    ports:
-      - "3005:3005"
-    command: ["node", "dist/product-agent/main.js"]
-    healthcheck:
-      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3005/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))\""]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-    networks:
-      - aesir-network
-    restart: unless-stopped
-    develop:
-      watch:
-        - action: rebuild
-          path: ./packages/agents/src
-        - action: rebuild
-          path: ./packages/agents/package.json
+          path: ./packages/agents/definitions
         - action: rebuild
           path: ./packages/types/src
         - action: rebuild
