@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 45 of 47 (Integration Testing & Validation)
-Plan: 1 of 3 in current phase
+Plan: 3 of 3 in current phase (45-02 in progress separately)
 Status: In progress
-Last activity: 2026-02-03 -- Completed 45-01-PLAN.md (Integration test infrastructure)
+Last activity: 2026-02-03 -- Completed 45-03-PLAN.md (HTTP layer tests & E2E checklist)
 
-Progress: [████████░░] ~81% (26/~32 estimated plans)
+Progress: [████████░░] ~84% (27/~32 estimated plans)
 
 ## Milestone History
 
@@ -28,9 +28,9 @@ Progress: [████████░░] ~81% (26/~32 estimated plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 26 (v2.3)
-- Average duration: ~5m24s
-- Total execution time: ~135m
+- Total plans completed: 27 (v2.3)
+- Average duration: ~5m25s
+- Total execution time: ~142m
 
 **By Phase:**
 
@@ -44,7 +44,7 @@ Progress: [████████░░] ~81% (26/~32 estimated plans)
 | 42 | 3/3 | 12m05s | 4m02s |
 | 43 | 2/2 | 12m02s | 6m01s |
 | 44 | 2/2 | 6m | 3m |
-| 45 | 1/3 | 15m | 15m |
+| 45 | 2/3 | 21m36s | 10m48s |
 
 *Updated after each plan completion*
 
@@ -112,6 +112,8 @@ v2.3 decisions:
 - DEFINITIONS_DIR resolved via fileURLToPath + path.resolve instead of __dirname (Biome naming convention rejects double-underscore prefixed variables)
 - Volume name temporal-postgresql kept unchanged to preserve existing PostgreSQL data across service consolidation
 - PRODUCT_AGENT_URL removed from .env.example -- events route through unified agent-service
+- Test Express app replicates service/main.ts routes rather than importing it -- production main.ts calls process.exit on env validation failure
+- Structural MockFn interface replaces vitest Mock import in helpers.ts -- avoids Mock<Procedure | Constructable> assignability issue in vitest 4.x
 
 ### Pending Todos
 
@@ -129,9 +131,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-03
-Stopped at: Completed 45-01-PLAN.md (Integration test infrastructure)
+Stopped at: Completed 45-03-PLAN.md (HTTP layer tests & E2E checklist)
 Resume file: None
-Next action: Continue Phase 45 (45-02 ConversationExecutor integration tests)
+Next action: Complete 45-02 (ConversationExecutor integration tests) if not already done, then Phase 46
 
 ---
-*Updated: 2026-02-03 -- Completed 45-01 (Integration test infrastructure)*
+*Updated: 2026-02-03 -- Completed 45-03 (HTTP layer tests & E2E checklist)*
