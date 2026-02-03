@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.3 Unified Agent Framework -- Phase 43 in progress
+**Current focus:** v2.3 Unified Agent Framework -- Phase 43 complete
 
 ## Current Position
 
 Phase: 43 of 47 (Smart Router Adaptation)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-03 -- Completed 43-01-PLAN.md (Missing adapters + pass-through)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-03 -- Completed 43-02-PLAN.md (Router adaptation pipeline)
 
-Progress: [████████░░] ~68% (22/~32 estimated plans)
+Progress: [████████░░] ~72% (23/~32 estimated plans)
 
 ## Milestone History
 
@@ -28,9 +28,9 @@ Progress: [████████░░] ~68% (22/~32 estimated plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 22 (v2.3)
-- Average duration: ~5m28s
-- Total execution time: ~121m
+- Total plans completed: 23 (v2.3)
+- Average duration: ~5m26s
+- Total execution time: ~129m
 
 **By Phase:**
 
@@ -42,7 +42,7 @@ Progress: [████████░░] ~68% (22/~32 estimated plans)
 | 40 | 3/3 | ~28m | ~9m20s |
 | 41 | 2/2 | 12m | 6m |
 | 42 | 3/3 | 12m05s | 4m02s |
-| 43 | 1/2 | 3m39s | 3m39s |
+| 43 | 2/2 | 12m02s | 6m01s |
 
 *Updated after each plan completion*
 
@@ -105,6 +105,8 @@ v2.3 decisions:
 - PR review events have no correlationKey (branchName not in review payloads) -- always routes to slow_path
 - slack.message.created differentiates thread_reply vs channel_message based on threadTs presence
 - linear.agent_session.prompted falls back to payload.body when payload.prompt is absent
+- Idempotent start detection via conversation ID comparison -- no executor interface changes needed
+- Helper functions use deps.logger instead of child logger parameter -- avoids Pino Logger<never> vs Logger<string> type mismatch
 
 ### Pending Todos
 
@@ -122,9 +124,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-03
-Stopped at: Completed 43-01-PLAN.md (Missing adapters + pass-through)
+Stopped at: Completed 43-02-PLAN.md (Router adaptation pipeline)
 Resume file: None
-Next action: 43-02-PLAN.md (next plan in phase)
+Next action: Phase 44 (next phase)
 
 ---
-*Updated: 2026-02-03 -- Phase 43 plan 01 complete (Smart Router Adaptation)*
+*Updated: 2026-02-03 -- Phase 43 complete (Smart Router Adaptation)*
