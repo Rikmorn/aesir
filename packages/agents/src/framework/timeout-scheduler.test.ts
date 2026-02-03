@@ -228,9 +228,9 @@ describe("createTimeoutScheduler", () => {
       ]);
 
       expect(mockExecutor.signal).toHaveBeenCalledWith("conv-abc", {
-        type: "wait_timeout",
+        type: "approval",
         data: {
-          originalWaitType: "approval",
+          timeout: true,
           reason: "Waiting for human approval",
         },
         message:

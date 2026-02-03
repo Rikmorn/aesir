@@ -177,8 +177,10 @@ export function createTimeoutScheduler(
           const { conversationId, waitType, reason } = job.data;
 
           const signal: Signal = {
-            type: "wait_timeout",
-            data: { originalWaitType: waitType, reason },
+            // Use the original wait type so the signal matches the pending_wait.
+            // The timeout context is communicated via source and data fields.
+            type: waitType,
+            data: { timeout: true, reason },
             message: `Wait timeout: you have been paused waiting for '${waitType}'. No signal was received. Decide whether to escalate, retry, or complete.`,
             source: "internal:scheduler",
             deduplicationId: `timeout-${conversationId}-${job.id}`,
