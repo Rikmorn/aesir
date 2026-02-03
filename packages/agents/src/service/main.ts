@@ -1,0 +1,260 @@
+/**
+ * Unified Agent Service Entry Point
+ *
+ * Single Express HTTP server replacing dev-agent:3004, product-agent:3005,
+ * and router:3006. Pure wiring -- all business logic lives in the framework
+ * module (Phases 37-43).
+ *
+ * Bootstrap sequence:
+ *   1. Env validation (fail-fast via Zod)
+ *   2. Logger
+ *   3. Database pool + Drizzle ORM
+ *   4. AgentRegistry (YAML definitions from disk)
+ *   5. ToolRegistry (28 tool factories)
+ *   6. EventLog (buffered append-only event recording)
+ *   7. SessionProjection (reactive agent_sessions updates)
+ *   8. TimeoutScheduler (pg-boss delayed signal delivery)
+ *   9. ConversationExecutor (SKIP LOCKED conversation lifecycle)
+ *  10. EventRouter (deterministic event-to-agent routing)
+ *  11. Express routes (health, events, conversations)
+ *  12. Worker loop (poll + execute queued conversations)
+ *  13. Graceful shutdown (SIGTERM/SIGINT)
+ */
+
+import "../shared/env/config.js";
+
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { createPinoLogger } from "@aesir/platform";
+import { NormalizedEventSchema } from "@aesir/types";
+import { drizzle } from "drizzle-orm/node-postgres";
+import express from "express";
+import { Pool } from "pg";
+import {
+  createAgentRegistry,
+  createConversationExecutor,
+  createEventLog,
+  createEventRouter,
+  createSessionProjection,
+  createTimeoutScheduler,
+  createToolRegistry,
+  registerAllTools,
+} from "../framework/index.js";
+import type { ArtifactExtractionConfig } from "../framework/types.js";
+import { routeEvent } from "../router/router.js";
+import type { RouteEventDeps } from "../router/types.js";
+import * as schema from "../shared/db/schema.js";
+import { config } from "../shared/env/config.js";
+
+// Resolve definitions directory relative to this file's location.
+// In compiled JS (dist/service/main.js), ../../definitions reaches package root.
+const DEFINITIONS_DIR = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../definitions",
+);
+
+// ─── Bootstrap ──────────────────────────────────────────────────────────────
+
+async function bootstrap(): Promise<void> {
+  // 1. Logger
+  const logger = createPinoLogger({ component: "agent-service" });
+  logger.info("Starting agent service");
+
+  // 2. Database pool (explicit, not from shared/db/client.ts singleton)
+  const pool = new Pool({
+    host: config.database.host,
+    port: config.database.port,
+    user: config.database.user,
+    password: config.database.password,
+    database: config.database.name,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000,
+  });
+
+  pool.on("error", (err) => {
+    logger.error({ err }, "Unexpected database pool error");
+  });
+
+  const db = drizzle(pool, { schema });
+
+  // 3. AgentRegistry -- loads YAML definitions from disk
+  const agentRegistry = createAgentRegistry({
+    definitionsDir: DEFINITIONS_DIR,
+    logger,
+  });
+
+  // 4. ToolRegistry -- 28 tool factories
+  const toolRegistry = createToolRegistry({ logger });
+  registerAllTools({ registry: toolRegistry, agentRegistry, logger });
+
+  // 5. EventLog -- buffered append-only event recording
+  const eventLog = createEventLog({ db, logger });
+
+  // 6. SessionProjection -- reactive agent_sessions updates
+  const artifactConfig: ArtifactExtractionConfig = new Map([
+    [
+      "github:create_pull_request",
+      { artifactKey: "pr_url", payloadPath: "result.url" },
+    ],
+    [
+      "github:create_branch",
+      { artifactKey: "branch_name", payloadPath: "result.branch" },
+    ],
+  ]);
+  const sessionProjection = createSessionProjection({
+    db,
+    logger,
+    eventLog,
+    artifactConfig,
+  });
+
+  // 7. TimeoutScheduler -- pg-boss delayed signal delivery
+  const timeoutScheduler = createTimeoutScheduler({ pool, logger });
+
+  // 8. ConversationExecutor -- SKIP LOCKED conversation lifecycle
+  const executor = createConversationExecutor({
+    db,
+    eventLog,
+    sessionProjection,
+    agentRegistry,
+    toolRegistry,
+    logger,
+    timeoutScheduler,
+    pollIntervalMs: config.service.workerPollIntervalMs,
+    concurrencyLimit: config.service.maxConcurrentConversations,
+    anthropicApiKey: config.anthropic.apiKey,
+  });
+
+  // 9. EventRouter -- deterministic event-to-agent routing
+  const eventRouter = createEventRouter({ agentRegistry, logger });
+  await eventRouter.loadStartRules();
+
+  // 10. Express app
+  const app = express();
+  app.use(express.json({ limit: "1mb" }));
+
+  // Route dependencies (shared across POST /events calls)
+  const routeEventDeps: RouteEventDeps = {
+    executor,
+    eventRouter,
+    logger,
+    alertsChannel: config.router.alertsChannel,
+    linearTeamId: config.linear.teamId,
+  };
+
+  // GET /health -- liveness check
+  app.get("/health", (_req, res) => {
+    res.json({ status: "ok", service: "agent-service" });
+  });
+
+  // POST /events -- receive NormalizedEvent, route through pipeline
+  app.post("/events", async (req, res) => {
+    try {
+      const parsed = NormalizedEventSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res
+          .status(400)
+          .json({ error: "Validation failed", issues: parsed.error.issues });
+        return;
+      }
+
+      const result = await routeEvent(parsed.data, routeEventDeps);
+      res.json(result);
+    } catch (error) {
+      logger.error({ err: error }, "POST /events failed");
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /conversations/:id -- retrieve conversation info
+  app.get("/conversations/:id", async (req, res) => {
+    try {
+      const info = await executor.get(req.params.id);
+      if (!info) {
+        res.status(404).json({ error: "Conversation not found" });
+        return;
+      }
+      res.json(info);
+    } catch (error) {
+      logger.error(
+        { err: error, conversationId: req.params.id },
+        "GET /conversations/:id failed",
+      );
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /conversations/:id/cancel -- cancel a conversation
+  app.post("/conversations/:id/cancel", async (req, res) => {
+    try {
+      const cancelled = await executor.cancel(req.params.id);
+      if (!cancelled) {
+        res
+          .status(409)
+          .json({ error: "Conversation already in terminal state" });
+        return;
+      }
+      res.json({ cancelled: true });
+    } catch (error) {
+      logger.error(
+        { err: error, conversationId: req.params.id },
+        "POST /conversations/:id/cancel failed",
+      );
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // 11. Start HTTP server
+  const server = app.listen(config.service.port, () => {
+    logger.info({ port: config.service.port }, "Agent service listening");
+  });
+
+  // 12. Start worker loop (AFTER server is listening)
+  executor.startWorker();
+
+  // 13. Graceful shutdown
+  let isShuttingDown = false;
+
+  const shutdown = async (signal: string): Promise<void> => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+    logger.info({ signal }, "Graceful shutdown initiated");
+
+    // 1. Stop accepting HTTP connections
+    server.close();
+
+    // 2. Stop worker + drain conversations + flush event log + stop pg-boss
+    await executor.stopWorker();
+
+    // 3. Final event log flush (belt + suspenders)
+    await eventLog.close();
+
+    // 4. Close session projection subscriptions
+    sessionProjection.close();
+
+    // 5. Close database pool
+    await pool.end();
+
+    logger.info("Graceful shutdown complete");
+    process.exit(0);
+  };
+
+  process.on("SIGINT", () => void shutdown("SIGINT"));
+  process.on("SIGTERM", () => void shutdown("SIGTERM"));
+
+  // Force exit after grace period
+  const forceTimeout = setTimeout(() => {
+    if (isShuttingDown) {
+      logger.error("Forced shutdown after timeout");
+      process.exit(1);
+    }
+  }, config.service.forceShutdownTimeoutMs);
+  forceTimeout.unref();
+}
+
+bootstrap().catch((err) => {
+  // biome-ignore lint/suspicious/noConsole: Pre-logger startup error
+  console.error("Fatal bootstrap error:", err);
+  process.exit(1);
+});
