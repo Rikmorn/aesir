@@ -13,7 +13,7 @@ import type {
 } from "../../shared/agent-loop/types.js";
 import { callMcpTool } from "../../shared/mcp/client.js";
 import { McpError } from "../../shared/mcp/errors.js";
-import type { RouterDeps } from "../types.js";
+import type { EventRouterDeps } from "../types.js";
 
 // ---------------------------------------------------------------------------
 // Input Schema
@@ -37,7 +37,7 @@ const SendMessageInputSchema = z.object({
  * @param _deps - Router dependencies (logger used for context)
  * @returns ToolDefinition for the agent loop
  */
-export function createSendMessageTool(_deps: RouterDeps): ToolDefinition {
+export function createSendMessageTool(_deps: EventRouterDeps): ToolDefinition {
   return {
     name: "send_message",
     description:

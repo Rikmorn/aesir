@@ -7,23 +7,14 @@
  * routeEvent() is the single entry point for all integration events.
  * It transforms NormalizedEvent -> IncomingEvent via adapters, routes
  * via EventRouter, and dispatches to ConversationExecutor.start()/signal().
- *
- * The legacy Temporal-based routeEventLegacy() is preserved for Phase 47
- * cleanup. router/main.ts uses routeEventLegacy until Phase 44 replaces it.
  */
 
 import type { NormalizedEvent } from "@aesir/types";
 import { ALL_ADAPTERS } from "../adapters/index.js";
 import { adaptPassThrough } from "../adapters/pass-through.js";
 import { callMcpTool } from "../shared/mcp/index.js";
-import { executeFastPath, matchFastPath } from "./fast-path.js";
-import { routeViaAgentLoop, routeViaAgentLoopV2 } from "./slow-path.js";
-import type {
-  RouteEventDeps,
-  RouteEventResult,
-  RouteResult,
-  RouterDeps,
-} from "./types.js";
+import { routeViaAgentLoopV2 } from "./slow-path.js";
+import type { RouteEventDeps, RouteEventResult } from "./types.js";
 
 // ---------------------------------------------------------------------------
 // v2.3 Core Routing Function
@@ -159,7 +150,7 @@ export async function routeEvent(
 }
 
 // ---------------------------------------------------------------------------
-// v2.3 Error Handling
+// Error Handling
 // ---------------------------------------------------------------------------
 
 /**
@@ -220,142 +211,6 @@ async function sendRoutingAlertV2(
   } catch (alertError) {
     // Best-effort: log but don't throw
     deps.logger.warn(
-      { err: alertError, eventId: event.id },
-      "Failed to send routing failure alert to Slack (best-effort)",
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Legacy Router (preserved for Phase 47 cleanup)
-// ---------------------------------------------------------------------------
-
-/**
- * @deprecated Use routeEvent() with RouteEventDeps instead.
- * Legacy route function using Temporal workflowClient.
- * Preserved for router/main.ts until Phase 44 replaces it.
- *
- * Route an event through fast-path rules, then slow-path LLM if no match.
- * Implements ROUT-06: events are never silently dropped.
- */
-export async function routeEventLegacy(
-  event: NormalizedEvent,
-  deps: RouterDeps,
-): Promise<RouteResult> {
-  const eventLogger = deps.logger.child({
-    eventId: event.id,
-    eventType: event.type,
-    source: event.source,
-  });
-
-  eventLogger.info("Routing event (legacy)");
-
-  // 1. Try fast path first (zero LLM latency)
-  const fastAction = matchFastPath(event);
-
-  if (fastAction) {
-    eventLogger.info(
-      { rule: "fast-path", actionType: fastAction.type },
-      "Fast-path match",
-    );
-    try {
-      const result = await executeFastPath(fastAction, deps);
-      eventLogger.info({ result }, "Fast-path routing complete");
-      return result;
-    } catch (error) {
-      eventLogger.error({ err: error }, "Fast-path execution failed");
-      return handleRoutingFailureLegacy(event, deps, error);
-    }
-  }
-
-  // 2. Slow path: LLM reasoning for ambiguous events
-  eventLogger.info("No fast-path match, routing via agentic loop");
-  try {
-    const result = await routeViaAgentLoop(event, deps);
-    eventLogger.info({ result }, "Slow-path routing complete");
-
-    // ROUT-06: If routing failed, alert
-    if (result.status === "failed") {
-      await sendRoutingAlertLegacy(
-        event,
-        deps,
-        result.error || "Unknown failure",
-      );
-    }
-
-    return result;
-  } catch (error) {
-    eventLogger.error({ err: error }, "Slow-path routing failed");
-    return handleRoutingFailureLegacy(event, deps, error);
-  }
-}
-
-/**
- * @deprecated Legacy failure handler for routeEventLegacy.
- */
-async function handleRoutingFailureLegacy(
-  event: NormalizedEvent,
-  deps: RouterDeps,
-  error: unknown,
-): Promise<RouteResult> {
-  const errorMessage = error instanceof Error ? error.message : String(error);
-
-  deps.logger.error(
-    {
-      eventId: event.id,
-      eventType: event.type,
-      source: event.source,
-      err: error,
-    },
-    `Routing failure: ${errorMessage}`,
-  );
-
-  // Best-effort Slack alert
-  await sendRoutingAlertLegacy(event, deps, errorMessage);
-
-  return {
-    status: "failed",
-    error: errorMessage,
-  };
-}
-
-/**
- * @deprecated Legacy alert sender for routeEventLegacy.
- */
-async function sendRoutingAlertLegacy(
-  event: NormalizedEvent,
-  deps: RouterDeps,
-  reason: string,
-): Promise<void> {
-  if (!deps.alertsChannel) {
-    deps.logger.warn(
-      { eventId: event.id },
-      "No alertsChannel configured, skipping Slack alert for routing failure",
-    );
-    return;
-  }
-
-  const alertMessage = `Router failed to route event: ${event.type} (${event.id}) - ${reason}`;
-
-  try {
-    await callMcpTool({
-      integration: "slack",
-      tool: "send_message",
-      params: {
-        channel: deps.alertsChannel,
-        text: alertMessage,
-      },
-      agentId: "router",
-      correlationId: event.correlationId,
-    });
-
-    deps.logger.info(
-      { eventId: event.id, channel: deps.alertsChannel },
-      "Routing failure alert sent to Slack",
-    );
-  } catch (alertError) {
-    // Best-effort: log but don't throw
-    deps.logger.error(
       { err: alertError, eventId: event.id },
       "Failed to send routing failure alert to Slack (best-effort)",
     );

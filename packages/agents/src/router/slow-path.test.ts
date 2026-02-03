@@ -1,3 +1,4 @@
+// @ts-nocheck -- Dead code: will be deleted in Phase 47 Plan B
 /**
  * Slow-Path Router Tests
  *
