@@ -21,7 +21,7 @@ v2.3 replaces Temporal workflow orchestration, per-agent services, and fragmente
 - [x] **Phase 41: Timeout Scheduling** - pg-boss integration for delayed signal delivery
 - [x] **Phase 42: Event Router + Adapters** - Webhook normalization to domain events with correlation-based signal routing
 - [x] **Phase 43: Smart Router Adaptation** - Adapt existing smart router from Temporal client to ConversationExecutor
-- [ ] **Phase 44: Single Service Consolidation** - One HTTP service replacing dev-agent, product-agent, and router services
+- [x] **Phase 44: Single Service Consolidation** - One HTTP service replacing dev-agent, product-agent, and router services
 - [ ] **Phase 45: Integration Testing + Validation** - Full lifecycle testing of start, pause, signal, resume, complete flows
 - [ ] **Phase 46: Temporal Migration + Cutover** - Feature flag cutover with Temporal drain period
 - [ ] **Phase 47: Cleanup + Documentation** - Remove Temporal code, old persistence stores, and update documentation
@@ -155,8 +155,8 @@ Plans:
   4. Graceful shutdown drains running conversations (finishes current loops before exit)
 **Plans**: 2 plans
 Plans:
-- [ ] 44-01-PLAN.md -- Env schema update + service/main.ts entry point (bootstrap, routes, shutdown)
-- [ ] 44-02-PLAN.md -- Docker Compose, nginx, .env.example, Dockerfile updates
+- [x] 44-01-PLAN.md -- Env schema update + service/main.ts entry point (bootstrap, routes, shutdown)
+- [x] 44-02-PLAN.md -- Docker Compose, nginx, .env.example, Dockerfile updates
 
 ### Phase 45: Integration Testing + Validation
 **Goal**: Full lifecycle testing validates the complete flow -- start conversation, pause via wait_for, deliver signal, resume, complete -- plus edge cases (stale detection, signal queueing, timeout enforcement)
@@ -212,11 +212,11 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 | 41. Timeout Scheduling | 2/2 | Complete | 2026-02-02 |
 | 42. Event Router + Adapters | 3/3 | Complete | 2026-02-02 |
 | 43. Smart Router Adaptation | 2/2 | Complete | 2026-02-03 |
-| 44. Single Service Consolidation | 0/2 | Not started | - |
+| 44. Single Service Consolidation | 2/2 | Complete | 2026-02-03 |
 | 45. Integration Testing + Validation | 0/TBD | Not started | - |
 | 46. Temporal Migration + Cutover | 0/TBD | Not started | - |
 | 47. Cleanup + Documentation | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-01*
-*Last updated: 2026-02-03 -- Phase 44 planned (2 plans, 2 waves)*
+*Last updated: 2026-02-03 -- Phase 44 complete (2 plans, 2 waves)*

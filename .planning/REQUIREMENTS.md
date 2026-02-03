@@ -72,11 +72,11 @@ Requirements for v2.3 milestone. Each maps to roadmap phases starting at Phase 3
 
 ### Service Consolidation
 
-- [ ] **SVC-01**: Single HTTP service replacing dev-agent:3004, product-agent:3005, router:3006
-- [ ] **SVC-02**: Unified /events endpoint receiving all webhook-routed events
-- [ ] **SVC-03**: /conversations/:id and /conversations/:id/cancel management endpoints
-- [ ] **SVC-04**: Worker polling loop integrated into same process as HTTP server
-- [ ] **SVC-05**: Graceful shutdown with conversation draining (finish running loops before exit)
+- [x] **SVC-01**: Single HTTP service replacing dev-agent:3004, product-agent:3005, router:3006
+- [x] **SVC-02**: Unified /events endpoint receiving all webhook-routed events
+- [x] **SVC-03**: /conversations/:id and /conversations/:id/cancel management endpoints
+- [x] **SVC-04**: Worker polling loop integrated into same process as HTTP server
+- [x] **SVC-05**: Graceful shutdown with conversation draining (finish running loops before exit)
 - [ ] **SVC-06**: Docker Compose updated — remove Temporal server, Temporal UI, per-agent services
 
 ### Timeout Scheduling
@@ -180,11 +180,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SIG-05 | Phase 43 | Complete |
 | SIG-06 | Phase 43 | Complete |
 | SIG-07 | Phase 40 | Pending |
-| SVC-01 | Phase 44 | Pending |
-| SVC-02 | Phase 44 | Pending |
-| SVC-03 | Phase 44 | Pending |
-| SVC-04 | Phase 44 | Pending |
-| SVC-05 | Phase 44 | Pending |
+| SVC-01 | Phase 44 | Complete |
+| SVC-02 | Phase 44 | Complete |
+| SVC-03 | Phase 44 | Complete |
+| SVC-04 | Phase 44 | Complete |
+| SVC-05 | Phase 44 | Complete |
 | SVC-06 | Phase 47 | Pending |
 | MIG-01 | Phase 46 | Pending |
 | MIG-02 | Phase 46 | Pending |
@@ -201,4 +201,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-01*
-*Last updated: 2026-02-03 -- Phase 43 complete (SIG-05, SIG-06)*
+*Last updated: 2026-02-03 -- Phase 44 complete (SVC-01 through SVC-05)*
