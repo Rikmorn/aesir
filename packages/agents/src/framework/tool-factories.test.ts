@@ -202,12 +202,14 @@ describe("registerAllTools", () => {
       expect(result?.content).toContain("approval");
     });
 
-    it("should resolve coordination:spawn_agent to placeholder that returns isError", async () => {
+    it("should resolve coordination:spawn_agent to tool that returns error when spawnDeps absent", async () => {
       const { registry } = setupRegistry();
       const ctx = createMockContext();
+      // ctx has no spawnDeps, so spawn_agent should return an error
 
       const tools = registry.resolve(["coordination:spawn_agent"], ctx);
       expect(tools).toHaveLength(1);
+      expect(tools[0]?.name).toBe("spawn_agent");
 
       const result = await tools[0]?.execute({
         agentType: "researcher",
@@ -215,7 +217,7 @@ describe("registerAllTools", () => {
       });
 
       expect(result?.isError).toBe(true);
-      expect(result?.content).toContain("Phase 40");
+      expect(result?.content).toContain("not available in this context");
     });
   });
 

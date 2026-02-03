@@ -19,7 +19,6 @@
  */
 
 import type { DevContainerManager, PinoLogger } from "@aesir/platform";
-import { z } from "zod";
 import type { ToolDefinition } from "../shared/agent-loop/types.js";
 import {
   createListDirectoryTool,
@@ -29,6 +28,7 @@ import {
   createWriteFileTool,
 } from "../shared/tools/codebase/index.js";
 import { createRequestHumanInputTool } from "../shared/tools/coordination/index.js";
+import { createSpawnAgentTool } from "../shared/tools/coordination/spawn-agent.js";
 import { createGitHubTools } from "../shared/tools/integration/github-tools.js";
 import { createLinearTools } from "../shared/tools/integration/linear-tools.js";
 import type { McpToolDeps } from "../shared/tools/integration/mcp-wrapper.js";
@@ -234,41 +234,13 @@ export function registerAllTools(options: RegisterAllToolsOptions): void {
     createRequestHumanInputTool(),
   );
 
-  // spawn_agent -- placeholder for Phase 40 (ConversationExecutor)
-  // The real implementation will use the ConversationExecutor to spawn
-  // child conversations. For Phase 38, this resolves correctly in the
-  // registry but returns an error when executed, since actual spawn
-  // execution still goes through the v2.2 toolkit path.
-  registry.register("coordination:spawn_agent", (_ctx: ToolContext) => ({
-    name: "spawn_agent",
-    description:
-      "Spawn a focused sub-agent to perform a specific task. Available agent types: " +
-      "'researcher' (explores codebase, reads files, searches code), " +
-      "'coder' (implements changes, writes files, runs builds), " +
-      "'tester' (runs tests, diagnoses failures, reads code). " +
-      "Each sub-agent shares the token budget with the orchestrator.",
-    inputSchema: z.object({
-      agentType: z
-        .enum(["researcher", "coder", "tester"])
-        .describe("Type of sub-agent to spawn"),
-      task: z
-        .string()
-        .describe("Task description for the sub-agent to execute"),
-      context: z
-        .string()
-        .optional()
-        .describe("Additional context to prepend to the task"),
-    }),
-    async execute(): Promise<{ content: string; isError: boolean }> {
-      return {
-        content:
-          "spawn_agent via ToolRegistry is not yet wired to the executor. " +
-          "Phase 40 (ConversationExecutor) will implement this. " +
-          "Current execution uses the v2.2 toolkit path.",
-        isError: true,
-      };
-    },
-  }));
+  // spawn_agent -- real implementation using createSpawnAgentTool
+  // When spawnDeps is populated in ToolContext (by the worker loop),
+  // the tool spawns sub-agents as nested runAgentLoop() calls.
+  // When spawnDeps is absent, the tool returns a descriptive error.
+  registry.register("coordination:spawn_agent", (ctx: ToolContext) =>
+    createSpawnAgentTool(ctx),
+  );
 
   // wait_for -- real implementation from Phase 40
   // Creates a default WaitForState so the tool resolves correctly in the registry.
