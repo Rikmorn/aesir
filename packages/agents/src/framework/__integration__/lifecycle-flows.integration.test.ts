@@ -35,7 +35,6 @@ vi.mock("../../shared/agent-loop/run-agent-loop.js", () => ({
 }));
 
 import { createLogger } from "@aesir/platform";
-import type { Mock } from "vitest";
 import {
   createConversationExecutor,
   createEventLog,
@@ -56,8 +55,13 @@ import {
   waitForStatus,
 } from "./helpers.js";
 
-// Typed reference to the mocked runAgentLoop for use with helper functions
-const mockRunAgentLoop = runAgentLoop as unknown as Mock;
+// Cast to structural mock type compatible with helper functions.
+// Helpers use MockFn (structural interface) to avoid vitest 4.x Mock generics issues.
+const mockRunAgentLoop = runAgentLoop as unknown as {
+  mockResolvedValue: (val: unknown) => void;
+  mockImplementation: (fn: (...args: unknown[]) => unknown) => void;
+  mockReset: () => void;
+};
 
 import {
   cleanupTables,
