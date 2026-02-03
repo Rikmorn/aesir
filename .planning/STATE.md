@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.3 Unified Agent Framework -- Phase 47 cleanup in progress
+**Current focus:** v2.3 Unified Agent Framework -- Phase 47 complete
 
 ## Current Position
 
 Phase: 47 of 47 (Cleanup & Documentation)
-Plan: 3 of 4 in current phase
-Status: In progress
-Last activity: 2026-02-03 -- Completed 47-03-PLAN.md (Phase C: remove dependencies, config cleanup, migration consolidation)
+Plan: 4 of 4 in current phase
+Status: Phase complete
+Last activity: 2026-02-03 -- Completed 47-04-PLAN.md (CLAUDE.md + README.md rewrite)
 
-Progress: [█████████░] ~99% (34/~35 estimated plans)
+Progress: [██████████] 100% (35/35 plans)
 
 ## Milestone History
 
@@ -28,9 +28,9 @@ Progress: [█████████░] ~99% (34/~35 estimated plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 34 (v2.3)
+- Total plans completed: 35 (v2.3)
 - Average duration: ~5m24s
-- Total execution time: ~184m
+- Total execution time: ~190m
 
 **By Phase:**
 
@@ -46,7 +46,7 @@ Progress: [█████████░] ~99% (34/~35 estimated plans)
 | 44 | 2/2 | 6m | 3m |
 | 45 | 3/3 | 32m36s | 10m52s |
 | 46 | 2/2 | ~11m | ~5m30s |
-| 47 | 3/4 | 19m25s | 6m28s |
+| 47 | 4/4 | 25m42s | 6m26s |
 
 *Updated after each plan completion*
 
@@ -112,7 +112,7 @@ v2.3 decisions:
 - Idempotent start detection via conversation ID comparison -- no executor interface changes needed
 - Helper functions use deps.logger instead of child logger parameter -- avoids Pino Logger<never> vs Logger<string> type mismatch
 - DEFINITIONS_DIR resolved via fileURLToPath + path.resolve instead of __dirname (Biome naming convention rejects double-underscore prefixed variables)
-- Volume name temporal-postgresql kept unchanged to preserve existing PostgreSQL data across service consolidation (subsequently renamed to aesir-postgresql in 47-03)
+- Volume renamed temporal-postgresql -> aesir-postgresql -- existing devs must docker compose down -v
 - PRODUCT_AGENT_URL removed from .env.example -- events route through unified agent-service
 - Test Express app replicates service/main.ts routes rather than importing it -- production main.ts calls process.exit on env validation failure
 - Structural MockFn interface replaces vitest Mock import in helpers.ts -- avoids Mock<Procedure | Constructable> assignability issue in vitest 4.x
@@ -133,6 +133,8 @@ v2.3 decisions:
 - Consolidated migrations create clean-slate v2.3 schema -- fresh clones get only conversations, agent_events, agent_sessions (no legacy context_snapshots/tasks/execution_traces)
 - Volume renamed temporal-postgresql -> aesir-postgresql -- existing devs must docker compose down -v
 - Pre-existing lint errors (3) and test failures (10) documented but not fixed in 47-03 -- not introduced by cleanup plans
+- CLAUDE.md v2.2 Design Principles merged into Agent-First Decision Checklist -- removed version framing, kept substance
+- Historical context (milestones, evolution) delegated to .planning/ directory rather than preserving abbreviated versions in CLAUDE.md
 
 ### Pending Todos
 
@@ -150,9 +152,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-03
-Stopped at: Completed 47-03-PLAN.md (Phase C: remove dependencies, config cleanup, migration consolidation)
+Stopped at: Completed 47-04-PLAN.md (CLAUDE.md + README.md rewrite)
 Resume file: None
-Next action: Execute plan 47-04 (Phase D: update CLAUDE.md documentation)
+Next action: v2.3 complete -- all 47 phases finished
 
 ---
-*Updated: 2026-02-03 -- Phase 47 plan 03 complete (@temporalio removed, credentials renamed temporal->aesir, migrations consolidated)*
+*Updated: 2026-02-03 -- Phase 47 plan 04 complete (CLAUDE.md + README.md rewritten for v2.3, zero legacy references)*
