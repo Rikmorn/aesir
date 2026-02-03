@@ -26,7 +26,7 @@ Requirements for v2.3 milestone. Each maps to roadmap phases starting at Phase 3
 - [x] **EVT-04**: Synchronous flush at lifecycle boundaries (pause, complete, fail) — no data loss on crash
 - [x] **EVT-05**: agent_sessions projection table reactively updated from events (artifacts, status, timing)
 - [x] **EVT-06**: Session projection extracts ground-truth artifacts (PR URLs, branch names) from tool.succeeded events
-- [ ] **EVT-07**: Replaces three disconnected stores: execution_traces, tasks, context_snapshots
+- [x] **EVT-07**: Replaces three disconnected stores: execution_traces, tasks, context_snapshots
 
 ### Conversation Executor
 
@@ -77,7 +77,7 @@ Requirements for v2.3 milestone. Each maps to roadmap phases starting at Phase 3
 - [x] **SVC-03**: /conversations/:id and /conversations/:id/cancel management endpoints
 - [x] **SVC-04**: Worker polling loop integrated into same process as HTTP server
 - [x] **SVC-05**: Graceful shutdown with conversation draining (finish running loops before exit)
-- [ ] **SVC-06**: Docker Compose updated — remove Temporal server, Temporal UI, per-agent services
+- [x] **SVC-06**: Docker Compose updated — remove Temporal server, Temporal UI, per-agent services
 
 ### Timeout Scheduling
 
@@ -89,11 +89,11 @@ Requirements for v2.3 milestone. Each maps to roadmap phases starting at Phase 3
 
 - [x] **MIG-01**: Feature flag (USE_V23_EXECUTOR) routing new events to ConversationExecutor
 - [x] **MIG-02**: Temporal drain period — existing workflows complete naturally (up to 7 days)
-- [ ] **MIG-03**: Delete packages/agents/src/shared/temporal/ after drain completes
-- [ ] **MIG-04**: Remove all @temporalio/* dependencies from package.json
-- [ ] **MIG-05**: Delete per-agent main.ts, worker.ts, and api/ directories
-- [ ] **MIG-06**: Drop old database tables (tasks, context_snapshots, execution_traces)
-- [ ] **MIG-07**: Update CLAUDE.md to reflect v2.3 architecture (remove all Temporal/LangGraph references)
+- [x] **MIG-03**: Delete packages/agents/src/shared/temporal/ after drain completes
+- [x] **MIG-04**: Remove all @temporalio/* dependencies from package.json
+- [x] **MIG-05**: Delete per-agent main.ts, worker.ts, and api/ directories
+- [x] **MIG-06**: Drop old database tables (tasks, context_snapshots, execution_traces)
+- [x] **MIG-07**: Update CLAUDE.md to reflect v2.3 architecture (remove all Temporal/LangGraph references)
 
 ## Deferred Requirements
 
@@ -138,7 +138,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EVT-04 | Phase 37 | Complete |
 | EVT-05 | Phase 37 | Complete |
 | EVT-06 | Phase 37 | Complete |
-| EVT-07 | Phase 47 | Pending |
+| EVT-07 | Phase 47 | Complete |
 | DEF-01 | Phase 38 | Complete |
 | DEF-02 | Phase 38 | Complete |
 | DEF-03 | Phase 38 | Complete |
@@ -185,14 +185,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SVC-03 | Phase 44 | Complete |
 | SVC-04 | Phase 44 | Complete |
 | SVC-05 | Phase 44 | Complete |
-| SVC-06 | Phase 47 | Pending |
+| SVC-06 | Phase 47 | Complete |
 | MIG-01 | Phase 46 | Complete |
 | MIG-02 | Phase 46 | Complete |
-| MIG-03 | Phase 47 | Pending |
-| MIG-04 | Phase 47 | Pending |
-| MIG-05 | Phase 47 | Pending |
-| MIG-06 | Phase 47 | Pending |
-| MIG-07 | Phase 47 | Pending |
+| MIG-03 | Phase 47 | Complete |
+| MIG-04 | Phase 47 | Complete |
+| MIG-05 | Phase 47 | Complete |
+| MIG-06 | Phase 47 | Complete |
+| MIG-07 | Phase 47 | Complete |
 
 **Coverage:**
 - v2.3 requirements: 58 total
@@ -201,4 +201,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-01*
-*Last updated: 2026-02-03 -- Phase 44 complete (SVC-01 through SVC-05)*
+*Last updated: 2026-02-03 -- Phase 47 complete (all v2.3 requirements satisfied except SIG-07 deferred)*
