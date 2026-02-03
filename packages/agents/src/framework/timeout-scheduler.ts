@@ -154,9 +154,18 @@ export function createTimeoutScheduler(
     migrate: true,
   });
 
+  // Handle pg-boss error events to prevent ERR_UNHANDLED_ERROR crashes.
+  // Worker-level errors (queue not found, fetch failures) are emitted here.
+  boss.on("error", (error) => {
+    logger.error({ err: error }, "pg-boss error");
+  });
+
   return {
     async start(executor: ConversationExecutor): Promise<void> {
       await boss.start();
+
+      // Ensure the queue exists (pg-boss v10+ requires explicit queue creation)
+      await boss.createQueue(TIMEOUT_QUEUE);
 
       // Register timeout worker that delivers wait_timeout signals
       await boss.work<TimeoutJobData>(

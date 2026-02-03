@@ -21,6 +21,7 @@ COPY packages/observability/package.json ./packages/observability/
 COPY packages/integrations/linear/package.json ./packages/integrations/linear/
 COPY packages/integrations/github/package.json ./packages/integrations/github/
 COPY packages/integrations/slack/package.json ./packages/integrations/slack/
+COPY packages/test-utils/package.json ./packages/test-utils/
 COPY packages/agents/package.json ./packages/agents/
 
 # Install all dependencies
@@ -40,7 +41,7 @@ RUN pnpm --filter @aesir/observability build
 RUN pnpm --filter @aesir/integration-linear build
 RUN pnpm --filter @aesir/integration-github build
 RUN pnpm --filter @aesir/integration-slack build
-RUN pnpm --filter @aesir/agents build
+RUN pnpm --filter @aesir/agents exec tsc -b tsconfig.build.json
 
 # Deploy creates a standalone package with all dependencies resolved (no symlinks)
 RUN pnpm --filter @aesir/agents deploy --prod /deploy

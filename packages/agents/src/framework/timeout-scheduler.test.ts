@@ -19,6 +19,8 @@ const { mockBoss, MockPgBossClass } = vi.hoisted(() => {
     cancel: vi.fn().mockResolvedValue(undefined),
     stop: vi.fn().mockResolvedValue(undefined),
     work: vi.fn().mockResolvedValue("worker-id-1"),
+    createQueue: vi.fn().mockResolvedValue(undefined),
+    on: vi.fn().mockReturnThis(),
   };
 
   // Use a function constructor so `new PgBoss(...)` works
