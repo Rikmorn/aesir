@@ -49,6 +49,7 @@
     "zod-to-json-schema": "^3.24.5"
   },
   "devDependencies": {
+    "@aesir/test-utils": "workspace:^",
     "@slack/types": "^2.19.0",
     "@types/express": "^4.17.21",
     "@types/node": "^22.0.0",

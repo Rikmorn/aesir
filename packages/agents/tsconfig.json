@@ -8,6 +8,7 @@
   "references": [
     { "path": "../types" },
     { "path": "../observability" },
-    { "path": "../platform" }
+    { "path": "../platform" },
+    { "path": "../test-utils" }
   ]
 }

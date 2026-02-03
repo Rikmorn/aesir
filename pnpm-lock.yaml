@@ -99,6 +99,9 @@ importers:
         specifier: ^3.24.5
         version: 3.25.1(zod@3.25.67)
     devDependencies:
+      '@aesir/test-utils':
+        specifier: workspace:^
+        version: link:../test-utils
       '@slack/types':
         specifier: ^2.19.0
         version: 2.19.0
