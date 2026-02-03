@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.3 Unified Agent Framework -- Phase 47.1 next
+**Current focus:** v2.3 Unified Agent Framework -- Phase 47.1 complete
 
 ## Current Position
 
 Phase: 47.1 (Sub Agent Spawn - INSERTED)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-03 -- Completed 47.1-01-PLAN.md
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-03 -- Completed 47.1-02-PLAN.md
 
-Progress: [██████████] 97% (36/37 plans)
+Progress: [██████████] 100% (37/37 plans)
 
 ## Milestone History
 
@@ -28,9 +28,9 @@ Progress: [██████████] 97% (36/37 plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 36 (v2.3)
-- Average duration: ~5m26s
-- Total execution time: ~196m
+- Total plans completed: 37 (v2.3)
+- Average duration: ~5m22s
+- Total execution time: ~199m
 
 **By Phase:**
 
@@ -47,7 +47,7 @@ Progress: [██████████] 97% (36/37 plans)
 | 45 | 3/3 | 32m36s | 10m52s |
 | 46 | 2/2 | ~11m | ~5m30s |
 | 47 | 4/4 | 25m42s | 6m26s |
-| 47.1 | 1/2 | 5m38s | 5m38s |
+| 47.1 | 2/2 | 8m38s | 4m19s |
 
 *Updated after each plan completion*
 
@@ -75,7 +75,7 @@ v2.3 decisions:
 - AgentRegistry verifies YAML id matches directory name -- prevents mismatched definitions
 - AgentRegistry version mismatch returns cached definition with warning -- file-based registry only stores latest version
 - MCP adapter uses create-all-then-find pattern -- preserves v2.2 batch factory compatibility without modifying existing tool files
-- spawn_agent placeholder does NOT use createSpawnAgentTool -- Phase 40 replaces with ConversationExecutor-backed implementation (replaced in 47.1-01)
+- spawn_agent placeholder replaced with real createSpawnAgentTool in 47.1-02 -- worker loop populates spawnDeps when agent has coordination:spawn_agent
 - SpawnAgentDeps travels inside ToolContext.spawnDeps, not as a separate ToolFactory parameter -- preserves ToolFactory type signature
 - Sub-agent ToolContext omits spawnDeps unless sub-agent has coordination:spawn_agent AND depth allows -- prevents unintended recursive spawning
 - abortSignal conditionally spread into runAgentLoop to satisfy exactOptionalPropertyTypes -- avoids passing undefined for optional fields
@@ -139,6 +139,8 @@ v2.3 decisions:
 - Pre-existing lint errors (3) and test failures (10) documented but not fixed in 47-03 -- not introduced by cleanup plans
 - CLAUDE.md v2.2 Design Principles merged into Agent-First Decision Checklist -- removed version framing, kept substance
 - Historical context (milestones, evolution) delegated to .planning/ directory rather than preserving abbreviated versions in CLAUDE.md
+- tokenBudget narrowed via && truthiness check instead of non-null assertion -- satisfies Biome noNonNullAssertion lint rule
+- Sub-agent definition validation at conversation start (step 1b), before event log init -- fail fast on misconfigured agent definitions without side effects
 
 ### Pending Todos
 
@@ -159,10 +161,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-03T23:48:41Z
-Stopped at: Completed 47.1-01-PLAN.md (SpawnAgentDeps + createSpawnAgentTool)
+Last session: 2026-02-03T23:56:00Z
+Stopped at: Completed 47.1-02-PLAN.md (worker-loop spawn wiring)
 Resume file: None
-Next action: Execute 47.1-02-PLAN.md (wire spawn-agent into tool-factories + worker-loop)
+Next action: Phase 47.1 complete -- all plans executed
 
 ---
-*Updated: 2026-02-03 -- Completed 47.1-01 (SpawnAgentDeps + createSpawnAgentTool)*
+*Updated: 2026-02-03 -- Completed 47.1-02 (worker-loop spawn wiring, phase complete)*
