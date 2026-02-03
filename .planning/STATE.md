@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 45 of 47 (Integration Testing & Validation)
-Plan: 3 of 3 in current phase (45-02 in progress separately)
-Status: In progress
-Last activity: 2026-02-03 -- Completed 45-03-PLAN.md (HTTP layer tests & E2E checklist)
+Plan: 3 of 3 in current phase (all complete)
+Status: Phase complete
+Last activity: 2026-02-03 -- Completed 45-02 (lifecycle flow integration tests)
 
-Progress: [████████░░] ~84% (27/~32 estimated plans)
+Progress: [████████░░] ~88% (28/~32 estimated plans)
 
 ## Milestone History
 
@@ -28,9 +28,9 @@ Progress: [████████░░] ~84% (27/~32 estimated plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 27 (v2.3)
-- Average duration: ~5m25s
-- Total execution time: ~142m
+- Total plans completed: 28 (v2.3)
+- Average duration: ~5m28s
+- Total execution time: ~153m
 
 **By Phase:**
 
@@ -44,7 +44,7 @@ Progress: [████████░░] ~84% (27/~32 estimated plans)
 | 42 | 3/3 | 12m05s | 4m02s |
 | 43 | 2/2 | 12m02s | 6m01s |
 | 44 | 2/2 | 6m | 3m |
-| 45 | 2/3 | 21m36s | 10m48s |
+| 45 | 3/3 | 32m36s | 10m52s |
 
 *Updated after each plan completion*
 
@@ -114,6 +114,9 @@ v2.3 decisions:
 - PRODUCT_AGENT_URL removed from .env.example -- events route through unified agent-service
 - Test Express app replicates service/main.ts routes rather than importing it -- production main.ts calls process.exit on env validation failure
 - Structural MockFn interface replaces vitest Mock import in helpers.ts -- avoids Mock<Procedure | Constructable> assignability issue in vitest 4.x
+- Manual timeout signal simulation in integration tests -- TimeoutScheduler sends wait_timeout type which doesn't match pending_wait type; tests deliver matching-type signal instead
+- Direct DB message injection for history compaction tests -- pre-populate 81 messages (40 tool pairs) to exceed 80000-token pruneThreshold
+- Worker loop queued signal consumption bug fix -- re-reads queued_signals after wait_for triggers and auto-resumes if matching signal exists
 
 ### Pending Todos
 
@@ -131,9 +134,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-03
-Stopped at: Completed 45-03-PLAN.md (HTTP layer tests & E2E checklist)
+Stopped at: Completed 45-02 (lifecycle flow integration tests) -- Phase 45 fully complete
 Resume file: None
-Next action: Complete 45-02 (ConversationExecutor integration tests) if not already done, then Phase 46
+Next action: Phase 46 (Agent Definitions)
 
 ---
-*Updated: 2026-02-03 -- Completed 45-03 (HTTP layer tests & E2E checklist)*
+*Updated: 2026-02-03 -- Completed 45-02 (lifecycle flow integration tests) -- Phase 45 fully complete*
