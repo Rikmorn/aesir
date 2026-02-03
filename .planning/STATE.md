@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 47.1 (Sub Agent Spawn - INSERTED)
-Plan: 0 of 0 in current phase (not yet planned)
-Status: Not started
-Last activity: 2026-02-03 -- Phase 47.1 inserted
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-03 -- Completed 47.1-01-PLAN.md
 
-Progress: [██████████] 97% (35/35 plans + Phase 47.1 pending)
+Progress: [██████████] 97% (36/37 plans)
 
 ## Milestone History
 
@@ -28,9 +28,9 @@ Progress: [██████████] 97% (35/35 plans + Phase 47.1 pending
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 35 (v2.3)
-- Average duration: ~5m24s
-- Total execution time: ~190m
+- Total plans completed: 36 (v2.3)
+- Average duration: ~5m26s
+- Total execution time: ~196m
 
 **By Phase:**
 
@@ -47,6 +47,7 @@ Progress: [██████████] 97% (35/35 plans + Phase 47.1 pending
 | 45 | 3/3 | 32m36s | 10m52s |
 | 46 | 2/2 | ~11m | ~5m30s |
 | 47 | 4/4 | 25m42s | 6m26s |
+| 47.1 | 1/2 | 5m38s | 5m38s |
 
 *Updated after each plan completion*
 
@@ -74,7 +75,10 @@ v2.3 decisions:
 - AgentRegistry verifies YAML id matches directory name -- prevents mismatched definitions
 - AgentRegistry version mismatch returns cached definition with warning -- file-based registry only stores latest version
 - MCP adapter uses create-all-then-find pattern -- preserves v2.2 batch factory compatibility without modifying existing tool files
-- spawn_agent placeholder does NOT use createSpawnAgentTool -- Phase 40 replaces with ConversationExecutor-backed implementation
+- spawn_agent placeholder does NOT use createSpawnAgentTool -- Phase 40 replaces with ConversationExecutor-backed implementation (replaced in 47.1-01)
+- SpawnAgentDeps travels inside ToolContext.spawnDeps, not as a separate ToolFactory parameter -- preserves ToolFactory type signature
+- Sub-agent ToolContext omits spawnDeps unless sub-agent has coordination:spawn_agent AND depth allows -- prevents unintended recursive spawning
+- abortSignal conditionally spread into runAgentLoop to satisfy exactOptionalPropertyTypes -- avoids passing undefined for optional fields
 - structuredClone for deep-cloning messages in history manager -- correctness over performance
 - Tool tier classification by name prefix rather than configurable map -- simpler, sufficient for v2.3
 - Summary wrapped in <summary></summary> tags for detection -- simple regex parsing, unambiguous in message content
@@ -155,10 +159,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-03
-Stopped at: Completed 47-04-PLAN.md (CLAUDE.md + README.md rewrite)
+Last session: 2026-02-03T23:48:41Z
+Stopped at: Completed 47.1-01-PLAN.md (SpawnAgentDeps + createSpawnAgentTool)
 Resume file: None
-Next action: Plan Phase 47.1 (Sub Agent Spawn)
+Next action: Execute 47.1-02-PLAN.md (wire spawn-agent into tool-factories + worker-loop)
 
 ---
-*Updated: 2026-02-03 -- Phase 47.1 inserted (Sub Agent Spawn)*
+*Updated: 2026-02-03 -- Completed 47.1-01 (SpawnAgentDeps + createSpawnAgentTool)*
