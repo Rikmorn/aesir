@@ -6,9 +6,10 @@ Agentic development platform that automates software workflows - from feature re
 
 - **Product Agent**: Gathers requirements through Slack conversations, creates Linear tasks
 - **Dev Agent**: Picks up tasks, writes code in Docker sandboxes, runs tests, creates PRs
-- **Human-in-the-Loop**: Temporal-orchestrated approval gates before execution and PR merge
+- **Human-in-the-Loop**: Conversation-based approval gates via `wait_for` tool -- agents pause and resume when humans respond
 - **MCP Integration Layer**: Agents communicate with services via Model Context Protocol (HTTP)
-- **Observability**: Structured logging, correlation IDs, execution tracking
+- **Declarative Agent Definitions**: Agents defined in YAML + prompt.md, not TypeScript
+- **Observability**: Structured logging, correlation IDs, execution tracking, event log
 
 ## Prerequisites
 
@@ -52,15 +53,15 @@ Edit `.env` with your credentials. At minimum you need:
 | `GITHUB_REPO_URL` | Full git clone URL (e.g., `https://github.com/org/repo.git`) |
 | `DEV_AGENT_SLACK_CHANNEL` | Slack channel ID for dev-agent notifications |
 
-See `.env.example` for the complete list with documentation.
+Database credentials default to `aesir:aesir` for local development. See `.env.example` for the complete list with documentation.
 
 ### 3. Start Infrastructure
 
 ```bash
-docker compose up -d postgresql temporal temporal-ui
+docker compose up -d postgresql
 ```
 
-Wait for Temporal to initialize, then run database migrations:
+Wait for PostgreSQL to initialize, then run database migrations:
 
 ```bash
 pnpm db:migrate
@@ -77,7 +78,7 @@ pnpm --filter @aesir/integration-slack seed:permissions
 ### 5. Start All Services
 
 ```bash
-# Start all services (integrations + agents)
+# Start all services (integrations + agent-service)
 docker compose up -d
 
 # Or with hot reload on source changes
@@ -90,56 +91,62 @@ docker compose watch
 |---------|-----|---------|
 | Nginx Proxy | http://localhost | Unified entry point |
 | PostgreSQL | localhost:5432 | Database |
-| Temporal gRPC | localhost:7233 | Workflow orchestration |
-| Temporal UI | http://localhost:8080 | Workflow monitoring |
 | Linear Integration | http://localhost:3001 | Linear webhooks, OAuth, MCP |
 | GitHub Integration | http://localhost:3002 | GitHub webhooks, OAuth, MCP |
 | Slack Integration | http://localhost:3003 | Slack events, OAuth, MCP |
-| Dev Agent | http://localhost:3004 | Dev agent HTTP API |
+| Agent Service | http://localhost:3004 | Unified agent service (events, conversations) |
 
 ## Architecture
 
 ```
-                    ┌─────────────┐
-                    │   Slack     │
-                    │   User      │
-                    └──────┬──────┘
-                           │
-┌──────────────────────────┼──────────────────────────┐
-│                     Nginx Proxy (:80)                │
-│      /linear/*    /github/*    /slack/*    /agent/*  │
-└────────┬────────────┬───────────┬───────────┬───────┘
-         │            │           │           │
-    ┌────▼────┐  ┌────▼────┐ ┌───▼────┐ ┌────▼────────┐
-    │ Linear  │  │ GitHub  │ │ Slack  │ │ Dev Agent   │
-    │ :3001   │  │ :3002   │ │ :3003  │ │ :3004       │
-    │         │  │         │ │        │ │             │
-    │ MCP     │  │ MCP     │ │ MCP    │ │ LangGraph   │
-    │ OAuth   │  │ OAuth   │ │ OAuth  │ │ Temporal    │
-    │ Webhooks│  │ Webhooks│ │ Events │ │ Sandbox     │
-    └────┬────┘  └────┬────┘ └───┬────┘ └──────┬──────┘
-         │            │          │              │
-         └────────────┼──────────┘     ┌────────┼────────┐
-                      │                │        │        │
-               ┌──────▼──────┐   ┌─────▼──┐ ┌──▼─────┐ │
-               │ PostgreSQL  │   │Docker  │ │Temporal│ │
-               │ :5432       │   │Sandbox │ │:7233   │ │
-               └─────────────┘   └────────┘ └────────┘ │
-                                                        │
-                                              ┌─────────▼─────────┐
-                                              │ Product Agent     │
-                                              │ (Slack → Linear)  │
-                                              └───────────────────┘
+                    +-------------+
+                    |   Slack     |
+                    |   User      |
+                    +------+------+
+                           |
++------------------------------------------+
+|              Nginx Proxy (:80)           |
+|   /linear/*  /github/*  /slack/*  /agent/*|
++----+----------+----------+--------+------+
+     |          |          |        |
++----v----+ +---v----+ +--v---+ +--v-----------+
+| Linear  | | GitHub | | Slack| | Agent Service|
+| :3001   | | :3002  | | :3003| | :3004        |
+|         | |        | |      | |              |
+| MCP     | | MCP    | | MCP  | | Executor     |
+| OAuth   | | OAuth  | | OAuth| | EventRouter  |
+| Webhooks| | Webhooks| |Events| | WorkerLoop   |
++----+----+ +---+----+ +--+---+ +------+-------+
+     |          |          |            |
+     +----------+----------+     +------+------+
+                |                |             |
+         +------v------+  +-----v----+  +-----v------+
+         | PostgreSQL  |  | Docker   |  | pg-boss    |
+         | :5432       |  | Sandbox  |  | (timeouts) |
+         +-------------+  +----------+  +------------+
 ```
+
+### How It Works
+
+The **Agent Service** is a unified service replacing separate per-agent services. It runs a ConversationExecutor backed by PostgreSQL:
+
+1. **Events arrive** via `POST /events` from integration webhooks
+2. **EventRouter** matches events to agent triggers defined in YAML
+3. **ConversationExecutor** creates conversations (status: `queued`)
+4. **WorkerLoop** claims conversations using `FOR UPDATE SKIP LOCKED`
+5. **Agent loop** runs: LLM reasoning + tool calls in a loop
+6. Agents can **pause** via `wait_for` tool (e.g., waiting for human approval)
+7. **Signals** (approval, PR review) resume paused conversations
+8. Conversations complete when the agent calls `end_turn` without pending tool calls
 
 ### 3-Layer Architecture
 
 ```
-Agents (dev-agent, product-agent)
-   ↓ communicates via MCP (HTTP)
+Agents (definitions/ + framework/)
+   | communicates via MCP (HTTP)
 Integrations (Linear, GitHub, Slack)
-   ↓ imports from
-Platform (config, logging, state, temporal)
+   | imports from
+Platform (config, logging, database, sandbox)
 ```
 
 - **Agents** communicate with integrations exclusively via HTTP/MCP - no direct SDK imports
@@ -150,59 +157,27 @@ Platform (config, logging, state, temporal)
 
 ```
 packages/
-├── agents/                  # @aesir/agents
-│   └── src/
-│       ├── dev-agent/       # Dev Agent (code generation, PRs)
-│       │   ├── workflow/    # HITL LangGraph workflow
-│       │   │   └── nodes/   # Phase nodes (research, plan, execute, verify, etc.)
-│       │   ├── api/         # HTTP handlers
-│       │   ├── classification/ # Approval intent classifier
-│       │   └── utils/       # Package manager detection
-│       ├── product-agent/   # Product Agent (requirements → tasks)
-│       │   ├── workflow/    # Conversation LangGraph workflow
-│       │   │   └── nodes/   # Phase nodes (analyze, clarify, create)
-│       │   ├── api/         # HTTP handlers
-│       │   └── slack/       # Slack event handlers
-│       └── shared/          # Shared agent infrastructure
-│           ├── mcp/         # MCP client for integration calls
-│           ├── temporal/    # Workflows, activities, signals
-│           └── tracing/     # LangGraph execution tracing
-├── integrations/
-│   ├── linear/              # @aesir/integration-linear (:3001)
-│   │   └── src/
-│   │       ├── api/         # HTTP routes (webhooks, OAuth)
-│   │       ├── client/      # Linear SDK wrapper
-│   │       ├── db/          # linear.* schema
-│   │       ├── mcp/         # MCP server and tools
-│   │       └── oauth/       # Token management
-│   ├── github/              # @aesir/integration-github (:3002)
-│   │   └── src/
-│   │       ├── api/         # HTTP routes (webhooks, OAuth)
-│   │       ├── client/      # Octokit client factory
-│   │       ├── db/          # github.* schema
-│   │       ├── mcp/         # MCP server and tools
-│   │       └── operations/  # Branch, commit, PR operations
-│   └── slack/               # @aesir/integration-slack (:3003)
-│       └── src/
-│           ├── api/         # HTTP routes (events, OAuth)
-│           ├── client/      # Bolt app factory
-│           ├── db/          # slack.* schema
-│           ├── mcp/         # MCP server and tools
-│           └── messages/    # Block Kit builders
-├── platform/                # @aesir/platform
-│   └── src/
-│       ├── config/          # Environment configuration
-│       ├── db/              # Database connection, migrations
-│       ├── logging/         # Pino-based structured logging
-│       └── sandbox/         # Docker sandbox for code execution
-├── observability/           # @aesir/observability
-│   └── src/
-│       ├── db/              # observability.* schema
-│       └── services/        # ExecutionTracker, IdempotencyChecker
-└── common/                  # @aesir/common
-    └── src/
-        ├── errors/          # Error classes
-        └── types/           # Shared domain types
++-- agents/                  # @aesir/agents - Unified agent service
+|   +-- definitions/         # Agent YAML + prompt.md files
+|   |   +-- dev-agent/       # Development workflow agent
+|   |   +-- product-agent/   # Product conversation agent
+|   |   +-- coder/           # Code generation sub-agent
+|   |   +-- researcher/      # Codebase research sub-agent
+|   |   +-- tester/          # Test execution sub-agent
+|   +-- src/
+|       +-- adapters/        # Event normalization (linear, github, slack)
+|       +-- framework/       # Core: ConversationExecutor, WorkerLoop, EventLog, etc.
+|       +-- router/          # Event routing pipeline
+|       +-- service/         # Unified HTTP entry point (main.ts)
+|       +-- shared/          # MCP client, tools, config, db, env
++-- integrations/
+|   +-- linear/              # @aesir/integration-linear (:3001)
+|   +-- github/              # @aesir/integration-github (:3002)
+|   +-- slack/               # @aesir/integration-slack (:3003)
++-- platform/                # @aesir/platform (config, logging, db, sandbox)
++-- observability/           # @aesir/observability (execution tracking)
++-- types/                   # @aesir/types (shared type definitions)
++-- test-utils/              # @aesir/test-utils (vitest mocks, factories)
 ```
 
 ## Available Scripts
@@ -225,13 +200,12 @@ packages/
 
 | Script | Description |
 |--------|-------------|
-| `pnpm docker:build` | Build Docker images |
-| `pnpm docker:up` | Start all services |
-| `pnpm docker:down` | Stop all services |
-| `pnpm docker:logs` | Follow all logs |
-| `pnpm docker:dev-agent` | Start and follow Dev Agent logs |
-| `pnpm docker:product-agent` | Start and follow Product Agent logs |
-| `pnpm infra:up` | Start PostgreSQL + Temporal only |
+| `docker compose up` | Start all services |
+| `docker compose up -d` | Start all services in background |
+| `docker compose watch` | Hot reload on source changes |
+| `docker compose down` | Stop all services |
+| `docker compose logs -f` | Follow all logs |
+| `docker compose up agent-service` | Start agent service only |
 
 ### Database
 
@@ -256,13 +230,12 @@ See `.env.example` for the complete list of variables, organized by section:
 
 - **General**: `NODE_ENV`, `LOG_LEVEL`
 - **Anthropic**: API key for LLM reasoning
-- **Database**: PostgreSQL connection, credential encryption key
-- **Temporal**: Server address and namespace
+- **Database**: PostgreSQL connection (`aesir:aesir@localhost:5432/aesir`), credential encryption key
 - **Slack**: Bot token, app token, signing secret, OAuth credentials, connection mode
 - **Linear**: Access token, team ID, webhook secret, OAuth credentials
 - **GitHub**: Token, owner, repo name, clone URL, webhook secret, OAuth credentials
 - **OAuth**: Callback URL for integration OAuth flows
-- **Agent Config**: Dev-agent Slack channel, product-agent allowed channels, event dispatch URL
+- **Agent Config**: Dev-agent Slack channel, product-agent allowed channels
 - **Observability**: LangSmith tracing (optional)
 - **Cloudflare**: Tunnel token for webhook exposure (optional)
 
@@ -407,7 +380,7 @@ curl -X POST https://aesir-dev.your-domain.com/linear/webhook
 1. **Task Assignment**: Delegate a Linear issue to the Dev Agent
 2. **Research**: Agent analyzes the codebase in a Docker sandbox
 3. **Planning**: Agent creates an execution plan
-4. **Approval**: Human reviews plan via Temporal signal (Slack notification)
+4. **Approval**: Human reviews plan via Slack (agent pauses with `wait_for`)
 5. **Execution**: Agent writes code, runs tests in sandbox
 6. **Verification**: Full test suite validation
 7. **PR Creation**: Agent creates branch and pull request
@@ -434,11 +407,11 @@ Run database migrations:
 pnpm db:migrate
 ```
 
-### "Failed to connect to Temporal server"
+### "Failed to connect to database"
 
-- Ensure infrastructure is running: `docker compose up -d postgresql temporal temporal-ui`
-- Wait for Temporal to initialize
-- Check Temporal UI at http://localhost:8080
+- Ensure PostgreSQL is running: `docker compose up -d postgresql`
+- Check DATABASE_URL in `.env` uses `aesir:aesir@localhost:5432/aesir`
+- Verify the container is healthy: `docker compose ps postgresql`
 
 ### "Failed to connect to Slack"
 
@@ -478,11 +451,12 @@ pnpm test:watch
 
 ### Database Schemas
 
-Each integration has its own PostgreSQL schema:
+Each service has its own PostgreSQL schema:
 
 | Schema | Package | Description |
 |--------|---------|-------------|
 | `platform` | @aesir/platform | Workspaces, configurations |
+| `agents` | @aesir/agents | Conversations, agent_events, agent_sessions |
 | `linear` | @aesir/integration-linear | Linear credentials, webhooks |
 | `github` | @aesir/integration-github | GitHub credentials, webhooks |
 | `slack` | @aesir/integration-slack | Slack credentials, events |
