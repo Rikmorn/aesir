@@ -130,7 +130,7 @@ export async function routeEvent(
 
         return {
           received: true,
-          action: "signaled",
+          action: signalResult.action,
           conversationId: routeDecision.conversationId,
         };
       }

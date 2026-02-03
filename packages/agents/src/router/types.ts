@@ -190,7 +190,16 @@ export interface RouteEventResult {
   /** Always true -- event was received */
   received: true;
   /** What happened */
-  action: "started" | "signaled" | "classifying" | "ignored" | "error";
+  action:
+    | "started"
+    | "signaled"
+    | "resumed"
+    | "queued"
+    | "rejected"
+    | "deduplicated"
+    | "classifying"
+    | "ignored"
+    | "error";
   /** Conversation ID when a conversation was started or signaled */
   conversationId?: string;
 }

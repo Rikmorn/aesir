@@ -452,7 +452,7 @@ describe("routeEvent (v2.3)", () => {
 
     expect(result).toEqual({
       received: true,
-      action: "signaled",
+      action: "resumed",
       conversationId: "dev-agent-ABC-123",
     });
 
@@ -621,7 +621,7 @@ describe("routeEvent (v2.3)", () => {
 
     expect(result).toEqual({
       received: true,
-      action: "signaled",
+      action: "deduplicated",
       conversationId: "dev-agent-ABC-123",
     });
 
