@@ -66,8 +66,8 @@ Requirements for v2.3 milestone. Each maps to roadmap phases starting at Phase 3
 - [x] **SIG-02**: Three adapters: Slack, GitHub, Linear (transform raw webhooks to approval, pr_merged, etc.)
 - [x] **SIG-03**: EventRouter loads start rules from registered agent definitions
 - [x] **SIG-04**: Correlation-based signal routing resolves conversation ID from correlation key
-- [ ] **SIG-05**: Fast-path routing preserved for unambiguous events (deterministic, no LLM needed)
-- [ ] **SIG-06**: Smart router adapted from Temporal workflowClient to ConversationExecutor
+- [x] **SIG-05**: Fast-path routing preserved for unambiguous events (deterministic, no LLM needed)
+- [x] **SIG-06**: Smart router adapted from Temporal workflowClient to ConversationExecutor
 - [ ] **SIG-07**: Signal deduplication — duplicate signals (webhook retries) are no-ops, tracked by source + delivery ID on conversation
 
 ### Service Consolidation
@@ -177,8 +177,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SIG-02 | Phase 42 | Complete |
 | SIG-03 | Phase 42 | Complete |
 | SIG-04 | Phase 42 | Complete |
-| SIG-05 | Phase 43 | Pending |
-| SIG-06 | Phase 43 | Pending |
+| SIG-05 | Phase 43 | Complete |
+| SIG-06 | Phase 43 | Complete |
 | SIG-07 | Phase 40 | Pending |
 | SVC-01 | Phase 44 | Pending |
 | SVC-02 | Phase 44 | Pending |
@@ -201,4 +201,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-01*
-*Last updated: 2026-02-02 -- Phase 42 complete (SIG-01 through SIG-04)*
+*Last updated: 2026-02-03 -- Phase 43 complete (SIG-05, SIG-06)*
