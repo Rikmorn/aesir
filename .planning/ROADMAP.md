@@ -23,7 +23,7 @@ v2.3 replaces Temporal workflow orchestration, per-agent services, and fragmente
 - [x] **Phase 43: Smart Router Adaptation** - Adapt existing smart router from Temporal client to ConversationExecutor
 - [x] **Phase 44: Single Service Consolidation** - One HTTP service replacing dev-agent, product-agent, and router services
 - [x] **Phase 45: Integration Testing + Validation** - Full lifecycle testing of start, pause, signal, resume, complete flows
-- [ ] **Phase 46: Temporal Migration + Cutover** - Feature flag cutover with Temporal drain period
+- [ ] **Phase 46: Pre-Cleanup Verification & Dependency Audit** - Verify cutover completeness, produce ordered deletion manifest for Phase 47
 - [ ] **Phase 47: Cleanup + Documentation** - Remove Temporal code, old persistence stores, and update documentation
 
 ## Phase Details
@@ -175,21 +175,23 @@ Plans:
 - [x] 45-02-PLAN.md -- Framework layer integration tests (8 lifecycle flows with real PostgreSQL)
 - [x] 45-03-PLAN.md -- HTTP layer integration tests (supertest) + manual E2E validation checklist
 
-### Phase 46: Temporal Migration + Cutover
-**Goal**: Feature flag routes new events to ConversationExecutor while existing Temporal workflows drain naturally over a 7-day window
+### Phase 46: Pre-Cleanup Verification & Dependency Audit
+**Goal**: Verify v2.3 cutover completeness and produce an ordered deletion manifest that Phase 47 executes -- dependency audit, dead code boundary mapping, Docker Compose validation, database migration audit, package.json audit
 **Depends on**: Phase 45 (validation passing)
-**Requirements**: MIG-01, MIG-02
-**Risk**: MEDIUM
+**Requirements**: MIG-01, MIG-02 (satisfied by Phase 44 cutover; Phase 46 verifies completeness)
+**Risk**: LOW
 **Research**: standard-pattern
 **Success Criteria** (what must be TRUE):
-  1. USE_V23_EXECUTOR feature flag routes all new events to ConversationExecutor when enabled
-  2. Existing Temporal workflows continue to receive signals and complete naturally during the drain period (up to 7 days)
-  3. After drain period, zero Temporal workflows remain running
+  1. Dependency audit confirms zero @temporalio/* imports in live code paths (only in dead code awaiting Phase 47 deletion)
+  2. Deletion manifest (46-DELETION-MANIFEST.md) produced with ordered file list, reference refactoring steps, tables to drop, and dependencies to remove
+  3. Docker Compose validation passes -- automated script boots services, verifies health, processes test event, tears down cleanly
+  4. Database audit confirms old tables (tasks, context_snapshots, execution_traces) have no active writers in v2.3 code
+  5. pnpm typecheck and pnpm lint pass with zero errors
 **Plans**: TBD
 
 ### Phase 47: Cleanup + Documentation
 **Goal**: Remove all Temporal code, services, Docker containers, database tables, and dependencies -- update documentation to reflect v2.3 architecture
-**Depends on**: Phase 46 (drain complete)
+**Depends on**: Phase 46 (verification + deletion manifest)
 **Requirements**: EVT-07, SVC-06, MIG-03, MIG-04, MIG-05, MIG-06, MIG-07
 **Risk**: LOW
 **Research**: standard-pattern
@@ -218,7 +220,7 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 | 43. Smart Router Adaptation | 2/2 | Complete | 2026-02-03 |
 | 44. Single Service Consolidation | 2/2 | Complete | 2026-02-03 |
 | 45. Integration Testing + Validation | 3/3 | Complete | 2026-02-03 |
-| 46. Temporal Migration + Cutover | 0/TBD | Not started | - |
+| 46. Pre-Cleanup Verification & Dependency Audit | 0/TBD | Not started | - |
 | 47. Cleanup + Documentation | 0/TBD | Not started | - |
 
 ---
