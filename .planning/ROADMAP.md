@@ -25,7 +25,7 @@ v2.3 replaces Temporal workflow orchestration, per-agent services, and fragmente
 - [x] **Phase 45: Integration Testing + Validation** - Full lifecycle testing of start, pause, signal, resume, complete flows
 - [x] **Phase 46: Pre-Cleanup Verification & Dependency Audit** - Verify cutover completeness, produce ordered deletion manifest for Phase 47
 - [x] **Phase 47: Cleanup + Documentation** - Remove Temporal code, old persistence stores, and update documentation
-- [ ] **Phase 47.1: Sub Agent Spawn** (INSERTED) - [To be planned]
+- [ ] **Phase 47.1: Sub Agent Spawn** (INSERTED) - Wire spawn_agent tool to nested in-process agent loops with shared token budgets
 
 ## Phase Details
 
@@ -213,15 +213,21 @@ Plans:
 - [x] 47-04-PLAN.md -- Documentation: Full CLAUDE.md rewrite + README.md update for v2.3
 
 ### Phase 47.1: Sub Agent Spawn (INSERTED)
-**Goal**: [Urgent work - to be planned]
+**Goal**: Wire the placeholder spawn_agent tool to the ConversationExecutor so the dev-agent can delegate work to sub-agents (researcher, coder, tester) that run as nested in-process agent loops with shared token budgets and sandbox access
 **Depends on**: Phase 47
-**Plans**: 0 plans
-
+**Risk**: LOW
+**Research**: complete
+**Success Criteria** (what must be TRUE):
+  1. createSpawnAgentTool() factory resolves sub-agent type via parent's subAgents mapping, runs runAgentLoop() with shared token budget, and returns output as tool result
+  2. Worker loop populates SpawnAgentDeps in ToolContext when agent has coordination:spawn_agent, creates shared TokenBudget from definition.tokenBudget
+  3. Sub-agent events (agent.started, agent.completed) recorded in parent's event log with parent_instance_id
+  4. Spawn depth enforced (maxSpawnDepth: 3) to prevent runaway recursion
+  5. Sub-agent definitions validated at conversation start (fail fast, not at spawn time)
+  6. All existing tests pass, new unit tests cover tool factory, worker loop wiring, and edge cases
+**Plans**: 2 plans
 Plans:
-- [ ] TBD (run /gsd:plan-phase 47.1 to break down)
-
-**Details:**
-[To be added during planning]
+- [ ] 47.1-01-PLAN.md -- SpawnAgentDeps types, createSpawnAgentTool() factory, unit tests, barrel export
+- [ ] 47.1-02-PLAN.md -- Worker loop wiring (spawnDeps, token budget, definition validation), tool-factories.ts replacement, test updates
 
 ## Progress
 
@@ -242,8 +248,8 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 | 45. Integration Testing + Validation | 3/3 | Complete | 2026-02-03 |
 | 46. Pre-Cleanup Verification & Dependency Audit | 2/2 | Complete | 2026-02-03 |
 | 47. Cleanup + Documentation | 4/4 | Complete | 2026-02-03 |
-| 47.1. Sub Agent Spawn (INSERTED) | 0/0 | Not Started | - |
+| 47.1. Sub Agent Spawn (INSERTED) | 0/2 | Not Started | - |
 
 ---
 *Roadmap created: 2026-02-01*
-*Last updated: 2026-02-03 -- Phase 47.1 inserted (Sub Agent Spawn)*
+*Last updated: 2026-02-03 -- Phase 47.1 planned (2 plans in 2 waves)*
