@@ -10,6 +10,7 @@ import type { DevContainerManager, PinoLogger } from "@aesir/platform";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { z } from "zod";
 import type { IncomingEvent } from "../adapters/types.js";
+import type { TokenBudget } from "../shared/agent-loop/token-budget.js";
 import type { ToolDefinition } from "../shared/agent-loop/types.js";
 import type * as agentsSchemaModule from "../shared/db/schema.js";
 import type {
@@ -316,6 +317,39 @@ export interface ToolContext {
   taskId?: string | undefined;
   /** Logger instance */
   logger: PinoLogger;
+  /** Spawn dependencies for sub-agent execution (populated by worker loop when agent has coordination:spawn_agent) */
+  spawnDeps?: SpawnAgentDeps | undefined;
+}
+
+// ─── Spawn Agent Dependencies ───────────────────────────────────────────────
+
+/**
+ * Dependencies for sub-agent spawning via the spawn_agent tool.
+ *
+ * Populated by the worker loop when the agent definition includes
+ * `coordination:spawn_agent` in its tool list. Carried inside ToolContext
+ * so tool factories have access at resolve time without changing the
+ * ToolFactory signature.
+ */
+export interface SpawnAgentDeps {
+  /** Registry for loading sub-agent definitions */
+  agentRegistry: AgentRegistry;
+  /** Registry for resolving sub-agent tool references */
+  toolRegistry: ToolRegistry;
+  /** Shared mutable token budget (passed by reference to sub-agents) */
+  tokenBudget: TokenBudget;
+  /** Event log for recording sub-agent lifecycle events */
+  eventLog: EventLog;
+  /** Parent agent's definition (contains subAgents mapping) */
+  parentDefinition: AgentDefinition;
+  /** Parent agent's instance ID (for parent_instance_id in events) */
+  parentInstanceId: string;
+  /** Abort signal propagated from parent (graceful shutdown) */
+  abortSignal?: AbortSignal;
+  /** Current spawn depth (0 = top-level agent) */
+  currentDepth: number;
+  /** Maximum allowed spawn depth (default: 3) */
+  maxSpawnDepth: number;
 }
 
 /**
