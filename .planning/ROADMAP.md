@@ -187,7 +187,10 @@ Plans:
   3. Docker Compose validation passes -- automated script boots services, verifies health, processes test event, tears down cleanly
   4. Database audit confirms old tables (tasks, context_snapshots, execution_traces) have no active writers in v2.3 code
   5. pnpm typecheck and pnpm lint pass with zero errors
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 46-01-PLAN.md -- Five-area codebase audit + three-phase deletion manifest
+- [ ] 46-02-PLAN.md -- Docker Compose validation script + manual QA checklist
 
 ### Phase 47: Cleanup + Documentation
 **Goal**: Remove all Temporal code, services, Docker containers, database tables, and dependencies -- update documentation to reflect v2.3 architecture
@@ -220,9 +223,9 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 | 43. Smart Router Adaptation | 2/2 | Complete | 2026-02-03 |
 | 44. Single Service Consolidation | 2/2 | Complete | 2026-02-03 |
 | 45. Integration Testing + Validation | 3/3 | Complete | 2026-02-03 |
-| 46. Pre-Cleanup Verification & Dependency Audit | 0/TBD | Not started | - |
+| 46. Pre-Cleanup Verification & Dependency Audit | 0/2 | Not started | - |
 | 47. Cleanup + Documentation | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-01*
-*Last updated: 2026-02-03 -- Phase 45 complete (3 plans, 2 waves)*
+*Last updated: 2026-02-03 -- Phase 46 planned (2 plans, 1 wave)*
