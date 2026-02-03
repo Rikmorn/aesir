@@ -14,7 +14,7 @@
 import type { PinoLogger } from "@aesir/platform";
 import type { NormalizedEvent } from "@aesir/types";
 import type { Client } from "@temporalio/client";
-import type { ConversationExecutor } from "../framework/types.js";
+import type { ConversationExecutor, EventRouter } from "../framework/types.js";
 
 // ---------------------------------------------------------------------------
 // Router Dependencies
@@ -155,4 +155,42 @@ export interface EventRouterDeps {
   alertsChannel?: string | undefined;
   /** Linear team ID for product-agent starts (optional) */
   linearTeamId?: string | undefined;
+}
+
+// ---------------------------------------------------------------------------
+// v2.3 Route Event Dependencies & Result
+// ---------------------------------------------------------------------------
+
+/**
+ * Dependencies for the v2.3 adapted routeEvent() function.
+ * RouteEventDeps is a superset of EventRouterDeps: includes the
+ * EventRouter itself (pre-initialized with loadStartRules() called).
+ *
+ * TypeScript structural typing means RouteEventDeps satisfies
+ * EventRouterDeps -- can pass directly to routeViaAgentLoopV2().
+ */
+export interface RouteEventDeps {
+  /** ConversationExecutor for start/signal operations */
+  executor: ConversationExecutor;
+  /** EventRouter for routing decisions (must have loadStartRules() called) */
+  eventRouter: EventRouter;
+  /** Pino logger instance */
+  logger: PinoLogger;
+  /** Slack channel ID for routing failure alerts (optional) */
+  alertsChannel?: string | undefined;
+  /** Linear team ID for product-agent starts (optional) */
+  linearTeamId?: string | undefined;
+}
+
+/**
+ * Result returned by routeEvent(). Used as HTTP response body.
+ * Unified 200 for all paths -- webhook callers just need ack.
+ */
+export interface RouteEventResult {
+  /** Always true -- event was received */
+  received: true;
+  /** What happened */
+  action: "started" | "signaled" | "classifying" | "ignored" | "error";
+  /** Conversation ID when a conversation was started or signaled */
+  conversationId?: string;
 }

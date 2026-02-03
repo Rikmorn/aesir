@@ -41,7 +41,7 @@ import { createPinoLogger } from "@aesir/platform";
 import { NormalizedEventSchema } from "@aesir/types";
 import { Client, Connection } from "@temporalio/client";
 import { matchFastPath } from "./fast-path.js";
-import { routeEvent } from "./router.js";
+import { routeEventLegacy } from "./router.js";
 import type { RouterDeps } from "./types.js";
 
 const logger = createPinoLogger({ component: "agents:router:main" });
@@ -178,7 +178,7 @@ async function bootstrap(): Promise<void> {
 
           if (fastAction) {
             // Fast path: process synchronously and return result
-            const result = await routeEvent(event, routerDeps);
+            const result = await routeEventLegacy(event, routerDeps);
             res.writeHead(200, { "Content-Type": "application/json" });
             res.end(JSON.stringify(result));
           } else {
@@ -193,7 +193,7 @@ async function bootstrap(): Promise<void> {
             );
 
             // Process in background (never throw from background task)
-            routeEvent(event, routerDeps).catch((err) => {
+            routeEventLegacy(event, routerDeps).catch((err) => {
               requestLogger.error(
                 { err, eventId: event.id },
                 "Background routing failed",

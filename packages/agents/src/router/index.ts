@@ -6,12 +6,13 @@
  * all integration events.
  *
  * Public API:
- * - routeEvent: Core routing function (fast -> slow fallback)
+ * - routeEvent: v2.3 pipeline (adapter -> EventRouter -> ConversationExecutor)
+ * - routeEventLegacy: Temporal-based routing (preserved for Phase 47 cleanup)
  * - matchFastPath / executeFastPath: Deterministic rule matching
  * - DETERMINISTIC_RULES: All fast-path rules
  * - routeViaAgentLoop / formatEventForLLM: LLM-based slow path
  * - ROUTER_SYSTEM_PROMPT: LLM system prompt for classification
- * - Types: RouterDeps, RouteResult, FastPathAction, RoutingRule
+ * - Types: RouterDeps, RouteResult, RouteEventDeps, RouteEventResult, FastPathAction, RoutingRule
  */
 
 export {
@@ -19,11 +20,14 @@ export {
   executeFastPath,
   matchFastPath,
 } from "./fast-path.js";
-export { routeEvent } from "./router.js";
+export { routeEvent, routeEventLegacy } from "./router.js";
 export { formatEventForLLM, routeViaAgentLoop } from "./slow-path.js";
 export { ROUTER_SYSTEM_PROMPT } from "./system-prompt.js";
 export type {
+  EventRouterDeps,
   FastPathAction,
+  RouteEventDeps,
+  RouteEventResult,
   RouteResult,
   RouterDeps,
   RoutingRule,

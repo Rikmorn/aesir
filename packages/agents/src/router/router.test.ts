@@ -1,8 +1,7 @@
 /**
- * Core Router Integration Tests
+ * Core Router Tests
  *
- * Tests for routeEvent: fast-path first, slow-path fallback,
- * ROUT-06 alert sending on failure, and error handling.
+ * Tests for routeEventLegacy (Temporal-based) and routeEvent (v2.3 pipeline).
  */
 
 import type { PinoLogger } from "@aesir/platform";
@@ -31,7 +30,7 @@ vi.mock("../shared/mcp/index.js", () => ({
 const { matchFastPath, executeFastPath } = await import("./fast-path.js");
 const { routeViaAgentLoop } = await import("./slow-path.js");
 const { callMcpTool } = await import("../shared/mcp/index.js");
-const { routeEvent } = await import("./router.js");
+const { routeEventLegacy } = await import("./router.js");
 
 // ---------------------------------------------------------------------------
 // Test Helpers
@@ -81,7 +80,7 @@ function createMockDeps(): RouterDeps {
 // routeEvent
 // ---------------------------------------------------------------------------
 
-describe("routeEvent", () => {
+describe("routeEventLegacy", () => {
   let deps: RouterDeps;
   const mockMatchFastPath = matchFastPath as ReturnType<typeof vi.fn>;
   const mockExecuteFastPath = executeFastPath as ReturnType<typeof vi.fn>;
@@ -112,7 +111,7 @@ describe("routeEvent", () => {
     mockExecuteFastPath.mockResolvedValue(routeResult);
 
     const event = createTestEvent();
-    const result = await routeEvent(event, deps);
+    const result = await routeEventLegacy(event, deps);
 
     expect(result.status).toBe("routed");
     expect(result.action).toBe("signal:planApproval");
@@ -132,7 +131,7 @@ describe("routeEvent", () => {
     });
 
     const event = createTestEvent();
-    await routeEvent(event, deps);
+    await routeEventLegacy(event, deps);
 
     expect(mockRouteViaAgentLoop).not.toHaveBeenCalled();
   });
@@ -147,7 +146,7 @@ describe("routeEvent", () => {
     });
 
     const event = createTestEvent();
-    const result = await routeEvent(event, deps);
+    const result = await routeEventLegacy(event, deps);
 
     expect(result.status).toBe("routed");
     expect(mockRouteViaAgentLoop).toHaveBeenCalledWith(event, deps);
@@ -166,7 +165,7 @@ describe("routeEvent", () => {
       action: "signal:planApproval",
     });
 
-    await routeEvent(event, deps);
+    await routeEventLegacy(event, deps);
 
     expect(mockMatchFastPath).toHaveBeenCalledWith(event);
     expect(mockRouteViaAgentLoop).toHaveBeenCalledWith(event, deps);
@@ -182,7 +181,7 @@ describe("routeEvent", () => {
     });
 
     const event = createTestEvent({ id: "evt_fail1" });
-    const result = await routeEvent(event, deps);
+    const result = await routeEventLegacy(event, deps);
 
     expect(result.status).toBe("failed");
     expect(mockCallMcpTool).toHaveBeenCalledWith(
@@ -209,7 +208,7 @@ describe("routeEvent", () => {
     mockExecuteFastPath.mockRejectedValue(new Error("Temporal unavailable"));
 
     const event = createTestEvent({ id: "evt_fail2" });
-    const result = await routeEvent(event, deps);
+    const result = await routeEventLegacy(event, deps);
 
     expect(result.status).toBe("failed");
     expect(result.error).toBe("Temporal unavailable");
@@ -234,7 +233,7 @@ describe("routeEvent", () => {
     mockCallMcpTool.mockRejectedValue(new Error("Slack API down"));
 
     const event = createTestEvent();
-    const result = await routeEvent(event, deps);
+    const result = await routeEventLegacy(event, deps);
 
     // Should still return failed, not throw
     expect(result.status).toBe("failed");
@@ -250,7 +249,7 @@ describe("routeEvent", () => {
     );
 
     const event = createTestEvent();
-    const result = await routeEvent(event, deps);
+    const result = await routeEventLegacy(event, deps);
 
     expect(result.status).toBe("failed");
     expect(result.error).toBe("Network connection lost");
@@ -267,7 +266,7 @@ describe("routeEvent", () => {
     });
 
     const event = createTestEvent();
-    const result = await routeEvent(event, deps);
+    const result = await routeEventLegacy(event, deps);
 
     expect(result.status).toBe("failed");
     // callMcpTool should not be called for alerting when no channel
@@ -284,7 +283,7 @@ describe("routeEvent", () => {
     });
 
     const event = createTestEvent();
-    await routeEvent(event, deps);
+    await routeEventLegacy(event, deps);
 
     expect(mockCallMcpTool).not.toHaveBeenCalled();
   });
