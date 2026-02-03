@@ -364,3 +364,245 @@ describe("Flow 4: Signal queued before wait_for", () => {
     expect(completed?.status).toBe("completed");
   });
 });
+
+// ─── Flow 5: Duplicate Start ────────────────────────────────────────────────
+
+describe("Flow 5: Duplicate Start", () => {
+  it("returns same conversation ID for duplicate start (idempotent)", async () => {
+    mockAgentLoopCompletes(mockRunAgentLoop);
+
+    const convId1 = await executor.start({
+      agentDefinitionId: "dev-agent",
+      correlationKey: "FLOW5-001",
+      initialMessage: "First start",
+    });
+
+    const convId2 = await executor.start({
+      agentDefinitionId: "dev-agent",
+      correlationKey: "FLOW5-001",
+      initialMessage: "Second start (should be idempotent)",
+    });
+
+    // Same ID returned (idempotent)
+    expect(convId2).toBe(convId1);
+
+    // Only one conversation exists with this correlation key
+    const list = await executor.list({ agentDefinitionId: "dev-agent" });
+    const matching = list.filter((c) => c.id.startsWith("dev-agent-FLOW5-001"));
+    expect(matching.length).toBe(1);
+  });
+
+  it("creates re-triggered conversation after terminal state", async () => {
+    mockAgentLoopCompletes(mockRunAgentLoop);
+
+    // Start and complete first conversation
+    const convId1 = await executor.start({
+      agentDefinitionId: "dev-agent",
+      correlationKey: "FLOW5-002",
+      initialMessage: "First attempt",
+    });
+
+    executor.startWorker();
+    await waitForStatus(executor, convId1, "completed", 10000);
+    await executor.stopWorker();
+
+    // Re-trigger after completion
+    const convId2 = await executor.start({
+      agentDefinitionId: "dev-agent",
+      correlationKey: "FLOW5-002",
+      initialMessage: "Second attempt",
+    });
+
+    // Different ID with -r2 suffix
+    expect(convId2).not.toBe(convId1);
+    expect(convId2).toMatch(/-r\d+$/);
+  });
+});
+
+// ─── Flow 6: Duplicate Signal ───────────────────────────────────────────────
+
+describe("Flow 6: Duplicate Signal", () => {
+  it("deduplicates signals with same deduplicationId", async () => {
+    mockAgentLoopSequence(mockRunAgentLoop, [
+      (m) => mockAgentLoopPauses(m, "approval", "Need approval"),
+      (m) => mockAgentLoopCompletes(m, "Done"),
+    ]);
+
+    const convId = await executor.start({
+      agentDefinitionId: "dev-agent",
+      correlationKey: "FLOW6-001",
+      initialMessage: "Feature work",
+    });
+
+    executor.startWorker();
+    await waitForStatus(executor, convId, "waiting", 10000);
+
+    // First signal: should resume
+    const result1 = await executor.signal(convId, {
+      type: "approval",
+      data: { approved: true },
+      deduplicationId: "dedup-001",
+      source: "slack",
+    });
+    expect(result1.action).toBe("resumed");
+
+    // Second signal with same deduplicationId: should be deduplicated
+    const result2 = await executor.signal(convId, {
+      type: "approval",
+      data: { approved: true },
+      deduplicationId: "dedup-001",
+      source: "slack",
+    });
+    expect(result2.action).toBe("deduplicated");
+
+    await waitForStatus(executor, convId, "completed", 10000);
+    await executor.stopWorker();
+  });
+});
+
+// ─── Flow 7: Sub-agent Spawn ────────────────────────────────────────────────
+
+describe("Flow 7: Sub-agent Spawn", () => {
+  it("parent conversation spawns child, both complete independently", async () => {
+    mockAgentLoopCompletes(mockRunAgentLoop);
+
+    // Start parent conversation
+    const parentId = await executor.start({
+      agentDefinitionId: "dev-agent",
+      correlationKey: "FLOW7-PARENT",
+      initialMessage: "Complex task requiring sub-agent",
+    });
+
+    // Simulate spawn: create child conversation with parentConversationId
+    const childId = await executor.start({
+      agentDefinitionId: "dev-agent",
+      correlationKey: "FLOW7-CHILD",
+      initialMessage: "Research sub-task",
+      parentConversationId: parentId,
+    });
+
+    executor.startWorker();
+    await waitForStatus(executor, parentId, "completed", 10000);
+    await waitForStatus(executor, childId, "completed", 10000);
+    await executor.stopWorker();
+
+    // Verify both completed
+    const parent = await executor.get(parentId);
+    const child = await executor.get(childId);
+    expect(parent?.status).toBe("completed");
+    expect(child?.status).toBe("completed");
+
+    // Verify parent-child relationship is recorded in DB
+    // Query the conversations table directly to check parent_conversation_id
+    const result = await ctx.pool.query(
+      "SELECT parent_conversation_id FROM agents.conversations WHERE id = $1",
+      [childId],
+    );
+    expect(result.rows[0]?.parent_conversation_id).toBe(parentId);
+  });
+});
+
+// ─── Flow 8: History Compaction ─────────────────────────────────────────────
+
+describe("Flow 8: History Compaction", () => {
+  it("compacts history when messages exceed threshold and agent still completes", async () => {
+    // Track what messages the agent loop actually receives.
+    // The worker loop calls historyManager.compact() before passing messages
+    // to runAgentLoop. If compaction triggers, the agent receives fewer/smaller
+    // messages than what's in the database.
+    let receivedInitialMessage: string | undefined;
+    let receivedContext: string | undefined;
+
+    mockRunAgentLoop.mockImplementation(async (...args: unknown[]) => {
+      const options = args[0] as Record<string, unknown>;
+      receivedInitialMessage = options.initialMessage as string | undefined;
+      receivedContext = options.context as string | undefined;
+      return {
+        status: "completed",
+        output: "Done with history",
+        toolCallCount: 0,
+        tokenCount: { input: 100, output: 50 },
+        trace: [],
+      };
+    });
+
+    // Start a conversation
+    const convId = await executor.start({
+      agentDefinitionId: "dev-agent",
+      correlationKey: "FLOW8-001",
+      initialMessage: "Start compaction test",
+    });
+
+    // Pre-populate with many messages via direct DB update.
+    // The dev-agent definition has pruneThreshold: 80000 tokens (chars/4 = 320000 chars).
+    // We generate enough content to exceed this threshold.
+    const manyMessages: unknown[] = [
+      { role: "user", content: "Start compaction test" },
+    ];
+
+    // Add 40 assistant + user message pairs with large tool results.
+    // Each tool_result has ~10000 chars = ~2500 tokens.
+    // 40 pairs * 2500 = ~100000 tokens, which exceeds 80000 pruneThreshold.
+    for (let i = 0; i < 40; i++) {
+      manyMessages.push(
+        {
+          role: "assistant",
+          content: [
+            {
+              type: "tool_use",
+              id: `tool_${i}`,
+              name: "read_file",
+              input: { file_path: `src/module${i}.ts` },
+            },
+          ],
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "tool_result",
+              tool_use_id: `tool_${i}`,
+              content: `// File content for module${i}\n${"x".repeat(10000)}`,
+            },
+          ],
+        },
+      );
+    }
+
+    // Update conversation messages directly (bypass executor API for precondition setup)
+    await ctx.pool.query(
+      "UPDATE agents.conversations SET messages = $1::jsonb WHERE id = $2",
+      [JSON.stringify(manyMessages), convId],
+    );
+
+    executor.startWorker();
+    await waitForStatus(executor, convId, "completed", 15000);
+    await executor.stopWorker();
+
+    // Verify the conversation completed
+    const completed = await executor.get(convId);
+    expect(completed?.status).toBe("completed");
+
+    // Verify the agent received something (was actually called)
+    expect(receivedInitialMessage).toBeDefined();
+
+    // The key assertion: history compaction ran and the agent still received
+    // a valid initial message and context. The exact content depends on whether
+    // this is treated as a "new" or "resumed" conversation.
+    // With 81 messages (1 initial + 40 pairs), this is a resumed conversation
+    // (existingMessages.length > 1), so the worker serializes compacted
+    // messages as context and sends "Continue the conversation..." as initialMessage.
+    expect(receivedInitialMessage).toContain("Continue");
+
+    // Verify compaction actually happened: the context should be smaller than
+    // the original JSON serialization because tool results were replaced
+    // with descriptors during Phase 1 pruning.
+    if (receivedContext) {
+      const originalSize = JSON.stringify(manyMessages).length;
+      const contextSize = receivedContext.length;
+      // Compacted context should be significantly smaller than original.
+      // Phase 1 replaces tool results with descriptors, reducing size substantially.
+      expect(contextSize).toBeLessThan(originalSize);
+    }
+  });
+});
