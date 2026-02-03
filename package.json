@@ -17,16 +17,12 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
-    "agent:dev": "pnpm --filter @aesir/agents dev-agent",
-    "agent:product": "pnpm --filter @aesir/agents product-agent",
     "docker:build": "docker compose build",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
-    "docker:agent:dev": "docker compose up -d dev-agent && docker compose logs -f dev-agent",
-    "docker:agent:product": "docker compose up -d product-agent && docker compose logs -f product-agent",
-    "infra:up": "docker compose up -d postgresql temporal temporal-ui",
-    "infra:logs": "docker compose logs -f postgresql temporal temporal-ui",
+    "infra:up": "docker compose up -d postgresql",
+    "infra:logs": "docker compose logs -f postgresql",
     "db:generate": "pnpm -r db:generate",
     "db:migrate": "pnpm -r --sequential db:migrate",
     "prepare": "husky"
@@ -34,9 +30,8 @@
   "keywords": [
     "agent",
     "ai",
-    "langchain",
-    "langgraph",
-    "automation"
+    "automation",
+    "conversation-executor"
   ],
   "author": "",
   "license": "UNLICENSED",

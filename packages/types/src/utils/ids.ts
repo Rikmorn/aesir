@@ -31,14 +31,8 @@ export const createId = {
   /** Agent session ID (agents.agent_sessions) */
   agentSession: () => `sess_${nanoid()}`,
 
-  /** Agent task ID (agents.tasks) */
-  agentTask: () => `atask_${nanoid()}`,
-
   /** Configuration ID (platform.configurations) */
   configuration: () => `conf_${nanoid()}`,
-
-  /** Context snapshot ID (agents.context_snapshots) */
-  contextSnapshot: () => `ctx_${nanoid()}`,
 
   /** Conversation ID (agents.conversations) */
   conversation: () => `conv_${nanoid()}`,
@@ -54,9 +48,6 @@ export const createId = {
 
   /** Agent execution ID (observability.agent_executions) */
   execution: () => `exec_${nanoid()}`,
-
-  /** Execution trace ID (agents.execution_traces) */
-  executionTrace: () => `trace_${nanoid()}`,
 
   /** Sync cursor ID (integrations.sync_cursors) */
   syncCursor: () => `sync_${nanoid()}`,
