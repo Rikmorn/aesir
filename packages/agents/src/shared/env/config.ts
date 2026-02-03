@@ -19,7 +19,7 @@ dotenvFlow.config({ silent: true, default_node_env: "development" });
 
 /**
  * Agents environment schema
- * All env vars needed by dev-agent and product-agent
+ * All env vars needed by the unified agent service
  */
 const agentEnvSchema = z.object({
   // Environment
@@ -49,10 +49,6 @@ const agentEnvSchema = z.object({
   DB_NAME: z.string().default("temporal"),
   CREDENTIAL_ENCRYPTION_KEY: z.string().length(64).optional(),
 
-  // Temporal
-  TEMPORAL_ADDRESS: z.string().default("localhost:7233"),
-  TEMPORAL_NAMESPACE: z.string().default("default"),
-
   // Observability
   LANGSMITH_TRACING: z
     .string()
@@ -63,6 +59,27 @@ const agentEnvSchema = z.object({
 
   // Retention
   RETENTION_DAYS: z.coerce.number().int().positive().default(14),
+
+  // Agent Service
+  AGENT_SERVICE_PORT: z.coerce.number().default(3004),
+  MAX_CONCURRENT_CONVERSATIONS: z.coerce.number().int().positive().default(5),
+  WORKER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(5000),
+  FORCE_SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+
+  // Router config (moved from router service)
+  ROUTER_ALERTS_CHANNEL: z.string().optional(),
+
+  // GitHub config (for DevContainerManager)
+  GITHUB_REPO_URL: z.string().optional(),
+  GITHUB_TOKEN: z.string().optional(),
+  GITHUB_OWNER: z.string().optional(),
+  GITHUB_BASE_BRANCH: z.string().default("main"),
+
+  // Dev agent config
+  DEV_AGENT_SLACK_CHANNEL: z.string().optional(),
+
+  // Product agent config
+  PRODUCT_AGENT_ALLOWED_CHANNELS: z.string().optional(),
 });
 
 // Validate immediately (fail-fast)
@@ -125,10 +142,18 @@ export const config = {
     url: `postgresql://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_HOST}:${env.DB_PORT}/${env.DB_NAME}`,
     encryptionKey: env.CREDENTIAL_ENCRYPTION_KEY,
   },
-  temporal: {
-    address: env.TEMPORAL_ADDRESS,
-    namespace: env.TEMPORAL_NAMESPACE,
+
+  service: {
+    port: env.AGENT_SERVICE_PORT,
+    maxConcurrentConversations: env.MAX_CONCURRENT_CONVERSATIONS,
+    workerPollIntervalMs: env.WORKER_POLL_INTERVAL_MS,
+    forceShutdownTimeoutMs: env.FORCE_SHUTDOWN_TIMEOUT_MS,
   },
+
+  router: {
+    alertsChannel: env.ROUTER_ALERTS_CHANNEL,
+  },
+
   observability: {
     langsmith: {
       tracing: env.LANGSMITH_TRACING,
