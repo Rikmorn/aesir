@@ -87,8 +87,8 @@ Requirements for v2.3 milestone. Each maps to roadmap phases starting at Phase 3
 
 ### Migration
 
-- [ ] **MIG-01**: Feature flag (USE_V23_EXECUTOR) routing new events to ConversationExecutor
-- [ ] **MIG-02**: Temporal drain period — existing workflows complete naturally (up to 7 days)
+- [x] **MIG-01**: Feature flag (USE_V23_EXECUTOR) routing new events to ConversationExecutor
+- [x] **MIG-02**: Temporal drain period — existing workflows complete naturally (up to 7 days)
 - [ ] **MIG-03**: Delete packages/agents/src/shared/temporal/ after drain completes
 - [ ] **MIG-04**: Remove all @temporalio/* dependencies from package.json
 - [ ] **MIG-05**: Delete per-agent main.ts, worker.ts, and api/ directories
@@ -186,8 +186,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SVC-04 | Phase 44 | Complete |
 | SVC-05 | Phase 44 | Complete |
 | SVC-06 | Phase 47 | Pending |
-| MIG-01 | Phase 46 | Pending |
-| MIG-02 | Phase 46 | Pending |
+| MIG-01 | Phase 46 | Complete |
+| MIG-02 | Phase 46 | Complete |
 | MIG-03 | Phase 47 | Pending |
 | MIG-04 | Phase 47 | Pending |
 | MIG-05 | Phase 47 | Pending |
