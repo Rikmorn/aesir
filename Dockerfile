@@ -45,7 +45,7 @@ RUN pnpm --filter @aesir/agents build
 # Deploy creates a standalone package with all dependencies resolved (no symlinks)
 RUN pnpm --filter @aesir/agents deploy --prod /deploy
 
-# Production image (slim uses glibc, required for Temporal SDK native bindings)
+# Production image
 FROM node:22-slim AS runtime
 
 WORKDIR /app
@@ -64,9 +64,5 @@ USER aesir
 # tini handles SIGTERM/SIGINT forwarding to Node.js
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
-# Default command - start dev-agent HTTP service (can be overridden for product-agent)
-# Other entry points:
-#   - dev-agent worker: node dist/dev-agent/worker.js
-#   - product-agent: node dist/product-agent/main.js
-#   - router: node dist/router/main.js
-CMD ["node", "dist/dev-agent/main.js"]
+# Default command - start unified agent service
+CMD ["node", "dist/service/main.js"]
