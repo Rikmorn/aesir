@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** Phase 51 in progress - Conversation Detail
+**Current focus:** Phase 51 complete - Conversation Detail
 
 ## Current Position
 
 Phase: 51 of 55 (Conversation Detail)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-04 -- Completed 51-02-PLAN.md
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-04 -- Completed 51-03-PLAN.md
 
-Progress: [#########] 56% (9/16 plans across 8 phases)
+Progress: [##########] 63% (10/16 plans across 8 phases)
 
 ## Milestone History
 
@@ -29,9 +29,9 @@ Progress: [#########] 56% (9/16 plans across 8 phases)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
-- Average duration: ~4 minutes
-- Total execution time: ~41 minutes
+- Total plans completed: 10
+- Average duration: ~5 minutes
+- Total execution time: ~46 minutes
 
 *Updated after each plan completion*
 
@@ -99,6 +99,12 @@ v2.4 decisions:
 - JSON truncation at 10,000 chars server-side to prevent browser freezing on large payloads
 - formatDurationMs as local helper in EventTimeline (not shared in format.ts)
 
+51-03 decisions:
+- MetadataSidebar as server component (no "use client") -- pure rendering, sidebar toggle at layout level
+- Sidebar toggle at layout level via CSS grid column switching (grid-cols-[1fr,1fr,300px] vs grid-cols-[1fr,1fr])
+- Local Anthropic message types to keep dashboard decoupled from @anthropic-ai/sdk
+- System prompt detection via content length heuristic (>500 chars first user message)
+
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
@@ -112,9 +118,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: Completed 51-02-PLAN.md
+Stopped at: Completed 51-03-PLAN.md (Phase 51 complete)
 Resume file: None
-Next action: Execute 51-03-PLAN.md (Message Panel + Page Assembly)
+Next action: Begin Phase 52
 
 ---
-*Updated: 2026-02-04 -- Completed 51-02 Event Timeline Components (2/3 plans in Phase 51)*
+*Updated: 2026-02-04 -- Completed 51-03 Message Panel + Page Assembly (3/3 plans in Phase 51, phase complete)*
