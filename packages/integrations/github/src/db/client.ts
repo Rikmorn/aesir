@@ -15,13 +15,13 @@ import { config } from "../types/config.js";
 const { Pool } = pg;
 
 // Lazy-loaded pool and db instances
-let _pool: pg.Pool | null = null;
+let cachedPool: pg.Pool | null = null;
 let Db: NodePgDatabase | null = null;
 
 function getPool(): pg.Pool {
-  if (_pool) return _pool;
+  if (cachedPool) return cachedPool;
 
-  _pool = new Pool({
+  cachedPool = new Pool({
     host: config.database.host,
     port: config.database.port,
     user: config.database.user,
@@ -32,7 +32,7 @@ function getPool(): pg.Pool {
     connectionTimeoutMillis: 2000,
   });
 
-  return _pool;
+  return cachedPool;
 }
 
 function getDb(): NodePgDatabase {

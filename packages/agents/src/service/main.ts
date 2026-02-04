@@ -139,7 +139,6 @@ async function bootstrap(): Promise<void> {
       : undefined,
     pollIntervalMs: config.service.workerPollIntervalMs,
     concurrencyLimit: config.service.maxConcurrentConversations,
-    anthropicApiKey: config.anthropic.apiKey,
   });
 
   // 9. EventRouter -- deterministic event-to-agent routing

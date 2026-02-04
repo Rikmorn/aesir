@@ -164,6 +164,7 @@ describe("DockerSandbox", () => {
     it(
       "should handle special characters in content",
       async () => {
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional -- test verifies template literal syntax in file content
         const content = 'const x = "hello"\nconst y = `template ${"literal"}`';
         await sandbox.writeFile("/tmp/special.ts", content);
         const result = await sandbox.readFile("/tmp/special.ts");

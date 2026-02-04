@@ -583,7 +583,7 @@ describe("compact -- tool type tiers", () => {
       makeToolResultMessage([
         {
           toolUseId: "tu_1",
-          content: "Found 50 results:\n" + "line 1\n".repeat(200),
+          content: `Found 50 results:\n${"line 1\n".repeat(200)}`,
         },
       ]),
       makeUserMessage("a"),
@@ -611,8 +611,7 @@ describe("compact -- tool type tiers", () => {
   it("replaces run_command result with descriptor including command and exit code", async () => {
     const manager = createHistoryManager({ logger: mockLogger });
 
-    const verboseOutput =
-      "exit code: 0\nAll 42 tests passed\n" + "test output line\n".repeat(100);
+    const verboseOutput = `exit code: 0\nAll 42 tests passed\n${"test output line\n".repeat(100)}`;
     const messages: Anthropic.MessageParam[] = [
       makeAssistantWithToolUse("running", [
         {
@@ -777,7 +776,7 @@ describe("compact -- full pipeline", () => {
       makeToolResultMessage([
         {
           toolUseId: "tu_1",
-          content: "Found results:\n" + "match line\n".repeat(100),
+          content: `Found results:\n${"match line\n".repeat(100)}`,
         },
       ]),
 
@@ -812,7 +811,7 @@ describe("compact -- full pipeline", () => {
       makeToolResultMessage([
         {
           toolUseId: "tu_4",
-          content: "exit code: 1\nFailed tests:\n" + "failure\n".repeat(50),
+          content: `exit code: 1\nFailed tests:\n${"failure\n".repeat(50)}`,
         },
       ]),
 
@@ -847,7 +846,7 @@ describe("compact -- full pipeline", () => {
       makeToolResultMessage([
         {
           toolUseId: "tu_7",
-          content: "file1.ts\nfile2.ts\n" + "file.ts\n".repeat(50),
+          content: `file1.ts\nfile2.ts\n${"file.ts\n".repeat(50)}`,
         },
       ]),
 
@@ -1508,7 +1507,7 @@ describe("compact -- full end-to-end pipeline", () => {
       makeToolResultMessage([
         {
           toolUseId: "tu_1",
-          content: "Found results:\n" + "match line\n".repeat(200),
+          content: `Found results:\n${"match line\n".repeat(200)}`,
         },
       ]),
 
@@ -1547,7 +1546,7 @@ describe("compact -- full end-to-end pipeline", () => {
       makeToolResultMessage([
         {
           toolUseId: "tu_4",
-          content: "exit code: 0\nAll tests passed\n" + "output\n".repeat(100),
+          content: `exit code: 0\nAll tests passed\n${"output\n".repeat(100)}`,
         },
       ]),
 

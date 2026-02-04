@@ -574,8 +574,6 @@ export interface ConversationExecutorOptions {
   toolRegistry: ToolRegistry;
   /** Logger instance */
   logger: PinoLogger;
-  /** Anthropic API key for LLM calls (optional, can use env default) */
-  anthropicApiKey?: string;
   /** How often to poll for claimable conversations (default: 1000ms) */
   pollIntervalMs?: number;
   /** Maximum concurrent conversations per worker (default: 5) */
