@@ -23,6 +23,7 @@
 #   - http://localhost/github/*   → GitHub integration (webhooks, OAuth, MCP)
 #   - http://localhost/slack/*    → Slack integration (events, OAuth, MCP)
 #   - http://localhost/agent/*    → Agent service (events, conversations, health)
+#   - http://localhost/dashboard/* → Dashboard (agent monitoring)
 #   - http://localhost/health     → Nginx health check
 #
 # Direct Access (bypass nginx):
@@ -31,6 +32,7 @@
 #   - GitHub Integration: http://localhost:3002
 #   - Slack Integration: http://localhost:3003
 #   - Agent Service: http://localhost:3004
+#   - Dashboard: http://localhost:3005
 #
 # Webhook URLs (configure in each service):
 #   - Linear:  https://<tunnel>/linear/webhook
@@ -333,6 +335,46 @@ services:
           path: ./packages/types/src
         - action: rebuild
           path: ./packages/platform/src
+
+  # Dashboard - Next.js operations dashboard for agent monitoring
+  # Provides read-only visibility into conversations, agents, tools, and system health
+  # Access: http://localhost:3005 (direct) or http://localhost/dashboard/ (via nginx)
+  dashboard:
+    build:
+      context: .
+      dockerfile: packages/dashboard/Dockerfile
+    container_name: aesir-dashboard
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    environment:
+      # Database connection (read-only access to existing schemas)
+      - DB_HOST=postgresql
+      - DB_PORT=5432
+      - DB_USER=aesir
+      - DB_PASSWORD=aesir
+      - DB_NAME=aesir
+      # Server configuration
+      - PORT=3005
+      - HOSTNAME=0.0.0.0
+      - NODE_ENV=${NODE_ENV:-production}
+    ports:
+      - "3005:3005"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3005/dashboard/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - aesir-network
+    restart: unless-stopped
+    develop:
+      watch:
+        - action: rebuild
+          path: ./packages/dashboard/src
+        - action: rebuild
+          path: ./packages/dashboard/package.json
 
   # Cloudflare Tunnel - exposes services to external webhooks (Linear, GitHub, Slack)
   # Configure tunnel to point to nginx:80 for unified routing
