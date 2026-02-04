@@ -226,8 +226,8 @@ Plans:
   6. All existing tests pass, new unit tests cover tool factory, worker loop wiring, and edge cases
 **Plans**: 2 plans
 Plans:
-- [ ] 47.1-01-PLAN.md -- SpawnAgentDeps types, createSpawnAgentTool() factory, unit tests, barrel export
-- [ ] 47.1-02-PLAN.md -- Worker loop wiring (spawnDeps, token budget, definition validation), tool-factories.ts replacement, test updates
+- [x] 47.1-01-PLAN.md -- SpawnAgentDeps types, createSpawnAgentTool() factory, unit tests, barrel export
+- [x] 47.1-02-PLAN.md -- Worker loop wiring (spawnDeps, token budget, definition validation), tool-factories.ts replacement, test updates
 
 ## Progress
 
@@ -248,8 +248,8 @@ Note: Phases 37 and 38 have no dependency on each other and could execute in par
 | 45. Integration Testing + Validation | 3/3 | Complete | 2026-02-03 |
 | 46. Pre-Cleanup Verification & Dependency Audit | 2/2 | Complete | 2026-02-03 |
 | 47. Cleanup + Documentation | 4/4 | Complete | 2026-02-03 |
-| 47.1. Sub Agent Spawn (INSERTED) | 0/2 | Not Started | - |
+| 47.1. Sub Agent Spawn (INSERTED) | 2/2 | Complete | 2026-02-03 |
 
 ---
 *Roadmap created: 2026-02-01*
-*Last updated: 2026-02-03 -- Phase 47.1 planned (2 plans in 2 waves)*
+*Last updated: 2026-02-03 -- Phase 47.1 complete (2/2 plans)*
