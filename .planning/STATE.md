@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** Phase 49 complete - Dashboard Infrastructure
+**Current focus:** Phase 50 in progress - Conversations List
 
 ## Current Position
 
-Phase: 49 of 55 (Dashboard Infrastructure)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-02-04 -- Completed 49-03-PLAN.md
+Phase: 50 of 55 (Conversations List)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-04 -- Completed 50-01-PLAN.md
 
-Progress: [#####---] 31% (5/16 plans across 8 phases)
+Progress: [######--] 38% (6/16 plans across 8 phases)
 
 ## Milestone History
 
@@ -29,9 +29,9 @@ Progress: [#####---] 31% (5/16 plans across 8 phases)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: ~5 minutes
-- Total execution time: ~24 minutes
+- Total plans completed: 6
+- Average duration: ~4 minutes
+- Total execution time: ~28 minutes
 
 *Updated after each plan completion*
 
@@ -76,6 +76,12 @@ v2.4 decisions:
 - proxy_pass http://dashboard/dashboard/ preserves basePath prefix for Next.js
 - No workspace dependency builds in Dockerfile (dashboard uses drizzle-orm/pg directly)
 
+50-01 decisions:
+- Token aggregation via Drizzle subquery join (not LATERAL) -- simpler since aggregation groups by conversation_id
+- Trigger event type via SQL subquery selecting first agent_events row by sequence ASC
+- Separate COUNT query for pagination total (cleaner than window function for this table size)
+- Dynamic filter builder returns SQL[] array, composed with and() -- extensible for future filters
+
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
@@ -89,9 +95,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: Completed 49-03-PLAN.md
+Stopped at: Completed 50-01-PLAN.md
 Resume file: None
-Next action: Phase 49 complete. Next phase: 50 (Dashboard Views)
+Next action: Execute 50-02-PLAN.md (Conversations Table UI)
 
 ---
-*Updated: 2026-02-04 -- Completed 49-03 Docker Infrastructure (3/3 plans in Phase 49 -- Phase complete)*
+*Updated: 2026-02-04 -- Completed 50-01 Data Layer and Dependencies (1/2 plans in Phase 50)*
