@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** Phase 50 in progress - Conversations List
+**Current focus:** Phase 50 complete - Conversations List
 
 ## Current Position
 
 Phase: 50 of 55 (Conversations List)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-04 -- Completed 50-01-PLAN.md
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-04 -- Completed 50-02-PLAN.md
 
-Progress: [######--] 38% (6/16 plans across 8 phases)
+Progress: [#######-] 44% (7/16 plans across 8 phases)
 
 ## Milestone History
 
@@ -29,9 +29,9 @@ Progress: [######--] 38% (6/16 plans across 8 phases)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
+- Total plans completed: 7
 - Average duration: ~4 minutes
-- Total execution time: ~28 minutes
+- Total execution time: ~33 minutes
 
 *Updated after each plan completion*
 
@@ -82,6 +82,12 @@ v2.4 decisions:
 - Separate COUNT query for pagination total (cleaner than window function for this table size)
 - Dynamic filter builder returns SQL[] array, composed with and() -- extensible for future filters
 
+50-02 decisions:
+- StatusBadge is server component (no "use client") for reuse in both server and client contexts
+- Popover + Command pattern for multi-select filters (consistent with shadcn/ui conventions)
+- Select component for time range (single-value, not multi-select)
+- Static key array for skeleton rows to satisfy Biome noArrayIndexKey rule
+
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
@@ -95,9 +101,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: Completed 50-01-PLAN.md
+Stopped at: Completed 50-02-PLAN.md
 Resume file: None
-Next action: Execute 50-02-PLAN.md (Conversations Table UI)
+Next action: Phase 50 complete. Next phase: 51 (Conversation Detail)
 
 ---
-*Updated: 2026-02-04 -- Completed 50-01 Data Layer and Dependencies (1/2 plans in Phase 50)*
+*Updated: 2026-02-04 -- Completed 50-02 Conversations Table UI (2/2 plans in Phase 50 -- phase complete)*
