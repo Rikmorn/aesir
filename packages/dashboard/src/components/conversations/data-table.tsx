@@ -25,6 +25,8 @@ interface ConversationsTableProps {
   page: number;
   pageSize: number;
   agentDefinitions: string[];
+  /** IDs of recently-updated conversations for highlight animation */
+  highlightedIds?: Set<string>;
 }
 
 export function ConversationsTable({
@@ -33,6 +35,7 @@ export function ConversationsTable({
   page,
   pageSize,
   agentDefinitions,
+  highlightedIds,
 }: ConversationsTableProps) {
   const table = useReactTable({
     data,
@@ -66,7 +69,14 @@ export function ConversationsTable({
           <TableBody>
             {table.getRowModel().rows.length > 0 ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow
+                  key={row.id}
+                  className={
+                    highlightedIds?.has(row.original.id)
+                      ? "bg-accent/30 transition-colors duration-[1500ms]"
+                      : undefined
+                  }
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(

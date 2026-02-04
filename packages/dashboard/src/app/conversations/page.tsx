@@ -1,4 +1,4 @@
-import { ConversationsTable } from "@/components/conversations/data-table";
+import { LiveConversationsTable } from "@/components/conversations/live-conversations-table";
 import { getTimeRangeDate } from "@/lib/format";
 import {
   getDistinctAgentDefinitions,
@@ -51,8 +51,8 @@ export default async function ConversationsPage({
           Monitor and browse agent conversation history
         </p>
       </div>
-      <ConversationsTable
-        data={items}
+      <LiveConversationsTable
+        initialData={items}
         total={total}
         page={page}
         pageSize={pageSize}
