@@ -143,7 +143,12 @@ Plans:
   2. The conversations list page auto-updates when a conversation's status changes (no page refresh needed)
   3. The conversation detail timeline appends new events in real-time as they occur during an active conversation
   4. The SSE client handles reconnection with exponential backoff on disconnect, and cleans up the connection on component unmount
-**Plans**: TBD
+**Plans:** 4 plans
+Plans:
+- [ ] 55-01-PLAN.md -- Core SSE infrastructure: EventStreamStore, useEventStream hook, SSE proxy route, connection status indicator
+- [ ] 55-02-PLAN.md -- Conversations list live wiring: LiveConversationsTable with SSE lifecycle event updates
+- [ ] 55-03-PLAN.md -- Conversation detail live wiring: LiveDetailPanels with per-conversation SSE streaming
+- [ ] 55-04-PLAN.md -- System overview live wiring: LiveOverview with SSE stat counts and active conversations
 
 ## Progress
 
@@ -160,7 +165,7 @@ Note: Phases 48 and 49 could execute in parallel (no dependency between them), b
 | 52. Agent Definitions View | 3/3 | Complete | 2026-02-04 |
 | 53. Tool Dashboard | 3/3 | Complete | 2026-02-04 |
 | 54. System Overview | 2/2 | Complete | 2026-02-04 |
-| 55. Real-Time Updates | 0/TBD | Not started | - |
+| 55. Real-Time Updates | 0/4 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-04*
