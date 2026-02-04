@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** Planning next milestone
+**Current focus:** v2.4 Operations Dashboard
 
 ## Current Position
 
-Phase: v2.3 complete -- no active phase
-Plan: N/A
-Status: Ready to plan next milestone
-Last activity: 2026-02-04 -- v2.3 milestone archived
+Phase: Not started (defining requirements)
+Plan: --
+Status: Defining requirements
+Last activity: 2026-02-04 -- Milestone v2.4 started
 
-Progress: Milestone v2.3 shipped. Next milestone not yet defined.
+Progress: Milestone v2.4 initialized. Requirements being defined from spec.
 
 ## Milestone History
 
@@ -32,6 +32,14 @@ Progress: Milestone v2.3 shipped. Next milestone not yet defined.
 
 v2.0/v2.1/v2.2/v2.3 decisions archived in milestones/.
 
+v2.4 decisions:
+- Separate Next.js dashboard service (not embedded in agent service)
+- SSE for real-time (not WebSockets)
+- Read-only Postgres access, no new tables
+- Service layer abstraction as future API boundary
+- Agent service /api/ prefix for management endpoints
+- shadcn/ui for components (owned code, not dependency)
+
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
@@ -45,9 +53,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: v2.3 milestone completion
+Stopped at: Defining v2.4 requirements
 Resume file: None
-Next action: `/gsd:new-milestone` to start next milestone cycle
+Next action: Complete requirements → create roadmap
 
 ---
-*Updated: 2026-02-04 -- v2.3 milestone archived*
+*Updated: 2026-02-04 -- v2.4 milestone started*

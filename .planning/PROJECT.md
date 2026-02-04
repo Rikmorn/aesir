@@ -8,6 +8,18 @@ An agentic development platform that automates software development workflows --
 
 End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
+## Current Milestone: v2.4 Operations Dashboard
+
+**Goal:** Real-time visibility into agent execution through a developer-focused web dashboard -- see what agents are doing, inspect tool calls, view configurations, and monitor conversation lifecycle.
+
+**Target features:**
+- Conversations view: list with filters + detail page with event timeline, message history, metadata
+- Agent definitions view: configuration inspector sourced from agent-service runtime registry
+- Tool dashboard: registry, permission matrix, performance metrics, failure tracking, integration health
+- System overview: conversation status summary, active conversations, worker status, token usage
+- Real-time updates via SSE bridged from EventLog.subscribe()
+- Agent service API extensions for runtime state (/api/tools/registry, /api/agents/registry, /api/worker/status, /api/sse/events)
+
 ## Current State
 
 **Version:** v2.3 Unified Agent Framework shipped (2026-02-04)
@@ -111,7 +123,16 @@ Agent definitions (YAML + prompt.md)
 
 ### Active
 
-**Deferred from v2.3 (candidates for next milestone):**
+**v2.4 Operations Dashboard:**
+- [ ] Dashboard infrastructure: Next.js 15 App Router package with Tailwind, shadcn/ui, Drizzle, service layer
+- [ ] Conversations view: list with filters, detail with event timeline + messages + metadata
+- [ ] Agent definitions view: list and detail sourced from agent-service runtime registry
+- [ ] Tool dashboard: registry, permission matrix, performance metrics, failures, integration health
+- [ ] System overview: conversation summary, active conversations, worker status, token usage
+- [ ] Real-time updates: SSE endpoint on agent-service, client hook, live conversation/event updates
+- [ ] Agent service API extensions: /api/tools/registry, /api/agents/registry, /api/worker/status, /api/sse/events
+
+**Deferred (candidates for future milestones):**
 - [ ] CI/CD pipeline for deployment
 - [ ] Monitoring and alerting for agent health
 - [ ] Multi-environment configuration (dev/staging/prod)
@@ -175,6 +196,10 @@ Agent definitions (YAML + prompt.md)
 | Agentic loops over fixed graphs | LLMs reason about control flow instead of following graphs | ✓ Good — agents adapt to complexity (v2.2) |
 | Orchestrator + sub-agents pattern | Focused sub-agents with isolated context | ✓ Good — keeps each agent's context small (v2.2) |
 | Hybrid smart router | Deterministic fast-path for obvious events, LLM for ambiguous | ✓ Good — zero latency for common events (v2.2) |
+| Separate dashboard service (Next.js) | Different lifecycle, resource profile, and dependency boundary from agent service | — Pending (v2.4) |
+| SSE over WebSockets | Unidirectional monitoring data, proxy-friendly, simpler than WS | — Pending (v2.4) |
+| Read-only Postgres access for dashboard | No new tables, no write paths; future API boundary via service layer | — Pending (v2.4) |
+| Agent service /api/ prefix for management endpoints | Separates management from operational endpoints, enables different auth policies | — Pending (v2.4) |
 | Webhooks over polling | Cost/load savings; agents wake on events | ✓ Good |
 | Full containerization | Reproducible environments | ✓ Good |
 | PostgreSQL for persistence | Shared across all services | ✓ Good |
@@ -199,4 +224,4 @@ Lessons learned during development that guide future phases.
 | Archive before delete | Always create archive files before updating/deleting originals. Milestone completion creates roadmap + requirements archives first. |
 
 ---
-*Last updated: 2026-02-04 after v2.3 milestone*
+*Last updated: 2026-02-04 after v2.4 milestone started*
