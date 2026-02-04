@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 49 of 55 (Dashboard Infrastructure)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-04 -- Completed 49-01-PLAN.md
+Last activity: 2026-02-04 -- Completed 49-02-PLAN.md
 
-Progress: [###-----] 19% (3/16 plans across 8 phases)
+Progress: [####----] 25% (4/16 plans across 8 phases)
 
 ## Milestone History
 
@@ -29,9 +29,9 @@ Progress: [###-----] 19% (3/16 plans across 8 phases)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: ~6 minutes
-- Total execution time: ~17 minutes
+- Total plans completed: 4
+- Average duration: ~5 minutes
+- Total execution time: ~21 minutes
 
 *Updated after each plan completion*
 
@@ -65,6 +65,12 @@ v2.4 decisions:
 - Biome override for API route files allows CONSTANT_CASE function names (GET, POST, etc.)
 - basePath set to /dashboard for Nginx sub-path routing
 
+49-02 decisions:
+- Approach B (local schema) chosen over importing from @aesir/agents to avoid heavy dependency tree
+- Service layer pattern: services/*.ts abstract all DB queries behind typed async functions
+- Local schema in lib/schema.ts mirrors agents schema without runtime @aesir/agents dependency
+- camelCase interfaces mapped from snake_case DB columns inside service functions
+
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
@@ -78,9 +84,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: Completed 49-01-PLAN.md
+Stopped at: Completed 49-02-PLAN.md
 Resume file: None
-Next action: Continue Phase 49 -- Plan 02 (Drizzle read-only database client and service layer)
+Next action: Continue Phase 49 -- Plan 03 (Docker integration and Nginx routing)
 
 ---
-*Updated: 2026-02-04 -- Completed 49-01 Dashboard Package Setup (1/3 plans in Phase 49)*
+*Updated: 2026-02-04 -- Completed 49-02 Database Client and Service Layer (2/3 plans in Phase 49)*
