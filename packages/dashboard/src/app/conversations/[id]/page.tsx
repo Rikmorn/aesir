@@ -1,10 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { DetailLayout } from "@/components/conversation-detail/detail-layout";
-import { EventTimeline } from "@/components/conversation-detail/event-timeline";
-import { MessagePanel } from "@/components/conversation-detail/message-panel";
-import { MetadataSidebar } from "@/components/conversation-detail/metadata-sidebar";
+import { LiveDetailPanels } from "@/components/conversation-detail/live-detail-panels";
 import {
   getChildConversations,
   getConversationById,
@@ -53,32 +50,23 @@ export default async function ConversationDetailPage({
         </p>
       </div>
 
-      {/* Three-panel layout with sidebar toggle */}
-      <DetailLayout
-        timelinePanel={
-          <>
-            <h2 className="text-lg font-semibold">Event Timeline</h2>
-            <p className="mb-4 text-sm text-muted-foreground">
-              {events.length} events
-            </p>
-            <EventTimeline events={events} />
-          </>
-        }
-        messagesPanel={
-          <>
-            <h2 className="text-lg font-semibold">Messages</h2>
-            <p className="mb-4 text-sm text-muted-foreground">
-              {messages.length} messages
-            </p>
-            <MessagePanel messages={messages} />
-          </>
-        }
-        sidebarPanel={
-          <MetadataSidebar
-            conversation={conversation}
-            childConversations={childConversations}
-          />
-        }
+      {/* Live detail panels with SSE real-time updates */}
+      <LiveDetailPanels
+        conversation={{
+          ...conversation,
+          createdAt: conversation.createdAt.toISOString(),
+          updatedAt: conversation.updatedAt.toISOString(),
+          lastEventAt: conversation.lastEventAt?.toISOString() ?? null,
+        }}
+        initialEvents={events.map((e) => ({
+          ...e,
+          timestamp: e.timestamp.toISOString(),
+        }))}
+        initialMessages={messages}
+        childConversations={childConversations.map((c) => ({
+          ...c,
+          createdAt: c.createdAt.toISOString(),
+        }))}
       />
     </main>
   );
