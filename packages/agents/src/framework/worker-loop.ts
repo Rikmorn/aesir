@@ -560,7 +560,87 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         }
       };
 
-      // 10. Run agent loop
+      // 10. Event recording callbacks
+      const eventBase = {
+        conversationId: conv.id,
+        agentDefinitionId: conv.agent_definition_id,
+        agentDefinitionVersion: conv.agent_definition_version,
+        agentInstanceId: instanceId,
+      };
+
+      const onToolCall = (call: {
+        name: string;
+        input: unknown;
+        id: string;
+      }) => {
+        childLogger.info(
+          { tool: call.name, toolCallId: call.id },
+          "Tool called",
+        );
+        eventLog.append({
+          ...eventBase,
+          type: "tool.called",
+          payload: {
+            tool_name: call.name,
+            tool_call_id: call.id,
+            input: call.input as Record<string, unknown>,
+          },
+        });
+      };
+
+      const onToolResult = (result: {
+        name: string;
+        id: string;
+        content: string;
+        isError: boolean;
+        durationMs: number;
+      }) => {
+        const eventType = result.isError ? "tool.failed" : "tool.succeeded";
+        childLogger.info(
+          {
+            tool: result.name,
+            toolCallId: result.id,
+            isError: result.isError,
+            durationMs: result.durationMs,
+          },
+          `Tool ${result.isError ? "failed" : "succeeded"}`,
+        );
+        eventLog.append({
+          ...eventBase,
+          type: eventType,
+          payload: {
+            tool_name: result.name,
+            tool_call_id: result.id,
+            // Truncate content to avoid bloating event log
+            output: result.content.slice(0, 2000),
+            is_error: result.isError,
+          },
+          durationMs: result.durationMs,
+        });
+      };
+
+      const onResponse = (response: {
+        usage: { input_tokens: number; output_tokens: number };
+        stop_reason: string | null;
+      }) => {
+        childLogger.info(
+          {
+            inputTokens: response.usage.input_tokens,
+            outputTokens: response.usage.output_tokens,
+            stopReason: response.stop_reason,
+          },
+          "LLM response received",
+        );
+        eventLog.append({
+          ...eventBase,
+          type: "llm.response",
+          payload: { stop_reason: response.stop_reason },
+          tokenCountInput: response.usage.input_tokens,
+          tokenCountOutput: response.usage.output_tokens,
+        });
+      };
+
+      // 11. Run agent loop
       const loopOptions: Parameters<typeof runAgentLoop>[0] = {
         systemPrompt: definition.systemPrompt,
         tools: resolvedTools,
@@ -568,6 +648,9 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         model: definition.model,
         maxIterations: definition.maxIterations,
         onHeartbeat,
+        onToolCall,
+        onToolResult,
+        onResponse,
         abortSignal,
         logger: childLogger,
         ...(tokenBudget && { tokenBudget }),
@@ -577,7 +660,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
       }
       const result: AgentLoopResult = await runAgentLoop(loopOptions);
 
-      // 11. Verify ownership before persisting
+      // 12. Verify ownership before persisting
       const ownershipCheck = await db
         .select({ claimed_by: conversations.claimed_by })
         .from(conversations)
@@ -592,13 +675,13 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         return;
       }
 
-      // 12. Build final messages array (for persistence)
+      // 13. Build final messages array (for persistence)
       // Combine pre-loop messages with new messages from the agent loop.
       // slice(1) skips the loop's initial user message (already in currentMessages
       // as the original initial message or context-wrapper for resumed conversations).
       const finalMessages = [...currentMessages, ...result.messages.slice(1)];
 
-      // 13. Handle result based on waitForState and loop status
+      // 14. Handle result based on waitForState and loop status
       if (waitForState.triggered) {
         // Before transitioning to waiting, check if a signal was queued
         // during execution that can immediately satisfy the wait_for.

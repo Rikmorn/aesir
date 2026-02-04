@@ -82,9 +82,28 @@ export async function callMcpTool<T = unknown>(
     | McpErrorResponse
     | McpSuccessResponse<T>;
 
-  // Handle error responses
+  // Handle error responses (HTTP 4xx/5xx)
   if (!response.ok) {
     throw new McpError(responseData as McpErrorResponse);
+  }
+
+  // Handle application-level errors (HTTP 200 but isError: true in body).
+  // MCP servers may return 200 with isError: true when the tool executed
+  // but produced an error result (e.g., GitHub API "Not Found").
+  if ("isError" in responseData && responseData.isError) {
+    const body = responseData as unknown as Record<string, unknown>;
+    const contentArr = body.content as Array<{ text?: string }> | undefined;
+    const errorText =
+      typeof body.error === "string"
+        ? body.error
+        : (contentArr?.[0]?.text ?? "Tool execution failed");
+    throw new McpError({
+      error: errorText,
+      isError: true,
+      meta: (body.meta as McpErrorResponse["meta"]) ?? {
+        correlation_id: "",
+      },
+    });
   }
 
   // Extract data from success response

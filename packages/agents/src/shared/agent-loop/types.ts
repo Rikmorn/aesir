@@ -67,6 +67,22 @@ export interface ToolCallInfo {
 }
 
 /**
+ * Information about a tool result, passed to the onToolResult callback.
+ */
+export interface ToolResultInfo {
+  /** Tool name */
+  name: string;
+  /** Unique tool_use ID from the LLM response */
+  id: string;
+  /** Tool output content */
+  content: string;
+  /** Whether the tool returned an error */
+  isError: boolean;
+  /** Duration of tool execution in milliseconds */
+  durationMs: number;
+}
+
+/**
  * LLM response type alias.
  * Uses the Anthropic SDK's Message type directly.
  */
@@ -152,6 +168,8 @@ export interface AgentLoopOptions {
   tokenBudget?: TokenBudget;
   /** Called on every tool call (for tracing/observability) */
   onToolCall?: (call: ToolCallInfo) => void;
+  /** Called after every tool execution with the result (for tracing/observability) */
+  onToolResult?: (result: ToolResultInfo) => void;
   /** Called on every LLM response (for tracing/observability) */
   onResponse?: (response: LLMResponse) => void;
   /** Called once when token budget drops below warning threshold (20% remaining) */

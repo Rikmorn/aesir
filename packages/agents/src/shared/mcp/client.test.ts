@@ -179,6 +179,63 @@ describe("callMcpTool", () => {
     expect(result).toEqual({ value: "structured data" });
   });
 
+  it("should throw McpError on HTTP 200 with isError: true (content array)", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        content: [{ type: "text", text: "Failed to create branch: Not Found" }],
+        meta: { correlation_id: "corr-123", duration_ms: 200 },
+        isError: true,
+      }),
+    } as Response);
+
+    await expect(
+      callMcpTool({
+        integration: "github",
+        tool: "create_branch",
+        params: { owner: "org", repo: "repo", branchName: "feat" },
+        agentId: "dev-agent",
+        correlationId: "corr-123",
+      }),
+    ).rejects.toThrow(McpError);
+
+    try {
+      await callMcpTool({
+        integration: "github",
+        tool: "create_branch",
+        params: { owner: "org", repo: "repo", branchName: "feat" },
+        agentId: "dev-agent",
+        correlationId: "corr-123",
+      });
+    } catch (error) {
+      expect(error).toBeInstanceOf(McpError);
+      expect((error as McpError).message).toBe(
+        "Failed to create branch: Not Found",
+      );
+    }
+  });
+
+  it("should throw McpError on HTTP 200 with isError: true (error field)", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        error: "Permission denied",
+        isError: true,
+        meta: { correlation_id: "corr-123" },
+      }),
+    } as Response);
+
+    await expect(
+      callMcpTool({
+        integration: "linear",
+        tool: "get_issue",
+        params: { issueId: "ABC-123" },
+        agentId: "dev-agent",
+        correlationId: "corr-123",
+      }),
+    ).rejects.toThrow("Permission denied");
+  });
+
   it("should handle response without data field", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,

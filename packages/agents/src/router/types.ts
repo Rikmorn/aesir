@@ -72,6 +72,12 @@ export interface RouteEventDeps {
   alertsChannel?: string | undefined;
   /** Linear team ID for product-agent starts (optional) */
   linearTeamId?: string | undefined;
+  /** GitHub owner/org for workspace context (optional) */
+  githubOwner?: string | undefined;
+  /** GitHub repo name for workspace context (optional) */
+  githubRepo?: string | undefined;
+  /** GitHub base branch for workspace context (optional, defaults to "main") */
+  githubBaseBranch?: string | undefined;
 }
 
 /**

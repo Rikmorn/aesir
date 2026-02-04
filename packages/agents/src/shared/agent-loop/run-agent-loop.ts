@@ -180,6 +180,7 @@ export async function runAgentLoop(
     tokenBudget,
     abortSignal,
     onToolCall,
+    onToolResult,
     onResponse,
     onBudgetWarning,
     onHeartbeat,
@@ -353,23 +354,46 @@ export async function runAgentLoop(
 
           rateLimitAttempt++;
 
-          // Use retry-after header if available, otherwise exponential backoff
-          const retryAfterHeader =
+          // Extract rate limit details from API response headers
+          const apiHeaders =
             retryError instanceof Anthropic.APIError
-              ? (retryError.headers?.["retry-after"] as string | undefined)
+              ? retryError.headers
               : undefined;
-          const delayMs = retryAfterHeader
-            ? Number.parseInt(retryAfterHeader, 10) * 1000
-            : RATE_LIMIT_BASE_DELAY_MS * 2 ** (rateLimitAttempt - 1);
-          const effectiveDelayMs = Number.isNaN(delayMs)
-            ? RATE_LIMIT_BASE_DELAY_MS * 2 ** (rateLimitAttempt - 1)
-            : delayMs;
+          const retryAfterHeader =
+            apiHeaders?.get?.("retry-after") ?? undefined;
+          const rateLimitInfo = apiHeaders
+            ? {
+                retryAfter: retryAfterHeader,
+                limitRequests: apiHeaders.get?.("x-ratelimit-limit-requests"),
+                limitTokens: apiHeaders.get?.("x-ratelimit-limit-tokens"),
+                remainingRequests: apiHeaders.get?.(
+                  "x-ratelimit-remaining-requests",
+                ),
+                remainingTokens: apiHeaders.get?.(
+                  "x-ratelimit-remaining-tokens",
+                ),
+                resetRequests: apiHeaders.get?.("x-ratelimit-reset-requests"),
+                resetTokens: apiHeaders.get?.("x-ratelimit-reset-tokens"),
+              }
+            : undefined;
+
+          // Use retry-after header if available, otherwise exponential backoff
+          const retryAfterMs = retryAfterHeader
+            ? Number.parseFloat(retryAfterHeader) * 1000
+            : undefined;
+          const backoffMs =
+            RATE_LIMIT_BASE_DELAY_MS * 2 ** (rateLimitAttempt - 1);
+          const effectiveDelayMs =
+            retryAfterMs && !Number.isNaN(retryAfterMs)
+              ? retryAfterMs
+              : backoffMs;
 
           logger?.warn(
             {
               attempt: rateLimitAttempt,
               maxRetries: RATE_LIMIT_MAX_RETRIES,
               delayMs: effectiveDelayMs,
+              ...rateLimitInfo,
             },
             "Rate limited by Anthropic API, retrying after backoff",
           );
@@ -565,6 +589,15 @@ export async function runAgentLoop(
         toolName: toolUse.name,
         toolCallId: toolUse.id,
         output: result.content,
+        durationMs: Math.round(toolDurationMs),
+      });
+
+      // LOOP-07: Fire onToolResult callback
+      onToolResult?.({
+        name: toolUse.name,
+        id: toolUse.id,
+        content: result.content,
+        isError: result.isError ?? false,
         durationMs: Math.round(toolDurationMs),
       });
 

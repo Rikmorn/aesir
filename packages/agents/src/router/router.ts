@@ -73,9 +73,32 @@ export async function routeEvent(
     // 3. Dispatch based on routing decision
     switch (routeDecision.action) {
       case "start": {
-        // Enrich initial message with context block for Slack-originated events.
-        // Product agent prompt expects <slack_context> with channel, thread, team.
+        // Enrich initial message with workspace and event-specific context blocks.
         let initialMessage = routeDecision.message;
+
+        // Workspace context: GitHub owner/repo, Linear team ID, base branch.
+        // Agents need these values for tool calls (github_create_branch, etc.)
+        const workspaceLines: string[] = [];
+        if (deps.githubOwner)
+          workspaceLines.push(`GitHub Owner: ${deps.githubOwner}`);
+        if (deps.githubRepo)
+          workspaceLines.push(`GitHub Repo: ${deps.githubRepo}`);
+        if (deps.githubBaseBranch)
+          workspaceLines.push(`GitHub Base Branch: ${deps.githubBaseBranch}`);
+        if (deps.linearTeamId)
+          workspaceLines.push(`Linear Team ID: ${deps.linearTeamId}`);
+
+        if (workspaceLines.length > 0) {
+          const workspaceBlock = [
+            "<workspace_context>",
+            ...workspaceLines,
+            "</workspace_context>",
+          ].join("\n");
+          initialMessage = `${workspaceBlock}\n\n${initialMessage}`;
+        }
+
+        // Slack-specific context for Slack-originated events.
+        // Product agent prompt expects <slack_context> with channel, thread, team.
         const eventData = routeDecision.event.data as Record<string, unknown>;
         if (
           routeDecision.event.source === "slack:webhook" &&
@@ -85,12 +108,9 @@ export async function routeEvent(
             "<slack_context>",
             `Channel: ${eventData.channelId}`,
             `Thread: ${eventData.threadTs ?? ""}`,
-            ...(deps.linearTeamId
-              ? [`Linear Team ID: ${deps.linearTeamId}`]
-              : []),
             "</slack_context>",
           ].join("\n");
-          initialMessage = `${contextBlock}\n\n${routeDecision.message}`;
+          initialMessage = `${contextBlock}\n\n${initialMessage}`;
         }
 
         const conversationId = await deps.executor.start({

@@ -157,6 +157,9 @@ async function bootstrap(): Promise<void> {
     logger,
     alertsChannel: config.router.alertsChannel,
     linearTeamId: config.linear.teamId,
+    githubOwner: config.github.owner,
+    githubRepo: config.github.repo,
+    githubBaseBranch: config.github.baseBranch,
   };
 
   // GET /health -- liveness check
