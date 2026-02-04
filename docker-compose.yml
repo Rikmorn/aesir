@@ -347,6 +347,8 @@ services:
     depends_on:
       postgresql:
         condition: service_healthy
+      agent-service:
+        condition: service_healthy
     environment:
       # Database connection (read-only access to existing schemas)
       - DB_HOST=postgresql
@@ -354,6 +356,8 @@ services:
       - DB_USER=aesir
       - DB_PASSWORD=aesir
       - DB_NAME=aesir
+      # Agent service API (Docker network)
+      - AGENT_SERVICE_URL=http://agent-service:3004
       # Server configuration
       - PORT=3005
       - HOSTNAME=0.0.0.0
