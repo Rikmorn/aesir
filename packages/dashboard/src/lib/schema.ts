@@ -33,6 +33,7 @@ export const conversations = agentsSchema.table("conversations", {
   id: text("id").primaryKey(),
   agent_definition_id: text("agent_definition_id").notNull(),
   agent_definition_version: text("agent_definition_version").notNull(),
+  messages: jsonb("messages").$type<unknown[]>().notNull().default([]),
   status: text("status", { enum: conversationStatusValues })
     .notNull()
     .default("queued"),
