@@ -20,8 +20,8 @@
 
 ### Conversations View
 
-- [ ] **CONV-01**: Conversations list page shows all conversations with status, agent, duration, token usage, last activity
-- [ ] **CONV-02**: Filters work: status, agent type, time range, has errors
+- [x] **CONV-01**: Conversations list page shows all conversations with status, agent, duration, token usage, last activity
+- [x] **CONV-02**: Filters work: status, agent type, time range, has errors
 - [ ] **CONV-03**: Conversation detail page shows event timeline with all event types rendered appropriately
 - [ ] **CONV-04**: Tool call events show input parameters (expandable) and results (expandable)
 - [ ] **CONV-05**: Failed tool calls are visually distinct (red/error styling)
@@ -136,8 +136,8 @@ Deferred to later milestones. Tracked but not in v2.4 roadmap.
 | INFRA-08 | Phase 49 | Complete |
 | INFRA-09 | Phase 49 | Complete |
 | INFRA-10 | Phase 49 | Complete |
-| CONV-01 | Phase 50 | Pending |
-| CONV-02 | Phase 50 | Pending |
+| CONV-01 | Phase 50 | Complete |
+| CONV-02 | Phase 50 | Complete |
 | CONV-03 | Phase 51 | Pending |
 | CONV-04 | Phase 51 | Pending |
 | CONV-05 | Phase 51 | Pending |
@@ -177,4 +177,4 @@ Deferred to later milestones. Tracked but not in v2.4 roadmap.
 
 ---
 *Requirements defined: 2026-02-04*
-*Last updated: 2026-02-04 after roadmap creation*
+*Last updated: 2026-02-04 after Phase 50 completion*

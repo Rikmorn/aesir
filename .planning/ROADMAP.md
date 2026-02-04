@@ -21,7 +21,7 @@ Real-time visibility into agent execution through a developer-focused web dashbo
 
 - [x] **Phase 48: Agent Service API Extensions** - New /api/ endpoints on the agent service for runtime state and SSE streaming
 - [x] **Phase 49: Dashboard Infrastructure** - Next.js 15 package with Tailwind, shadcn/ui, Drizzle, Docker, service layer
-- [ ] **Phase 50: Conversations List** - Filterable list of all conversations with status, tokens, and activity
+- [x] **Phase 50: Conversations List** - Filterable list of all conversations with status, tokens, and activity
 - [ ] **Phase 51: Conversation Detail** - Event timeline, message history, and metadata panels for a single conversation
 - [ ] **Phase 52: Agent Definitions View** - Agent list and detail pages sourced from agent-service runtime registry
 - [ ] **Phase 53: Tool Dashboard** - Tool registry, permission matrix, performance metrics, failures, and integration health
@@ -71,8 +71,8 @@ Plans:
   3. The page loads within a reasonable time and the table is visually clean (proper alignment, status badges with color coding, empty state when no conversations match filters)
 **Plans:** 2 plans
 Plans:
-- [ ] 50-01-PLAN.md -- Dependencies, service layer expansion with token aggregation and multi-filter, format utilities, NuqsAdapter
-- [ ] 50-02-PLAN.md -- DataTable UI with column definitions, filter toolbar, pagination, loading skeleton, and conversations page
+- [x] 50-01-PLAN.md -- Dependencies, service layer expansion with token aggregation and multi-filter, format utilities, NuqsAdapter
+- [x] 50-02-PLAN.md -- DataTable UI with column definitions, filter toolbar, pagination, loading skeleton, and conversations page
 
 ### Phase 51: Conversation Detail
 **Goal**: Users can inspect any conversation's full execution history -- every tool call, LLM response, pause, signal, and sub-agent -- from a single page, making agent debugging visual instead of SQL-based
@@ -140,7 +140,7 @@ Note: Phases 48 and 49 could execute in parallel (no dependency between them), b
 |-------|----------------|--------|-----------|
 | 48. Agent Service API Extensions | 2/2 | Complete | 2026-02-04 |
 | 49. Dashboard Infrastructure | 3/3 | Complete | 2026-02-04 |
-| 50. Conversations List | 0/2 | Not started | - |
+| 50. Conversations List | 2/2 | Complete | 2026-02-04 |
 | 51. Conversation Detail | 0/TBD | Not started | - |
 | 52. Agent Definitions View | 0/TBD | Not started | - |
 | 53. Tool Dashboard | 0/TBD | Not started | - |
