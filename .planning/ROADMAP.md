@@ -129,7 +129,10 @@ Plans:
   2. Active conversations are listed with agent name, duration, last event, and links to detail pages
   3. Worker status section displays current active claims, max concurrent capacity, poll interval, last poll time, and uptime (from agent-service API)
   4. Recent errors section shows the last 10 failures with links, and token usage shows aggregate consumption by agent type over the last 24h
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 54-01-PLAN.md -- Overview service layer (status counts, active conversations, recent errors, token usage) and fetchWorkerStatus HTTP client
+- [ ] 54-02-PLAN.md -- Overview UI components (stat cards, active conversations, worker status, recent errors, token usage chart) and page assembly
 
 ### Phase 55: Real-Time Updates
 **Goal**: The dashboard reflects current system state without manual refresh -- conversation status changes appear in the list, new events append to timelines, and overview counts update live
@@ -156,7 +159,7 @@ Note: Phases 48 and 49 could execute in parallel (no dependency between them), b
 | 51. Conversation Detail | 3/3 | Complete | 2026-02-04 |
 | 52. Agent Definitions View | 3/3 | Complete | 2026-02-04 |
 | 53. Tool Dashboard | 3/3 | Complete | 2026-02-04 |
-| 54. System Overview | 0/TBD | Not started | - |
+| 54. System Overview | 0/2 | Not started | - |
 | 55. Real-Time Updates | 0/TBD | Not started | - |
 
 ---
