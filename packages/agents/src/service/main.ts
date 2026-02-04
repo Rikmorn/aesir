@@ -157,7 +157,7 @@ async function bootstrap(): Promise<void> {
     { name: "slack", healthUrl: `${config.mcp.slack.url}/health` },
   ];
 
-  const apiRouter = createApiRouter({
+  const { router: apiRouter, sseManager } = createApiRouter({
     toolRegistry,
     agentRegistry,
     getWorkerStatus: () => executor.getWorkerStatus(),
@@ -258,22 +258,25 @@ async function bootstrap(): Promise<void> {
     isShuttingDown = true;
     logger.info({ signal }, "Graceful shutdown initiated");
 
-    // 1. Stop accepting HTTP connections
+    // 1. Close all SSE connections (clients get disconnected cleanly)
+    sseManager.closeAll();
+
+    // 2. Stop accepting HTTP connections
     server.close();
 
-    // 2. Stop worker + drain conversations + flush event log + stop pg-boss
+    // 3. Stop worker + drain conversations + flush event log + stop pg-boss
     await executor.stopWorker();
 
-    // 3. Final event log flush (belt + suspenders)
+    // 4. Final event log flush (belt + suspenders)
     await eventLog.close();
 
-    // 4. Close session projection subscriptions
+    // 5. Close session projection subscriptions
     sessionProjection.close();
 
-    // 5. Close sandbox manager
+    // 6. Close sandbox manager
     await sandboxManager.close();
 
-    // 6. Close database pool
+    // 7. Close database pool
     await pool.end();
 
     logger.info("Graceful shutdown complete");

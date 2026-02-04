@@ -10,7 +10,7 @@
  * - GET /api/agents/registry   -- agent definitions (without prompt)
  * - GET /api/agents/registry/:id -- agent definition (with prompt)
  * - GET /api/worker/status     -- worker loop status
- * - GET /api/sse/events        -- SSE event stream (Plan 02)
+ * - GET /api/sse/events        -- SSE event stream
  */
 
 import type { PinoLogger } from "@aesir/platform";
@@ -22,6 +22,10 @@ import type {
 } from "../../framework/types.js";
 import type { WorkerLoopStatus } from "../../framework/worker-loop.js";
 import { createAgentsRegistryRouter } from "./agents-registry.js";
+import {
+  createSseEventsRouter,
+  type SseConnectionManager,
+} from "./sse-events.js";
 import { createToolsHealthRouter } from "./tools-health.js";
 import { createToolsRegistryRouter } from "./tools-registry.js";
 import { createWorkerStatusRouter } from "./worker-status.js";
@@ -48,15 +52,25 @@ export interface ApiRouterOptions {
 /**
  * Create the combined API router that mounts all sub-routers.
  *
- * SSE endpoint (Plan 02) will be added to this router later.
+ * Returns both the Express Router and the SSE connection manager
+ * (main.ts needs the manager for graceful shutdown).
  */
-export function createApiRouter(options: ApiRouterOptions): Router {
-  const { toolRegistry, agentRegistry, getWorkerStatus, integrations, logger } =
-    options;
+export function createApiRouter(options: ApiRouterOptions): {
+  router: Router;
+  sseManager: SseConnectionManager;
+} {
+  const {
+    toolRegistry,
+    agentRegistry,
+    getWorkerStatus,
+    eventLog,
+    integrations,
+    logger,
+  } = options;
 
   const router = Router();
 
-  // Mount sub-routers
+  // Mount REST sub-routers
   router.use(
     "/tools/registry",
     createToolsRegistryRouter({ toolRegistry, logger }),
@@ -77,5 +91,12 @@ export function createApiRouter(options: ApiRouterOptions): Router {
     createWorkerStatusRouter({ getWorkerStatus, logger }),
   );
 
-  return router;
+  // Mount SSE sub-router
+  const { router: sseRouter, manager: sseManager } = createSseEventsRouter({
+    eventLog,
+    logger,
+  });
+  router.use("/sse/events", sseRouter);
+
+  return { router, sseManager };
 }
