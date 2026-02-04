@@ -69,7 +69,10 @@ Plans:
   1. Navigating to `/conversations` shows a table of all conversations with columns for agent name, status badge, duration, token usage (input + output), and last activity timestamp
   2. Filtering by status (multi-select), agent type (multi-select), time range (last hour / 24h / 7d / custom), and has-errors (boolean) narrows the list correctly
   3. The page loads within a reasonable time and the table is visually clean (proper alignment, status badges with color coding, empty state when no conversations match filters)
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 50-01-PLAN.md -- Dependencies, service layer expansion with token aggregation and multi-filter, format utilities, NuqsAdapter
+- [ ] 50-02-PLAN.md -- DataTable UI with column definitions, filter toolbar, pagination, loading skeleton, and conversations page
 
 ### Phase 51: Conversation Detail
 **Goal**: Users can inspect any conversation's full execution history -- every tool call, LLM response, pause, signal, and sub-agent -- from a single page, making agent debugging visual instead of SQL-based
@@ -137,7 +140,7 @@ Note: Phases 48 and 49 could execute in parallel (no dependency between them), b
 |-------|----------------|--------|-----------|
 | 48. Agent Service API Extensions | 2/2 | Complete | 2026-02-04 |
 | 49. Dashboard Infrastructure | 3/3 | Complete | 2026-02-04 |
-| 50. Conversations List | 0/TBD | Not started | - |
+| 50. Conversations List | 0/2 | Not started | - |
 | 51. Conversation Detail | 0/TBD | Not started | - |
 | 52. Agent Definitions View | 0/TBD | Not started | - |
 | 53. Tool Dashboard | 0/TBD | Not started | - |
