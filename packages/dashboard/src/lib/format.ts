@@ -73,3 +73,23 @@ export function getTimeRangeDate(range: string): Date {
       return new Date(now.getTime() - 24 * 60 * 60 * 1000);
   }
 }
+
+/**
+ * Format an agent event type for display.
+ *
+ * Converts database enum values to human-readable labels.
+ * Examples:
+ *   "tool.called" -> "Tool Called"
+ *   "llm.response" -> "LLM Response"
+ *   "agent.started" -> "Agent Started"
+ *   "signal.received" -> "Signal Received"
+ */
+export function formatEventType(type: string): string {
+  return type
+    .split(".")
+    .map((word) => {
+      if (word === "llm") return "LLM";
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ");
+}
