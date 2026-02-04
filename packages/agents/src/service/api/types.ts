@@ -60,9 +60,9 @@ export interface AgentRegistrySummary {
   description: string;
   version: string;
   model: string;
-  temperature?: number;
+  temperature?: number | undefined;
   tools: string[];
-  subAgents?: Record<string, string>;
+  subAgents?: Record<string, string> | undefined;
   maxIterations: number;
   tokenBudget: number;
   history: {
@@ -71,7 +71,7 @@ export interface AgentRegistrySummary {
     summaryThreshold: number;
     summaryModel: string;
   };
-  triggers?: Array<{ event: string }>;
+  triggers?: Array<{ event: string }> | undefined;
 }
 
 /**
