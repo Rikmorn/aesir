@@ -40,7 +40,10 @@ Real-time visibility into agent execution through a developer-focused web dashbo
   3. `curl http://localhost:3004/api/worker/status` returns the worker loop's active claims, max concurrent, poll interval, and uptime
   4. `curl http://localhost:3004/api/tools/health` returns Linear, GitHub, and Slack endpoint status with latency (cached 30s)
   5. Connecting to `GET /api/sse/events` opens an SSE stream that emits agent events in real-time, with support for `?conversationId` and `?types` query parameter filters
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 48-01-PLAN.md -- Shared API foundation, interface extensions, and four REST endpoints (tools/registry, tools/health, agents/registry, worker/status)
+- [ ] 48-02-PLAN.md -- SSE event stream endpoint with connection management, filtering, replay, and shutdown cleanup
 
 ### Phase 49: Dashboard Infrastructure
 **Goal**: A working Next.js 15 application exists in the monorepo, builds in Docker, serves on port 3005 via Compose, passes typecheck and lint, and has the service layer pattern established for all future views
@@ -128,7 +131,7 @@ Note: Phases 48 and 49 could execute in parallel (no dependency between them), b
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 48. Agent Service API Extensions | 0/TBD | Not started | - |
+| 48. Agent Service API Extensions | 0/2 | Planned | - |
 | 49. Dashboard Infrastructure | 0/TBD | Not started | - |
 | 50. Conversations List | 0/TBD | Not started | - |
 | 51. Conversation Detail | 0/TBD | Not started | - |
