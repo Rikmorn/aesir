@@ -42,7 +42,7 @@ Real-time visibility into agent execution through a developer-focused web dashbo
   5. Connecting to `GET /api/sse/events` opens an SSE stream that emits agent events in real-time, with support for `?conversationId` and `?types` query parameter filters
 **Plans:** 2 plans
 Plans:
-- [ ] 48-01-PLAN.md -- Shared API foundation, interface extensions, and four REST endpoints (tools/registry, tools/health, agents/registry, worker/status)
+- [x] 48-01-PLAN.md -- Shared API foundation, interface extensions, and four REST endpoints (tools/registry, tools/health, agents/registry, worker/status)
 - [ ] 48-02-PLAN.md -- SSE event stream endpoint with connection management, filtering, replay, and shutdown cleanup
 
 ### Phase 49: Dashboard Infrastructure
@@ -131,7 +131,7 @@ Note: Phases 48 and 49 could execute in parallel (no dependency between them), b
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 48. Agent Service API Extensions | 0/2 | Planned | - |
+| 48. Agent Service API Extensions | 1/2 | In progress | - |
 | 49. Dashboard Infrastructure | 0/TBD | Not started | - |
 | 50. Conversations List | 0/TBD | Not started | - |
 | 51. Conversation Detail | 0/TBD | Not started | - |
