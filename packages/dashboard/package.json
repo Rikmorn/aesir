@@ -19,12 +19,15 @@
     "clsx": "^2.1.0",
     "tailwind-merge": "^3.0.0",
     "lucide-react": "^0.400.0",
-    "tw-animate-css": "^1.0.0"
+    "tw-animate-css": "^1.0.0",
+    "drizzle-orm": "^0.45.1",
+    "pg": "^8.17.2"
   },
   "devDependencies": {
     "typescript": "^5.7.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0"
+    "@types/react-dom": "^19.0.0",
+    "@types/pg": "^8.16.0"
   }
 }

@@ -132,12 +132,18 @@ importers:
       clsx:
         specifier: ^2.1.0
         version: 2.1.1
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.1(@types/pg@8.16.0)(pg@8.17.2)(postgres@3.4.8)
       lucide-react:
         specifier: ^0.400.0
         version: 0.400.0(react@19.2.4)
       next:
         specifier: 15.5.9
         version: 15.5.9(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      pg:
+        specifier: ^8.17.2
+        version: 8.17.2
       react:
         specifier: ^19.0.3
         version: 19.2.4
@@ -157,6 +163,9 @@ importers:
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.7
+      '@types/pg':
+        specifier: ^8.16.0
+        version: 8.16.0
       '@types/react':
         specifier: ^19.0.0
         version: 19.2.11
