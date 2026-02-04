@@ -202,6 +202,95 @@
           }
         }
       }
+    },
+    {
+      "includes": ["packages/dashboard/**/*.ts", "packages/dashboard/**/*.tsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {},
+                "patterns": [
+                  {
+                    "group": [
+                      "@aesir/integration-linear",
+                      "@aesir/integration-linear/*"
+                    ],
+                    "message": "Dashboard reads from Postgres and agent-service API only. Do not import integration packages directly."
+                  },
+                  {
+                    "group": [
+                      "@aesir/integration-github",
+                      "@aesir/integration-github/*"
+                    ],
+                    "message": "Dashboard reads from Postgres and agent-service API only. Do not import integration packages directly."
+                  },
+                  {
+                    "group": [
+                      "@aesir/integration-slack",
+                      "@aesir/integration-slack/*"
+                    ],
+                    "message": "Dashboard reads from Postgres and agent-service API only. Do not import integration packages directly."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/dashboard/**/*.tsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": {
+              "level": "error",
+              "options": {
+                "strictCase": false,
+                "conventions": [
+                  {
+                    "selector": { "kind": "variable" },
+                    "formats": ["camelCase", "CONSTANT_CASE", "PascalCase"]
+                  },
+                  {
+                    "selector": { "kind": "function" },
+                    "formats": ["camelCase", "PascalCase"]
+                  },
+                  {
+                    "selector": { "kind": "typeLike" },
+                    "formats": ["PascalCase"]
+                  },
+                  {
+                    "selector": {
+                      "kind": "const",
+                      "scope": "global"
+                    },
+                    "formats": ["camelCase", "CONSTANT_CASE", "PascalCase"]
+                  },
+                  {
+                    "selector": {
+                      "kind": "objectLiteralProperty"
+                    },
+                    "formats": [
+                      "camelCase",
+                      "CONSTANT_CASE",
+                      "snake_case",
+                      "PascalCase"
+                    ]
+                  },
+                  {
+                    "selector": { "kind": "typeProperty" },
+                    "formats": ["camelCase", "snake_case"]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   ]
 }
