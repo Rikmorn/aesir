@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** Phase 50 complete - Conversations List
+**Current focus:** Phase 51 in progress - Conversation Detail
 
 ## Current Position
 
-Phase: 50 of 55 (Conversations List)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-04 -- Completed 50-02-PLAN.md
+Phase: 51 of 55 (Conversation Detail)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-04 -- Completed 51-01-PLAN.md
 
-Progress: [#######-] 44% (7/16 plans across 8 phases)
+Progress: [########-] 50% (8/16 plans across 8 phases)
 
 ## Milestone History
 
@@ -29,9 +29,9 @@ Progress: [#######-] 44% (7/16 plans across 8 phases)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
+- Total plans completed: 8
 - Average duration: ~4 minutes
-- Total execution time: ~33 minutes
+- Total execution time: ~37 minutes
 
 *Updated after each plan completion*
 
@@ -88,6 +88,11 @@ v2.4 decisions:
 - Select component for time range (single-value, not multi-select)
 - Static key array for skeleton rows to satisfy Biome noArrayIndexKey rule
 
+51-01 decisions:
+- Destructuring for row access (`const [row] = rows`) to satisfy TypeScript strict noUncheckedIndexedAccess
+- getChildConversations as separate function for metadata sidebar sub-agent links
+- ConversationEvent.type as string (not AgentEventType enum) for service interface flexibility
+
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
@@ -101,9 +106,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: Completed 50-02-PLAN.md
+Stopped at: Completed 51-01-PLAN.md
 Resume file: None
-Next action: Phase 50 complete. Next phase: 51 (Conversation Detail)
+Next action: Execute 51-02-PLAN.md (Event Timeline Components)
 
 ---
-*Updated: 2026-02-04 -- Completed 50-02 Conversations Table UI (2/2 plans in Phase 50 -- phase complete)*
+*Updated: 2026-02-04 -- Completed 51-01 Data Foundation and UI Primitives (1/3 plans in Phase 51)*
