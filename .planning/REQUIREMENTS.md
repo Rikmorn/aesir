@@ -117,64 +117,64 @@ Deferred to later milestones. Tracked but not in v2.4 roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | TBD | Pending |
-| INFRA-02 | TBD | Pending |
-| INFRA-03 | TBD | Pending |
-| INFRA-04 | TBD | Pending |
-| INFRA-05 | TBD | Pending |
-| INFRA-06 | TBD | Pending |
-| INFRA-07 | TBD | Pending |
-| INFRA-08 | TBD | Pending |
-| INFRA-09 | TBD | Pending |
-| INFRA-10 | TBD | Pending |
-| CONV-01 | TBD | Pending |
-| CONV-02 | TBD | Pending |
-| CONV-03 | TBD | Pending |
-| CONV-04 | TBD | Pending |
-| CONV-05 | TBD | Pending |
-| CONV-06 | TBD | Pending |
-| CONV-07 | TBD | Pending |
-| CONV-08 | TBD | Pending |
-| CONV-09 | TBD | Pending |
-| CONV-10 | TBD | Pending |
-| AGNT-01 | TBD | Pending |
-| AGNT-02 | TBD | Pending |
-| AGNT-03 | TBD | Pending |
-| AGNT-04 | TBD | Pending |
-| AGNT-05 | TBD | Pending |
-| AGNT-06 | TBD | Pending |
-| TOOL-01 | TBD | Pending |
-| TOOL-02 | TBD | Pending |
-| TOOL-03 | TBD | Pending |
-| TOOL-04 | TBD | Pending |
-| TOOL-05 | TBD | Pending |
-| TOOL-06 | TBD | Pending |
-| TOOL-07 | TBD | Pending |
-| OVER-01 | TBD | Pending |
-| OVER-02 | TBD | Pending |
-| OVER-03 | TBD | Pending |
-| OVER-04 | TBD | Pending |
-| OVER-05 | TBD | Pending |
-| SSE-01 | TBD | Pending |
-| SSE-02 | TBD | Pending |
-| SSE-03 | TBD | Pending |
-| SSE-04 | TBD | Pending |
-| SSE-05 | TBD | Pending |
-| SSE-06 | TBD | Pending |
-| SSE-07 | TBD | Pending |
-| API-01 | TBD | Pending |
-| API-02 | TBD | Pending |
-| API-03 | TBD | Pending |
-| API-04 | TBD | Pending |
-| API-05 | TBD | Pending |
-| API-06 | TBD | Pending |
-| API-07 | TBD | Pending |
+| API-01 | Phase 48 | Pending |
+| API-02 | Phase 48 | Pending |
+| API-03 | Phase 48 | Pending |
+| API-04 | Phase 48 | Pending |
+| API-05 | Phase 48 | Pending |
+| API-06 | Phase 48 | Pending |
+| API-07 | Phase 48 | Pending |
+| SSE-01 | Phase 48 | Pending |
+| SSE-02 | Phase 48 | Pending |
+| INFRA-01 | Phase 49 | Pending |
+| INFRA-02 | Phase 49 | Pending |
+| INFRA-03 | Phase 49 | Pending |
+| INFRA-04 | Phase 49 | Pending |
+| INFRA-05 | Phase 49 | Pending |
+| INFRA-06 | Phase 49 | Pending |
+| INFRA-07 | Phase 49 | Pending |
+| INFRA-08 | Phase 49 | Pending |
+| INFRA-09 | Phase 49 | Pending |
+| INFRA-10 | Phase 49 | Pending |
+| CONV-01 | Phase 50 | Pending |
+| CONV-02 | Phase 50 | Pending |
+| CONV-03 | Phase 51 | Pending |
+| CONV-04 | Phase 51 | Pending |
+| CONV-05 | Phase 51 | Pending |
+| CONV-06 | Phase 51 | Pending |
+| CONV-07 | Phase 51 | Pending |
+| CONV-08 | Phase 51 | Pending |
+| CONV-09 | Phase 51 | Pending |
+| CONV-10 | Phase 51 | Pending |
+| AGNT-01 | Phase 52 | Pending |
+| AGNT-02 | Phase 52 | Pending |
+| AGNT-03 | Phase 52 | Pending |
+| AGNT-04 | Phase 52 | Pending |
+| AGNT-05 | Phase 52 | Pending |
+| AGNT-06 | Phase 52 | Pending |
+| TOOL-01 | Phase 53 | Pending |
+| TOOL-02 | Phase 53 | Pending |
+| TOOL-03 | Phase 53 | Pending |
+| TOOL-04 | Phase 53 | Pending |
+| TOOL-05 | Phase 53 | Pending |
+| TOOL-06 | Phase 53 | Pending |
+| TOOL-07 | Phase 53 | Pending |
+| OVER-01 | Phase 54 | Pending |
+| OVER-02 | Phase 54 | Pending |
+| OVER-03 | Phase 54 | Pending |
+| OVER-04 | Phase 54 | Pending |
+| OVER-05 | Phase 54 | Pending |
+| SSE-03 | Phase 55 | Pending |
+| SSE-04 | Phase 55 | Pending |
+| SSE-05 | Phase 55 | Pending |
+| SSE-06 | Phase 55 | Pending |
+| SSE-07 | Phase 55 | Pending |
 
 **Coverage:**
 - v2.4 requirements: 52 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 52
+- Mapped to phases: 52
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-04*
-*Last updated: 2026-02-04 after initial definition*
+*Last updated: 2026-02-04 after roadmap creation*
