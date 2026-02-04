@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** Phase 48 complete - Agent Service API Extensions
+**Current focus:** Phase 49 in progress - Dashboard Infrastructure
 
 ## Current Position
 
-Phase: 48 of 55 (Agent Service API Extensions)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-04 -- Completed 48-02-PLAN.md
+Phase: 49 of 55 (Dashboard Infrastructure)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-04 -- Completed 49-01-PLAN.md
 
-Progress: [##------] 12% (2/16 plans across 8 phases)
+Progress: [###-----] 19% (3/16 plans across 8 phases)
 
 ## Milestone History
 
@@ -29,9 +29,9 @@ Progress: [##------] 12% (2/16 plans across 8 phases)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: ~5 minutes
-- Total execution time: ~10 minutes
+- Total plans completed: 3
+- Average duration: ~6 minutes
+- Total execution time: ~17 minutes
 
 *Updated after each plan completion*
 
@@ -59,6 +59,12 @@ v2.4 decisions:
 - Connection limit of 50 with 429 TOO_MANY_CONNECTIONS response
 - sseManager.closeAll() runs before server.close() in shutdown sequence
 
+49-01 decisions:
+- Dashboard tsconfig.json does NOT extend tsconfig.base.json (incompatible module/moduleResolution for Next.js)
+- Biome override for TSX files allows PascalCase function names (React components)
+- Biome override for API route files allows CONSTANT_CASE function names (GET, POST, etc.)
+- basePath set to /dashboard for Nginx sub-path routing
+
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
@@ -72,9 +78,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: Completed 48-02-PLAN.md (Phase 48 complete)
+Stopped at: Completed 49-01-PLAN.md
 Resume file: None
-Next action: Begin Phase 49 (Dashboard)
+Next action: Continue Phase 49 -- Plan 02 (Drizzle read-only database client and service layer)
 
 ---
-*Updated: 2026-02-04 -- Completed Phase 48 Agent Service API Extensions (2/2 plans)*
+*Updated: 2026-02-04 -- Completed 49-01 Dashboard Package Setup (1/3 plans in Phase 49)*
