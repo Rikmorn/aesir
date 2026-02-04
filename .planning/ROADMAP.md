@@ -22,7 +22,7 @@ Real-time visibility into agent execution through a developer-focused web dashbo
 - [x] **Phase 48: Agent Service API Extensions** - New /api/ endpoints on the agent service for runtime state and SSE streaming
 - [x] **Phase 49: Dashboard Infrastructure** - Next.js 15 package with Tailwind, shadcn/ui, Drizzle, Docker, service layer
 - [x] **Phase 50: Conversations List** - Filterable list of all conversations with status, tokens, and activity
-- [ ] **Phase 51: Conversation Detail** - Event timeline, message history, and metadata panels for a single conversation
+- [x] **Phase 51: Conversation Detail** - Event timeline, message history, and metadata panels for a single conversation
 - [ ] **Phase 52: Agent Definitions View** - Agent list and detail pages sourced from agent-service runtime registry
 - [ ] **Phase 53: Tool Dashboard** - Tool registry, permission matrix, performance metrics, failures, and integration health
 - [ ] **Phase 54: System Overview** - Landing page with conversation summary, active conversations, worker status, errors, and token usage
@@ -86,9 +86,9 @@ Plans:
   5. A metadata sidebar shows conversation ID, agent definition, status, retry count, parent/child links, session artifacts, and timestamps
 **Plans:** 3 plans
 Plans:
-- [ ] 51-01-PLAN.md -- Schema update, shadcn components, service layer extensions, format utility
-- [ ] 51-02-PLAN.md -- Event timeline components (EventIcon, JsonPayload, EventTimeline with collapsible events)
-- [ ] 51-03-PLAN.md -- Message panel, metadata sidebar, and conversation detail page assembly
+- [x] 51-01-PLAN.md -- Schema update, shadcn components, service layer extensions, format utility
+- [x] 51-02-PLAN.md -- Event timeline components (EventIcon, JsonPayload, EventTimeline with collapsible events)
+- [x] 51-03-PLAN.md -- Message panel, metadata sidebar, and conversation detail page assembly
 
 ### Phase 52: Agent Definitions View
 **Goal**: Users can see what agents exist, how they're configured, and what they've been doing recently -- without reading YAML files or grepping code
@@ -145,7 +145,7 @@ Note: Phases 48 and 49 could execute in parallel (no dependency between them), b
 | 48. Agent Service API Extensions | 2/2 | Complete | 2026-02-04 |
 | 49. Dashboard Infrastructure | 3/3 | Complete | 2026-02-04 |
 | 50. Conversations List | 2/2 | Complete | 2026-02-04 |
-| 51. Conversation Detail | 0/TBD | Not started | - |
+| 51. Conversation Detail | 3/3 | Complete | 2026-02-04 |
 | 52. Agent Definitions View | 0/TBD | Not started | - |
 | 53. Tool Dashboard | 0/TBD | Not started | - |
 | 54. System Overview | 0/TBD | Not started | - |

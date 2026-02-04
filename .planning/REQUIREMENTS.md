@@ -22,14 +22,14 @@
 
 - [x] **CONV-01**: Conversations list page shows all conversations with status, agent, duration, token usage, last activity
 - [x] **CONV-02**: Filters work: status, agent type, time range, has errors
-- [ ] **CONV-03**: Conversation detail page shows event timeline with all event types rendered appropriately
-- [ ] **CONV-04**: Tool call events show input parameters (expandable) and results (expandable)
-- [ ] **CONV-05**: Failed tool calls are visually distinct (red/error styling)
-- [ ] **CONV-06**: LLM response events show token counts and latency
-- [ ] **CONV-07**: Sub-agent events render as nested/indented sections in the parent timeline
-- [ ] **CONV-08**: Conversation messages panel shows the LLM message history as a chat view
-- [ ] **CONV-09**: Conversation metadata sidebar shows all relevant fields including artifacts and parent/child links
-- [ ] **CONV-10**: Clicking a child conversation navigates to its detail page
+- [x] **CONV-03**: Conversation detail page shows event timeline with all event types rendered appropriately
+- [x] **CONV-04**: Tool call events show input parameters (expandable) and results (expandable)
+- [x] **CONV-05**: Failed tool calls are visually distinct (red/error styling)
+- [x] **CONV-06**: LLM response events show token counts and latency
+- [x] **CONV-07**: Sub-agent events render as nested/indented sections in the parent timeline
+- [x] **CONV-08**: Conversation messages panel shows the LLM message history as a chat view
+- [x] **CONV-09**: Conversation metadata sidebar shows all relevant fields including artifacts and parent/child links
+- [x] **CONV-10**: Clicking a child conversation navigates to its detail page
 
 ### Agent Definitions View
 
@@ -138,14 +138,14 @@ Deferred to later milestones. Tracked but not in v2.4 roadmap.
 | INFRA-10 | Phase 49 | Complete |
 | CONV-01 | Phase 50 | Complete |
 | CONV-02 | Phase 50 | Complete |
-| CONV-03 | Phase 51 | Pending |
-| CONV-04 | Phase 51 | Pending |
-| CONV-05 | Phase 51 | Pending |
-| CONV-06 | Phase 51 | Pending |
-| CONV-07 | Phase 51 | Pending |
-| CONV-08 | Phase 51 | Pending |
-| CONV-09 | Phase 51 | Pending |
-| CONV-10 | Phase 51 | Pending |
+| CONV-03 | Phase 51 | Complete |
+| CONV-04 | Phase 51 | Complete |
+| CONV-05 | Phase 51 | Complete |
+| CONV-06 | Phase 51 | Complete |
+| CONV-07 | Phase 51 | Complete |
+| CONV-08 | Phase 51 | Complete |
+| CONV-09 | Phase 51 | Complete |
+| CONV-10 | Phase 51 | Complete |
 | AGNT-01 | Phase 52 | Pending |
 | AGNT-02 | Phase 52 | Pending |
 | AGNT-03 | Phase 52 | Pending |
