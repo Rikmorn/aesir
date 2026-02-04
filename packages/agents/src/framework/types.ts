@@ -21,6 +21,7 @@ import type {
   NewAgentEvent,
 } from "../shared/db/schema.js";
 import type { TimeoutScheduler } from "./timeout-scheduler.js";
+import type { WorkerLoopStatus } from "./worker-loop.js";
 
 export { agentEventTypeValues } from "../shared/db/schema.js";
 
@@ -556,6 +557,12 @@ export interface ConversationExecutor {
    * waits for running conversations to finish, and flushes resources.
    */
   stopWorker(): Promise<void>;
+
+  /**
+   * Get the current worker loop status snapshot.
+   * Returns null if the worker loop has not been created yet.
+   */
+  getWorkerStatus(): WorkerLoopStatus | null;
 }
 
 /**

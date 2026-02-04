@@ -615,6 +615,13 @@ export function createConversationExecutor(
         await options.timeoutScheduler.close();
       }
     },
+
+    getWorkerStatus() {
+      if (!workerLoop) {
+        return null;
+      }
+      return workerLoop.getStatus();
+    },
   };
 
   return executor;

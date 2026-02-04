@@ -37,5 +37,9 @@ export {
   createDefaultWaitForState,
   createWaitForTool,
 } from "./wait-for-tool.js";
-export type { WorkerLoop, WorkerLoopOptions } from "./worker-loop.js";
+export type {
+  WorkerLoop,
+  WorkerLoopOptions,
+  WorkerLoopStatus,
+} from "./worker-loop.js";
 export { createWorkerLoop } from "./worker-loop.js";

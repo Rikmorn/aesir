@@ -64,6 +64,7 @@ function createMockExecutor(): ConversationExecutor {
     list: vi.fn().mockResolvedValue([]),
     startWorker: vi.fn(),
     stopWorker: vi.fn().mockResolvedValue(undefined),
+    getWorkerStatus: vi.fn().mockReturnValue(null),
   };
 }
 

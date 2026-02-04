@@ -85,6 +85,24 @@ export interface WorkerLoopOptions {
 }
 
 /**
+ * Status snapshot of the worker loop, returned by getStatus().
+ */
+export interface WorkerLoopStatus {
+  /** Number of currently executing conversations */
+  activeClaims: number;
+  /** Maximum concurrent conversations allowed */
+  maxConcurrent: number;
+  /** How often the worker polls for new work (ms) */
+  pollIntervalMs: number;
+  /** When the last poll cycle started, or null if never polled */
+  lastPollAt: Date | null;
+  /** Milliseconds since the worker loop started */
+  uptimeMs: number;
+  /** Whether the loop is currently running (not draining) */
+  isRunning: boolean;
+}
+
+/**
  * WorkerLoop - Polls for queued conversations and executes agent loops.
  */
 export interface WorkerLoop {
@@ -98,6 +116,8 @@ export interface WorkerLoop {
   isRunning(): boolean;
   /** Number of currently executing conversations */
   getRunningCount(): number;
+  /** Get a snapshot of current worker loop status */
+  getStatus(): WorkerLoopStatus;
 }
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
@@ -200,6 +220,8 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
   let started = false;
   let pollTimer: ReturnType<typeof setTimeout> | null = null;
   const running = new Map<string, AbortController>();
+  let startedAt: Date | null = null;
+  let lastPollAt: Date | null = null;
 
   // ─── Stale Recovery ───────────────────────────────────────────────────
 
@@ -974,6 +996,8 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
   async function poll(): Promise<void> {
     if (draining) return;
 
+    lastPollAt = new Date();
+
     try {
       // 1. Recover stale conversations
       await recoverStaleConversations();
@@ -1012,6 +1036,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
 
       started = true;
       draining = false;
+      startedAt = new Date();
 
       logger.info(
         {
@@ -1063,6 +1088,17 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
 
     getRunningCount(): number {
       return running.size;
+    },
+
+    getStatus(): WorkerLoopStatus {
+      return {
+        activeClaims: running.size,
+        maxConcurrent: concurrencyLimit,
+        pollIntervalMs,
+        lastPollAt,
+        uptimeMs: startedAt ? Date.now() - startedAt.getTime() : 0,
+        isRunning: started && !draining,
+      };
     },
   };
 }
