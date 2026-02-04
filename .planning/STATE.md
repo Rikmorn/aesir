@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** Phase 49 in progress - Dashboard Infrastructure
+**Current focus:** Phase 49 complete - Dashboard Infrastructure
 
 ## Current Position
 
 Phase: 49 of 55 (Dashboard Infrastructure)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-04 -- Completed 49-02-PLAN.md
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-04 -- Completed 49-03-PLAN.md
 
-Progress: [####----] 25% (4/16 plans across 8 phases)
+Progress: [#####---] 31% (5/16 plans across 8 phases)
 
 ## Milestone History
 
@@ -29,9 +29,9 @@ Progress: [####----] 25% (4/16 plans across 8 phases)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
+- Total plans completed: 5
 - Average duration: ~5 minutes
-- Total execution time: ~21 minutes
+- Total execution time: ~24 minutes
 
 *Updated after each plan completion*
 
@@ -71,6 +71,11 @@ v2.4 decisions:
 - Local schema in lib/schema.ts mirrors agents schema without runtime @aesir/agents dependency
 - camelCase interfaces mapped from snake_case DB columns inside service functions
 
+49-03 decisions:
+- Dashboard NOT in nginx depends_on (optional service, 502 when down is acceptable)
+- proxy_pass http://dashboard/dashboard/ preserves basePath prefix for Next.js
+- No workspace dependency builds in Dockerfile (dashboard uses drizzle-orm/pg directly)
+
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
@@ -84,9 +89,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: Completed 49-02-PLAN.md
+Stopped at: Completed 49-03-PLAN.md
 Resume file: None
-Next action: Continue Phase 49 -- Plan 03 (Docker integration and Nginx routing)
+Next action: Phase 49 complete. Next phase: 50 (Dashboard Views)
 
 ---
-*Updated: 2026-02-04 -- Completed 49-02 Database Client and Service Layer (2/3 plans in Phase 49)*
+*Updated: 2026-02-04 -- Completed 49-03 Docker Infrastructure (3/3 plans in Phase 49 -- Phase complete)*
