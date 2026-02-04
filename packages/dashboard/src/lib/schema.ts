@@ -12,7 +12,14 @@
  * Source of truth: packages/agents/src/shared/db/schema.ts
  */
 
-import { integer, jsonb, pgSchema, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  integer,
+  jsonb,
+  pgSchema,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 export const agentsSchema = pgSchema("agents");
 
@@ -112,6 +119,33 @@ export const agentSessions = agentsSchema.table("agent_sessions", {
   updated_at: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+});
+
+// ─── Integration Schemas (MCP Permissions) ──────────────────────────────────
+
+export const linearSchema = pgSchema("linear");
+export const githubSchema = pgSchema("github");
+export const slackSchema = pgSchema("slack");
+
+export const linearMcpPermissions = linearSchema.table("mcp_tool_permissions", {
+  id: text("id").primaryKey(),
+  agent_id: text("agent_id").notNull(),
+  tool_name: text("tool_name").notNull(),
+  allowed: boolean("allowed").notNull(),
+});
+
+export const githubMcpPermissions = githubSchema.table("mcp_tool_permissions", {
+  id: text("id").primaryKey(),
+  agent_id: text("agent_id").notNull(),
+  tool_name: text("tool_name").notNull(),
+  allowed: boolean("allowed").notNull(),
+});
+
+export const slackMcpPermissions = slackSchema.table("mcp_tool_permissions", {
+  id: text("id").primaryKey(),
+  agent_id: text("agent_id").notNull(),
+  tool_name: text("tool_name").notNull(),
+  allowed: boolean("allowed").notNull(),
 });
 
 // ─── Type Exports ────────────────────────────────────────────────────────────

@@ -85,6 +85,30 @@ export async function fetchAgentList(): Promise<AgentSummary[]> {
   }
 }
 
+// ─── Tool Registry Types ────────────────────────────────────────────────────
+
+/**
+ * A single tool entry from the agent-service tool registry.
+ * Matches ToolRegistryEntry from agent-service API types.
+ */
+export interface ToolRegistryEntry {
+  name: string;
+  namespace: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+}
+
+/**
+ * Health status of a single integration (Linear, GitHub, Slack).
+ * Matches IntegrationHealth from agent-service API types.
+ */
+export interface IntegrationHealth {
+  name: string;
+  status: "healthy" | "unhealthy";
+  latencyMs: number | null;
+  lastChecked: string;
+}
+
 /**
  * Fetch a single agent definition by ID from the agent-service registry.
  *
@@ -121,5 +145,75 @@ export async function fetchAgentDetail(
       error,
     );
     return null;
+  }
+}
+
+// ─── Tool Registry Client ───────────────────────────────────────────────────
+
+/**
+ * Fetch all registered tools from the agent-service tool registry.
+ *
+ * Returns an array of ToolRegistryEntry objects.
+ * Returns empty array on error (agent-service unreachable, non-ok response).
+ */
+export async function fetchToolRegistry(): Promise<ToolRegistryEntry[]> {
+  const url = `${getBaseUrl()}/api/tools/registry`;
+
+  try {
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(5000),
+      headers: { Accept: "application/json" },
+      next: { revalidate: 60 },
+    });
+
+    if (!response.ok) {
+      // biome-ignore lint/suspicious/noConsole: Server-side HTTP client needs error logging for debugging unreachable agent-service
+      console.error(
+        `[agent-service] Failed to fetch tool registry: ${response.status} ${response.statusText}`,
+      );
+      return [];
+    }
+
+    return (await response.json()) as ToolRegistryEntry[];
+  } catch (error) {
+    // biome-ignore lint/suspicious/noConsole: Server-side HTTP client needs error logging for debugging unreachable agent-service
+    console.error("[agent-service] Failed to fetch tool registry:", error);
+    return [];
+  }
+}
+
+/**
+ * Fetch integration health status from the agent-service.
+ *
+ * Returns an array of IntegrationHealth objects for each integration.
+ * Uses shorter revalidation (30s) since health can change quickly.
+ * Returns empty array on error (agent-service unreachable, non-ok response).
+ */
+export async function fetchToolsHealth(): Promise<IntegrationHealth[]> {
+  const url = `${getBaseUrl()}/api/tools/health`;
+
+  try {
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(5000),
+      headers: { Accept: "application/json" },
+      next: { revalidate: 30 },
+    });
+
+    if (!response.ok) {
+      // biome-ignore lint/suspicious/noConsole: Server-side HTTP client needs error logging for debugging unreachable agent-service
+      console.error(
+        `[agent-service] Failed to fetch tools health: ${response.status} ${response.statusText}`,
+      );
+      return [];
+    }
+
+    const data = (await response.json()) as {
+      integrations: IntegrationHealth[];
+    };
+    return data.integrations;
+  } catch (error) {
+    // biome-ignore lint/suspicious/noConsole: Server-side HTTP client needs error logging for debugging unreachable agent-service
+    console.error("[agent-service] Failed to fetch tools health:", error);
+    return [];
   }
 }

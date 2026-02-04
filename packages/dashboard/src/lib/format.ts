@@ -75,6 +75,34 @@ export function getTimeRangeDate(range: string): Date {
 }
 
 /**
+ * Format a duration in milliseconds as a human-readable string.
+ *
+ * @returns "<1ms", "Xms", "X.Xs", "Xm Xs"
+ */
+export function formatDurationMs(ms: number | null): string {
+  if (ms === null || ms === undefined) return "-";
+  if (ms < 1) return "<1ms";
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  const seconds = ms / 1000;
+  if (seconds < 60) return `${seconds.toFixed(1)}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.round(seconds % 60);
+  return `${minutes}m ${remainingSeconds}s`;
+}
+
+/**
+ * Format a number as a percentage string.
+ *
+ * @param value - A number between 0 and 1
+ * @returns "0%", "X.X%", or "100%"
+ */
+export function formatPercentage(value: number): string {
+  if (value === 0) return "0%";
+  if (value >= 1) return "100%";
+  return `${(value * 100).toFixed(1)}%`;
+}
+
+/**
  * Format an agent event type for display.
  *
  * Converts database enum values to human-readable labels.
