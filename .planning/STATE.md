@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 51 of 55 (Conversation Detail)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-04 -- Completed 51-01-PLAN.md
+Last activity: 2026-02-04 -- Completed 51-02-PLAN.md
 
-Progress: [########-] 50% (8/16 plans across 8 phases)
+Progress: [#########] 56% (9/16 plans across 8 phases)
 
 ## Milestone History
 
@@ -29,9 +29,9 @@ Progress: [########-] 50% (8/16 plans across 8 phases)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
+- Total plans completed: 9
 - Average duration: ~4 minutes
-- Total execution time: ~37 minutes
+- Total execution time: ~41 minutes
 
 *Updated after each plan completion*
 
@@ -93,6 +93,12 @@ v2.4 decisions:
 - getChildConversations as separate function for metadata sidebar sub-agent links
 - ConversationEvent.type as string (not AgentEventType enum) for service interface flexibility
 
+51-02 decisions:
+- EventIcon and JsonPayload as server components (no "use client") for composability in both server and client contexts
+- Sub-agent nesting is single-depth (all parentInstanceId !== null get same indentation)
+- JSON truncation at 10,000 chars server-side to prevent browser freezing on large payloads
+- formatDurationMs as local helper in EventTimeline (not shared in format.ts)
+
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
@@ -106,9 +112,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: Completed 51-01-PLAN.md
+Stopped at: Completed 51-02-PLAN.md
 Resume file: None
-Next action: Execute 51-02-PLAN.md (Event Timeline Components)
+Next action: Execute 51-03-PLAN.md (Message Panel + Page Assembly)
 
 ---
-*Updated: 2026-02-04 -- Completed 51-01 Data Foundation and UI Primitives (1/3 plans in Phase 51)*
+*Updated: 2026-02-04 -- Completed 51-02 Event Timeline Components (2/3 plans in Phase 51)*
