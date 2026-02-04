@@ -217,3 +217,51 @@ export async function fetchToolsHealth(): Promise<IntegrationHealth[]> {
     return [];
   }
 }
+
+// ─── Worker Status ─────────────────────────────────────────────────────────
+
+/**
+ * Worker loop status snapshot from the agent-service.
+ * Matches WorkerStatusResponse from agent-service API types.
+ */
+export interface WorkerStatus {
+  activeClaims: number;
+  maxConcurrent: number;
+  pollIntervalMs: number;
+  lastPollAt: string | null;
+  uptimeMs: number;
+}
+
+/**
+ * Fetch the current worker loop status from the agent-service.
+ *
+ * Returns a WorkerStatus snapshot with active claims, concurrency limits,
+ * poll interval, last poll time, and uptime.
+ * Uses shorter revalidation (30s) since worker status changes frequently.
+ * Returns null on error (agent-service unreachable, non-ok response).
+ */
+export async function fetchWorkerStatus(): Promise<WorkerStatus | null> {
+  const url = `${getBaseUrl()}/api/worker/status`;
+
+  try {
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(5000),
+      headers: { Accept: "application/json" },
+      next: { revalidate: 30 },
+    });
+
+    if (!response.ok) {
+      // biome-ignore lint/suspicious/noConsole: Server-side HTTP client needs error logging for debugging unreachable agent-service
+      console.error(
+        `[agent-service] Failed to fetch worker status: ${response.status} ${response.statusText}`,
+      );
+      return null;
+    }
+
+    return (await response.json()) as WorkerStatus;
+  } catch (error) {
+    // biome-ignore lint/suspicious/noConsole: Server-side HTTP client needs error logging for debugging unreachable agent-service
+    console.error("[agent-service] Failed to fetch worker status:", error);
+    return null;
+  }
+}
