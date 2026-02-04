@@ -52,11 +52,11 @@
 
 ### System Overview
 
-- [ ] **OVER-01**: Landing page shows conversation status summary (counts by status)
-- [ ] **OVER-02**: Active conversations list with real-time updates
-- [ ] **OVER-03**: Worker status displays current claims, capacity, poll interval
-- [ ] **OVER-04**: Recent errors section shows last 10 failures with links
-- [ ] **OVER-05**: Token usage shows aggregate consumption by agent type
+- [x] **OVER-01**: Landing page shows conversation status summary (counts by status)
+- [x] **OVER-02**: Active conversations list with real-time updates
+- [x] **OVER-03**: Worker status displays current claims, capacity, poll interval
+- [x] **OVER-04**: Recent errors section shows last 10 failures with links
+- [x] **OVER-05**: Token usage shows aggregate consumption by agent type
 
 ### Real-Time Updates
 
@@ -159,11 +159,11 @@ Deferred to later milestones. Tracked but not in v2.4 roadmap.
 | TOOL-05 | Phase 53 | Complete |
 | TOOL-06 | Phase 53 | Complete |
 | TOOL-07 | Phase 53 | Complete |
-| OVER-01 | Phase 54 | Pending |
-| OVER-02 | Phase 54 | Pending |
-| OVER-03 | Phase 54 | Pending |
-| OVER-04 | Phase 54 | Pending |
-| OVER-05 | Phase 54 | Pending |
+| OVER-01 | Phase 54 | Complete |
+| OVER-02 | Phase 54 | Complete |
+| OVER-03 | Phase 54 | Complete |
+| OVER-04 | Phase 54 | Complete |
+| OVER-05 | Phase 54 | Complete |
 | SSE-03 | Phase 55 | Pending |
 | SSE-04 | Phase 55 | Pending |
 | SSE-05 | Phase 55 | Pending |
@@ -177,4 +177,4 @@ Deferred to later milestones. Tracked but not in v2.4 roadmap.
 
 ---
 *Requirements defined: 2026-02-04*
-*Last updated: 2026-02-04 after Phase 53 completion*
+*Last updated: 2026-02-04 after Phase 54 completion*
