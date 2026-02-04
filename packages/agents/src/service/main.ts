@@ -45,6 +45,7 @@ import { routeEvent } from "../router/router.js";
 import type { RouteEventDeps } from "../router/types.js";
 import * as schema from "../shared/db/schema.js";
 import { config } from "../shared/env/config.js";
+import { createApiRouter } from "./api/router.js";
 
 // Resolve definitions directory relative to this file's location.
 // In compiled JS (dist/service/main.js), ../../definitions reaches package root.
@@ -148,6 +149,24 @@ async function bootstrap(): Promise<void> {
   // 10. Express app
   const app = express();
   app.use(express.json({ limit: "1mb" }));
+
+  // 10a. Management API -- /api/ prefix for tools, agents, worker, SSE
+  const integrations = [
+    { name: "linear", healthUrl: `${config.mcp.linear.url}/health` },
+    { name: "github", healthUrl: `${config.mcp.github.url}/health` },
+    { name: "slack", healthUrl: `${config.mcp.slack.url}/health` },
+  ];
+
+  const apiRouter = createApiRouter({
+    toolRegistry,
+    agentRegistry,
+    getWorkerStatus: () => executor.getWorkerStatus(),
+    eventLog,
+    integrations,
+    logger,
+  });
+
+  app.use("/api", apiRouter);
 
   // Route dependencies (shared across POST /events calls)
   const routeEventDeps: RouteEventDeps = {
