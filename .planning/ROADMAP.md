@@ -99,7 +99,11 @@ Plans:
   2. The agent detail page (`/agents/[id]`) shows full configuration (model, temperature, iterations, token budget, history settings), tools with namespace grouping linking to the tool dashboard, and sub-agent references linking to their detail pages
   3. System prompt content is rendered with Markdown formatting (collapsible for long prompts)
   4. Recent conversations for the agent are listed with status and duration, linking to the conversation detail page
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 52-01-PLAN.md -- Dependencies (react-markdown, shadcn card/tabs/tooltip), agent-service HTTP client, agents service layer, Docker Compose update
+- [ ] 52-02-PLAN.md -- Agent list page with agent cards, type badges, and loading skeleton
+- [ ] 52-03-PLAN.md -- Agent detail page with configuration panel, tools list, sub-agents, prompt viewer, recent conversations, and loading skeleton
 
 ### Phase 53: Tool Dashboard
 **Goal**: Users can see all registered tools, who can use them, whether permissions are correctly configured, how tools are performing, and whether integrations are healthy -- the unified tool visibility layer
@@ -146,7 +150,7 @@ Note: Phases 48 and 49 could execute in parallel (no dependency between them), b
 | 49. Dashboard Infrastructure | 3/3 | Complete | 2026-02-04 |
 | 50. Conversations List | 2/2 | Complete | 2026-02-04 |
 | 51. Conversation Detail | 3/3 | Complete | 2026-02-04 |
-| 52. Agent Definitions View | 0/TBD | Not started | - |
+| 52. Agent Definitions View | 0/3 | Not started | - |
 | 53. Tool Dashboard | 0/TBD | Not started | - |
 | 54. System Overview | 0/TBD | Not started | - |
 | 55. Real-Time Updates | 0/TBD | Not started | - |
