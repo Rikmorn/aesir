@@ -84,7 +84,11 @@ Plans:
   3. Sub-agent events render as nested/indented sections within the parent timeline, and clicking a child conversation navigates to its own detail page
   4. A messages panel shows the LLM conversation history as a chat view (system prompt, user messages, assistant messages, tool use/result blocks)
   5. A metadata sidebar shows conversation ID, agent definition, status, retry count, parent/child links, session artifacts, and timestamps
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 51-01-PLAN.md -- Schema update, shadcn components, service layer extensions, format utility
+- [ ] 51-02-PLAN.md -- Event timeline components (EventIcon, JsonPayload, EventTimeline with collapsible events)
+- [ ] 51-03-PLAN.md -- Message panel, metadata sidebar, and conversation detail page assembly
 
 ### Phase 52: Agent Definitions View
 **Goal**: Users can see what agents exist, how they're configured, and what they've been doing recently -- without reading YAML files or grepping code
