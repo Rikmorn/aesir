@@ -19,7 +19,7 @@ Real-time visibility into agent execution through a developer-focused web dashbo
 - Integer phases (48, 49, ...): Planned milestone work
 - Decimal phases (48.1, 48.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 48: Agent Service API Extensions** - New /api/ endpoints on the agent service for runtime state and SSE streaming
+- [x] **Phase 48: Agent Service API Extensions** - New /api/ endpoints on the agent service for runtime state and SSE streaming
 - [ ] **Phase 49: Dashboard Infrastructure** - Next.js 15 package with Tailwind, shadcn/ui, Drizzle, Docker, service layer
 - [ ] **Phase 50: Conversations List** - Filterable list of all conversations with status, tokens, and activity
 - [ ] **Phase 51: Conversation Detail** - Event timeline, message history, and metadata panels for a single conversation
@@ -43,7 +43,7 @@ Real-time visibility into agent execution through a developer-focused web dashbo
 **Plans:** 2 plans
 Plans:
 - [x] 48-01-PLAN.md -- Shared API foundation, interface extensions, and four REST endpoints (tools/registry, tools/health, agents/registry, worker/status)
-- [ ] 48-02-PLAN.md -- SSE event stream endpoint with connection management, filtering, replay, and shutdown cleanup
+- [x] 48-02-PLAN.md -- SSE event stream endpoint with connection management, filtering, replay, and shutdown cleanup
 
 ### Phase 49: Dashboard Infrastructure
 **Goal**: A working Next.js 15 application exists in the monorepo, builds in Docker, serves on port 3005 via Compose, passes typecheck and lint, and has the service layer pattern established for all future views
@@ -131,7 +131,7 @@ Note: Phases 48 and 49 could execute in parallel (no dependency between them), b
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 48. Agent Service API Extensions | 1/2 | In progress | - |
+| 48. Agent Service API Extensions | 2/2 | Complete | 2026-02-04 |
 | 49. Dashboard Infrastructure | 0/TBD | Not started | - |
 | 50. Conversations List | 0/TBD | Not started | - |
 | 51. Conversation Detail | 0/TBD | Not started | - |
