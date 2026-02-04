@@ -10,6 +10,7 @@
 
 import {
   and,
+  asc,
   count,
   desc,
   eq,
@@ -55,6 +56,42 @@ export interface ConversationListItem {
 export interface ConversationStatusCount {
   status: string;
   count: number;
+}
+
+export interface ConversationDetail {
+  id: string;
+  agentDefinitionId: string;
+  agentDefinitionVersion: string;
+  status: string;
+  retryCount: number;
+  errorMessage: string | null;
+  parentConversationId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  artifacts: Record<string, string>;
+  lastEventAt: Date | null;
+}
+
+export interface ConversationEvent {
+  id: string;
+  conversationId: string;
+  agentDefinitionId: string;
+  agentInstanceId: string;
+  parentInstanceId: string | null;
+  sequence: number;
+  type: string;
+  payload: Record<string, unknown>;
+  timestamp: Date;
+  tokenCountInput: number | null;
+  tokenCountOutput: number | null;
+  durationMs: number | null;
+}
+
+export interface ChildConversation {
+  id: string;
+  agentDefinitionId: string;
+  status: string;
+  createdAt: Date;
 }
 
 // ─── Queries ─────────────────────────────────────────────────────────────────
@@ -183,6 +220,135 @@ export async function countConversationsByStatus(): Promise<
   return rows.map((row) => ({
     status: row.status,
     count: Number(row.count),
+  }));
+}
+
+// ─── Conversation Detail ─────────────────────────────────────────────────────
+
+/**
+ * Get a single conversation by ID with metadata from agent_sessions.
+ *
+ * Returns conversation fields plus artifacts and last_event_at from the
+ * agent_sessions join. Returns null if the conversation does not exist.
+ */
+export async function getConversationById(
+  id: string,
+): Promise<ConversationDetail | null> {
+  const rows = await db
+    .select({
+      id: conversations.id,
+      agent_definition_id: conversations.agent_definition_id,
+      agent_definition_version: conversations.agent_definition_version,
+      status: conversations.status,
+      retry_count: conversations.retry_count,
+      error_message: conversations.error_message,
+      parent_conversation_id: conversations.parent_conversation_id,
+      created_at: conversations.created_at,
+      updated_at: conversations.updated_at,
+      artifacts: agentSessions.artifacts,
+      last_event_at: agentSessions.last_event_at,
+    })
+    .from(conversations)
+    .leftJoin(
+      agentSessions,
+      eq(agentSessions.conversation_id, conversations.id),
+    )
+    .where(eq(conversations.id, id))
+    .limit(1);
+
+  const [row] = rows;
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    agentDefinitionId: row.agent_definition_id,
+    agentDefinitionVersion: row.agent_definition_version,
+    status: row.status,
+    retryCount: row.retry_count,
+    errorMessage: row.error_message,
+    parentConversationId: row.parent_conversation_id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    artifacts: row.artifacts ?? {},
+    lastEventAt: row.last_event_at,
+  };
+}
+
+/**
+ * Get all events for a conversation ordered by sequence ASC.
+ *
+ * Returns the full event timeline for rendering in the detail view.
+ * Sequence ordering is critical for correct chronological display.
+ */
+export async function getConversationEvents(
+  conversationId: string,
+): Promise<ConversationEvent[]> {
+  const rows = await db
+    .select()
+    .from(agentEvents)
+    .where(eq(agentEvents.conversation_id, conversationId))
+    .orderBy(asc(agentEvents.sequence));
+
+  return rows.map((row) => ({
+    id: row.id,
+    conversationId: row.conversation_id,
+    agentDefinitionId: row.agent_definition_id,
+    agentInstanceId: row.agent_instance_id,
+    parentInstanceId: row.parent_instance_id,
+    sequence: row.sequence,
+    type: row.type,
+    payload: row.payload as Record<string, unknown>,
+    timestamp: row.timestamp,
+    tokenCountInput: row.token_count_input,
+    tokenCountOutput: row.token_count_output,
+    durationMs: row.duration_ms,
+  }));
+}
+
+/**
+ * Get the messages array for a conversation.
+ *
+ * Returns the Anthropic Messages API format stored in the conversations.messages
+ * JSONB column. Returns an empty array if the conversation does not exist.
+ */
+export async function getConversationMessages(
+  conversationId: string,
+): Promise<unknown[]> {
+  const rows = await db
+    .select({ messages: conversations.messages })
+    .from(conversations)
+    .where(eq(conversations.id, conversationId))
+    .limit(1);
+
+  const [row] = rows;
+  return row ? (row.messages as unknown[]) : [];
+}
+
+/**
+ * Get child conversations for a parent conversation.
+ *
+ * Returns sub-agent conversations spawned by the parent, ordered by creation
+ * time. Used for displaying sub-agent links in the metadata sidebar.
+ */
+export async function getChildConversations(
+  parentConversationId: string,
+): Promise<ChildConversation[]> {
+  const rows = await db
+    .select({
+      id: conversations.id,
+      agent_definition_id: conversations.agent_definition_id,
+      status: conversations.status,
+      created_at: conversations.created_at,
+    })
+    .from(conversations)
+    .where(eq(conversations.parent_conversation_id, parentConversationId))
+    .orderBy(asc(conversations.created_at));
+
+  return rows.map((row) => ({
+    id: row.id,
+    agentDefinitionId: row.agent_definition_id,
+    status: row.status,
+    createdAt: row.created_at,
   }));
 }
 
