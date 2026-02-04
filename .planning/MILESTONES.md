@@ -1,5 +1,33 @@
 # Project Milestones: Aesir
 
+## v2.3 Unified Agent Framework (Shipped: 2026-02-04)
+
+**Delivered:** Replaced Temporal workflows, per-agent services, and fragmented persistence with a Postgres-backed ConversationExecutor, declarative YAML agent definitions, and a unified event log -- cutting Docker services from 12 to 6 and removing ~21,590 lines of legacy code
+
+**Phases completed:** 37-47.1 (12 phases, 32 plans total)
+
+**Key accomplishments:**
+- Postgres-backed ConversationExecutor with SKIP LOCKED claiming, heartbeat monitoring, wait_for pause/resume, and at-least-once execution replacing Temporal workflows
+- Declarative agent definitions (YAML + prompt.md) with AgentRegistry and ToolRegistry -- new agent = new directory, zero code changes
+- Unified event log (agent_events) with SessionProjection replacing three disconnected stores
+- Three-phase history compaction with tool pruning, LLM summarization, and ground-truth artifact injection
+- Single agent service replacing 6 Docker services (Temporal, Temporal UI, router, dev-agent, dev-agent-worker, product-agent)
+- Sub-agent spawn tool wiring nested in-process agent loops with shared token budgets
+- ~86 files and ~21,590 lines of legacy code removed (all Temporal, LangGraph, per-agent service code)
+
+**Stats:**
+- 343 files modified (+52,621 / -28,953, +23,668 net lines)
+- 59,306 lines of TypeScript total
+- 12 phases, 32 plans, 58 requirements (58/58 satisfied)
+- 164 commits over 3 days (2026-02-01 → 2026-02-04)
+- ~500+ new tests across framework components
+
+**Git range:** `c676274` → `c482fa3`
+
+**What's next:** Production readiness (CI/CD, monitoring, multi-environment), agent memory, cross-agent collaboration
+
+---
+
 ## v2.2 Agentic Architecture (Shipped: 2026-01-31)
 
 **Delivered:** Replaced LangGraph state machine architecture with agentic tool-use loops where LLMs make control flow decisions — agents reason, act, observe, and adapt instead of following predetermined graphs

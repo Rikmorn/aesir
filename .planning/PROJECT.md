@@ -2,59 +2,53 @@
 
 ## What This Is
 
-An agentic development platform that automates software development workflows — from feature request to shipped code. Agents reason about tasks, use tools to act, observe results, and adapt — operating like coworkers within existing business tools (Linear, GitHub, Slack), not as a separate system to manage.
+An agentic development platform that automates software development workflows -- from feature request to shipped code. A Postgres-backed conversation executor with declarative agent definitions. Agents collaborate using existing business tools (Linear, GitHub, Slack) and operate like coworkers within those tools, not as a separate system to manage.
 
 ## Core Value
 
 End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-## Current Milestone: v2.3 Unified Agent Framework
-
-**Goal:** Replace per-agent services, Temporal workflow state machines, and fragmented persistence with a unified agent framework where agents are declarative config, conversations are the execution primitive, and a single event log provides ground truth.
-
-**Target features:**
-- Declarative agent definitions (YAML + prompt.md) replacing hardcoded orchestrator code
-- Unified event log replacing three disconnected persistence stores
-- ConversationExecutor replacing Temporal workflows for pause/resume/signal routing
-- Full conversation history with three-phase compaction (tool pruning → anchored summary → agent memory)
-- Single agent service replacing per-agent HTTP servers and Temporal workers
-- Agent/Tool registries for zero-infrastructure-change agent additions
-- Generalized event/signal system with adapters and signal queueing
-
 ## Current State
 
-**Version:** v2.2 Agentic Architecture shipped (2026-01-31)
+**Version:** v2.3 Unified Agent Framework shipped (2026-02-04)
 
 **Tech Stack:**
 - TypeScript/Node.js monorepo (pnpm workspaces)
-- 83,110 lines across ~900 files in 7 packages
-- @anthropic-ai/sdk for agentic tool-use loops, Temporal for durable workflows
-- PostgreSQL for all persistence (credentials, context snapshots, execution traces, task state)
-- Docker Compose for local development with health checks and watch mode
+- 59,306 lines across 7 packages
+- @anthropic-ai/sdk for agentic tool-use loops
+- Postgres-backed ConversationExecutor with SKIP LOCKED claiming (no Temporal)
+- Declarative agent definitions (YAML + prompt.md) with AgentRegistry + ToolRegistry
+- Unified event log (agent_events) with SessionProjection
+- PostgreSQL for all persistence (conversations, events, sessions, credentials)
+- Docker Compose for local development (6 services: PostgreSQL, nginx, 3 integrations, agent-service)
 - MCP (Model Context Protocol) for agent-integration communication
-- Smart router service for hybrid event classification (deterministic + LLM)
+- Smart router with hybrid event classification (deterministic + LLM)
 
 **Architecture:**
 ```
-Smart Router (port 3006)
-   ↓ routes events to
-@aesir/agents (dev-agent, product-agent)
-   ↓ HTTP/MCP
+Agent Service (port 3004)
+   ↓ routes events via EventRouter
+ConversationExecutor (SKIP LOCKED worker loop)
+   ↓ runs declarative agents
+Agent definitions (YAML + prompt.md)
+   ↓ tools via MCP
 @aesir/integration-{linear,github,slack} (independent services)
    ↓ imports
 @aesir/platform, @aesir/types (shared infrastructure)
 ```
 
 **Key Capabilities:**
-- Agentic tool-use loops: agents reason about what to do instead of following fixed graphs
-- Dev agent orchestrator with focused sub-agents (researcher, coder, tester)
+- Agentic tool-use loops: agents reason about what to do via @anthropic-ai/sdk native tool-use
+- Dev agent orchestrator with sub-agents (researcher, coder, tester) via spawn_agent tool
 - Product agent adapts conversation strategy based on input clarity
-- 25 typed tools in 4 role-specific toolkits with error-as-data pattern
+- 28 tool factories in namespace:tool_name registry with ToolContext injection
 - Hybrid event routing: deterministic fast-path + LLM slow-path
-- Semantic context snapshots across Temporal activity boundaries
-- Automatic execution tracing with parent/child agent correlation
-- Guardrails: sandbox enforcement, merge protection, token budgets, cost tracking
-- 926 tests passing across 56 test files
+- Unified event log with session projection for ground-truth artifact tracking
+- Three-phase history compaction (tool pruning → LLM summarization → artifact grounding)
+- wait_for tool for agent-controlled pause/resume with signal queueing
+- pg-boss timeout scheduling for delayed signal delivery
+- Guardrails: sandbox enforcement, merge protection, token budgets, spawn depth limits
+- Graceful shutdown with conversation draining
 
 ## Requirements
 
@@ -67,7 +61,7 @@ Smart Router (port 3006)
 - ✓ Linear integration: read/update tasks via webhooks, agent appears as app identity — v1.0
 - ✓ GitHub integration: branches, commits, PRs, read comments, merge on approval — v1.0
 - ✓ Slack integration: notifications when human approval needed, status updates — v1.0
-- ✓ Human-in-the-loop support: Temporal workflows pause for approval/review — v1.0
+- ✓ Human-in-the-loop support: conversations pause for approval/review — v1.0
 - ✓ Agent configuration: define agents via code/config files — v1.0
 - ✓ Logging/observability: all actions logged with timestamp, context, task ID — v1.0
 - ✓ Webhook-driven events: agents wake on Linear/GitHub events via Cloudflare tunnel — v1.0
@@ -94,43 +88,47 @@ Smart Router (port 3006)
 
 **v2.2 Agentic Architecture (shipped 2026-01-31):**
 - ✓ Agentic tool-use loop runtime with @anthropic-ai/sdk native tool-use (78/78 requirements) — v2.2
-- ✓ Agent tool library: 25 tools in 4 role-specific toolkits (codebase, MCP, coordination) — v2.2
-- ✓ Dev agent orchestrator with sub-agents (researcher, coder, tester) replacing 13-node LangGraph graph — v2.2
+- ✓ Agent tool library: 25 tools in 4 role-specific toolkits — v2.2
+- ✓ Dev agent orchestrator with sub-agents replacing 13-node LangGraph graph — v2.2
 - ✓ Product agent as single adaptive agentic loop replacing 6-node LangGraph graph — v2.2
-- ✓ Smart router: hybrid deterministic + LLM event classification replacing hardcoded switches — v2.2
-- ✓ Context management: semantic snapshots replacing LangGraph checkpoints — v2.2
+- ✓ Smart router: hybrid deterministic + LLM event classification — v2.2
 - ✓ Execution tracing with parent/child agent correlation — v2.2
 - ✓ Guardrails: iteration limits, cost budgets, escalation with diagnosis — v2.2
-- ✓ All @langchain/* dependencies removed, 51 LangGraph files deleted — v2.2
+- ✓ All @langchain/* dependencies removed — v2.2
+
+**v2.3 Unified Agent Framework (shipped 2026-02-04):**
+- ✓ Declarative agent definitions (YAML + prompt.md) with AgentRegistry — v2.3
+- ✓ Unified event log replacing execution_traces, tasks, context_snapshots — v2.3
+- ✓ ConversationExecutor with pause/resume/signal routing (replaces Temporal) — v2.3
+- ✓ Three-phase history management (tool pruning → anchored summary → artifact grounding) — v2.3
+- ✓ Agent registry + tool registry with namespace-based resolution — v2.3
+- ✓ Single agent service replacing per-agent HTTP servers — v2.3
+- ✓ Generalized signal handling with adapters and signal queueing — v2.3
+- ✓ wait_for tool for agent-controlled pause/resume — v2.3
+- ✓ Smart router adapted from Temporal to ConversationExecutor — v2.3
+- ✓ Temporal dependency, per-agent services, old persistence stores removed — v2.3
+- ✓ Sub-agent spawn via nested in-process agent loops with shared token budgets — v2.3
 
 ### Active
 
-**v2.3 Unified Agent Framework:**
-- [ ] Declarative agent definitions (YAML config + prompt.md files)
-- [ ] Unified event log replacing execution_traces, tasks, context_snapshots
-- [ ] ConversationExecutor with pause/resume/signal routing (replaces Temporal workflows)
-- [ ] Three-phase history management (tool pruning → anchored summary → future: agent memory)
-- [ ] Agent registry + tool registry with namespace-based resolution
-- [ ] Single agent service replacing per-agent HTTP servers
-- [ ] Generalized signal handling with adapters and signal queueing
-- [ ] wait_for tool for agent-controlled pause/resume
-- [ ] Smart router adapted from Temporal to ConversationExecutor
-- [ ] Remove Temporal dependency, per-agent services, old persistence stores
-
-**Deferred:**
+**Deferred from v2.3 (candidates for next milestone):**
 - [ ] CI/CD pipeline for deployment
 - [ ] Monitoring and alerting for agent health
 - [ ] Multi-environment configuration (dev/staging/prod)
 - [ ] Cross-agent collaboration (dev agent asks product agent to clarify mid-task)
 - [ ] QA agent for automated code review
+- [ ] Agent-managed memory (MemGPT/Letta style with memory:save/search tools)
+- [ ] Cross-session learning (agents improve from past task outcomes)
+- [ ] LISTEN/NOTIFY for event-driven worker wakeup (replace polling)
 
 ### Out of Scope
 
 - Full codebase indexing / RAG — agents explore via read_file/search_codebase tools; no vector DB needed
 - UI for agent creation — code/config first, UI is future enhancement
-- Streaming LLM responses — non-streaming recommended for backend agents in Temporal
+- Streaming LLM responses — non-streaming appropriate for backend agents
 - Multi-repo support — agents work on single configured repo; future enhancement
-- Parallel sub-agents — dev workflow is sequential; parallel adds complexity without benefit
+- Parallel sub-agents — sequential sub-agent execution is sufficient
+- Full event sourcing library — append-only store with ~200 lines is sufficient
 
 ## Context
 
@@ -145,11 +143,12 @@ Smart Router (port 3006)
 - Prefer well-maintained external libraries over hand-rolling
 - Agent-first problem solving: fix agent behavior via prompts and tools, not deterministic overrides
 
-**Known Tech Debt (from v2.2):**
-- tool_result trace type not recorded (runAgentLoop lacks onToolResult callback) — addressed by event log
-- dev-agent/classification/approval.ts dead code (absorbed into router, file not deleted) — deleted in v2.3
-- Context snapshot JSONB fields have no size limits — replaced by event log in v2.3
+**Known Tech Debt (from v2.3):**
+- Dispatcher route fallback defaults reference router:3006 instead of agent-service:3004 (22 occurrences; runtime correct via docker-compose)
+- Two signal types (user_reply, cancel) defined in SIGNAL_AGENT_MAP but no adapter produces them (reserved for future)
+- schema.drizzle.ts retains legacy table definitions (intentional, prevents destructive drizzle-kit migrations)
 - 4 pre-existing test failures, 11 tests skipped pending infrastructure
+- Run dev-agent container as non-root (infrastructure improvement)
 
 ## Constraints
 
@@ -165,18 +164,21 @@ Smart Router (port 3006)
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| LangGraph for agent orchestration | StateGraph + checkpointing, good TypeScript support | ✓ Replaced — agentic tool-use loops better (v2.2) |
-| @anthropic-ai/sdk native tool-use | Full control over tracing, budgets, Temporal integration | ✓ Good — replaced all @langchain/* |
-| Agentic loops over fixed graphs | LLMs reason about control flow instead of following predetermined graphs | ✓ Good — agents adapt to task complexity |
-| Orchestrator + sub-agents pattern | Focused sub-agents (researcher, coder, tester) with isolated context | ✓ Good — keeps each agent's context small |
-| Hybrid smart router | Deterministic fast-path for obvious events, LLM for ambiguous | ✓ Good — zero latency for common events |
-| Semantic context snapshots | LLM self-summarization at activity boundaries | ✓ Good — replaced LangGraph checkpoint persistence |
-| Temporal for durable workflows | Signal-based approval, built-in retry | ✓ Good |
+| Postgres-backed ConversationExecutor | SKIP LOCKED claiming, conversation semantics don't map to generic job queues | ✓ Good — replaced Temporal (v2.3) |
+| Declarative YAML + prompt.md agents | Adding new agent = new directory, zero code changes | ✓ Good — 5 agents defined declaratively (v2.3) |
+| Unified event log (agent_events) | Single source of truth replacing 3 disconnected stores | ✓ Good — simpler, more reliable (v2.3) |
+| pg-boss for timeout scheduling only | Delayed signal delivery is a pure delayed-job problem | ✓ Good — clean separation (v2.3) |
+| Domain-language signal types | approval, pr_review, pr_merged, pr_closed vs Temporal signal names | ✓ Good — clearer semantics (v2.3) |
+| Three-phase history compaction | Tool pruning → LLM summary → artifact grounding with fallback | ✓ Good — prevents context overflow (v2.3) |
+| Single agent service | Replaced 6 services (Temporal, Temporal UI, router, 3 agent services) | ✓ Good — simpler ops (v2.3) |
+| @anthropic-ai/sdk native tool-use | Full control over tracing, budgets, integration | ✓ Good — replaced all @langchain/* (v2.2) |
+| Agentic loops over fixed graphs | LLMs reason about control flow instead of following graphs | ✓ Good — agents adapt to complexity (v2.2) |
+| Orchestrator + sub-agents pattern | Focused sub-agents with isolated context | ✓ Good — keeps each agent's context small (v2.2) |
+| Hybrid smart router | Deterministic fast-path for obvious events, LLM for ambiguous | ✓ Good — zero latency for common events (v2.2) |
 | Webhooks over polling | Cost/load savings; agents wake on events | ✓ Good |
 | Full containerization | Reproducible environments | ✓ Good |
-| PostgreSQL for persistence | Shared between Temporal, agents, credentials | ✓ Good |
+| PostgreSQL for persistence | Shared across all services | ✓ Good |
 | Docker sandbox for code execution | Isolated test running, no host pollution | ✓ Good |
-| v2.0 = full restructure | v1 proved concept; fix foundation before features | ✓ Good |
 | Biome over ESLint/Prettier | Single tool for linting + formatting, faster | ✓ Good |
 | pino for logging | Replace hand-rolled logging with maintained library | ✓ Good |
 | 3-layer architecture | Platform → Integrations → Agents with clear boundaries | ✓ Good |
@@ -191,8 +193,10 @@ Lessons learned during development that guide future phases.
 |-----------|---------|
 | Infrastructure phases must include consumer migration | Phase 19 created MCP servers but didn't wire agents to use them. When building infrastructure, include at least one consumer migration to validate end-to-end. |
 | Pure library pattern for shared packages | @aesir/types should never validate env vars at import time. Services own their config and pass dependencies to libraries. |
-| Agent-first problem solving | When an agent makes a wrong decision, fix the agent (prompts, tools, context) — don't add deterministic overrides in workflow/activity code. |
+| Agent-first problem solving | When an agent makes a wrong decision, fix the agent (prompts, tools, context) -- don't add deterministic overrides in workflow/activity code. |
 | Prompts are first-class code | System prompts are the primary control surface for agent behavior. Test prompt changes against real scenarios. |
+| Three-phase deletion order | Refactor references -> delete files -> remove deps. Prevents build breakage during large cleanups. |
+| Archive before delete | Always create archive files before updating/deleting originals. Milestone completion creates roadmap + requirements archives first. |
 
 ---
-*Last updated: 2026-02-01 after v2.3 milestone started*
+*Last updated: 2026-02-04 after v2.3 milestone*
