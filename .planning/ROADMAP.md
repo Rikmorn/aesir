@@ -114,7 +114,11 @@ Plans:
   2. A permission matrix shows agent-to-tool access from both YAML definitions and MCP database permissions, and mismatches (agent references tool but MCP doesn't allow) are visually highlighted
   3. A recent failures section shows the last tool.failed events with timestamps, tool name, agent, conversation link, error payload, and duration
   4. An integration health section shows the status of Linear, GitHub, and Slack MCP endpoints with last successful call and latency
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 53-01-PLAN.md -- Dependencies (recharts, shadcn chart), MCP permission schemas, agent-service HTTP client extensions, tools service layer
+- [ ] 53-02-PLAN.md -- Tools page with tabbed layout, tool registry, permission matrix, integration health (server components)
+- [ ] 53-03-PLAN.md -- Tool performance charts (Recharts) and recent failures list with filters and pagination (client components)
 
 ### Phase 54: System Overview
 **Goal**: The dashboard landing page gives an instant pulse check -- conversation counts, active work, worker health, recent errors, and token consumption -- answering "is the system healthy right now?"
@@ -151,7 +155,7 @@ Note: Phases 48 and 49 could execute in parallel (no dependency between them), b
 | 50. Conversations List | 2/2 | Complete | 2026-02-04 |
 | 51. Conversation Detail | 3/3 | Complete | 2026-02-04 |
 | 52. Agent Definitions View | 3/3 | Complete | 2026-02-04 |
-| 53. Tool Dashboard | 0/TBD | Not started | - |
+| 53. Tool Dashboard | 0/3 | Not started | - |
 | 54. System Overview | 0/TBD | Not started | - |
 | 55. Real-Time Updates | 0/TBD | Not started | - |
 
