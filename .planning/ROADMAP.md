@@ -55,7 +55,11 @@ Plans:
   3. Nginx routes requests to `/dashboard/*` to the dashboard service
   4. `pnpm run typecheck` and `pnpm run lint` pass for the dashboard package with zero errors
   5. A service layer exists in `src/services/` with at least one query function using Drizzle ORM against existing Postgres schemas, and middleware.ts exists as an auth-ready passthrough
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 49-01-PLAN.md -- Next.js package scaffold with Tailwind, shadcn/ui, health endpoint, middleware, typecheck, lint
+- [ ] 49-02-PLAN.md -- Drizzle ORM database connectivity and service layer pattern
+- [ ] 49-03-PLAN.md -- Docker multi-stage build, Compose service, Nginx routing
 
 ### Phase 50: Conversations List
 **Goal**: Users can see all agent conversations at a glance with filtering, answering "what have agents been doing?" without SQL
@@ -132,7 +136,7 @@ Note: Phases 48 and 49 could execute in parallel (no dependency between them), b
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 48. Agent Service API Extensions | 2/2 | Complete | 2026-02-04 |
-| 49. Dashboard Infrastructure | 0/TBD | Not started | - |
+| 49. Dashboard Infrastructure | 0/3 | Not started | - |
 | 50. Conversations List | 0/TBD | Not started | - |
 | 51. Conversation Detail | 0/TBD | Not started | - |
 | 52. Agent Definitions View | 0/TBD | Not started | - |
