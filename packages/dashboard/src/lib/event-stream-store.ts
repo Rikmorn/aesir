@@ -22,7 +22,7 @@ import {
   ALL_EVENT_TYPES,
   type EventStreamState,
   type SseEvent,
-} from "./sse-types.js";
+} from "./sse-types";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
