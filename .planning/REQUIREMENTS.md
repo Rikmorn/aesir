@@ -60,23 +60,23 @@
 
 ### Real-Time Updates
 
-- [ ] **SSE-01**: Agent-service SSE endpoint (`GET /api/sse/events`) streams events
-- [ ] **SSE-02**: SSE supports filtering by conversationId and event types
-- [ ] **SSE-03**: Dashboard SSE client hook connects, parses, and updates component state
-- [ ] **SSE-04**: Conversations list auto-updates when conversation status changes
-- [ ] **SSE-05**: Conversation detail timeline appends new events in real-time
-- [ ] **SSE-06**: SSE client handles reconnection with backoff
-- [ ] **SSE-07**: SSE connection cleans up on component unmount
+- [x] **SSE-01**: Agent-service SSE endpoint (`GET /api/sse/events`) streams events
+- [x] **SSE-02**: SSE supports filtering by conversationId and event types
+- [x] **SSE-03**: Dashboard SSE client hook connects, parses, and updates component state
+- [x] **SSE-04**: Conversations list auto-updates when conversation status changes
+- [x] **SSE-05**: Conversation detail timeline appends new events in real-time
+- [x] **SSE-06**: SSE client handles reconnection with backoff
+- [x] **SSE-07**: SSE connection cleans up on component unmount
 
 ### Agent Service API
 
-- [ ] **API-01**: `GET /api/tools/registry` returns all registered tools with metadata
-- [ ] **API-02**: `GET /api/tools/health` returns integration endpoint status (cached 30s)
-- [ ] **API-03**: `GET /api/agents/registry` returns all agent definitions (without full prompts)
-- [ ] **API-04**: `GET /api/agents/registry/:id` returns full agent definition including prompt
-- [ ] **API-05**: `GET /api/worker/status` returns worker loop state
-- [ ] **API-06**: `GET /api/sse/events` streams real-time events via SSE
-- [ ] **API-07**: All new endpoints use `/api/` prefix, separate from operational endpoints
+- [x] **API-01**: `GET /api/tools/registry` returns all registered tools with metadata
+- [x] **API-02**: `GET /api/tools/health` returns integration endpoint status (cached 30s)
+- [x] **API-03**: `GET /api/agents/registry` returns all agent definitions (without full prompts)
+- [x] **API-04**: `GET /api/agents/registry/:id` returns full agent definition including prompt
+- [x] **API-05**: `GET /api/worker/status` returns worker loop state
+- [x] **API-06**: `GET /api/sse/events` streams real-time events via SSE
+- [x] **API-07**: All new endpoints use `/api/` prefix, separate from operational endpoints
 
 ## Future Requirements
 
@@ -117,15 +117,15 @@ Deferred to later milestones. Tracked but not in v2.4 roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| API-01 | Phase 48 | Pending |
-| API-02 | Phase 48 | Pending |
-| API-03 | Phase 48 | Pending |
-| API-04 | Phase 48 | Pending |
-| API-05 | Phase 48 | Pending |
-| API-06 | Phase 48 | Pending |
-| API-07 | Phase 48 | Pending |
-| SSE-01 | Phase 48 | Pending |
-| SSE-02 | Phase 48 | Pending |
+| API-01 | Phase 48 | Complete |
+| API-02 | Phase 48 | Complete |
+| API-03 | Phase 48 | Complete |
+| API-04 | Phase 48 | Complete |
+| API-05 | Phase 48 | Complete |
+| API-06 | Phase 48 | Complete |
+| API-07 | Phase 48 | Complete |
+| SSE-01 | Phase 48 | Complete |
+| SSE-02 | Phase 48 | Complete |
 | INFRA-01 | Phase 49 | Complete |
 | INFRA-02 | Phase 49 | Complete |
 | INFRA-03 | Phase 49 | Complete |
@@ -164,11 +164,11 @@ Deferred to later milestones. Tracked but not in v2.4 roadmap.
 | OVER-03 | Phase 54 | Complete |
 | OVER-04 | Phase 54 | Complete |
 | OVER-05 | Phase 54 | Complete |
-| SSE-03 | Phase 55 | Pending |
-| SSE-04 | Phase 55 | Pending |
-| SSE-05 | Phase 55 | Pending |
-| SSE-06 | Phase 55 | Pending |
-| SSE-07 | Phase 55 | Pending |
+| SSE-03 | Phase 55 | Complete |
+| SSE-04 | Phase 55 | Complete |
+| SSE-05 | Phase 55 | Complete |
+| SSE-06 | Phase 55 | Complete |
+| SSE-07 | Phase 55 | Complete |
 
 **Coverage:**
 - v2.4 requirements: 52 total
@@ -177,4 +177,4 @@ Deferred to later milestones. Tracked but not in v2.4 roadmap.
 
 ---
 *Requirements defined: 2026-02-04*
-*Last updated: 2026-02-04 after Phase 54 completion*
+*Last updated: 2026-02-04 after Phase 55 completion -- all v2.4 requirements complete*
