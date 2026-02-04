@@ -1,3 +1,7 @@
 export default function HomePage() {
-  return <h1>Aesir Dashboard</h1>;
+  return (
+    <main className="flex min-h-screen items-center justify-center">
+      <h1 className="text-2xl font-bold">Aesir Dashboard</h1>
+    </main>
+  );
 }

@@ -6,6 +6,7 @@
     { "path": "packages/integrations" },
     { "path": "packages/observability" },
     { "path": "packages/agents" },
+    { "path": "packages/dashboard" },
     { "path": "packages/test-utils" }
   ]
 }
