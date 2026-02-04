@@ -10,6 +10,10 @@ import { getTimeRangeDate } from "@/lib/format";
 import {
   buildPermissionMatrix,
   getMcpPermissions,
+  getRecentToolFailures,
+  getTimeBucketSeconds,
+  getToolMetrics,
+  getToolMetricTimeSeries,
   getToolRegistry,
 } from "@/services/tools";
 
@@ -20,6 +24,9 @@ interface ToolsPageProps {
     tab?: string;
     tool?: string;
     timeRange?: string;
+    failurePage?: string;
+    failureNamespace?: string;
+    failureAgent?: string;
   }>;
 }
 
@@ -30,16 +37,40 @@ export default async function ToolsPage({ searchParams }: ToolsPageProps) {
   const defaultTab = params.tool ? "registry" : (params.tab ?? "registry");
   const timeRange = params.timeRange ?? "1h";
   const since = getTimeRangeDate(timeRange);
+  const bucketSeconds = getTimeBucketSeconds(timeRange);
+
+  // Failure pagination/filtering params
+  const failurePage = Number(params.failurePage ?? "1");
+  const failureOffset = (failurePage - 1) * 25;
+  const failureNamespace = params.failureNamespace ?? undefined;
+  const failureAgent = params.failureAgent ?? undefined;
 
   // Load data in parallel
-  const [agents, integrations, mcpPermissions] = await Promise.all([
-    fetchAgentList(),
-    fetchToolsHealth(),
-    getMcpPermissions(),
-  ]);
+  const [agents, integrations, mcpPermissions, timeSeries, metrics] =
+    await Promise.all([
+      fetchAgentList(),
+      fetchToolsHealth(),
+      getMcpPermissions(),
+      getToolMetricTimeSeries(since, bucketSeconds),
+      getToolMetrics(since),
+    ]);
 
   // Build tool registry with metrics (depends on agents + since)
   const tools = await getToolRegistry(since, agents);
+
+  // Resolve namespace filter to tool names for failure query
+  const failureToolNames = failureNamespace
+    ? tools.filter((t) => t.namespace === failureNamespace).map((t) => t.name)
+    : undefined;
+
+  // Load failures (depends on resolved tool names)
+  const failures = await getRecentToolFailures({
+    limit: 25,
+    offset: failureOffset,
+    toolNames: failureToolNames,
+    agentId: failureAgent,
+    since,
+  });
 
   // Build permission matrix (pure function, no DB)
   const permissionCells = buildPermissionMatrix(agents, mcpPermissions);
@@ -86,11 +117,20 @@ export default async function ToolsPage({ searchParams }: ToolsPageProps) {
         </TabsContent>
 
         <TabsContent value="performance" className="mt-6">
-          <ToolPerformance />
+          <ToolPerformance
+            timeSeries={timeSeries}
+            metrics={metrics}
+            defaultTimeRange={timeRange}
+          />
         </TabsContent>
 
         <TabsContent value="failures" className="mt-6">
-          <RecentFailures />
+          <RecentFailures
+            failures={failures.items}
+            total={failures.total}
+            toolRegistry={tools}
+            agentIds={agents.map((a) => a.id)}
+          />
         </TabsContent>
 
         <TabsContent value="health" className="mt-6">

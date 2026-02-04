@@ -475,7 +475,7 @@ export function getTimeBucketSeconds(timeRange: string): number {
 export async function getRecentToolFailures(params: {
   limit?: number;
   offset?: number;
-  namespace?: string;
+  toolNames?: string[];
   agentId?: string;
   since?: Date;
 }): Promise<{ items: ToolFailure[]; total: number }> {
@@ -490,6 +490,12 @@ export async function getRecentToolFailures(params: {
 
   if (params.agentId) {
     conditions.push(eq(agentEvents.agent_definition_id, params.agentId));
+  }
+
+  if (params.toolNames && params.toolNames.length > 0) {
+    conditions.push(
+      inArray(sql`${agentEvents.payload}->>'tool_name'`, params.toolNames),
+    );
   }
 
   const whereClause = and(...conditions);
