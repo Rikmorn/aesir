@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** Phase 51 complete - Conversation Detail
+**Current focus:** Phase 52 - Agent Definitions View
 
 ## Current Position
 
-Phase: 51 of 55 (Conversation Detail)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-02-04 -- Completed 51-03-PLAN.md
+Phase: 52 of 55 (Agent Definitions View)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-04 -- Completed 52-01-PLAN.md
 
-Progress: [##########] 63% (10/16 plans across 8 phases)
+Progress: [###########] 69% (11/16 plans across 8 phases)
 
 ## Milestone History
 
@@ -29,9 +29,9 @@ Progress: [##########] 63% (10/16 plans across 8 phases)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
+- Total plans completed: 11
 - Average duration: ~5 minutes
-- Total execution time: ~46 minutes
+- Total execution time: ~50 minutes
 
 *Updated after each plan completion*
 
@@ -105,6 +105,13 @@ v2.4 decisions:
 - Local Anthropic message types to keep dashboard decoupled from @anthropic-ai/sdk
 - System prompt detection via content length heuristic (>500 chars first user message)
 
+52-01 decisions:
+- Local AgentSummary/AgentDetail interfaces mirror agent-service API types (no @aesir/agents import)
+- AbortSignal.timeout(5000) for agent-service HTTP requests
+- next revalidate 60s for fetch caching of agent definitions
+- biome-ignore for console.error in server-side HTTP client (dashboard lacks pino logger)
+- agent-service added to dashboard depends_on in Docker Compose
+
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
@@ -118,9 +125,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: Completed 51-03-PLAN.md (Phase 51 complete)
+Stopped at: Completed 52-01-PLAN.md
 Resume file: None
-Next action: Begin Phase 52
+Next action: Continue Phase 52 (Plan 02 - Agent List Page)
 
 ---
-*Updated: 2026-02-04 -- Completed 51-03 Message Panel + Page Assembly (3/3 plans in Phase 51, phase complete)*
+*Updated: 2026-02-04 -- Completed 52-01 Dependencies and Data Layer (1/3 plans in Phase 52)*
