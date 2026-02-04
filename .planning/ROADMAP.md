@@ -23,7 +23,7 @@ Real-time visibility into agent execution through a developer-focused web dashbo
 - [x] **Phase 49: Dashboard Infrastructure** - Next.js 15 package with Tailwind, shadcn/ui, Drizzle, Docker, service layer
 - [x] **Phase 50: Conversations List** - Filterable list of all conversations with status, tokens, and activity
 - [x] **Phase 51: Conversation Detail** - Event timeline, message history, and metadata panels for a single conversation
-- [ ] **Phase 52: Agent Definitions View** - Agent list and detail pages sourced from agent-service runtime registry
+- [x] **Phase 52: Agent Definitions View** - Agent list and detail pages sourced from agent-service runtime registry
 - [ ] **Phase 53: Tool Dashboard** - Tool registry, permission matrix, performance metrics, failures, and integration health
 - [ ] **Phase 54: System Overview** - Landing page with conversation summary, active conversations, worker status, errors, and token usage
 - [ ] **Phase 55: Real-Time Updates** - SSE client hook wired into conversations list, conversation detail, and system overview
@@ -101,9 +101,9 @@ Plans:
   4. Recent conversations for the agent are listed with status and duration, linking to the conversation detail page
 **Plans:** 3 plans
 Plans:
-- [ ] 52-01-PLAN.md -- Dependencies (react-markdown, shadcn card/tabs/tooltip), agent-service HTTP client, agents service layer, Docker Compose update
-- [ ] 52-02-PLAN.md -- Agent list page with agent cards, type badges, and loading skeleton
-- [ ] 52-03-PLAN.md -- Agent detail page with configuration panel, tools list, sub-agents, prompt viewer, recent conversations, and loading skeleton
+- [x] 52-01-PLAN.md -- Dependencies (react-markdown, shadcn card/tabs/tooltip), agent-service HTTP client, agents service layer, Docker Compose update
+- [x] 52-02-PLAN.md -- Agent list page with agent cards, type badges, and loading skeleton
+- [x] 52-03-PLAN.md -- Agent detail page with configuration panel, tools list, sub-agents, prompt viewer, recent conversations, and loading skeleton
 
 ### Phase 53: Tool Dashboard
 **Goal**: Users can see all registered tools, who can use them, whether permissions are correctly configured, how tools are performing, and whether integrations are healthy -- the unified tool visibility layer
@@ -150,7 +150,7 @@ Note: Phases 48 and 49 could execute in parallel (no dependency between them), b
 | 49. Dashboard Infrastructure | 3/3 | Complete | 2026-02-04 |
 | 50. Conversations List | 2/2 | Complete | 2026-02-04 |
 | 51. Conversation Detail | 3/3 | Complete | 2026-02-04 |
-| 52. Agent Definitions View | 0/3 | Not started | - |
+| 52. Agent Definitions View | 3/3 | Complete | 2026-02-04 |
 | 53. Tool Dashboard | 0/TBD | Not started | - |
 | 54. System Overview | 0/TBD | Not started | - |
 | 55. Real-Time Updates | 0/TBD | Not started | - |

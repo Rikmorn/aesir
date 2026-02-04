@@ -33,12 +33,12 @@
 
 ### Agent Definitions View
 
-- [ ] **AGNT-01**: Agent list page shows all loaded agent definitions with key metadata
-- [ ] **AGNT-02**: Agent detail page shows full configuration: model, tools, sub-agents, triggers, history settings
-- [ ] **AGNT-03**: System prompt content is rendered with Markdown formatting
-- [ ] **AGNT-04**: Tools list on agent detail links to the tool dashboard
-- [ ] **AGNT-05**: Sub-agent references link to the sub-agent's detail page
-- [ ] **AGNT-06**: Recent conversations for the agent are shown with links
+- [x] **AGNT-01**: Agent list page shows all loaded agent definitions with key metadata
+- [x] **AGNT-02**: Agent detail page shows full configuration: model, tools, sub-agents, triggers, history settings
+- [x] **AGNT-03**: System prompt content is rendered with Markdown formatting
+- [x] **AGNT-04**: Tools list on agent detail links to the tool dashboard
+- [x] **AGNT-05**: Sub-agent references link to the sub-agent's detail page
+- [x] **AGNT-06**: Recent conversations for the agent are shown with links
 
 ### Tool Dashboard
 
@@ -146,12 +146,12 @@ Deferred to later milestones. Tracked but not in v2.4 roadmap.
 | CONV-08 | Phase 51 | Complete |
 | CONV-09 | Phase 51 | Complete |
 | CONV-10 | Phase 51 | Complete |
-| AGNT-01 | Phase 52 | Pending |
-| AGNT-02 | Phase 52 | Pending |
-| AGNT-03 | Phase 52 | Pending |
-| AGNT-04 | Phase 52 | Pending |
-| AGNT-05 | Phase 52 | Pending |
-| AGNT-06 | Phase 52 | Pending |
+| AGNT-01 | Phase 52 | Complete |
+| AGNT-02 | Phase 52 | Complete |
+| AGNT-03 | Phase 52 | Complete |
+| AGNT-04 | Phase 52 | Complete |
+| AGNT-05 | Phase 52 | Complete |
+| AGNT-06 | Phase 52 | Complete |
 | TOOL-01 | Phase 53 | Pending |
 | TOOL-02 | Phase 53 | Pending |
 | TOOL-03 | Phase 53 | Pending |
@@ -177,4 +177,4 @@ Deferred to later milestones. Tracked but not in v2.4 roadmap.
 
 ---
 *Requirements defined: 2026-02-04*
-*Last updated: 2026-02-04 after Phase 50 completion*
+*Last updated: 2026-02-04 after Phase 52 completion*
