@@ -24,7 +24,7 @@ Real-time visibility into agent execution through a developer-focused web dashbo
 - [x] **Phase 50: Conversations List** - Filterable list of all conversations with status, tokens, and activity
 - [x] **Phase 51: Conversation Detail** - Event timeline, message history, and metadata panels for a single conversation
 - [x] **Phase 52: Agent Definitions View** - Agent list and detail pages sourced from agent-service runtime registry
-- [ ] **Phase 53: Tool Dashboard** - Tool registry, permission matrix, performance metrics, failures, and integration health
+- [x] **Phase 53: Tool Dashboard** - Tool registry, permission matrix, performance metrics, failures, and integration health
 - [ ] **Phase 54: System Overview** - Landing page with conversation summary, active conversations, worker status, errors, and token usage
 - [ ] **Phase 55: Real-Time Updates** - SSE client hook wired into conversations list, conversation detail, and system overview
 
@@ -116,9 +116,9 @@ Plans:
   4. An integration health section shows the status of Linear, GitHub, and Slack MCP endpoints with last successful call and latency
 **Plans:** 3 plans
 Plans:
-- [ ] 53-01-PLAN.md -- Dependencies (recharts, shadcn chart), MCP permission schemas, agent-service HTTP client extensions, tools service layer
-- [ ] 53-02-PLAN.md -- Tools page with tabbed layout, tool registry, permission matrix, integration health (server components)
-- [ ] 53-03-PLAN.md -- Tool performance charts (Recharts) and recent failures list with filters and pagination (client components)
+- [x] 53-01-PLAN.md -- Dependencies (recharts, shadcn chart), MCP permission schemas, agent-service HTTP client extensions, tools service layer
+- [x] 53-02-PLAN.md -- Tools page with tabbed layout, tool registry, permission matrix, integration health (server components)
+- [x] 53-03-PLAN.md -- Tool performance charts (Recharts) and recent failures list with filters and pagination (client components)
 
 ### Phase 54: System Overview
 **Goal**: The dashboard landing page gives an instant pulse check -- conversation counts, active work, worker health, recent errors, and token consumption -- answering "is the system healthy right now?"
@@ -155,7 +155,7 @@ Note: Phases 48 and 49 could execute in parallel (no dependency between them), b
 | 50. Conversations List | 2/2 | Complete | 2026-02-04 |
 | 51. Conversation Detail | 3/3 | Complete | 2026-02-04 |
 | 52. Agent Definitions View | 3/3 | Complete | 2026-02-04 |
-| 53. Tool Dashboard | 0/3 | Not started | - |
+| 53. Tool Dashboard | 3/3 | Complete | 2026-02-04 |
 | 54. System Overview | 0/TBD | Not started | - |
 | 55. Real-Time Updates | 0/TBD | Not started | - |
 

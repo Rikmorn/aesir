@@ -42,13 +42,13 @@
 
 ### Tool Dashboard
 
-- [ ] **TOOL-01**: Tool registry view shows all registered tools organized by namespace
-- [ ] **TOOL-02**: Each tool shows description, which agents use it, and performance metrics
-- [ ] **TOOL-03**: Permission matrix shows agent-to-tool access from both definition and MCP perspectives
-- [ ] **TOOL-04**: Permission mismatches (definition references tool but MCP doesn't allow) are highlighted
-- [ ] **TOOL-05**: Tool performance section shows call volume, failure rate, and latency metrics
-- [ ] **TOOL-06**: Recent failures list shows tool.failed events with error payloads
-- [ ] **TOOL-07**: Integration health section shows status of Linear, GitHub, Slack MCP endpoints
+- [x] **TOOL-01**: Tool registry view shows all registered tools organized by namespace
+- [x] **TOOL-02**: Each tool shows description, which agents use it, and performance metrics
+- [x] **TOOL-03**: Permission matrix shows agent-to-tool access from both definition and MCP perspectives
+- [x] **TOOL-04**: Permission mismatches (definition references tool but MCP doesn't allow) are highlighted
+- [x] **TOOL-05**: Tool performance section shows call volume, failure rate, and latency metrics
+- [x] **TOOL-06**: Recent failures list shows tool.failed events with error payloads
+- [x] **TOOL-07**: Integration health section shows status of Linear, GitHub, Slack MCP endpoints
 
 ### System Overview
 
@@ -152,13 +152,13 @@ Deferred to later milestones. Tracked but not in v2.4 roadmap.
 | AGNT-04 | Phase 52 | Complete |
 | AGNT-05 | Phase 52 | Complete |
 | AGNT-06 | Phase 52 | Complete |
-| TOOL-01 | Phase 53 | Pending |
-| TOOL-02 | Phase 53 | Pending |
-| TOOL-03 | Phase 53 | Pending |
-| TOOL-04 | Phase 53 | Pending |
-| TOOL-05 | Phase 53 | Pending |
-| TOOL-06 | Phase 53 | Pending |
-| TOOL-07 | Phase 53 | Pending |
+| TOOL-01 | Phase 53 | Complete |
+| TOOL-02 | Phase 53 | Complete |
+| TOOL-03 | Phase 53 | Complete |
+| TOOL-04 | Phase 53 | Complete |
+| TOOL-05 | Phase 53 | Complete |
+| TOOL-06 | Phase 53 | Complete |
+| TOOL-07 | Phase 53 | Complete |
 | OVER-01 | Phase 54 | Pending |
 | OVER-02 | Phase 54 | Pending |
 | OVER-03 | Phase 54 | Pending |
@@ -177,4 +177,4 @@ Deferred to later milestones. Tracked but not in v2.4 roadmap.
 
 ---
 *Requirements defined: 2026-02-04*
-*Last updated: 2026-02-04 after Phase 52 completion*
+*Last updated: 2026-02-04 after Phase 53 completion*
