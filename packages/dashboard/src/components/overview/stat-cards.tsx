@@ -5,6 +5,7 @@ import type { StatusCounts } from "@/services/overview";
 
 interface StatCardsProps {
   counts: StatusCounts;
+  highlightedFields?: Set<string>;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -32,19 +33,30 @@ const cards: Array<{
   },
 ];
 
-export function StatCards({ counts }: StatCardsProps) {
+export function StatCards({ counts, highlightedFields }: StatCardsProps) {
   return (
     <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
-      {cards.map((card) => (
-        <Card key={card.key}>
-          <CardContent className="pt-6">
-            <p className={`text-3xl font-bold ${card.className ?? ""}`}>
-              {counts[card.field]}
-            </p>
-            <p className="text-sm text-muted-foreground">{card.label}</p>
-          </CardContent>
-        </Card>
-      ))}
+      {cards.map((card) => {
+        const isHighlighted = highlightedFields?.has(card.field) ?? false;
+
+        return (
+          <Card
+            key={card.key}
+            className={
+              isHighlighted
+                ? "ring-2 ring-emerald-500/50 transition-shadow duration-300"
+                : "transition-shadow duration-300"
+            }
+          >
+            <CardContent className="pt-6">
+              <p className={`text-3xl font-bold ${card.className ?? ""}`}>
+                {counts[card.field]}
+              </p>
+              <p className="text-sm text-muted-foreground">{card.label}</p>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }
