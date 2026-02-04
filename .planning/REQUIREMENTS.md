@@ -7,16 +7,16 @@
 
 ### Dashboard Infrastructure
 
-- [ ] **INFRA-01**: `packages/dashboard/` exists as a pnpm workspace package (`@aesir/dashboard`)
-- [ ] **INFRA-02**: Next.js 15 App Router with Tailwind CSS and shadcn/ui configured
-- [ ] **INFRA-03**: Drizzle ORM connected to existing Postgres (read-only, shared schema imports)
-- [ ] **INFRA-04**: Service layer (`src/services/`) abstracts all database queries
-- [ ] **INFRA-05**: Auth-ready middleware.ts in place (passthrough)
-- [ ] **INFRA-06**: Dockerfile builds and runs in Docker Compose on port 3005
-- [ ] **INFRA-07**: Nginx routes `/dashboard/*` to the dashboard service
-- [ ] **INFRA-08**: Health check endpoint (`/api/health`) returns 200
-- [ ] **INFRA-09**: `pnpm run typecheck` passes for the dashboard package
-- [ ] **INFRA-10**: `pnpm run lint` passes for the dashboard package
+- [x] **INFRA-01**: `packages/dashboard/` exists as a pnpm workspace package (`@aesir/dashboard`)
+- [x] **INFRA-02**: Next.js 15 App Router with Tailwind CSS and shadcn/ui configured
+- [x] **INFRA-03**: Drizzle ORM connected to existing Postgres (read-only, shared schema imports)
+- [x] **INFRA-04**: Service layer (`src/services/`) abstracts all database queries
+- [x] **INFRA-05**: Auth-ready middleware.ts in place (passthrough)
+- [x] **INFRA-06**: Dockerfile builds and runs in Docker Compose on port 3005
+- [x] **INFRA-07**: Nginx routes `/dashboard/*` to the dashboard service
+- [x] **INFRA-08**: Health check endpoint (`/api/health`) returns 200
+- [x] **INFRA-09**: `pnpm run typecheck` passes for the dashboard package
+- [x] **INFRA-10**: `pnpm run lint` passes for the dashboard package
 
 ### Conversations View
 
@@ -126,16 +126,16 @@ Deferred to later milestones. Tracked but not in v2.4 roadmap.
 | API-07 | Phase 48 | Pending |
 | SSE-01 | Phase 48 | Pending |
 | SSE-02 | Phase 48 | Pending |
-| INFRA-01 | Phase 49 | Pending |
-| INFRA-02 | Phase 49 | Pending |
-| INFRA-03 | Phase 49 | Pending |
-| INFRA-04 | Phase 49 | Pending |
-| INFRA-05 | Phase 49 | Pending |
-| INFRA-06 | Phase 49 | Pending |
-| INFRA-07 | Phase 49 | Pending |
-| INFRA-08 | Phase 49 | Pending |
-| INFRA-09 | Phase 49 | Pending |
-| INFRA-10 | Phase 49 | Pending |
+| INFRA-01 | Phase 49 | Complete |
+| INFRA-02 | Phase 49 | Complete |
+| INFRA-03 | Phase 49 | Complete |
+| INFRA-04 | Phase 49 | Complete |
+| INFRA-05 | Phase 49 | Complete |
+| INFRA-06 | Phase 49 | Complete |
+| INFRA-07 | Phase 49 | Complete |
+| INFRA-08 | Phase 49 | Complete |
+| INFRA-09 | Phase 49 | Complete |
+| INFRA-10 | Phase 49 | Complete |
 | CONV-01 | Phase 50 | Pending |
 | CONV-02 | Phase 50 | Pending |
 | CONV-03 | Phase 51 | Pending |

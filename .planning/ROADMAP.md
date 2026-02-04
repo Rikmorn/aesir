@@ -20,7 +20,7 @@ Real-time visibility into agent execution through a developer-focused web dashbo
 - Decimal phases (48.1, 48.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 48: Agent Service API Extensions** - New /api/ endpoints on the agent service for runtime state and SSE streaming
-- [ ] **Phase 49: Dashboard Infrastructure** - Next.js 15 package with Tailwind, shadcn/ui, Drizzle, Docker, service layer
+- [x] **Phase 49: Dashboard Infrastructure** - Next.js 15 package with Tailwind, shadcn/ui, Drizzle, Docker, service layer
 - [ ] **Phase 50: Conversations List** - Filterable list of all conversations with status, tokens, and activity
 - [ ] **Phase 51: Conversation Detail** - Event timeline, message history, and metadata panels for a single conversation
 - [ ] **Phase 52: Agent Definitions View** - Agent list and detail pages sourced from agent-service runtime registry
@@ -57,9 +57,9 @@ Plans:
   5. A service layer exists in `src/services/` with at least one query function using Drizzle ORM against existing Postgres schemas, and middleware.ts exists as an auth-ready passthrough
 **Plans:** 3 plans
 Plans:
-- [ ] 49-01-PLAN.md -- Next.js package scaffold with Tailwind, shadcn/ui, health endpoint, middleware, typecheck, lint
-- [ ] 49-02-PLAN.md -- Drizzle ORM database connectivity and service layer pattern
-- [ ] 49-03-PLAN.md -- Docker multi-stage build, Compose service, Nginx routing
+- [x] 49-01-PLAN.md -- Next.js package scaffold with Tailwind, shadcn/ui, health endpoint, middleware, typecheck, lint
+- [x] 49-02-PLAN.md -- Drizzle ORM database connectivity and service layer pattern
+- [x] 49-03-PLAN.md -- Docker multi-stage build, Compose service, Nginx routing
 
 ### Phase 50: Conversations List
 **Goal**: Users can see all agent conversations at a glance with filtering, answering "what have agents been doing?" without SQL
@@ -136,7 +136,7 @@ Note: Phases 48 and 49 could execute in parallel (no dependency between them), b
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 48. Agent Service API Extensions | 2/2 | Complete | 2026-02-04 |
-| 49. Dashboard Infrastructure | 0/3 | Not started | - |
+| 49. Dashboard Infrastructure | 3/3 | Complete | 2026-02-04 |
 | 50. Conversations List | 0/TBD | Not started | - |
 | 51. Conversation Detail | 0/TBD | Not started | - |
 | 52. Agent Definitions View | 0/TBD | Not started | - |
