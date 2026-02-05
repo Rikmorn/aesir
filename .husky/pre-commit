@@ -4,4 +4,4 @@
 # Runs biome check on staged files and typecheck
 
 npx biome check --staged --no-errors-on-unmatched
-pnpm -r run build
+pnpm -r run typecheck
