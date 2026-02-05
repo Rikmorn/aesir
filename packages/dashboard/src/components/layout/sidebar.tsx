@@ -12,6 +12,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -177,14 +178,24 @@ export function Sidebar() {
           })}
         </nav>
 
-        {/* Footer - only show text when expanded */}
-        {!isCollapsed && (
-          <div className="border-t px-4 py-3">
-            <p className="text-xs text-muted-foreground">
-              Operations Dashboard
-            </p>
-          </div>
-        )}
+        {/* Footer */}
+        <div
+          className={cn(
+            "border-t",
+            isCollapsed ? "flex justify-center py-2" : "px-4 py-3",
+          )}
+        >
+          {isCollapsed ? (
+            <ThemeToggle collapsed />
+          ) : (
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                Operations Dashboard
+              </p>
+              <ThemeToggle />
+            </div>
+          )}
+        </div>
       </aside>
     </TooltipProvider>
   );
