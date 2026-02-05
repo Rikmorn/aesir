@@ -92,6 +92,16 @@ export const agentEvents = agentsSchema.table("agent_events", {
   duration_ms: integer("duration_ms"),
 });
 
+// ─── Agent Event Content ─────────────────────────────────────────────────────
+
+export const agentEventContent = agentsSchema.table("agent_event_content", {
+  event_id: text("event_id").primaryKey(),
+  content: jsonb("content").$type<unknown[]>().notNull(),
+  created_at: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 // ─── Agent Sessions ──────────────────────────────────────────────────────────
 
 export const sessionStatusValues = [
@@ -153,3 +163,4 @@ export const slackMcpPermissions = slackSchema.table("mcp_tool_permissions", {
 export type Conversation = typeof conversations.$inferSelect;
 export type AgentEvent = typeof agentEvents.$inferSelect;
 export type AgentSession = typeof agentSessions.$inferSelect;
+export type AgentEventContent = typeof agentEventContent.$inferSelect;

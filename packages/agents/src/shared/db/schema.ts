@@ -191,6 +191,26 @@ export const agentSessions = agentsSchema.table("agent_sessions", {
     .defaultNow(),
 });
 
+// ─── Agent Event Content ─────────────────────────────────────────────────────
+
+/**
+ * Agent Event Content table
+ *
+ * Stores full LLM response content separately from the lean event log.
+ * Content is stored as JSONB matching Anthropic.Message.content format.
+ * One-to-one relationship with agent_events (event_id is PK and FK).
+ * Cascade delete ensures content is removed when events are purged.
+ */
+export const agentEventContent = agentsSchema.table("agent_event_content", {
+  event_id: text("event_id")
+    .primaryKey()
+    .references(() => agentEvents.id, { onDelete: "cascade" }),
+  content: jsonb("content").$type<unknown[]>().notNull(),
+  created_at: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 // ─── Type Exports ────────────────────────────────────────────────────────────
 
 export type Conversation = typeof conversations.$inferSelect;
@@ -199,3 +219,5 @@ export type AgentEvent = typeof agentEvents.$inferSelect;
 export type NewAgentEvent = typeof agentEvents.$inferInsert;
 export type AgentSession = typeof agentSessions.$inferSelect;
 export type NewAgentSession = typeof agentSessions.$inferInsert;
+export type AgentEventContent = typeof agentEventContent.$inferSelect;
+export type NewAgentEventContent = typeof agentEventContent.$inferInsert;

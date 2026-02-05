@@ -15,16 +15,21 @@
  */
 
 import { createDevContainerGit, type PinoLogger } from "@aesir/platform";
+import { createId } from "@aesir/types";
 import type Anthropic from "@anthropic-ai/sdk";
 import { eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { nanoid } from "nanoid";
 import { runAgentLoop } from "../shared/agent-loop/run-agent-loop.js";
 import { createTokenBudget } from "../shared/agent-loop/token-budget.js";
-import type { AgentLoopResult } from "../shared/agent-loop/types.js";
+import type {
+  AgentLoopResult,
+  LLMResponse,
+} from "../shared/agent-loop/types.js";
 import type * as agentsSchemaModule from "../shared/db/schema.js";
 import type { Conversation } from "../shared/db/schema.js";
 import { conversations } from "../shared/db/schema.js";
+import { storeEventContent } from "./event-content.js";
 import { createHistoryManager } from "./history-manager.js";
 import type { TimeoutScheduler } from "./timeout-scheduler.js";
 import type {
@@ -641,10 +646,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         });
       };
 
-      const onResponse = (response: {
-        usage: { input_tokens: number; output_tokens: number };
-        stop_reason: string | null;
-      }) => {
+      const onResponse = (response: LLMResponse) => {
         childLogger.info(
           {
             inputTokens: response.usage.input_tokens,
@@ -653,13 +655,21 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
           },
           "LLM response received",
         );
+
+        // Pre-generate event ID so we can reference it for content storage
+        const eventId = createId.agentEvent();
+
         eventLog.append({
           ...eventBase,
+          id: eventId,
           type: "llm.response",
           payload: { stop_reason: response.stop_reason },
           tokenCountInput: response.usage.input_tokens,
           tokenCountOutput: response.usage.output_tokens,
         });
+
+        // Fire-and-forget content storage (non-blocking)
+        void storeEventContent(db, eventId, response.content, childLogger);
       };
 
       // 11. Run agent loop

@@ -16,6 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { ConversationEvent } from "@/services/conversations";
 
+import { EventContentDisplay } from "./event-content";
 import { EventIcon } from "./event-icon";
 import { JsonPayload } from "./json-payload";
 
@@ -121,7 +122,22 @@ function EventItem({ event, isSubAgent }: EventItemProps) {
 
         <CollapsibleContent>
           <div className="border-t px-3 pb-3 pt-2">
-            <JsonPayload data={event.payload} />
+            {event.type === "llm.response" ? (
+              <>
+                {/* LLM Response: show content inline, with raw payload in details */}
+                <EventContentDisplay eventId={event.id} isExpanded={isOpen} />
+                <details className="mt-3">
+                  <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                    Raw payload
+                  </summary>
+                  <div className="mt-2">
+                    <JsonPayload data={event.payload} />
+                  </div>
+                </details>
+              </>
+            ) : (
+              <JsonPayload data={event.payload} />
+            )}
           </div>
         </CollapsibleContent>
       </div>

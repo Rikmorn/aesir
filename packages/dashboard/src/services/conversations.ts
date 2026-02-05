@@ -23,6 +23,7 @@ import {
 
 import { db } from "@/lib/db";
 import {
+  agentEventContent,
   agentEvents,
   agentSessions,
   type ConversationStatus,
@@ -350,6 +351,28 @@ export async function getChildConversations(
     status: row.status,
     createdAt: row.created_at,
   }));
+}
+
+// ─── Event Content ───────────────────────────────────────────────────────────
+
+/**
+ * Get the LLM response content for an event.
+ *
+ * Returns the full content blocks array (Anthropic format) stored separately
+ * from the lean event log. Returns null if no content exists (older events
+ * before this feature was added, or events without text content).
+ */
+export async function getEventContent(
+  eventId: string,
+): Promise<unknown[] | null> {
+  const rows = await db
+    .select({ content: agentEventContent.content })
+    .from(agentEventContent)
+    .where(eq(agentEventContent.event_id, eventId))
+    .limit(1);
+
+  const [row] = rows;
+  return row ? row.content : null;
 }
 
 // ─── Filter Builder ──────────────────────────────────────────────────────────

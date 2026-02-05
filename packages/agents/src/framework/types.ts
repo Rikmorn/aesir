@@ -47,6 +47,8 @@ export type {
  * The caller provides the event content; EventLog adds id, sequence, timestamp.
  */
 export interface AppendEventInput {
+  /** Optional pre-generated event ID. If omitted, a new ID is generated. */
+  id?: string;
   conversationId: string;
   agentDefinitionId: string;
   agentDefinitionVersion: string;

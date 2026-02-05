@@ -209,7 +209,7 @@ export function createEventLog(options: EventLogOptions): EventLog {
 
       // Build the record
       const record: NewAgentEvent = {
-        id: createId.agentEvent(),
+        id: event.id ?? createId.agentEvent(),
         conversation_id: event.conversationId,
         agent_definition_id: event.agentDefinitionId,
         agent_definition_version: event.agentDefinitionVersion,

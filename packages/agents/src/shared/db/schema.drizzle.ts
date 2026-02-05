@@ -281,3 +281,13 @@ export const agentSessions = agentsSchema.table("agent_sessions", {
     .notNull()
     .defaultNow(),
 });
+
+// ─── Agent Event Content ─────────────────────────────────────────────────────
+
+export const agentEventContent = agentsSchema.table("agent_event_content", {
+  event_id: text("event_id").primaryKey(),
+  content: jsonb("content").notNull(),
+  created_at: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
