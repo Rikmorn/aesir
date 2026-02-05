@@ -6,7 +6,10 @@
  * Run with: pnpm --filter @aesir/integration-slack seed:permissions
  */
 
-import "dotenv-flow/config";
+import { loadEnvFromRoot } from "@aesir/platform";
+
+loadEnvFromRoot();
+
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { mcpToolPermissions } from "../src/db/schema.js";

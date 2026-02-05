@@ -10,14 +10,9 @@
  * Run with: pnpm --filter @aesir/integration-github seed:credential
  */
 
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import dotenvFlow from "dotenv-flow";
+import { loadEnvFromRoot } from "@aesir/platform";
 
-// Load .env from monorepo root (scripts run from package directory)
-const currentDir = path.dirname(fileURLToPath(import.meta.url));
-const monorepoRoot = path.resolve(currentDir, "../../../../");
-dotenvFlow.config({ path: monorepoRoot, silent: true });
+loadEnvFromRoot();
 
 import { createId } from "@aesir/types";
 import { eq } from "drizzle-orm";

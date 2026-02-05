@@ -10,7 +10,10 @@
  * Run with: pnpm --filter @aesir/integration-linear seed:credential
  */
 
-import "dotenv-flow/config";
+import { loadEnvFromRoot } from "@aesir/platform";
+
+loadEnvFromRoot();
+
 import { createId } from "@aesir/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";

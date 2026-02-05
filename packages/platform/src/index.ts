@@ -1,5 +1,7 @@
 // @aesir/platform - sandbox, logging, testing, services
 
+// Config utilities
+export * from "./config/index.js";
 // Errors
 export * from "./errors/index.js";
 // Logging

@@ -1,4 +1,4 @@
-#!/usr/bin/env -S npx tsx -r dotenv-flow/config
+#!/usr/bin/env tsx
 /**
  * GitHub Credential Migration Script
  *
@@ -9,7 +9,7 @@
  *   pnpm --filter @aesir/integration-github migrate
  *
  * Or directly:
- *   npx tsx -r dotenv-flow/config packages/integrations/github/scripts/migrate-credentials.ts
+ *   npx tsx packages/integrations/github/scripts/migrate-credentials.ts
  *
  * This script uses direct database connection to avoid full environment validation.
  * Only database env vars are required.
@@ -17,6 +17,10 @@
  * This script is idempotent - running it multiple times is safe.
  * It skips credentials that already exist in github.credentials.
  */
+import { loadEnvFromRoot } from "@aesir/platform";
+
+loadEnvFromRoot();
+
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,7 +30,6 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { pgSchema, text, timestamp } from "drizzle-orm/pg-core";
 import pg from "pg";
 
-// Environment variables loaded via -r dotenv-flow/config flag
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const packageRoot = resolve(scriptDir, "..");
 

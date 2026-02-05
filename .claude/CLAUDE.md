@@ -444,6 +444,17 @@ const apiKey = config.anthropic.apiKey;
 const dbUrl = config.database.url;
 ```
 
+**Scripts (seed, migrate):** Scripts run from package directories via `pnpm --filter`, but `.env` is at the monorepo root. Use `loadEnvFromRoot()` from `@aesir/platform` to load env vars correctly:
+
+```typescript
+#!/usr/bin/env tsx
+import { loadEnvFromRoot } from "@aesir/platform";
+loadEnvFromRoot(); // Must be called before accessing process.env
+
+// Now process.env has vars from root .env
+const dbUrl = process.env.DATABASE_URL;
+```
+
 ### Linear Integration
 
 For Linear functionality, import from the dedicated package:
