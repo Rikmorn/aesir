@@ -255,15 +255,18 @@ export async function getRecentErrors(limit = 10): Promise<RecentError[]> {
 }
 
 /**
- * Get token usage aggregated by agent for the last 24 hours.
+ * Get token usage aggregated by agent for a given time range.
  *
  * Filters to type='llm.response' events only (the only event type
- * that records token counts) within the 24h window.
+ * that records token counts) within the specified window.
  *
+ * @param since - Start of the time range (defaults to 24 hours ago)
  * @returns Array of TokenUsageByAgent with input and output token totals
  */
-export async function getTokenUsageByAgent(): Promise<TokenUsageByAgent[]> {
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+export async function getTokenUsageByAgent(
+  since?: Date,
+): Promise<TokenUsageByAgent[]> {
+  const effectiveSince = since ?? new Date(Date.now() - 24 * 60 * 60 * 1000);
 
   const rows = await db
     .select({
@@ -275,7 +278,7 @@ export async function getTokenUsageByAgent(): Promise<TokenUsageByAgent[]> {
     .where(
       and(
         eq(agentEvents.type, "llm.response"),
-        gte(agentEvents.timestamp, since),
+        gte(agentEvents.timestamp, effectiveSince),
       ),
     )
     .groupBy(agentEvents.agent_definition_id);

@@ -1,5 +1,6 @@
 import { LiveOverview } from "@/components/overview/live-overview";
 import { fetchWorkerStatus } from "@/lib/agent-service";
+import { getTimeRangeDate } from "@/lib/format";
 import {
   getActiveConversations,
   getConversationStatusCounts,
@@ -10,7 +11,17 @@ import {
 // Force dynamic rendering -- overview queries the database and agent-service on every request
 export const dynamic = "force-dynamic";
 
-export default async function OverviewPage() {
+interface OverviewPageProps {
+  searchParams: Promise<{ tokenTimeRange?: string }>;
+}
+
+export default async function OverviewPage({
+  searchParams,
+}: OverviewPageProps) {
+  const params = await searchParams;
+  const tokenTimeRange = params.tokenTimeRange ?? "24h";
+  const tokenSince = getTimeRangeDate(tokenTimeRange);
+
   const [
     statusCounts,
     activeConversations,
@@ -22,7 +33,7 @@ export default async function OverviewPage() {
     getActiveConversations(),
     fetchWorkerStatus(),
     getRecentErrors(),
-    getTokenUsageByAgent(),
+    getTokenUsageByAgent(tokenSince),
   ]);
 
   // Serialize Date fields for server/client boundary crossing
@@ -43,6 +54,7 @@ export default async function OverviewPage() {
       workerStatus={workerStatus}
       recentErrors={serializedErrors}
       tokenUsage={tokenUsage}
+      defaultTokenTimeRange={tokenTimeRange}
     />
   );
 }

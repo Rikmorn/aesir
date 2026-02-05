@@ -69,6 +69,7 @@ interface LiveOverviewProps {
   workerStatus: WorkerStatusType | null;
   recentErrors: SerializedRecentError[];
   tokenUsage: TokenUsageByAgent[];
+  defaultTokenTimeRange: string;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -103,6 +104,7 @@ export function LiveOverview({
   workerStatus,
   recentErrors,
   tokenUsage,
+  defaultTokenTimeRange,
 }: LiveOverviewProps) {
   const router = useRouter();
 
@@ -233,7 +235,10 @@ export function LiveOverview({
         {/* Recent errors + Token usage */}
         <div className="grid gap-4 lg:grid-cols-2">
           <RecentErrors errors={errors} />
-          <TokenUsage data={tokenUsage} />
+          <TokenUsage
+            data={tokenUsage}
+            defaultTimeRange={defaultTokenTimeRange}
+          />
         </div>
       </div>
     </main>

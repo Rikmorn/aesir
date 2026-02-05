@@ -1,5 +1,6 @@
 "use client";
 
+import { parseAsString, useQueryState } from "nuqs";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +12,13 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatTokenCount } from "@/lib/format";
 import type { TokenUsageByAgent } from "@/services/overview";
 
@@ -18,7 +26,16 @@ import type { TokenUsageByAgent } from "@/services/overview";
 
 interface TokenUsageProps {
   data: TokenUsageByAgent[];
+  defaultTimeRange: string;
 }
+
+// ─── Time Range Options ─────────────────────────────────────────────────────
+
+const TIME_RANGE_OPTIONS = [
+  { value: "1h", label: "Last hour" },
+  { value: "24h", label: "Last 24 hours" },
+  { value: "7d", label: "Last 7 days" },
+];
 
 // ─── Chart Config ────────────────────────────────────────────────────────────
 
@@ -29,22 +46,42 @@ const chartConfig = {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function TokenUsage({ data }: TokenUsageProps) {
+export function TokenUsage({ data, defaultTimeRange }: TokenUsageProps) {
+  const [timeRange, setTimeRange] = useQueryState(
+    "tokenTimeRange",
+    parseAsString.withDefault(defaultTimeRange).withOptions({ shallow: false }),
+  );
+
   const totalTokens = data.reduce(
     (sum, d) => sum + d.inputTokens + d.outputTokens,
     0,
   );
 
+  const timeRangeLabel =
+    TIME_RANGE_OPTIONS.find((o) => o.value === timeRange)?.label ?? timeRange;
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Token Usage (24h)</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle>Token Usage</CardTitle>
+        <Select value={timeRange} onValueChange={setTimeRange}>
+          <SelectTrigger size="sm" className="w-auto">
+            <SelectValue placeholder="Time range" />
+          </SelectTrigger>
+          <SelectContent>
+            {TIME_RANGE_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </CardHeader>
       <CardContent>
         {data.length === 0 || totalTokens === 0 ? (
           <div className="flex h-[200px] items-center justify-center rounded-lg border border-dashed">
             <p className="text-sm text-muted-foreground">
-              No LLM calls in the last 24 hours
+              No LLM calls in the {timeRangeLabel.toLowerCase()}
             </p>
           </div>
         ) : (
@@ -54,7 +91,7 @@ export function TokenUsage({ data }: TokenUsageProps) {
                 {formatTokenCount(totalTokens)}
               </p>
               <p className="text-sm text-muted-foreground">
-                Total tokens (last 24h)
+                Total tokens ({timeRangeLabel.toLowerCase()})
               </p>
             </div>
             <ChartContainer
