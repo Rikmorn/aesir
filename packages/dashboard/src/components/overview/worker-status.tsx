@@ -44,7 +44,7 @@ export function WorkerStatus({ status }: WorkerStatusProps) {
       </CardHeader>
       <CardContent>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-          <dt className="text-muted-foreground">Active Claims</dt>
+          <dt className="text-muted-foreground">Running</dt>
           <dd>
             {status.activeClaims} / {status.maxConcurrent}
           </dd>

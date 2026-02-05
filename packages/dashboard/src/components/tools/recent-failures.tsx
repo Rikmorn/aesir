@@ -43,6 +43,7 @@ interface RecentFailuresProps {
   total: number;
   toolRegistry: ToolRegistryItem[];
   agentIds: string[];
+  defaultTimeRange: string;
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -50,11 +51,11 @@ interface RecentFailuresProps {
 const PAGE_SIZE = 25;
 const ALL_VALUE = "__all__";
 
-const parsers = {
-  failurePage: parseAsInteger.withDefault(1),
-  failureNamespace: parseAsString,
-  failureAgent: parseAsString,
-};
+const TIME_RANGE_OPTIONS = [
+  { value: "1h", label: "Last hour" },
+  { value: "24h", label: "Last 24 hours" },
+  { value: "7d", label: "Last 7 days" },
+];
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
@@ -63,8 +64,17 @@ export function RecentFailures({
   total,
   toolRegistry,
   agentIds,
+  defaultTimeRange,
 }: RecentFailuresProps) {
-  const [filters, setFilters] = useQueryStates(parsers, { shallow: false });
+  const [filters, setFilters] = useQueryStates(
+    {
+      failurePage: parseAsInteger.withDefault(1),
+      failureNamespace: parseAsString,
+      failureAgent: parseAsString,
+      timeRange: parseAsString.withDefault(defaultTimeRange),
+    },
+    { shallow: false },
+  );
 
   const page = filters.failurePage;
   const startItem = (page - 1) * PAGE_SIZE + 1;
@@ -86,6 +96,13 @@ export function RecentFailures({
   function handleAgentChange(value: string) {
     setFilters({
       failureAgent: value === ALL_VALUE ? null : value,
+      failurePage: 1,
+    });
+  }
+
+  function handleTimeRangeChange(value: string) {
+    setFilters({
+      timeRange: value,
       failurePage: 1,
     });
   }
@@ -152,6 +169,22 @@ export function RecentFailures({
             ))}
           </SelectContent>
         </Select>
+
+        <div className="flex-1" />
+
+        {/* Time Range Filter */}
+        <Select value={filters.timeRange} onValueChange={handleTimeRangeChange}>
+          <SelectTrigger size="sm" className="w-auto">
+            <SelectValue placeholder="Time range" />
+          </SelectTrigger>
+          <SelectContent>
+            {TIME_RANGE_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Failure Table */}
@@ -159,12 +192,12 @@ export function RecentFailures({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Timestamp</TableHead>
-              <TableHead>Tool</TableHead>
-              <TableHead>Agent</TableHead>
-              <TableHead>Duration</TableHead>
+              <TableHead className="w-20">Timestamp</TableHead>
+              <TableHead className="w-44">Tool</TableHead>
+              <TableHead className="w-24">Agent</TableHead>
+              <TableHead className="w-20">Duration</TableHead>
               <TableHead>Error</TableHead>
-              <TableHead>Conversation</TableHead>
+              <TableHead className="w-52">Conversation</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -270,11 +303,11 @@ function FailureRow({ failure }: { failure: ToolFailure }) {
       </TableCell>
 
       {/* Error */}
-      <TableCell className="max-w-[300px]">
+      <TableCell className="max-w-[200px] overflow-hidden">
         {failure.errorOutput.length > 100 ? (
           <Collapsible>
-            <CollapsibleTrigger className="flex items-center gap-1 text-left text-xs text-muted-foreground hover:text-foreground">
-              <span className="line-clamp-1">{truncatedError}</span>
+            <CollapsibleTrigger className="flex w-full items-center gap-1 text-left text-xs text-muted-foreground hover:text-foreground">
+              <span className="min-w-0 flex-1 truncate">{truncatedError}</span>
               <ChevronDownIcon className="h-3 w-3 shrink-0" />
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-2">
@@ -294,19 +327,19 @@ function FailureRow({ failure }: { failure: ToolFailure }) {
             </CollapsibleContent>
           </Collapsible>
         ) : (
-          <span className="text-xs text-muted-foreground">
+          <span className="block truncate text-xs text-muted-foreground">
             {failure.errorOutput || "-"}
           </span>
         )}
       </TableCell>
 
       {/* Conversation Link */}
-      <TableCell>
+      <TableCell className="max-w-0">
         <Link
           href={`/conversations/${failure.conversationId}`}
-          className="text-sm text-primary hover:underline"
+          className="block truncate text-sm text-primary hover:underline"
         >
-          {failure.conversationId.slice(0, 8)}...
+          {failure.conversationId}
         </Link>
       </TableCell>
     </TableRow>

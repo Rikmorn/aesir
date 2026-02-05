@@ -4,6 +4,9 @@ import { AgentCard } from "@/components/agents/agent-card";
 import { getAgentType } from "@/components/agents/agent-type-badge";
 import { getAgentList } from "@/services/agents";
 
+// Force dynamic rendering -- agents list queries the agent-service on every request
+export const dynamic = "force-dynamic";
+
 export default async function AgentsPage() {
   const agents = await getAgentList();
 

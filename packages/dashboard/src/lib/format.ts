@@ -103,6 +103,17 @@ export function formatPercentage(value: number): string {
 }
 
 /**
+ * Format a date as a short timestamp (e.g., "Feb 4, 00:51").
+ */
+export function formatTimestamp(date: Date): string {
+  const month = date.toLocaleDateString("en-US", { month: "short" });
+  const day = date.getDate();
+  const hours = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+  return `${month} ${day}, ${hours}:${minutes}`;
+}
+
+/**
  * Format an agent event type for display.
  *
  * Converts database enum values to human-readable labels.
@@ -120,4 +131,15 @@ export function formatEventType(type: string): string {
       return word.charAt(0).toUpperCase() + word.slice(1);
     })
     .join(" ");
+}
+
+/**
+ * Estimate token count for a text string.
+ *
+ * Uses chars/4 approximation (ceil) which is roughly accurate for English text.
+ * This matches the estimation used in the agent framework's history manager.
+ */
+export function estimateTokens(text: string): number {
+  if (!text) return 0;
+  return Math.ceil(text.length / 4);
 }

@@ -5,6 +5,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import { useRouter } from "next/navigation";
 
 import {
   Table,
@@ -37,6 +38,7 @@ export function ConversationsTable({
   agentDefinitions,
   highlightedIds,
 }: ConversationsTableProps) {
+  const router = useRouter();
   const table = useReactTable({
     data,
     columns,
@@ -71,10 +73,13 @@ export function ConversationsTable({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  className={
+                  className={`cursor-pointer hover:bg-muted/50 ${
                     highlightedIds?.has(row.original.id)
                       ? "bg-accent/30 transition-colors duration-[1500ms]"
-                      : undefined
+                      : ""
+                  }`}
+                  onClick={() =>
+                    router.push(`/conversations/${row.original.id}`)
                   }
                 >
                   {row.getVisibleCells().map((cell) => (

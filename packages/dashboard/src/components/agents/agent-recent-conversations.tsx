@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { StatusBadge } from "@/components/conversations/status-badge";
 import {
@@ -19,6 +22,7 @@ import {
 import {
   formatDuration,
   formatRelativeTime,
+  formatTimestamp,
   formatTokenCount,
 } from "@/lib/format";
 import type { RecentConversation } from "@/services/agents";
@@ -36,6 +40,8 @@ export function AgentRecentConversations({
   conversations,
   agentDefinitionId,
 }: AgentRecentConversationsProps) {
+  const router = useRouter();
+
   if (conversations.length === 0) {
     return (
       <Card>
@@ -61,6 +67,7 @@ export function AgentRecentConversations({
           <TableHeader>
             <TableRow>
               <TableHead>Status</TableHead>
+              <TableHead>Created</TableHead>
               <TableHead>Duration</TableHead>
               <TableHead>Tokens</TableHead>
               <TableHead>Last Activity</TableHead>
@@ -68,11 +75,16 @@ export function AgentRecentConversations({
           </TableHeader>
           <TableBody>
             {conversations.map((conversation) => (
-              <TableRow key={conversation.id}>
+              <TableRow
+                key={conversation.id}
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => router.push(`/conversations/${conversation.id}`)}
+              >
                 <TableCell>
-                  <Link href={`/conversations/${conversation.id}`}>
-                    <StatusBadge status={conversation.status} />
-                  </Link>
+                  <StatusBadge status={conversation.status} />
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {formatTimestamp(conversation.createdAt)}
                 </TableCell>
                 <TableCell className="text-sm font-mono">
                   {formatDuration(

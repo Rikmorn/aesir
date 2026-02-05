@@ -29,7 +29,6 @@ import type {
 
 import { DetailLayout } from "./detail-layout";
 import { EventTimeline } from "./event-timeline";
-import { MessagePanel } from "./message-panel";
 import { MetadataSidebar } from "./metadata-sidebar";
 
 // ─── Serialized Types ──────────────────────────────────────────────────────
@@ -55,7 +54,6 @@ interface SerializedChildConversation
 export interface LiveDetailPanelsProps {
   conversation: SerializedConversationDetail;
   initialEvents: SerializedConversationEvent[];
-  initialMessages: unknown[];
   childConversations: SerializedChildConversation[];
 }
 
@@ -69,7 +67,6 @@ const SCROLL_THRESHOLD_PX = 100;
 export function LiveDetailPanels({
   conversation: initialConversation,
   initialEvents,
-  initialMessages,
   childConversations: initialChildren,
 }: LiveDetailPanelsProps) {
   const router = useRouter();
@@ -251,8 +248,6 @@ export function LiveDetailPanels({
 
   // ─── Render ───────────────────────────────────────────────────────
 
-  const hasNewSseEvents = sseEventCount > 0;
-
   return (
     <div className="space-y-4">
       {/* Connection status indicator */}
@@ -306,21 +301,6 @@ export function LiveDetailPanels({
               </button>
             )}
           </div>
-        }
-        messagesPanel={
-          <>
-            <h2 className="text-lg font-semibold">Messages</h2>
-            <p className="mb-4 text-sm text-muted-foreground">
-              {initialMessages.length} messages
-            </p>
-            {hasNewSseEvents && conversationMeta.status !== "completed" && (
-              <div className="mb-3 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200">
-                Conversation is active. Messages will update when the
-                conversation completes.
-              </div>
-            )}
-            <MessagePanel messages={initialMessages} />
-          </>
         }
         sidebarPanel={
           <MetadataSidebar

@@ -3,8 +3,7 @@ import { PermissionMatrix } from "@/components/tools/permission-matrix";
 import { RecentFailures } from "@/components/tools/recent-failures";
 import { ToolPerformance } from "@/components/tools/tool-performance";
 import { ToolRegistry } from "@/components/tools/tool-registry";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToolsTabs } from "@/components/tools/tools-tabs";
 import { fetchAgentList, fetchToolsHealth } from "@/lib/agent-service";
 import { getTimeRangeDate } from "@/lib/format";
 import {
@@ -16,6 +15,9 @@ import {
   getToolMetricTimeSeries,
   getToolRegistry,
 } from "@/services/tools";
+
+// Force dynamic rendering -- queries database and agent-service on every request
+export const dynamic = "force-dynamic";
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
@@ -89,54 +91,37 @@ export default async function ToolsPage({ searchParams }: ToolsPageProps) {
       </div>
 
       {/* Tabbed Content */}
-      <Tabs defaultValue={defaultTab}>
-        <TabsList>
-          <TabsTrigger value="registry">Registry</TabsTrigger>
-          <TabsTrigger value="permissions">
-            Permissions
-            {mismatchCount > 0 && (
-              <Badge
-                variant="destructive"
-                className="ml-1.5 h-5 px-1.5 text-[10px]"
-              >
-                {mismatchCount}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="failures">Failures</TabsTrigger>
-          <TabsTrigger value="health">Health</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="registry" className="mt-6">
-          <ToolRegistry tools={tools} highlightTool={params.tool} />
-        </TabsContent>
-
-        <TabsContent value="permissions" className="mt-6">
+      <ToolsTabs
+        defaultTab={defaultTab}
+        mismatchCount={mismatchCount}
+        registryContent={
+          <ToolRegistry
+            tools={tools}
+            highlightTool={params.tool}
+            defaultTimeRange={timeRange}
+          />
+        }
+        permissionsContent={
           <PermissionMatrix cells={permissionCells} agents={agents} />
-        </TabsContent>
-
-        <TabsContent value="performance" className="mt-6">
+        }
+        performanceContent={
           <ToolPerformance
             timeSeries={timeSeries}
             metrics={metrics}
             defaultTimeRange={timeRange}
           />
-        </TabsContent>
-
-        <TabsContent value="failures" className="mt-6">
+        }
+        failuresContent={
           <RecentFailures
             failures={failures.items}
             total={failures.total}
             toolRegistry={tools}
             agentIds={agents.map((a) => a.id)}
+            defaultTimeRange={timeRange}
           />
-        </TabsContent>
-
-        <TabsContent value="health" className="mt-6">
-          <IntegrationHealth integrations={integrations} />
-        </TabsContent>
-      </Tabs>
+        }
+        healthContent={<IntegrationHealth integrations={integrations} />}
+      />
     </main>
   );
 }

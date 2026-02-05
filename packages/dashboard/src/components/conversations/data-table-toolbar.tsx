@@ -89,7 +89,7 @@ export function DataTableToolbar({ agentDefinitions }: DataTableToolbarProps) {
   }
 
   function handleTimeRangeChange(value: string) {
-    setFilters({ timeRange: value === "all" ? null : value, page: 1 });
+    setFilters({ timeRange: value, page: 1 });
   }
 
   function toggleHasErrors() {
@@ -211,10 +211,7 @@ export function DataTableToolbar({ agentDefinitions }: DataTableToolbarProps) {
       </Popover>
 
       {/* Time range filter */}
-      <Select
-        value={filters.timeRange ?? "all"}
-        onValueChange={handleTimeRangeChange}
-      >
+      <Select value={filters.timeRange} onValueChange={handleTimeRangeChange}>
         <SelectTrigger size="sm" className="w-auto">
           <SelectValue placeholder="Time range" />
         </SelectTrigger>

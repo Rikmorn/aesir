@@ -41,12 +41,12 @@ export function MetadataSidebar({
 
       {/* Agent */}
       <MetadataField label="Agent">
-        <span className="text-sm">
-          {conversation.agentDefinitionId}{" "}
-          <span className="text-muted-foreground">
-            v{conversation.agentDefinitionVersion}
-          </span>
-        </span>
+        <Link
+          href={`/agents/${conversation.agentDefinitionId}`}
+          className="text-sm text-primary underline-offset-4 hover:underline"
+        >
+          {conversation.agentDefinitionId}
+        </Link>
       </MetadataField>
 
       {/* Retries */}

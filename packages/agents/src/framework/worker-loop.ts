@@ -406,14 +406,31 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         []) as Anthropic.MessageParam[];
       const isResumed = existingMessages.length > 1;
 
+      // Extract initial context from first message (for new conversations)
+      const firstMessage = existingMessages[0];
+      const initialContext =
+        !isResumed && firstMessage
+          ? typeof firstMessage.content === "string"
+            ? firstMessage.content
+            : JSON.stringify(firstMessage.content)
+          : undefined;
+
       // Append lifecycle event
+      // For agent.started, capture the system prompt and initial context
+      // so we know exactly what was used for this conversation
       eventLog.append({
         conversationId: conv.id,
         agentDefinitionId: conv.agent_definition_id,
         agentDefinitionVersion: conv.agent_definition_version,
         agentInstanceId: instanceId,
         type: isResumed ? "agent.resumed" : "agent.started",
-        payload: { workerId },
+        payload: isResumed
+          ? { workerId }
+          : {
+              workerId,
+              systemPrompt: definition.systemPrompt,
+              initialContext,
+            },
       });
 
       // 4. Setup sandbox if agent uses codebase tools

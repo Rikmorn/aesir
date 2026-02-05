@@ -1,13 +1,14 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-
 import { LiveDetailPanels } from "@/components/conversation-detail/live-detail-panels";
+import { BackToConversations } from "@/components/navigation/back-link";
 import {
   getChildConversations,
   getConversationById,
   getConversationEvents,
-  getConversationMessages,
 } from "@/services/conversations";
+
+// Force dynamic rendering -- queries database on every request
+export const dynamic = "force-dynamic";
 
 // ─── Page ───────────────────────────────────────────────────────────────────
 
@@ -20,13 +21,11 @@ export default async function ConversationDetailPage({
 }: ConversationDetailPageProps) {
   const { id } = await params;
 
-  const [conversation, events, messages, childConversations] =
-    await Promise.all([
-      getConversationById(id),
-      getConversationEvents(id),
-      getConversationMessages(id),
-      getChildConversations(id),
-    ]);
+  const [conversation, events, childConversations] = await Promise.all([
+    getConversationById(id),
+    getConversationEvents(id),
+    getChildConversations(id),
+  ]);
 
   if (!conversation) {
     notFound();
@@ -36,12 +35,7 @@ export default async function ConversationDetailPage({
     <main className="container mx-auto px-4 py-8">
       {/* Header with breadcrumb and title */}
       <div className="mb-6">
-        <Link
-          href="/conversations"
-          className="text-sm text-muted-foreground hover:text-foreground"
-        >
-          &larr; Back to Conversations
-        </Link>
+        <BackToConversations />
         <h1 className="mt-2 text-2xl font-bold tracking-tight">
           {conversation.agentDefinitionId}
         </h1>
@@ -62,7 +56,6 @@ export default async function ConversationDetailPage({
           ...e,
           timestamp: e.timestamp.toISOString(),
         }))}
-        initialMessages={messages}
         childConversations={childConversations.map((c) => ({
           ...c,
           createdAt: c.createdAt.toISOString(),

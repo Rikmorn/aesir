@@ -122,7 +122,10 @@ function EventItem({ event, isSubAgent }: EventItemProps) {
 
         <CollapsibleContent>
           <div className="border-t px-3 pb-3 pt-2">
-            {event.type === "llm.response" ? (
+            {event.type === "agent.started" &&
+            typeof event.payload.systemPrompt === "string" ? (
+              <AgentStartedContent payload={event.payload} />
+            ) : event.type === "llm.response" ? (
               <>
                 {/* LLM Response: show content inline, with raw payload in details */}
                 <EventContentDisplay eventId={event.id} isExpanded={isOpen} />
@@ -142,6 +145,52 @@ function EventItem({ event, isSubAgent }: EventItemProps) {
         </CollapsibleContent>
       </div>
     </Collapsible>
+  );
+}
+
+// ─── AgentStartedContent ─────────────────────────────────────────────────────
+
+interface AgentStartedContentProps {
+  payload: Record<string, unknown>;
+}
+
+/**
+ * Renders the expanded content for an agent.started event.
+ *
+ * Shows:
+ * 1. Initial context (the trigger/task that started the conversation)
+ * 2. System prompt (collapsible, since it can be long)
+ */
+function AgentStartedContent({ payload }: AgentStartedContentProps) {
+  const initialContext = payload.initialContext;
+  const systemPrompt = payload.systemPrompt;
+
+  return (
+    <div className="space-y-4">
+      {/* Initial Context / Task */}
+      {typeof initialContext === "string" && (
+        <div>
+          <div className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Initial Context
+          </div>
+          <div className="whitespace-pre-wrap rounded border bg-muted/30 p-3 text-sm">
+            {initialContext}
+          </div>
+        </div>
+      )}
+
+      {/* System Prompt (collapsible) */}
+      {typeof systemPrompt === "string" && (
+        <details>
+          <summary className="cursor-pointer text-xs font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground">
+            System Prompt ({systemPrompt.length.toLocaleString()} chars)
+          </summary>
+          <div className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap rounded border border-dashed border-muted-foreground/30 bg-muted/20 p-3 text-xs text-muted-foreground">
+            {systemPrompt}
+          </div>
+        </details>
+      )}
+    </div>
   );
 }
 

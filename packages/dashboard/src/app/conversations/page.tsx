@@ -5,6 +5,9 @@ import {
   listConversations,
 } from "@/services/conversations";
 
+// Force dynamic rendering -- queries database on every request
+export const dynamic = "force-dynamic";
+
 interface ConversationsPageProps {
   searchParams: Promise<{
     page?: string;
