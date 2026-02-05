@@ -2,42 +2,34 @@
 
 ## What This Is
 
-An agentic development platform that automates software development workflows -- from feature request to shipped code. A Postgres-backed conversation executor with declarative agent definitions. Agents collaborate using existing business tools (Linear, GitHub, Slack) and operate like coworkers within those tools, not as a separate system to manage.
+An agentic development platform that automates software development workflows -- from feature request to shipped code. A Postgres-backed conversation executor with declarative agent definitions. Agents collaborate using existing business tools (Linear, GitHub, Slack) and operate like coworkers within those tools, not as a separate system to manage. Includes a real-time operations dashboard for monitoring agent execution, inspecting tool calls, auditing permissions, and viewing system health.
 
 ## Core Value
 
 End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-## Current Milestone: v2.4 Operations Dashboard
-
-**Goal:** Real-time visibility into agent execution through a developer-focused web dashboard -- see what agents are doing, inspect tool calls, view configurations, and monitor conversation lifecycle.
-
-**Target features:**
-- Conversations view: list with filters + detail page with event timeline, message history, metadata
-- Agent definitions view: configuration inspector sourced from agent-service runtime registry
-- Tool dashboard: registry, permission matrix, performance metrics, failure tracking, integration health
-- System overview: conversation status summary, active conversations, worker status, token usage
-- Real-time updates via SSE bridged from EventLog.subscribe()
-- Agent service API extensions for runtime state (/api/tools/registry, /api/agents/registry, /api/worker/status, /api/sse/events)
-
 ## Current State
 
-**Version:** v2.3 Unified Agent Framework shipped (2026-02-04)
+**Version:** v2.4 Operations Dashboard shipped (2026-02-05)
 
 **Tech Stack:**
 - TypeScript/Node.js monorepo (pnpm workspaces)
-- 59,306 lines across 7 packages
+- ~69,000 lines across 8 packages
 - @anthropic-ai/sdk for agentic tool-use loops
 - Postgres-backed ConversationExecutor with SKIP LOCKED claiming (no Temporal)
 - Declarative agent definitions (YAML + prompt.md) with AgentRegistry + ToolRegistry
 - Unified event log (agent_events) with SessionProjection
 - PostgreSQL for all persistence (conversations, events, sessions, credentials)
-- Docker Compose for local development (6 services: PostgreSQL, nginx, 3 integrations, agent-service)
+- Docker Compose for local development (7 services: PostgreSQL, nginx, 3 integrations, agent-service, dashboard)
 - MCP (Model Context Protocol) for agent-integration communication
 - Smart router with hybrid event classification (deterministic + LLM)
+- Next.js 15 operations dashboard with Tailwind, shadcn/ui, Drizzle ORM, SSE real-time updates
 
 **Architecture:**
 ```
+Dashboard (port 3005, Next.js 15)
+   ↓ reads Postgres directly + HTTP to agent-service /api/*
+   ↓ SSE proxy to agent-service /api/sse/events
 Agent Service (port 3004)
    ↓ routes events via EventRouter
 ConversationExecutor (SKIP LOCKED worker loop)
@@ -61,6 +53,8 @@ Agent definitions (YAML + prompt.md)
 - pg-boss timeout scheduling for delayed signal delivery
 - Guardrails: sandbox enforcement, merge protection, token budgets, spawn depth limits
 - Graceful shutdown with conversation draining
+- Real-time operations dashboard: conversations, agents, tools, system overview with SSE live updates
+- Dashboard features: dark mode, sidebar navigation, permission matrix, inline LLM content, URL-persisted state
 
 ## Requirements
 
@@ -121,16 +115,16 @@ Agent definitions (YAML + prompt.md)
 - ✓ Temporal dependency, per-agent services, old persistence stores removed — v2.3
 - ✓ Sub-agent spawn via nested in-process agent loops with shared token budgets — v2.3
 
-### Active
+**v2.4 Operations Dashboard (shipped 2026-02-05):**
+- ✓ Dashboard infrastructure: Next.js 15 App Router with Tailwind, shadcn/ui, Drizzle, Docker/Nginx (52/52 requirements) — v2.4
+- ✓ Conversations view: filterable list with token aggregation, event timeline with inline LLM content — v2.4
+- ✓ Agent definitions view: list and detail sourced from agent-service runtime registry — v2.4
+- ✓ Tool dashboard: registry, permission matrix with mismatch detection, performance metrics, failures, integration health — v2.4
+- ✓ System overview: conversation summary, active conversations, worker status, token usage — v2.4
+- ✓ Real-time updates: SSE endpoint on agent-service, EventStreamStore, useEventStream hook, live updates across all views — v2.4
+- ✓ Agent service API extensions: /api/tools/registry, /api/agents/registry, /api/worker/status, /api/sse/events — v2.4
 
-**v2.4 Operations Dashboard:**
-- [ ] Dashboard infrastructure: Next.js 15 App Router package with Tailwind, shadcn/ui, Drizzle, service layer
-- [ ] Conversations view: list with filters, detail with event timeline + messages + metadata
-- [ ] Agent definitions view: list and detail sourced from agent-service runtime registry
-- [ ] Tool dashboard: registry, permission matrix, performance metrics, failures, integration health
-- [ ] System overview: conversation summary, active conversations, worker status, token usage
-- [ ] Real-time updates: SSE endpoint on agent-service, client hook, live conversation/event updates
-- [ ] Agent service API extensions: /api/tools/registry, /api/agents/registry, /api/worker/status, /api/sse/events
+### Active
 
 **Deferred (candidates for future milestones):**
 - [ ] CI/CD pipeline for deployment
@@ -141,6 +135,10 @@ Agent definitions (YAML + prompt.md)
 - [ ] Agent-managed memory (MemGPT/Letta style with memory:save/search tools)
 - [ ] Cross-session learning (agents improve from past task outcomes)
 - [ ] LISTEN/NOTIFY for event-driven worker wakeup (replace polling)
+- [ ] Dashboard authentication enforcement (Auth.js, multi-tenancy)
+- [ ] Dashboard editing capabilities (agent definitions, permissions, conversation actions)
+- [ ] Historical analytics and trend analysis
+- [ ] Automated E2E tests (Playwright)
 
 ### Out of Scope
 
@@ -164,7 +162,7 @@ Agent definitions (YAML + prompt.md)
 - Prefer well-maintained external libraries over hand-rolling
 - Agent-first problem solving: fix agent behavior via prompts and tools, not deterministic overrides
 
-**Known Tech Debt (from v2.3):**
+**Known Tech Debt (carried from v2.3, unchanged in v2.4):**
 - Dispatcher route fallback defaults reference router:3006 instead of agent-service:3004 (22 occurrences; runtime correct via docker-compose)
 - Two signal types (user_reply, cancel) defined in SIGNAL_AGENT_MAP but no adapter produces them (reserved for future)
 - schema.drizzle.ts retains legacy table definitions (intentional, prevents destructive drizzle-kit migrations)
@@ -196,10 +194,12 @@ Agent definitions (YAML + prompt.md)
 | Agentic loops over fixed graphs | LLMs reason about control flow instead of following graphs | ✓ Good — agents adapt to complexity (v2.2) |
 | Orchestrator + sub-agents pattern | Focused sub-agents with isolated context | ✓ Good — keeps each agent's context small (v2.2) |
 | Hybrid smart router | Deterministic fast-path for obvious events, LLM for ambiguous | ✓ Good — zero latency for common events (v2.2) |
-| Separate dashboard service (Next.js) | Different lifecycle, resource profile, and dependency boundary from agent service | — Pending (v2.4) |
-| SSE over WebSockets | Unidirectional monitoring data, proxy-friendly, simpler than WS | — Pending (v2.4) |
-| Read-only Postgres access for dashboard | No new tables, no write paths; future API boundary via service layer | — Pending (v2.4) |
-| Agent service /api/ prefix for management endpoints | Separates management from operational endpoints, enables different auth policies | — Pending (v2.4) |
+| Separate dashboard service (Next.js) | Different lifecycle, resource profile, and dependency boundary from agent service | ✓ Good — clean separation, independent deployment (v2.4) |
+| SSE over WebSockets | Unidirectional monitoring data, proxy-friendly, simpler than WS | ✓ Good — works through Nginx proxy, simple reconnection (v2.4) |
+| Read-only Postgres access for dashboard | No new tables, no write paths; future API boundary via service layer | ✓ Good — one exception: agent_event_content table for inline LLM display (v2.4) |
+| Agent service /api/ prefix for management endpoints | Separates management from operational endpoints, enables different auth policies | ✓ Good — 6 endpoints used by dashboard (v2.4) |
+| Local schema mirrors for dashboard | Dashboard lib/schema.ts mirrors agents schema without importing @aesir/agents | ✓ Good — avoids heavy dependency tree in Next.js (v2.4) |
+| Service layer as future API boundary | services/*.ts abstract all DB queries behind typed async functions | ✓ Good — clean migration path to dedicated API server (v2.4) |
 | Webhooks over polling | Cost/load savings; agents wake on events | ✓ Good |
 | Full containerization | Reproducible environments | ✓ Good |
 | PostgreSQL for persistence | Shared across all services | ✓ Good |
@@ -222,6 +222,8 @@ Lessons learned during development that guide future phases.
 | Prompts are first-class code | System prompts are the primary control surface for agent behavior. Test prompt changes against real scenarios. |
 | Three-phase deletion order | Refactor references -> delete files -> remove deps. Prevents build breakage during large cleanups. |
 | Archive before delete | Always create archive files before updating/deleting originals. Milestone completion creates roadmap + requirements archives first. |
+| Local schema mirrors over cross-package imports | Dashboard mirrors agent schema locally to avoid importing @aesir/agents and its heavy dependency tree. Keep UI packages decoupled from backend internals. |
+| Serialize at RSC boundaries | Date objects must be serialized as ISO strings before passing from server to client components. Enforce typed serialized interfaces at the boundary. |
 
 ---
-*Last updated: 2026-02-04 after v2.4 milestone started*
+*Last updated: 2026-02-05 after v2.4 milestone*

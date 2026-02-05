@@ -1,5 +1,32 @@
 # Project Milestones: Aesir
 
+## v2.4 Operations Dashboard (Shipped: 2026-02-05)
+
+**Delivered:** Real-time visibility into agent execution through a developer-focused web dashboard -- conversations, tool usage, agent configurations, permission auditing, and system health, all with live SSE updates
+
+**Phases completed:** 48-55 (8 phases, 22 plans total)
+
+**Key accomplishments:**
+- Agent service API extensions: four REST endpoints + SSE streaming for real-time agent events
+- Next.js 15 dashboard infrastructure with Tailwind, shadcn/ui, Drizzle ORM, Docker/Nginx integration
+- Conversations intelligence: filterable list with token aggregation and event timeline detail view with inline LLM content
+- Agent definitions and tool visibility: runtime registry views, permission matrix with mismatch detection
+- System overview with conversation status, worker health, recent errors, and token usage
+- Real-time SSE event streaming across all views with reconnection, batched updates, and auto-scroll
+- 6 post-phase UX enhancements: sidebar navigation, dark mode, tab URL persistence, enhanced prompt viewer, back links, time range filters
+
+**Stats:**
+- 199 files created/modified (+31,848 / -322 lines)
+- 10,140 lines of dashboard TypeScript/TSX/CSS
+- 8 phases, 22 plans, 52 requirements (52/52 satisfied)
+- 104 commits over 2 days (2026-02-04 → 2026-02-05)
+
+**Git range:** `7d9541f` → `a007b30`
+
+**What's next:** Agent memory, cross-agent collaboration, CI/CD pipeline, monitoring/alerting
+
+---
+
 ## v2.3 Unified Agent Framework (Shipped: 2026-02-04)
 
 **Delivered:** Replaced Temporal workflows, per-agent services, and fragmented persistence with a Postgres-backed ConversationExecutor, declarative YAML agent definitions, and a unified event log -- cutting Docker services from 12 to 6 and removing ~21,590 lines of legacy code
