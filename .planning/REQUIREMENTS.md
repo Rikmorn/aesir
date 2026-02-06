@@ -8,12 +8,12 @@
 
 ### Prompt Rewrites
 
-- [ ] **PROMPT-01**: Rewrite product-agent prompt to goal-oriented style (identity, constitutional constraints, few-shot examples, PROMPT_GUIDE.md structure)
-- [ ] **PROMPT-02**: Rewrite dev-agent prompt to goal-oriented style (identity, constitutional constraints, few-shot examples, PROMPT_GUIDE.md structure)
-- [ ] **PROMPT-03**: Traceability matrix created per agent (old if/then rule → failure it prevented → new constraint or example that covers it)
-- [ ] **PROMPT-04**: Orchestrator prompts include selective chain-of-thought (`<reasoning>` blocks before significant decisions)
-- [ ] **PROMPT-05**: Constraint priority ordering documented per agent (safety > correctness > efficiency)
-- [ ] **PROMPT-06**: One few-shot example per agent demonstrates resolving a constraint tension
+- [x] **PROMPT-01**: Rewrite product-agent prompt to goal-oriented style (identity, constitutional constraints, few-shot examples, PROMPT_GUIDE.md structure)
+- [x] **PROMPT-02**: Rewrite dev-agent prompt to goal-oriented style (identity, constitutional constraints, few-shot examples, PROMPT_GUIDE.md structure)
+- [x] **PROMPT-03**: Traceability matrix created per agent (old if/then rule → failure it prevented → new constraint or example that covers it)
+- [x] **PROMPT-04**: Orchestrator prompts include selective chain-of-thought (`<reasoning>` blocks before significant decisions)
+- [x] **PROMPT-05**: Constraint priority ordering documented per agent (safety > correctness > efficiency)
+- [x] **PROMPT-06**: One few-shot example per agent demonstrates resolving a constraint tension
 
 ### Conversation Reopening
 

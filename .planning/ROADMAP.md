@@ -22,7 +22,7 @@ v2.5 gives agents continuity across interactions. Five delivery boundaries: rewr
 
 Decimal phases execute between their surrounding integers in numeric order.
 
-- [ ] **Phase 56: Goal-Oriented Prompt Rewrites** - Rewrite product-agent and dev-agent prompts to constitutional + few-shot style
+- [x] **Phase 56: Goal-Oriented Prompt Rewrites** - Rewrite product-agent and dev-agent prompts to constitutional + few-shot style
 - [ ] **Phase 57: Conversation Reopening** - Enable completed/failed conversations to receive reopen signals and resume
 - [ ] **Phase 58.1: Task Schema and Service** - Task/handoff data model, TaskService, ToolContext rename, migration
 - [ ] **Phase 58.2: Agent Task Tools** - Six task tools, registration, YAML wiring, context injection
@@ -128,7 +128,7 @@ Phase 57 (Reopening) ──> Phase 58.1 ──> 58.2 ──> 58.3 ──> 58.4 �
 
 | Phase | Milestone | Reqs | Plans Complete | Status | Completed |
 |-------|-----------|:----:|----------------|--------|-----------|
-| 56. Prompt Rewrites | v2.5 | 6 | 0/2 | Planned | - |
+| 56. Prompt Rewrites | v2.5 | 6 | 2/2 | Complete | 2026-02-06 |
 | 57. Conversation Reopening | v2.5 | 11 | 0/TBD | Not started | - |
 | 58.1 Task Schema and Service | v2.5 | 13 | 0/TBD | Not started | - |
 | 58.2 Agent Task Tools | v2.5 | 10 | 0/TBD | Not started | - |
@@ -138,4 +138,4 @@ Phase 57 (Reopening) ──> Phase 58.1 ──> 58.2 ──> 58.3 ──> 58.4 �
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-06 after Phase 56 planning*
+*Last updated: 2026-02-06 after Phase 56 execution complete*
