@@ -49,8 +49,14 @@ export const createId = {
   /** Agent execution ID (observability.agent_executions) */
   execution: () => `exec_${nanoid()}`,
 
+  /** Handoff ID (agents.task_handoffs) */
+  handoff: () => `ho_${nanoid()}`,
+
   /** Sync cursor ID (integrations.sync_cursors) */
   syncCursor: () => `sync_${nanoid()}`,
+
+  /** Task ID (agents.tasks) */
+  task: () => `task_${nanoid()}`,
 
   /** Webhook delivery ID (integrations.webhook_deliveries) */
   webhookDelivery: () => `whd_${nanoid()}`,

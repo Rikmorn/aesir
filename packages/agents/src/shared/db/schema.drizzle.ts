@@ -26,27 +26,7 @@ const nanoid = customAlphabet(
 
 export const agentsSchema = pgSchema("agents");
 
-// ─── Context Snapshots ───────────────────────────────────────────────────────
-
-const taskStatusValues = [
-  "pending",
-  "researching",
-  "planning",
-  "approved",
-  "executing",
-  "complete",
-  "failed",
-] as const;
-
-const approvalStatusValues = ["pending", "approved", "rejected"] as const;
-
-const traceTypeValues = [
-  "tool_call",
-  "tool_result",
-  "llm_response",
-  "agent_spawn",
-  "agent_complete",
-] as const;
+// ─── Enum Arrays ────────────────────────────────────────────────────────────
 
 const conversationStatusValues = [
   "queued",
@@ -77,72 +57,45 @@ const sessionStatusValues = [
   "failed",
 ] as const;
 
-export const contextSnapshots = agentsSchema.table(
-  "context_snapshots",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => `ctx_${nanoid()}`),
-    task_id: text("task_id").notNull(),
-    workflow_id: text("workflow_id").notNull(),
-    agent_type: text("agent_type").notNull(),
-    stage: text("stage").notNull(),
+const taskStatusValues = [
+  "created",
+  "active",
+  "paused",
+  "completed",
+  "cancelled",
+] as const;
 
-    summary: text("summary").notNull(),
-    completed_actions: jsonb("completed_actions").default([]),
-    pending_intent: text("pending_intent"),
-    known_issues: jsonb("known_issues").default([]),
-    project_context: jsonb("project_context").default({}),
-    key_files: jsonb("key_files").default([]),
-    research_findings: jsonb("research_findings"),
-    plan: jsonb("plan"),
+const handoffTypeValues = [
+  "completion",
+  "pause",
+  "delegation",
+  "escalation",
+] as const;
 
-    tool_call_count: integer("tool_call_count").notNull().default(0),
-    token_count: jsonb("token_count").default({ input: 0, output: 0 }),
-    created_at: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updated_at: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-  (table) => [
-    index("context_snapshots_task_idx").on(table.task_id),
-    index("context_snapshots_workflow_idx").on(table.workflow_id),
-  ],
-);
-
-// ─── Tasks ───────────────────────────────────────────────────────────────────
+// ─── Tasks ──────────────────────────────────────────────────────────────────
 
 export const tasks = agentsSchema.table(
   "tasks",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => `atask_${nanoid()}`),
-    task_id: text("task_id").notNull().unique(),
-    issue_id: text("issue_id"),
-    issue_identifier: text("issue_identifier"),
-    agent_type: text("agent_type").notNull(),
-    workflow_id: text("workflow_id"),
+    id: text("id").primaryKey(),
+    parent_id: text("parent_id"),
+
+    creator_type: text("creator_type", {
+      enum: ["agent", "human"] as const,
+    }).notNull(),
+    creator_id: text("creator_id").notNull(),
+    assignee_type: text("assignee_type", {
+      enum: ["agent", "human"] as const,
+    }).notNull(),
+    assignee_id: text("assignee_id").notNull(),
+
     status: text("status", { enum: taskStatusValues })
       .notNull()
-      .default("pending"),
+      .default("created"),
 
-    container_id: text("container_id"),
-    branch_name: text("branch_name"),
-    pr_number: integer("pr_number"),
-    pr_url: text("pr_url"),
-    approval_status: text("approval_status", {
-      enum: approvalStatusValues,
-    }).default("pending"),
-    approval_feedback: text("approval_feedback"),
-
-    error: text("error"),
-    escalation_reason: text("escalation_reason"),
-
-    slack_channel: text("slack_channel"),
-    slack_message_ts: text("slack_message_ts"),
+    title: text("title").notNull(),
+    objective: text("objective"),
+    metadata: jsonb("metadata").default({}),
 
     created_at: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -150,46 +103,16 @@ export const tasks = agentsSchema.table(
     updated_at: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
+    completed_at: timestamp("completed_at", { withTimezone: true }),
   },
   (table) => [
-    index("tasks_workflow_idx").on(table.workflow_id),
-    index("tasks_status_idx").on(table.status),
-  ],
-);
-
-// ─── Execution Traces ────────────────────────────────────────────────────────
-
-export const executionTraces = agentsSchema.table(
-  "execution_traces",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => `trace_${nanoid()}`),
-    task_id: text("task_id").notNull(),
-    workflow_id: text("workflow_id").notNull(),
-    agent_type: text("agent_type").notNull(),
-    agent_instance_id: text("agent_instance_id").notNull(),
-    parent_agent_instance_id: text("parent_agent_instance_id"),
-    step_number: integer("step_number").notNull(),
-
-    type: text("type", { enum: traceTypeValues }).notNull(),
-    tool_name: text("tool_name"),
-    input: jsonb("input"),
-    output: jsonb("output"),
-
-    token_count_input: integer("token_count_input"),
-    token_count_output: integer("token_count_output"),
-    duration_ms: integer("duration_ms"),
-
-    created_at: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-  (table) => [
-    index("execution_traces_task_idx").on(table.task_id),
-    index("execution_traces_instance_idx").on(table.agent_instance_id),
-    index("execution_traces_parent_idx").on(table.parent_agent_instance_id),
-    index("execution_traces_workflow_idx").on(table.workflow_id),
+    index("idx_tasks_assignee").on(
+      table.assignee_type,
+      table.assignee_id,
+      table.status,
+    ),
+    index("idx_tasks_parent").on(table.parent_id),
+    index("idx_tasks_status").on(table.status),
   ],
 );
 
@@ -216,6 +139,7 @@ export const conversations = agentsSchema.table(
     reopen_count: integer("reopen_count").notNull().default(0),
     delivered_signal_ids: jsonb("delivered_signal_ids").notNull().default([]),
     parent_conversation_id: text("parent_conversation_id"),
+    task_id: text("task_id"),
     created_at: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -227,7 +151,31 @@ export const conversations = agentsSchema.table(
     index("idx_conversations_status").on(table.status),
     index("idx_conversations_definition").on(table.agent_definition_id),
     index("idx_conversations_parent").on(table.parent_conversation_id),
+    index("idx_conversations_task").on(table.task_id),
   ],
+);
+
+// ─── Task Handoffs ──────────────────────────────────────────────────────────
+
+export const taskHandoffs = agentsSchema.table(
+  "task_handoffs",
+  {
+    id: text("id").primaryKey(),
+    task_id: text("task_id").notNull(),
+    conversation_id: text("conversation_id").notNull(),
+
+    handoff_type: text("handoff_type", { enum: handoffTypeValues }).notNull(),
+    context: jsonb("context").notNull(),
+
+    author_type: text("author_type", {
+      enum: ["agent", "human"] as const,
+    }).notNull(),
+    author_id: text("author_id").notNull(),
+    created_at: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [index("idx_handoffs_task").on(table.task_id, table.created_at)],
 );
 
 // ─── Agent Events ────────────────────────────────────────────────────────────

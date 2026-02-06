@@ -78,6 +78,8 @@ export const conversations = agentsSchema.table(
       .default([]),
     // Sub-agent tracking: links child conversations to their parent
     parent_conversation_id: text("parent_conversation_id"),
+    // Task association (Phase 58.1 -- v2.5 task primitive)
+    task_id: text("task_id").references(() => tasks.id),
     created_at: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -89,6 +91,7 @@ export const conversations = agentsSchema.table(
     index("idx_conversations_status").on(table.status),
     index("idx_conversations_definition").on(table.agent_definition_id),
     index("idx_conversations_parent").on(table.parent_conversation_id),
+    index("idx_conversations_task").on(table.task_id),
   ],
 );
 
@@ -214,6 +217,111 @@ export const agentEventContent = agentsSchema.table("agent_event_content", {
     .notNull(),
 });
 
+// ─── Tasks ──────────────────────────────────────────────────────────────────
+
+/**
+ * Task status values (v2.5 task primitive)
+ */
+export const taskStatusValues = [
+  "created",
+  "active",
+  "paused",
+  "completed",
+  "cancelled",
+] as const;
+export type TaskStatus = (typeof taskStatusValues)[number];
+
+/**
+ * Handoff type values (v2.5 task handoffs)
+ */
+export const handoffTypeValues = [
+  "completion",
+  "pause",
+  "delegation",
+  "escalation",
+] as const;
+export type HandoffType = (typeof handoffTypeValues)[number];
+
+/**
+ * Tasks table
+ *
+ * Core coordination entity for v2.5 agentic conversations.
+ * Groups related conversations around a single unit of work.
+ * Supports subtask trees via self-referential parent_id FK.
+ */
+export const tasks = agentsSchema.table(
+  "tasks",
+  {
+    id: text("id").primaryKey(),
+    parent_id: text("parent_id"),
+
+    creator_type: text("creator_type", {
+      enum: ["agent", "human"] as const,
+    }).notNull(),
+    creator_id: text("creator_id").notNull(),
+    assignee_type: text("assignee_type", {
+      enum: ["agent", "human"] as const,
+    }).notNull(),
+    assignee_id: text("assignee_id").notNull(),
+
+    status: text("status", { enum: taskStatusValues })
+      .notNull()
+      .default("created"),
+
+    title: text("title").notNull(),
+    objective: text("objective"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+
+    created_at: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updated_at: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    completed_at: timestamp("completed_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("idx_tasks_assignee").on(
+      table.assignee_type,
+      table.assignee_id,
+      table.status,
+    ),
+    index("idx_tasks_parent").on(table.parent_id),
+    index("idx_tasks_status").on(table.status),
+  ],
+);
+
+/**
+ * Task Handoffs table
+ *
+ * Records context handoffs between conversations within a task.
+ * Each handoff captures a structured snapshot for the next agent/conversation.
+ */
+export const taskHandoffs = agentsSchema.table(
+  "task_handoffs",
+  {
+    id: text("id").primaryKey(),
+    task_id: text("task_id")
+      .notNull()
+      .references(() => tasks.id),
+    conversation_id: text("conversation_id")
+      .notNull()
+      .references(() => conversations.id),
+
+    handoff_type: text("handoff_type", { enum: handoffTypeValues }).notNull(),
+    context: jsonb("context").$type<Record<string, unknown>>().notNull(),
+
+    author_type: text("author_type", {
+      enum: ["agent", "human"] as const,
+    }).notNull(),
+    author_id: text("author_id").notNull(),
+    created_at: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [index("idx_handoffs_task").on(table.task_id, table.created_at)],
+);
+
 // ─── Type Exports ────────────────────────────────────────────────────────────
 
 export type Conversation = typeof conversations.$inferSelect;
@@ -224,3 +332,7 @@ export type AgentSession = typeof agentSessions.$inferSelect;
 export type NewAgentSession = typeof agentSessions.$inferInsert;
 export type AgentEventContent = typeof agentEventContent.$inferSelect;
 export type NewAgentEventContent = typeof agentEventContent.$inferInsert;
+export type Task = typeof tasks.$inferSelect;
+export type NewTask = typeof tasks.$inferInsert;
+export type TaskHandoff = typeof taskHandoffs.$inferSelect;
+export type NewTaskHandoff = typeof taskHandoffs.$inferInsert;
