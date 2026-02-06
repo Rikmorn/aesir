@@ -9,7 +9,7 @@
  * focuses on the data operations (conversation lifecycle management).
  */
 
-import { and, desc, eq, like } from "drizzle-orm";
+import { and, desc, eq, like, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type * as agentsSchemaModule from "../shared/db/schema.js";
 import type { ConversationStatus } from "../shared/db/schema.js";
@@ -547,6 +547,106 @@ export function createConversationExecutor(
         );
 
         return true;
+      });
+    },
+
+    async reopen(
+      conversationId: string,
+      reason: string,
+    ): Promise<{ action: "reopened" | "rejected"; error?: string }> {
+      if (!reason || reason.trim().length === 0) {
+        return { action: "rejected", error: "Reason is required" };
+      }
+
+      return await db.transaction(async (tx) => {
+        // Lock conversation row
+        const rows = await tx
+          .select()
+          .from(conversations)
+          .where(eq(conversations.id, conversationId))
+          .for("update");
+
+        if (rows.length === 0) {
+          return { action: "rejected", error: "Conversation not found" };
+        }
+
+        const row = rows[0] as (typeof rows)[0];
+
+        // Only completed and failed are reopenable
+        if (row.status !== "completed" && row.status !== "failed") {
+          return {
+            action: "rejected",
+            error: `Cannot reopen conversation in ${row.status} status`,
+          };
+        }
+
+        // Build world-state user message
+        const worldStateContent = [
+          "<world_state>",
+          `This conversation was reopened. Context: ${reason.trim()}`,
+          "",
+          "The world may have changed since you last acted. Verify the current state of any artifacts you previously created before taking new actions.",
+          "</world_state>",
+        ].join("\n");
+
+        const updatedMessages = [
+          ...((row.messages ?? []) as unknown[]),
+          { role: "user", content: worldStateContent },
+        ];
+
+        // FIFO eviction for delivered_signal_ids (cap at 100)
+        const deliveredIds = [
+          ...((row.delivered_signal_ids ?? []) as string[]),
+        ];
+        deliveredIds.push(`reopen:${Date.now()}`);
+        while (deliveredIds.length > 100) {
+          deliveredIds.shift();
+        }
+
+        // Transition to queued with reset execution limits
+        await tx
+          .update(conversations)
+          .set({
+            status: "queued",
+            messages: updatedMessages,
+            retry_count: 0,
+            error_message: null,
+            reopen_count: sql`${conversations.reopen_count} + 1`,
+            pending_wait: null,
+            claimed_by: null,
+            claimed_at: null,
+            last_heartbeat_at: null,
+            delivered_signal_ids: deliveredIds,
+            updated_at: new Date(),
+          })
+          .where(eq(conversations.id, conversationId));
+
+        // Emit agent.reopened event
+        await eventLog.initSequence(conversationId);
+        eventLog.append({
+          conversationId,
+          agentDefinitionId: row.agent_definition_id,
+          agentDefinitionVersion: row.agent_definition_version,
+          agentInstanceId: `reopen-${conversationId}`,
+          type: "agent.reopened",
+          payload: {
+            reason: reason.trim(),
+            previousStatus: row.status,
+            reopenCount: (row.reopen_count ?? 0) + 1,
+          },
+        });
+        await eventLog.flush();
+
+        logger.info(
+          {
+            conversationId,
+            previousStatus: row.status,
+            reopenCount: (row.reopen_count ?? 0) + 1,
+          },
+          "Conversation reopened",
+        );
+
+        return { action: "reopened" };
       });
     },
 

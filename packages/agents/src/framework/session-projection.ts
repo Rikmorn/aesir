@@ -124,6 +124,18 @@ export function createSessionProjection(
       .where(eq(agentSessions.conversation_id, event.conversation_id));
   }
 
+  async function handleAgentReopened(event: AgentEvent): Promise<void> {
+    await db
+      .update(agentSessions)
+      .set({
+        status: "running",
+        last_event_type: event.type,
+        last_event_at: event.timestamp,
+        updated_at: new Date(),
+      })
+      .where(eq(agentSessions.conversation_id, event.conversation_id));
+  }
+
   async function handleToolSucceeded(event: AgentEvent): Promise<void> {
     const toolName = (event.payload as Record<string, unknown>)?.toolName as
       | string
@@ -167,6 +179,9 @@ export function createSessionProjection(
       case "agent.resumed":
         await handleAgentResumed(event);
         break;
+      case "agent.reopened":
+        await handleAgentReopened(event);
+        break;
       case "tool.succeeded":
         await handleToolSucceeded(event);
         break;
@@ -182,6 +197,7 @@ export function createSessionProjection(
         "agent.completed",
         "agent.paused",
         "agent.resumed",
+        "agent.reopened",
         "tool.succeeded",
       ],
     },

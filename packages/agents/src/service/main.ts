@@ -242,6 +242,34 @@ async function bootstrap(): Promise<void> {
     }
   });
 
+  // POST /conversations/:id/reopen -- reopen a terminal conversation
+  app.post("/conversations/:id/reopen", async (req, res) => {
+    try {
+      const { reason } = req.body as { reason?: string };
+      if (!reason || typeof reason !== "string" || reason.trim().length === 0) {
+        res
+          .status(400)
+          .json({ error: "reason is required and must be non-empty" });
+        return;
+      }
+
+      const result = await executor.reopen(req.params.id, reason);
+      if (result.action === "rejected") {
+        const statusCode = result.error?.includes("not found") ? 404 : 400;
+        res.status(statusCode).json({ error: result.error });
+        return;
+      }
+
+      res.json({ reopened: true });
+    } catch (error) {
+      logger.error(
+        { err: error, conversationId: req.params.id },
+        "POST /conversations/:id/reopen failed",
+      );
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // 11. Start HTTP server
   const server = app.listen(config.service.port, () => {
     logger.info({ port: config.service.port }, "Agent service listening");
