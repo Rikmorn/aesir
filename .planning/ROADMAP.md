@@ -23,7 +23,7 @@ v2.5 gives agents continuity across interactions. Five delivery boundaries: rewr
 Decimal phases execute between their surrounding integers in numeric order.
 
 - [x] **Phase 56: Goal-Oriented Prompt Rewrites** - Rewrite product-agent and dev-agent prompts to constitutional + few-shot style
-- [ ] **Phase 57: Conversation Reopening** - Enable completed/failed conversations to receive reopen signals and resume
+- [x] **Phase 57: Conversation Reopening** - Enable completed/failed conversations to receive reopen signals and resume
 - [ ] **Phase 58.1: Task Schema and Service** - Task/handoff data model, TaskService, ToolContext rename, migration
 - [ ] **Phase 58.2: Agent Task Tools** - Six task tools, registration, YAML wiring, context injection
 - [ ] **Phase 58.3: Integration Correlation** - Correlation tables per integration, MCP header, outgoing recording, incoming lookup
@@ -59,8 +59,8 @@ Plans:
   5. The delivered_signal_ids array is capped at 100 entries to prevent unbounded growth
 **Plans:** 2 plans
 Plans:
-- [ ] 57-01-PLAN.md -- Backend: schema migration, executor reopen method, API endpoint, session projection, prompt constraints
-- [ ] 57-02-PLAN.md -- Dashboard: API proxy, reopen dialog, action bar, metadata sidebar, event icon, list columns
+- [x] 57-01-PLAN.md -- Backend: schema migration, executor reopen method, API endpoint, session projection, prompt constraints
+- [x] 57-02-PLAN.md -- Dashboard: API proxy, reopen dialog, action bar, metadata sidebar, event icon, list columns
 
 ### Phase 58.1: Task Schema and Service
 **Goal**: The task and handoff data model exists in PostgreSQL with a validated service layer, enabling the tool and routing layers to be built on top
@@ -132,7 +132,7 @@ Phase 57 (Reopening) ──> Phase 58.1 ──> 58.2 ──> 58.3 ──> 58.4 �
 | Phase | Milestone | Reqs | Plans Complete | Status | Completed |
 |-------|-----------|:----:|----------------|--------|-----------|
 | 56. Prompt Rewrites | v2.5 | 6 | 2/2 | Complete | 2026-02-06 |
-| 57. Conversation Reopening | v2.5 | 11 | 0/2 | Not started | - |
+| 57. Conversation Reopening | v2.5 | 11 | 2/2 | Complete | 2026-02-06 |
 | 58.1 Task Schema and Service | v2.5 | 13 | 0/TBD | Not started | - |
 | 58.2 Agent Task Tools | v2.5 | 10 | 0/TBD | Not started | - |
 | 58.3 Integration Correlation | v2.5 | 11 | 0/TBD | Not started | - |
@@ -141,4 +141,4 @@ Phase 57 (Reopening) ──> Phase 58.1 ──> 58.2 ──> 58.3 ──> 58.4 �
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-06 after Phase 57 planning complete*
+*Last updated: 2026-02-06 after Phase 57 execution complete*

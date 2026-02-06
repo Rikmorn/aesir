@@ -139,23 +139,23 @@ Deferred to post-v2.5 milestones. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROMPT-01 | Phase 56 | Pending |
-| PROMPT-02 | Phase 56 | Pending |
-| PROMPT-03 | Phase 56 | Pending |
-| PROMPT-04 | Phase 56 | Pending |
-| PROMPT-05 | Phase 56 | Pending |
-| PROMPT-06 | Phase 56 | Pending |
-| REOPEN-01 | Phase 57 | Pending |
-| REOPEN-02 | Phase 57 | Pending |
-| REOPEN-03 | Phase 57 | Pending |
-| REOPEN-04 | Phase 57 | Pending |
-| REOPEN-05 | Phase 57 | Pending |
-| REOPEN-06 | Phase 57 | Pending |
-| REOPEN-07 | Phase 57 | Pending |
-| REOPEN-08 | Phase 57 | Pending |
-| REOPEN-09 | Phase 57 | Pending |
-| REOPEN-10 | Phase 57 | Pending |
-| REOPEN-11 | Phase 57 | Pending |
+| PROMPT-01 | Phase 56 | Complete |
+| PROMPT-02 | Phase 56 | Complete |
+| PROMPT-03 | Phase 56 | Complete |
+| PROMPT-04 | Phase 56 | Complete |
+| PROMPT-05 | Phase 56 | Complete |
+| PROMPT-06 | Phase 56 | Complete |
+| REOPEN-01 | Phase 57 | Complete |
+| REOPEN-02 | Phase 57 | Complete |
+| REOPEN-03 | Phase 57 | Complete |
+| REOPEN-04 | Phase 57 | Complete |
+| REOPEN-05 | Phase 57 | Complete |
+| REOPEN-06 | Phase 57 | Complete |
+| REOPEN-07 | Phase 57 | Complete |
+| REOPEN-08 | Phase 57 | Complete |
+| REOPEN-09 | Phase 57 | Complete |
+| REOPEN-10 | Phase 57 | Complete |
+| REOPEN-11 | Phase 57 | Complete |
 | TASK-01 | Phase 58.1 | Pending |
 | TASK-02 | Phase 58.1 | Pending |
 | TASK-03 | Phase 58.1 | Pending |
@@ -216,4 +216,4 @@ Deferred to post-v2.5 milestones. Tracked but not in current roadmap.
 
 ---
 *Requirements defined: 2026-02-06*
-*Last updated: 2026-02-06 after roadmap restructuring*
+*Last updated: 2026-02-06 after Phase 57 completion*
