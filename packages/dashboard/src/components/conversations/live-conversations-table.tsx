@@ -111,6 +111,7 @@ export function LiveConversationsTable({
             triggerEventType: event.type,
             lastActivity: eventTimestamp,
             errorMessage: null,
+            reopenCount: 0,
           };
           // Only add if not already queued as new
           if (!newItems.some((n) => n.id === conversationId)) {

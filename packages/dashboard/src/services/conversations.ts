@@ -52,6 +52,7 @@ export interface ConversationListItem {
   updatedAt: Date;
   lastActivity: Date | null;
   errorMessage: string | null;
+  reopenCount: number;
 }
 
 export interface ConversationStatusCount {
@@ -65,6 +66,7 @@ export interface ConversationDetail {
   agentDefinitionVersion: string;
   status: string;
   retryCount: number;
+  reopenCount: number;
   errorMessage: string | null;
   parentConversationId: string | null;
   createdAt: Date;
@@ -141,6 +143,7 @@ export async function listConversations(
       agent_definition_id: conversations.agent_definition_id,
       status: conversations.status,
       error_message: conversations.error_message,
+      reopen_count: conversations.reopen_count,
       created_at: conversations.created_at,
       updated_at: conversations.updated_at,
       last_event_at: agentSessions.last_event_at,
@@ -181,6 +184,7 @@ export async function listConversations(
       updatedAt: row.updated_at,
       lastActivity: row.last_event_at,
       errorMessage: row.error_message,
+      reopenCount: row.reopen_count,
     })),
     total: Number(countResult?.total ?? 0),
   };
@@ -242,6 +246,7 @@ export async function getConversationById(
       agent_definition_version: conversations.agent_definition_version,
       status: conversations.status,
       retry_count: conversations.retry_count,
+      reopen_count: conversations.reopen_count,
       error_message: conversations.error_message,
       parent_conversation_id: conversations.parent_conversation_id,
       created_at: conversations.created_at,
@@ -266,6 +271,7 @@ export async function getConversationById(
     agentDefinitionVersion: row.agent_definition_version,
     status: row.status,
     retryCount: row.retry_count,
+    reopenCount: row.reopen_count,
     errorMessage: row.error_message,
     parentConversationId: row.parent_conversation_id,
     createdAt: row.created_at,

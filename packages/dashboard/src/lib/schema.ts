@@ -46,6 +46,7 @@ export const conversations = agentsSchema.table("conversations", {
     .default("queued"),
   retry_count: integer("retry_count").notNull().default(0),
   error_message: text("error_message"),
+  reopen_count: integer("reopen_count").notNull().default(0),
   parent_conversation_id: text("parent_conversation_id"),
   created_at: timestamp("created_at", { withTimezone: true })
     .defaultNow()
@@ -66,6 +67,7 @@ export const agentEventTypeValues = [
   "agent.completed",
   "agent.paused",
   "agent.resumed",
+  "agent.reopened",
   "signal.received",
 ] as const;
 
