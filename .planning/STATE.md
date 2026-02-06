@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.5 Agentic Conversations -- Phase 58.1 in progress
+**Current focus:** v2.5 Agentic Conversations -- Phase 58.1 complete
 
 ## Current Position
 
 Phase: 58.1 of 59 (Task Schema and Service)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-06 -- Completed 58.1-01-PLAN.md (rename taskId to sandboxId)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-06 -- Completed 58.1-02-PLAN.md (task schema and service)
 
-Progress: [█░] 50% (Phase 58.1: 1/2 plans complete)
+Progress: [██] 100% (Phase 58.1: 2/2 plans complete)
 
 ## Milestone History
 
@@ -30,9 +30,9 @@ Progress: [█░] 50% (Phase 58.1: 1/2 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 4m 58s
-- Total execution time: 24m 42s
+- Total plans completed: 6
+- Average duration: 5m 27s
+- Total execution time: 32m 42s
 
 ## Accumulated Context
 
@@ -55,6 +55,9 @@ See PROJECT.md Key Decisions table for full history.
 | QUEUED-SSE-ACTIVE | Added queued to SSE isActive check for early connection after reopen | 57-02 |
 | SANDBOX-RENAME | ToolContext.taskId renamed to sandboxId to free taskId for v2.5 task primitive | 58.1-01 |
 | CORRELATION-REF | Router query_conversations parameter renamed from taskId to correlationRef | 58.1-01 |
+| SELF-REF-FK | Self-referential FK (tasks.parent_id) handled in SQL migration only, not Drizzle references() | 58.1-02 |
+| SERVICE-SHAPE-ONLY | TaskService validates data shape (Zod) only; business logic in tool layer (Phase 58.2) | 58.1-02 |
+| INPUT-TYPES | Exported task param types use z.input<> for caller ergonomics with Zod defaults | 58.1-02 |
 
 ### Pending Todos
 
@@ -68,10 +71,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-06T22:17Z
-Stopped at: Completed 58.1-01-PLAN.md (rename taskId to sandboxId)
+Last session: 2026-02-06T22:29Z
+Stopped at: Completed 58.1-02-PLAN.md (task schema and service)
 Resume file: None
-Next action: Execute Phase 58.1 Plan 02 (Task Schema and Service)
+Next action: Execute Phase 58.2 (Agentic Conversations -- agent task tools)
 
 ---
-*Updated: 2026-02-06 -- Phase 58.1 plan 01 complete (taskId renamed to sandboxId across agents package)*
+*Updated: 2026-02-06 -- Phase 58.1 complete (task tables, TaskService, ToolContext.taskId wired)*
