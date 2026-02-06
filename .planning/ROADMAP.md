@@ -57,7 +57,10 @@ Plans:
   3. The dashboard shows a reopen/retry button on completed and failed conversation detail views, and clicking it triggers POST /conversations/:id/reopen
   4. Non-reopen signal types on terminal conversations are still ignored -- only the reopen signal triggers the transition
   5. The delivered_signal_ids array is capped at 100 entries to prevent unbounded growth
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 57-01-PLAN.md -- Backend: schema migration, executor reopen method, API endpoint, session projection, prompt constraints
+- [ ] 57-02-PLAN.md -- Dashboard: API proxy, reopen dialog, action bar, metadata sidebar, event icon, list columns
 
 ### Phase 58.1: Task Schema and Service
 **Goal**: The task and handoff data model exists in PostgreSQL with a validated service layer, enabling the tool and routing layers to be built on top
@@ -129,7 +132,7 @@ Phase 57 (Reopening) ──> Phase 58.1 ──> 58.2 ──> 58.3 ──> 58.4 �
 | Phase | Milestone | Reqs | Plans Complete | Status | Completed |
 |-------|-----------|:----:|----------------|--------|-----------|
 | 56. Prompt Rewrites | v2.5 | 6 | 2/2 | Complete | 2026-02-06 |
-| 57. Conversation Reopening | v2.5 | 11 | 0/TBD | Not started | - |
+| 57. Conversation Reopening | v2.5 | 11 | 0/2 | Not started | - |
 | 58.1 Task Schema and Service | v2.5 | 13 | 0/TBD | Not started | - |
 | 58.2 Agent Task Tools | v2.5 | 10 | 0/TBD | Not started | - |
 | 58.3 Integration Correlation | v2.5 | 11 | 0/TBD | Not started | - |
@@ -138,4 +141,4 @@ Phase 57 (Reopening) ──> Phase 58.1 ──> 58.2 ──> 58.3 ──> 58.4 �
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-06 after Phase 56 execution complete*
+*Last updated: 2026-02-06 after Phase 57 planning complete*
