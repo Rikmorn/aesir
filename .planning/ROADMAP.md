@@ -71,7 +71,10 @@ Plans:
   2. TaskService provides CRUD operations with Zod-validated inputs: task status transitions are enforced via tools (CHECK constraint for valid values, tools reject invalid transitions), handoff context requires a summary field (max 2000 chars, ~4KB total), and metadata is capped at 10KB
   3. ToolContext.taskId has been renamed to sandboxId across all codebase tool factories, and a new ToolContext.taskId field is set from conv.task_id in the worker loop
   4. All existing code paths handle null task_id gracefully -- conversations without tasks continue to work unchanged
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 58.1-01-PLAN.md -- Rename ToolContext.taskId to sandboxId across agents package
+- [ ] 58.1-02-PLAN.md -- Migration, Drizzle schemas, createId, TaskService, ToolContext.taskId wiring
 
 ### Phase 58.2: Agent Task Tools
 **Goal**: Agents can create, manage, and query tasks through six tools with structured context delivery
@@ -133,7 +136,7 @@ Phase 57 (Reopening) ──> Phase 58.1 ──> 58.2 ──> 58.3 ──> 58.4 �
 |-------|-----------|:----:|----------------|--------|-----------|
 | 56. Prompt Rewrites | v2.5 | 6 | 2/2 | Complete | 2026-02-06 |
 | 57. Conversation Reopening | v2.5 | 11 | 2/2 | Complete | 2026-02-06 |
-| 58.1 Task Schema and Service | v2.5 | 13 | 0/TBD | Not started | - |
+| 58.1 Task Schema and Service | v2.5 | 13 | 0/2 | Planned | - |
 | 58.2 Agent Task Tools | v2.5 | 10 | 0/TBD | Not started | - |
 | 58.3 Integration Correlation | v2.5 | 11 | 0/TBD | Not started | - |
 | 58.4 Task-Aware Event Routing | v2.5 | 6 | 0/TBD | Not started | - |
@@ -141,4 +144,4 @@ Phase 57 (Reopening) ──> Phase 58.1 ──> 58.2 ──> 58.3 ──> 58.4 �
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-06 after Phase 57 execution complete*
+*Last updated: 2026-02-06 after Phase 58.1 planning complete*
