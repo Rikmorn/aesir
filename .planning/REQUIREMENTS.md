@@ -8,18 +8,12 @@
 
 ### Prompt Rewrites
 
-- [ ] **PROMPT-01**: Product-agent prompt rewritten to goal-oriented identity (2-3 sentences, no procedures)
-- [ ] **PROMPT-02**: Product-agent prompt uses constitutional constraints (5-7 negative boundaries, not positive procedures)
-- [ ] **PROMPT-03**: Product-agent prompt includes 3-5 few-shot examples with reasoning (input → reasoning → action, abstract not literal tool calls)
-- [ ] **PROMPT-04**: Product-agent prompt follows PROMPT_GUIDE.md structure (identity → constraints → examples → tools → context)
-- [ ] **PROMPT-05**: Dev-agent prompt rewritten to goal-oriented identity (2-3 sentences, no procedures)
-- [ ] **PROMPT-06**: Dev-agent prompt uses constitutional constraints (5-7 negative boundaries, not positive procedures)
-- [ ] **PROMPT-07**: Dev-agent prompt includes 3-5 few-shot examples with reasoning (input → reasoning → action, abstract not literal tool calls)
-- [ ] **PROMPT-08**: Dev-agent prompt follows PROMPT_GUIDE.md structure (identity → constraints → examples → tools → context)
-- [ ] **PROMPT-09**: Traceability matrix created per agent (old if/then rule → failure it prevented → new constraint or example that covers it)
-- [ ] **PROMPT-10**: Orchestrator prompts include selective chain-of-thought (`<reasoning>` blocks before significant decisions)
-- [ ] **PROMPT-11**: Constraint priority ordering documented per agent (safety > correctness > efficiency)
-- [ ] **PROMPT-12**: One few-shot example per agent demonstrates resolving a constraint tension
+- [ ] **PROMPT-01**: Rewrite product-agent prompt to goal-oriented style (identity, constitutional constraints, few-shot examples, PROMPT_GUIDE.md structure)
+- [ ] **PROMPT-02**: Rewrite dev-agent prompt to goal-oriented style (identity, constitutional constraints, few-shot examples, PROMPT_GUIDE.md structure)
+- [ ] **PROMPT-03**: Traceability matrix created per agent (old if/then rule → failure it prevented → new constraint or example that covers it)
+- [ ] **PROMPT-04**: Orchestrator prompts include selective chain-of-thought (`<reasoning>` blocks before significant decisions)
+- [ ] **PROMPT-05**: Constraint priority ordering documented per agent (safety > correctness > efficiency)
+- [ ] **PROMPT-06**: One few-shot example per agent demonstrates resolving a constraint tension
 
 ### Conversation Reopening
 
@@ -42,7 +36,7 @@
 - [ ] **TASK-03**: `task_id` nullable FK column added to `agents.conversations`
 - [ ] **TASK-04**: Task IDs use existing `createId` pattern (`task_<nanoid>`)
 - [ ] **TASK-05**: Handoff IDs use `createId` pattern (`ho_<nanoid>`)
-- [ ] **TASK-06**: Task status transitions validated: created → active → paused → completed/cancelled (with paused ↔ active bidirectional)
+- [ ] **TASK-06**: Task status transitions enforced via tools (complete_task rejects cancelled tasks, etc.) with CHECK constraint for valid values
 - [ ] **TASK-07**: Handoff context enforced via Zod: `{ summary: string (required, max 2000 chars), key_decisions?, artifacts?, open_questions?, next_steps? }`, capped at ~4KB
 - [ ] **TASK-08**: `tasks.metadata` validated with Zod on write, 10KB size limit enforced at application layer
 - [ ] **TASK-09**: `create_task` agent tool implemented (with optional parent_id for subtasks)
@@ -62,7 +56,6 @@
 - [ ] **TASK-23**: Task context auto-injected as `<task_context>` block in worker loop (most recent handoff, truncated at 4000 chars with pointer to `get_task_context`)
 - [ ] **TASK-24**: TaskService factory created with CRUD operations and validation
 - [ ] **TASK-25**: Backward compatibility: all code paths handle null task_id gracefully
-- [ ] **TASK-26**: Stale task cleanup: scheduled job flags inactive tasks via timeout signal (reuses existing pg-boss + wait_for timeout pattern)
 - [ ] **TASK-27**: Schema migration handles legacy `tasks` table in schema.drizzle.ts (check if empty, drop or rename)
 
 ### Integration Correlation
@@ -78,6 +71,8 @@
 - [ ] **CORR-09**: GitHub integration performs correlation lookup on incoming webhooks, attaches task_id to event
 - [ ] **CORR-10**: Slack integration performs correlation lookup on incoming webhooks, attaches task_id to event
 - [ ] **CORR-11**: `IncomingEvent` schema extended with optional `taskId` field
+
+*Note: CORR-01/02/03, CORR-05/06/07, and CORR-08/09/10 follow a 3x3 pattern (same requirement per integration). Built once, replicated three times.*
 
 ### Event Routing
 
@@ -102,6 +97,9 @@
 ## Future Requirements
 
 Deferred to post-v2.5 milestones. Tracked but not in current roadmap.
+
+### Stale Task Cleanup
+- **TASK-26**: Stale task cleanup: scheduled job flags inactive tasks via timeout signal (reuses existing pg-boss + wait_for timeout pattern). *Deferred: tasks won't go stale until system has been running for weeks. Operational polish, not core capability.*
 
 ### Evaluation and Monitoring
 - **EVAL-01**: Prompt evaluation tooling (promptfoo, shadow mode)
@@ -147,12 +145,6 @@ Deferred to post-v2.5 milestones. Tracked but not in current roadmap.
 | PROMPT-04 | Phase 56 | Pending |
 | PROMPT-05 | Phase 56 | Pending |
 | PROMPT-06 | Phase 56 | Pending |
-| PROMPT-07 | Phase 56 | Pending |
-| PROMPT-08 | Phase 56 | Pending |
-| PROMPT-09 | Phase 56 | Pending |
-| PROMPT-10 | Phase 56 | Pending |
-| PROMPT-11 | Phase 56 | Pending |
-| PROMPT-12 | Phase 56 | Pending |
 | REOPEN-01 | Phase 57 | Pending |
 | REOPEN-02 | Phase 57 | Pending |
 | REOPEN-03 | Phase 57 | Pending |
@@ -164,50 +156,49 @@ Deferred to post-v2.5 milestones. Tracked but not in current roadmap.
 | REOPEN-09 | Phase 57 | Pending |
 | REOPEN-10 | Phase 57 | Pending |
 | REOPEN-11 | Phase 57 | Pending |
-| TASK-01 | Phase 58 | Pending |
-| TASK-02 | Phase 58 | Pending |
-| TASK-03 | Phase 58 | Pending |
-| TASK-04 | Phase 58 | Pending |
-| TASK-05 | Phase 58 | Pending |
-| TASK-06 | Phase 58 | Pending |
-| TASK-07 | Phase 58 | Pending |
-| TASK-08 | Phase 58 | Pending |
-| TASK-09 | Phase 58 | Pending |
-| TASK-10 | Phase 58 | Pending |
-| TASK-11 | Phase 58 | Pending |
-| TASK-12 | Phase 58 | Pending |
-| TASK-13 | Phase 58 | Pending |
-| TASK-14 | Phase 58 | Pending |
-| TASK-15 | Phase 58 | Pending |
-| TASK-16 | Phase 58 | Pending |
-| TASK-17 | Phase 58 | Pending |
-| TASK-18 | Phase 58 | Pending |
-| TASK-19 | Phase 58 | Pending |
-| TASK-20 | Phase 58 | Pending |
-| TASK-21 | Phase 58 | Pending |
-| TASK-22 | Phase 58 | Pending |
-| TASK-23 | Phase 58 | Pending |
-| TASK-24 | Phase 58 | Pending |
-| TASK-25 | Phase 58 | Pending |
-| TASK-26 | Phase 58 | Pending |
-| TASK-27 | Phase 58 | Pending |
-| CORR-01 | Phase 58 | Pending |
-| CORR-02 | Phase 58 | Pending |
-| CORR-03 | Phase 58 | Pending |
-| CORR-04 | Phase 58 | Pending |
-| CORR-05 | Phase 58 | Pending |
-| CORR-06 | Phase 58 | Pending |
-| CORR-07 | Phase 58 | Pending |
-| CORR-08 | Phase 58 | Pending |
-| CORR-09 | Phase 58 | Pending |
-| CORR-10 | Phase 58 | Pending |
-| CORR-11 | Phase 58 | Pending |
-| ROUTE-01 | Phase 58 | Pending |
-| ROUTE-02 | Phase 58 | Pending |
-| ROUTE-03 | Phase 58 | Pending |
-| ROUTE-04 | Phase 58 | Pending |
-| ROUTE-05 | Phase 58 | Pending |
-| ROUTE-06 | Phase 58 | Pending |
+| TASK-01 | Phase 58.1 | Pending |
+| TASK-02 | Phase 58.1 | Pending |
+| TASK-03 | Phase 58.1 | Pending |
+| TASK-04 | Phase 58.1 | Pending |
+| TASK-05 | Phase 58.1 | Pending |
+| TASK-06 | Phase 58.1 | Pending |
+| TASK-07 | Phase 58.1 | Pending |
+| TASK-08 | Phase 58.1 | Pending |
+| TASK-09 | Phase 58.2 | Pending |
+| TASK-10 | Phase 58.2 | Pending |
+| TASK-11 | Phase 58.2 | Pending |
+| TASK-12 | Phase 58.2 | Pending |
+| TASK-13 | Phase 58.2 | Pending |
+| TASK-14 | Phase 58.2 | Pending |
+| TASK-15 | Phase 58.2 | Pending |
+| TASK-16 | Phase 58.2 | Pending |
+| TASK-17 | Phase 58.2 | Pending |
+| TASK-18 | Phase 59 | Pending |
+| TASK-19 | Phase 59 | Pending |
+| TASK-20 | Phase 59 | Pending |
+| TASK-21 | Phase 58.1 | Pending |
+| TASK-22 | Phase 58.1 | Pending |
+| TASK-23 | Phase 58.2 | Pending |
+| TASK-24 | Phase 58.1 | Pending |
+| TASK-25 | Phase 58.1 | Pending |
+| TASK-27 | Phase 58.1 | Pending |
+| CORR-01 | Phase 58.3 | Pending |
+| CORR-02 | Phase 58.3 | Pending |
+| CORR-03 | Phase 58.3 | Pending |
+| CORR-04 | Phase 58.3 | Pending |
+| CORR-05 | Phase 58.3 | Pending |
+| CORR-06 | Phase 58.3 | Pending |
+| CORR-07 | Phase 58.3 | Pending |
+| CORR-08 | Phase 58.3 | Pending |
+| CORR-09 | Phase 58.3 | Pending |
+| CORR-10 | Phase 58.3 | Pending |
+| CORR-11 | Phase 58.3 | Pending |
+| ROUTE-01 | Phase 58.4 | Pending |
+| ROUTE-02 | Phase 58.4 | Pending |
+| ROUTE-03 | Phase 58.4 | Pending |
+| ROUTE-04 | Phase 58.4 | Pending |
+| ROUTE-05 | Phase 58.4 | Pending |
+| ROUTE-06 | Phase 58.4 | Pending |
 | EVOL-01 | Phase 59 | Pending |
 | EVOL-02 | Phase 59 | Pending |
 | EVOL-03 | Phase 59 | Pending |
@@ -218,10 +209,11 @@ Deferred to post-v2.5 milestones. Tracked but not in current roadmap.
 | EVOL-08 | Phase 59 | Pending |
 
 **Coverage:**
-- v2.5 requirements: 67 total
-- Mapped to phases: 67
-- Unmapped: 0 ✓
+- v2.5 active requirements: 68 total
+- Mapped to phases: 68
+- Unmapped: 0
+- Deferred: 1 (TASK-26)
 
 ---
 *Requirements defined: 2026-02-06*
-*Last updated: 2026-02-06 after initial definition*
+*Last updated: 2026-02-06 after roadmap restructuring*
