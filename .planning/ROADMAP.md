@@ -42,7 +42,10 @@ Decimal phases execute between their surrounding integers in numeric order.
   3. Each agent has 3-5 few-shot examples showing input-reasoning-action patterns, with at least one example resolving a constraint tension
   4. A traceability matrix exists per agent mapping every removed procedural rule to the new constraint or example that covers the same failure mode
   5. Both prompts include selective chain-of-thought guidance (reasoning blocks before significant decisions) and explicit constraint priority ordering (safety > correctness > efficiency)
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 56-01-PLAN.md -- Product-agent traceability matrix and prompt rewrite
+- [ ] 56-02-PLAN.md -- Dev-agent traceability matrix and prompt rewrite
 
 ### Phase 57: Conversation Reopening
 **Goal**: Completed or failed conversations can receive follow-up events and re-enter the work loop with awareness of what changed since they last ran
@@ -125,7 +128,7 @@ Phase 57 (Reopening) ──> Phase 58.1 ──> 58.2 ──> 58.3 ──> 58.4 �
 
 | Phase | Milestone | Reqs | Plans Complete | Status | Completed |
 |-------|-----------|:----:|----------------|--------|-----------|
-| 56. Prompt Rewrites | v2.5 | 6 | 0/TBD | Not started | - |
+| 56. Prompt Rewrites | v2.5 | 6 | 0/2 | Planned | - |
 | 57. Conversation Reopening | v2.5 | 11 | 0/TBD | Not started | - |
 | 58.1 Task Schema and Service | v2.5 | 13 | 0/TBD | Not started | - |
 | 58.2 Agent Task Tools | v2.5 | 10 | 0/TBD | Not started | - |
@@ -135,4 +138,4 @@ Phase 57 (Reopening) ──> Phase 58.1 ──> 58.2 ──> 58.3 ──> 58.4 �
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-06 after restructuring*
+*Last updated: 2026-02-06 after Phase 56 planning*
