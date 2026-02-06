@@ -30,6 +30,7 @@ import type {
 import { DetailLayout } from "./detail-layout";
 import { EventTimeline } from "./event-timeline";
 import { MetadataSidebar } from "./metadata-sidebar";
+import { ReopenDialog } from "./reopen-dialog";
 
 // ─── Serialized Types ──────────────────────────────────────────────────────
 // Date fields arrive as ISO strings across the RSC server/client boundary.
@@ -110,7 +111,8 @@ export function LiveDetailPanels({
 
   const isActive =
     conversationMeta.status === "running" ||
-    conversationMeta.status === "waiting";
+    conversationMeta.status === "waiting" ||
+    conversationMeta.status === "queued";
 
   const {
     events: sseEvents,
@@ -178,6 +180,13 @@ export function LiveDetailPanels({
         setConversationMeta((prev) => ({
           ...prev,
           status: "running",
+          updatedAt: now,
+        }));
+      } else if (sse.type === "agent.reopened") {
+        setConversationMeta((prev) => ({
+          ...prev,
+          status: "queued",
+          reopenCount: prev.reopenCount + 1,
           updatedAt: now,
         }));
       }
@@ -250,12 +259,18 @@ export function LiveDetailPanels({
 
   return (
     <div className="space-y-4">
-      {/* Connection status indicator */}
-      {isActive && (
-        <div className="flex items-center justify-end">
-          <ConnectionStatusIndicator status={connectionStatus} />
-        </div>
-      )}
+      {/* Connection status and reopen action */}
+      <div className="flex items-center justify-end gap-2">
+        {isActive && <ConnectionStatusIndicator status={connectionStatus} />}
+        {(conversationMeta.status === "completed" ||
+          conversationMeta.status === "failed") && (
+          <ReopenDialog
+            conversationId={serverConversation.id}
+            status={conversationMeta.status}
+            onReopened={() => router.refresh()}
+          />
+        )}
+      </div>
 
       <DetailLayout
         timelinePanel={

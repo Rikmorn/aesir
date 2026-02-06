@@ -5,6 +5,7 @@ import {
   MessageCircle,
   PauseCircle,
   PlayCircle,
+  RotateCcw,
   XCircle,
   Zap,
 } from "lucide-react";
@@ -16,6 +17,7 @@ const iconMap: Record<string, LucideIcon> = {
   "agent.completed": CheckCircle,
   "agent.paused": PauseCircle,
   "agent.resumed": PlayCircle,
+  "agent.reopened": RotateCcw,
   "tool.called": Zap,
   "tool.succeeded": CheckCircle,
   "tool.failed": XCircle,
@@ -28,6 +30,7 @@ const colorMap: Record<string, string> = {
   "agent.completed": "text-green-500",
   "agent.paused": "text-yellow-500",
   "agent.resumed": "text-blue-500",
+  "agent.reopened": "text-cyan-500",
   "tool.called": "text-purple-500",
   "tool.succeeded": "text-green-500",
   "tool.failed": "text-red-500",

@@ -54,6 +54,17 @@ export function MetadataSidebar({
         <span className="text-sm">{conversation.retryCount}</span>
       </MetadataField>
 
+      {/* Reopens */}
+      <MetadataField label="Reopens">
+        <span
+          className={
+            conversation.reopenCount > 0 ? "text-sm font-medium" : "text-sm"
+          }
+        >
+          {conversation.reopenCount}
+        </span>
+      </MetadataField>
+
       {/* Error */}
       {conversation.errorMessage && (
         <MetadataField label="Error">

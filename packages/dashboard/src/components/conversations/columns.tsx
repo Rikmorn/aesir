@@ -1,7 +1,7 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import {
   formatDuration,
@@ -84,6 +84,25 @@ export const columns: ColumnDef<ConversationListItem>[] = [
         {formatRelativeTime(row.original.lastActivity)}
       </span>
     ),
+  },
+  {
+    id: "reopenCount",
+    header: "",
+    size: 40,
+    cell: ({ row }) => {
+      if (row.original.reopenCount > 0) {
+        return (
+          <span
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+            title={`Reopened ${row.original.reopenCount} time${row.original.reopenCount > 1 ? "s" : ""}`}
+          >
+            <RotateCcw className="h-3 w-3" />
+            {row.original.reopenCount}
+          </span>
+        );
+      }
+      return null;
+    },
   },
   {
     id: "error",
