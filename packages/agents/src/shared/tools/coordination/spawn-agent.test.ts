@@ -431,6 +431,7 @@ describe("createSpawnAgentTool", () => {
       containerManager:
         mockContainerManager as unknown as ToolContext["containerManager"],
       sandboxId: "task_abc",
+      taskId: "task_xyz",
     });
     const tool = createSpawnAgentTool(ctx);
 
@@ -450,6 +451,8 @@ describe("createSpawnAgentTool", () => {
     // Shared sandbox
     expect(subCtx.containerManager).toBe(mockContainerManager);
     expect(subCtx.sandboxId).toBe("task_abc");
+    // Task context propagated to sub-agent
+    expect(subCtx.taskId).toBe("task_xyz");
     // NO spawnDeps (sub-agent doesn't have spawn_agent in its tools)
     expect(subCtx.spawnDeps).toBeUndefined();
   });
