@@ -318,6 +318,8 @@ export interface ToolContext {
   containerManager?: DevContainerManager | undefined;
   /** Sandbox container ID identifying which dev container to use (optional) */
   sandboxId?: string | undefined;
+  /** Task ID from the conversation's associated task (v2.5 task primitive, undefined if no task) */
+  taskId?: string | undefined;
   /** Logger instance */
   logger: PinoLogger;
   /** Spawn dependencies for sub-agent execution (populated by worker loop when agent has coordination:spawn_agent) */

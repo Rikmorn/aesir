@@ -461,6 +461,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
       const toolContext: ToolContext = {
         agentId: conv.agent_definition_id,
         correlationId: conv.id,
+        taskId: conv.task_id ?? undefined,
         logger: childLogger,
         ...(needsSandbox &&
           sandboxManager && {
