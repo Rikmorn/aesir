@@ -31,14 +31,14 @@
 
 ### Task Primitive
 
-- [ ] **TASK-01**: `agents.tasks` table created with id, parent_id, creator_type/id, assignee_type/id, status, title, objective, metadata, timestamps
-- [ ] **TASK-02**: `agents.task_handoffs` table created with id, task_id, conversation_id, handoff_type, context (JSONB), author_type/id, created_at
-- [ ] **TASK-03**: `task_id` nullable FK column added to `agents.conversations`
-- [ ] **TASK-04**: Task IDs use existing `createId` pattern (`task_<nanoid>`)
-- [ ] **TASK-05**: Handoff IDs use `createId` pattern (`ho_<nanoid>`)
-- [ ] **TASK-06**: Task status transitions enforced via tools (complete_task rejects cancelled tasks, etc.) with CHECK constraint for valid values
-- [ ] **TASK-07**: Handoff context enforced via Zod: `{ summary: string (required, max 2000 chars), key_decisions?, artifacts?, open_questions?, next_steps? }`, capped at ~4KB
-- [ ] **TASK-08**: `tasks.metadata` validated with Zod on write, 10KB size limit enforced at application layer
+- [x] **TASK-01**: `agents.tasks` table created with id, parent_id, creator_type/id, assignee_type/id, status, title, objective, metadata, timestamps
+- [x] **TASK-02**: `agents.task_handoffs` table created with id, task_id, conversation_id, handoff_type, context (JSONB), author_type/id, created_at
+- [x] **TASK-03**: `task_id` nullable FK column added to `agents.conversations`
+- [x] **TASK-04**: Task IDs use existing `createId` pattern (`task_<nanoid>`)
+- [x] **TASK-05**: Handoff IDs use `createId` pattern (`ho_<nanoid>`)
+- [x] **TASK-06**: Task status transitions enforced via tools (complete_task rejects cancelled tasks, etc.) with CHECK constraint for valid values
+- [x] **TASK-07**: Handoff context enforced via Zod: `{ summary: string (required, max 2000 chars), key_decisions?, artifacts?, open_questions?, next_steps? }`, capped at ~4KB
+- [x] **TASK-08**: `tasks.metadata` validated with Zod on write, 10KB size limit enforced at application layer
 - [ ] **TASK-09**: `create_task` agent tool implemented (with optional parent_id for subtasks)
 - [ ] **TASK-10**: `complete_task` agent tool implemented (marks task completed with structured completion handoff)
 - [ ] **TASK-11**: `pause_task` agent tool implemented (pauses task with structured pause handoff)
@@ -51,12 +51,12 @@
 - [ ] **TASK-18**: Circular delegation prevented: `create_task` checks ancestry for same-assignee cycles
 - [ ] **TASK-19**: Max depth of 5 levels for parent_id chains enforced
 - [ ] **TASK-20**: Max 10 subtasks per parent task enforced
-- [ ] **TASK-21**: `ToolContext.taskId` renamed to `sandboxId` (existing sandbox container ID usage)
-- [ ] **TASK-22**: New `ToolContext.taskId` set from `conv.task_id` in worker loop
+- [x] **TASK-21**: `ToolContext.taskId` renamed to `sandboxId` (existing sandbox container ID usage)
+- [x] **TASK-22**: New `ToolContext.taskId` set from `conv.task_id` in worker loop
 - [ ] **TASK-23**: Task context auto-injected as `<task_context>` block in worker loop (most recent handoff, truncated at 4000 chars with pointer to `get_task_context`)
-- [ ] **TASK-24**: TaskService factory created with CRUD operations and validation
-- [ ] **TASK-25**: Backward compatibility: all code paths handle null task_id gracefully
-- [ ] **TASK-27**: Schema migration handles legacy `tasks` table in schema.drizzle.ts (check if empty, drop or rename)
+- [x] **TASK-24**: TaskService factory created with CRUD operations and validation
+- [x] **TASK-25**: Backward compatibility: all code paths handle null task_id gracefully
+- [x] **TASK-27**: Schema migration handles legacy `tasks` table in schema.drizzle.ts (check if empty, drop or rename)
 
 ### Integration Correlation
 
@@ -156,14 +156,14 @@ Deferred to post-v2.5 milestones. Tracked but not in current roadmap.
 | REOPEN-09 | Phase 57 | Complete |
 | REOPEN-10 | Phase 57 | Complete |
 | REOPEN-11 | Phase 57 | Complete |
-| TASK-01 | Phase 58.1 | Pending |
-| TASK-02 | Phase 58.1 | Pending |
-| TASK-03 | Phase 58.1 | Pending |
-| TASK-04 | Phase 58.1 | Pending |
-| TASK-05 | Phase 58.1 | Pending |
-| TASK-06 | Phase 58.1 | Pending |
-| TASK-07 | Phase 58.1 | Pending |
-| TASK-08 | Phase 58.1 | Pending |
+| TASK-01 | Phase 58.1 | Complete |
+| TASK-02 | Phase 58.1 | Complete |
+| TASK-03 | Phase 58.1 | Complete |
+| TASK-04 | Phase 58.1 | Complete |
+| TASK-05 | Phase 58.1 | Complete |
+| TASK-06 | Phase 58.1 | Complete |
+| TASK-07 | Phase 58.1 | Complete |
+| TASK-08 | Phase 58.1 | Complete |
 | TASK-09 | Phase 58.2 | Pending |
 | TASK-10 | Phase 58.2 | Pending |
 | TASK-11 | Phase 58.2 | Pending |
@@ -176,12 +176,12 @@ Deferred to post-v2.5 milestones. Tracked but not in current roadmap.
 | TASK-18 | Phase 59 | Pending |
 | TASK-19 | Phase 59 | Pending |
 | TASK-20 | Phase 59 | Pending |
-| TASK-21 | Phase 58.1 | Pending |
-| TASK-22 | Phase 58.1 | Pending |
+| TASK-21 | Phase 58.1 | Complete |
+| TASK-22 | Phase 58.1 | Complete |
 | TASK-23 | Phase 58.2 | Pending |
-| TASK-24 | Phase 58.1 | Pending |
-| TASK-25 | Phase 58.1 | Pending |
-| TASK-27 | Phase 58.1 | Pending |
+| TASK-24 | Phase 58.1 | Complete |
+| TASK-25 | Phase 58.1 | Complete |
+| TASK-27 | Phase 58.1 | Complete |
 | CORR-01 | Phase 58.3 | Pending |
 | CORR-02 | Phase 58.3 | Pending |
 | CORR-03 | Phase 58.3 | Pending |
