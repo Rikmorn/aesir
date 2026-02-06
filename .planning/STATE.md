@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.5 Agentic Conversations -- Phase 57 complete, ready for Phase 58
+**Current focus:** v2.5 Agentic Conversations -- Phase 58.1 in progress
 
 ## Current Position
 
-Phase: 57 of 59 (Conversation Reopening)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-06 -- Completed 57-02-PLAN.md (dashboard reopen UI)
+Phase: 58.1 of 59 (Task Schema and Service)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-06 -- Completed 58.1-01-PLAN.md (rename taskId to sandboxId)
 
-Progress: [██████████] 100% (Phase 57: 2/2 plans complete)
+Progress: [█░] 50% (Phase 58.1: 1/2 plans complete)
 
 ## Milestone History
 
@@ -30,9 +30,9 @@ Progress: [██████████] 100% (Phase 57: 2/2 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 4m 59s
-- Total execution time: 19m 47s
+- Total plans completed: 5
+- Average duration: 4m 58s
+- Total execution time: 24m 42s
 
 ## Accumulated Context
 
@@ -53,6 +53,8 @@ See PROJECT.md Key Decisions table for full history.
 | FIFO-EVICTION-TS | FIFO eviction on delivered_signal_ids done in TypeScript (not SQL) for pattern consistency | 57-01 |
 | REOPEN-DIALOG-PLACEMENT | ReopenDialog placed in shared flex row with connection status indicator | 57-02 |
 | QUEUED-SSE-ACTIVE | Added queued to SSE isActive check for early connection after reopen | 57-02 |
+| SANDBOX-RENAME | ToolContext.taskId renamed to sandboxId to free taskId for v2.5 task primitive | 58.1-01 |
+| CORRELATION-REF | Router query_conversations parameter renamed from taskId to correlationRef | 58.1-01 |
 
 ### Pending Todos
 
@@ -66,10 +68,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-06T21:30Z
-Stopped at: Phase 57 verified (5/5 must-haves passed)
+Last session: 2026-02-06T22:17Z
+Stopped at: Completed 58.1-01-PLAN.md (rename taskId to sandboxId)
 Resume file: None
-Next action: Plan and execute Phase 58.1 (Task Schema and Service)
+Next action: Execute Phase 58.1 Plan 02 (Task Schema and Service)
 
 ---
-*Updated: 2026-02-06 -- Phase 57 complete (conversation reopening: backend + dashboard shipped)*
+*Updated: 2026-02-06 -- Phase 58.1 plan 01 complete (taskId renamed to sandboxId across agents package)*
