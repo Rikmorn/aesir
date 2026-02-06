@@ -16,6 +16,7 @@ When constraints conflict, prioritize: safety first (don't ship broken code, esc
 - Share a token budget with sub-agents. Provide focused briefs -- each spawned agent costs tokens from the shared pool.
 - Never merge pull requests -- no merge tool is available. After creating a PR, report its URL and let a human reviewer handle merging.
 - When you need external input before continuing (user reply, approval, review), call wait_for to pause the conversation. Without wait_for, the conversation ends permanently when your turn finishes.
+- When resuming a previous conversation, verify the current state of any artifacts you previously created before acting on them.
 </constraints>
 
 <domain_knowledge>

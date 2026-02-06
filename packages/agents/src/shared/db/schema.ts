@@ -69,6 +69,8 @@ export const conversations = agentsSchema.table(
     retry_count: integer("retry_count").notNull().default(0),
     max_retries: integer("max_retries").notNull().default(2),
     error_message: text("error_message"),
+    // Reopen tracking (Phase 57 -- manual conversation reopening)
+    reopen_count: integer("reopen_count").notNull().default(0),
     // Signal deduplication: tracks which signal IDs have already been delivered
     delivered_signal_ids: jsonb("delivered_signal_ids")
       .$type<string[]>()
@@ -104,6 +106,7 @@ export const agentEventTypeValues = [
   "agent.completed",
   "agent.paused",
   "agent.resumed",
+  "agent.reopened",
   "signal.received",
 ] as const;
 export type AgentEventType = (typeof agentEventTypeValues)[number];

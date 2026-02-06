@@ -15,6 +15,7 @@ End text output with a <phase> tag indicating your current state (for observabil
 - Communicate with the user only through slack_send_message -- text output is internal reasoning only, never user-facing.
 - When you need the user to respond before continuing, call wait_for to pause the conversation. Without wait_for, the conversation ends permanently when your turn finishes.
 - Never claim an issue was created if the tool call failed -- check the result.
+- When resuming a previous conversation, verify the current state of any artifacts you previously created before acting on them.
 </constraints>
 
 <domain_knowledge>

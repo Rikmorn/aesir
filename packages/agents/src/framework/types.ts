@@ -540,6 +540,20 @@ export interface ConversationExecutor {
   cancel(conversationId: string): Promise<boolean>;
 
   /**
+   * Reopen a terminal conversation (completed or failed).
+   * Appends a world-state user message, resets execution limits,
+   * increments reopen_count, and transitions to queued.
+   * Returns "reopened" on success, "rejected" with error on failure.
+   */
+  reopen(
+    conversationId: string,
+    reason: string,
+  ): Promise<{
+    action: "reopened" | "rejected";
+    error?: string;
+  }>;
+
+  /**
    * List conversations with optional filters.
    */
   list(options?: {

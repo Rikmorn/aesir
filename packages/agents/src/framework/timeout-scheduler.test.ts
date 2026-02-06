@@ -61,6 +61,7 @@ function createMockExecutor(): ConversationExecutor {
     signal: vi.fn().mockResolvedValue({ action: "resumed" }),
     get: vi.fn().mockResolvedValue(null),
     cancel: vi.fn().mockResolvedValue(true),
+    reopen: vi.fn().mockResolvedValue({ action: "reopened" }),
     list: vi.fn().mockResolvedValue([]),
     startWorker: vi.fn(),
     stopWorker: vi.fn().mockResolvedValue(undefined),
