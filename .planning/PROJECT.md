@@ -126,11 +126,25 @@ Agent definitions (YAML + prompt.md)
 
 ### Active
 
+**Current Milestone: v2.5 Agentic Conversations**
+
+**Goal:** Give agents continuity across interactions through a task primitive that groups conversations, enable conversation reopening for follow-up events, and rewrite orchestrator prompts to be goal-oriented instead of procedural.
+
+- [ ] Prompt rewrites: product-agent and dev-agent rewritten to goal-oriented, constitutional + few-shot style
+- [ ] Conversation reopening: completed/failed conversations receive `reopen` signals and re-enter work loop
+- [ ] Task primitive: tasks table, task_handoffs table, task_id on conversations
+- [ ] Agent task tools: create_task, complete_task, pause_task, handoff_task, list_tasks, get_task_context
+- [ ] Integration correlation tables: Linear, GitHub, Slack with auto-correlation on outgoing MCP calls
+- [ ] Event routing: task-based routing priority (task reference → fast-path → reasoning path)
+- [ ] Stale task cleanup: timeout signal mechanism for inactive tasks
+- [ ] Context pressure: most-recent handoff delivery by default, older via get_task_context
+- [ ] Prompt evolution: all agent prompts updated to leverage task lifecycle and handoff authoring
+- [ ] Dashboard: reopen/retry action on conversation detail view
+
 **Deferred (candidates for future milestones):**
 - [ ] CI/CD pipeline for deployment
 - [ ] Monitoring and alerting for agent health
 - [ ] Multi-environment configuration (dev/staging/prod)
-- [ ] Cross-agent collaboration (dev agent asks product agent to clarify mid-task)
 - [ ] QA agent for automated code review
 - [ ] Agent-managed memory (MemGPT/Letta style with memory:save/search tools)
 - [ ] Cross-session learning (agents improve from past task outcomes)
@@ -139,6 +153,8 @@ Agent definitions (YAML + prompt.md)
 - [ ] Dashboard editing capabilities (agent definitions, permissions, conversation actions)
 - [ ] Historical analytics and trend analysis
 - [ ] Automated E2E tests (Playwright)
+- [ ] Dashboard tasks view (list tasks, task detail with grouped conversations and handoffs)
+- [ ] Full bidirectional task assignment (agent → human task delivery via integrations)
 
 ### Out of Scope
 
@@ -226,4 +242,4 @@ Lessons learned during development that guide future phases.
 | Serialize at RSC boundaries | Date objects must be serialized as ISO strings before passing from server to client components. Enforce typed serialized interfaces at the boundary. |
 
 ---
-*Last updated: 2026-02-05 after v2.4 milestone*
+*Last updated: 2026-02-06 after v2.5 milestone started*

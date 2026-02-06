@@ -2,19 +2,19 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-05)
+See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** Planning next milestone
+**Current focus:** v2.5 Agentic Conversations — defining requirements
 
 ## Current Position
 
-Phase: Not started
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-02-05 -- v2.4 milestone complete
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-06 — Milestone v2.5 started
 
-Progress: Milestone complete. Next milestone not yet defined.
+Progress: Milestone initialized. Requirements and roadmap in progress.
 
 ## Milestone History
 
@@ -45,10 +45,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-05
-Stopped at: v2.4 milestone archived
+Last session: 2026-02-06
+Stopped at: Milestone v2.5 initialization in progress
 Resume file: None
-Next action: `/gsd:new-milestone` to start next milestone
+Next action: Complete requirements and roadmap definition
 
 ---
-*Updated: 2026-02-05 -- v2.4 Operations Dashboard milestone archived*
+*Updated: 2026-02-06 — v2.5 Agentic Conversations milestone started*
