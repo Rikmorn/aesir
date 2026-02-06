@@ -13,7 +13,7 @@
  * - Coordination (3): spawn_agent, request_human_input, wait_for
  *
  * Adapters bridge ToolContext to the existing factory signatures:
- * - Codebase adapter: extracts containerManager, taskId, logger from ToolContext
+ * - Codebase adapter: extracts containerManager, sandboxId, logger from ToolContext
  * - MCP adapter: extracts agentId, correlationId from ToolContext
  * - Coordination tools are either context-free or use placeholder implementations
  */
@@ -59,7 +59,7 @@ export interface RegisterAllToolsOptions {
 /**
  * Adapter that bridges ToolContext to CodebaseToolDeps.
  *
- * Extracts containerManager, taskId, and logger from the ToolContext
+ * Extracts containerManager, sandboxId, and logger from the ToolContext
  * and passes them to the existing codebase tool factory function.
  */
 function codebaseAdapter(
@@ -68,10 +68,10 @@ function codebaseAdapter(
   return (ctx: ToolContext) =>
     createFn({
       // Type assertions are safe here: agents that use codebase tools
-      // always have containerManager and taskId set in their ToolContext.
+      // always have containerManager and sandboxId set in their ToolContext.
       // If missing, the runtime error is intentional (misconfigured agent).
       containerManager: ctx.containerManager as DevContainerManager,
-      taskId: ctx.taskId as string,
+      sandboxId: ctx.sandboxId as string,
       logger: ctx.logger,
     });
 }

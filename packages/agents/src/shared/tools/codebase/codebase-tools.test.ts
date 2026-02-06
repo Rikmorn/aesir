@@ -33,7 +33,7 @@ function createMockDeps(): CodebaseToolDeps & {
     } as unknown as DevContainerManager & {
       execute: ReturnType<typeof vi.fn>;
     },
-    taskId: "test-task-123",
+    sandboxId: "test-task-123",
     logger: {
       info: vi.fn(),
       error: vi.fn(),

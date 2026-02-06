@@ -1379,7 +1379,7 @@ describe("createWorkerLoop", () => {
       expect(completedCall).toBeDefined();
     });
 
-    it("should include containerManager and taskId in ToolContext when sandbox is available", async () => {
+    it("should include containerManager and sandboxId in ToolContext when sandbox is available", async () => {
       const { options, mockDb, mockToolRegistry } = createTestOptions();
       const mockSandbox = createMockSandboxManager();
       options.sandboxManager = mockSandbox;
@@ -1397,7 +1397,7 @@ describe("createWorkerLoop", () => {
       const resolveCall = mockToolRegistry.resolve.mock.calls[0];
       const toolContext = resolveCall?.[1] as Record<string, unknown>;
       expect(toolContext.containerManager).toBe(mockSandbox);
-      expect(toolContext.taskId).toBe("dev-agent-AES-42");
+      expect(toolContext.sandboxId).toBe("dev-agent-AES-42");
     });
 
     it("should not include containerManager in ToolContext when no sandboxManager configured", async () => {
@@ -1416,7 +1416,7 @@ describe("createWorkerLoop", () => {
       const resolveCall = mockToolRegistry.resolve.mock.calls[0];
       const toolContext = resolveCall?.[1] as Record<string, unknown>;
       expect(toolContext.containerManager).toBeUndefined();
-      expect(toolContext.taskId).toBeUndefined();
+      expect(toolContext.sandboxId).toBeUndefined();
     });
 
     it("should clone repo when sandboxSetup is provided", async () => {

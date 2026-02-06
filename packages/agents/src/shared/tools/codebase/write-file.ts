@@ -22,7 +22,7 @@ const inputSchema = z.object({
  * Overwrites existing files completely -- there is no append mode.
  */
 export function createWriteFileTool(deps: CodebaseToolDeps): ToolDefinition {
-  const { containerManager, taskId, logger } = deps;
+  const { containerManager, sandboxId, logger } = deps;
 
   return {
     name: "write_file",
@@ -53,7 +53,7 @@ export function createWriteFileTool(deps: CodebaseToolDeps): ToolDefinition {
         const lastSlash = path.lastIndexOf("/");
         if (lastSlash > 0) {
           const dir = path.slice(0, lastSlash);
-          const mkdirResult = await containerManager.execute(taskId, {
+          const mkdirResult = await containerManager.execute(sandboxId, {
             command: ["mkdir", "-p", dir],
             workdir: "/workspace/repo",
             timeoutMs: 30_000,
@@ -69,7 +69,7 @@ export function createWriteFileTool(deps: CodebaseToolDeps): ToolDefinition {
 
         // Write via base64 to avoid shell escaping issues
         const b64 = Buffer.from(content).toString("base64");
-        const writeResult = await containerManager.execute(taskId, {
+        const writeResult = await containerManager.execute(sandboxId, {
           command: ["sh", "-c", `printf '%s' '${b64}' | base64 -d > '${path}'`],
           workdir: "/workspace/repo",
           timeoutMs: 30_000,
@@ -86,7 +86,7 @@ export function createWriteFileTool(deps: CodebaseToolDeps): ToolDefinition {
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Unknown error writing file";
-        logger.error({ err, path, taskId }, "write_file tool error");
+        logger.error({ err, path, sandboxId }, "write_file tool error");
         return { content: message, isError: true };
       }
     },

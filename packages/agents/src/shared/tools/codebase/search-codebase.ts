@@ -31,7 +31,7 @@ const inputSchema = z.object({
 export function createSearchCodebaseTool(
   deps: CodebaseToolDeps,
 ): ToolDefinition {
-  const { containerManager, taskId, logger } = deps;
+  const { containerManager, sandboxId, logger } = deps;
 
   return {
     name: "search_codebase",
@@ -76,7 +76,7 @@ export function createSearchCodebaseTool(
           command.push(path);
         }
 
-        const result = await containerManager.execute(taskId, {
+        const result = await containerManager.execute(sandboxId, {
           command,
           workdir: "/workspace/repo",
           timeoutMs: 30_000,
@@ -105,7 +105,7 @@ export function createSearchCodebaseTool(
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Unknown error searching";
-        logger.error({ err, pattern, taskId }, "search_codebase tool error");
+        logger.error({ err, pattern, sandboxId }, "search_codebase tool error");
         return { content: message, isError: true };
       }
     },

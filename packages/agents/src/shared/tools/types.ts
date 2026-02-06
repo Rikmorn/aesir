@@ -23,8 +23,8 @@ export const MAX_STDERR_BYTES = 50_000;
 export interface CodebaseToolDeps {
   /** Container manager for executing commands in dev containers */
   containerManager: DevContainerManager;
-  /** Task ID identifying which dev container to use */
-  taskId: string;
+  /** Sandbox container ID identifying which dev container to use */
+  sandboxId: string;
   /** Logger for debug and error output */
   logger: PinoLogger;
 }

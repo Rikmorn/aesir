@@ -32,7 +32,7 @@ const DEFAULT_TIMEOUT_MS = 180_000;
  * STDOUT and STDERR sections with the exit code.
  */
 export function createRunCommandTool(deps: CodebaseToolDeps): ToolDefinition {
-  const { containerManager, taskId, logger } = deps;
+  const { containerManager, sandboxId, logger } = deps;
 
   return {
     name: "run_command",
@@ -60,7 +60,7 @@ export function createRunCommandTool(deps: CodebaseToolDeps): ToolDefinition {
       }
 
       try {
-        const result = await containerManager.execute(taskId, {
+        const result = await containerManager.execute(sandboxId, {
           command: ["sh", "-c", command],
           workdir: "/workspace/repo",
           timeoutMs: timeout,
@@ -104,7 +104,7 @@ export function createRunCommandTool(deps: CodebaseToolDeps): ToolDefinition {
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Unknown error running command";
-        logger.error({ err, command, taskId }, "run_command tool error");
+        logger.error({ err, command, sandboxId }, "run_command tool error");
         return { content: message, isError: true };
       }
     },

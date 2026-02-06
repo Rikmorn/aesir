@@ -108,7 +108,7 @@ export function createSpawnAgentTool(ctx: ToolContext): ToolDefinition {
         correlationId: ctx.correlationId,
         logger: ctx.logger.child({ subAgent: definition.id }),
         containerManager: ctx.containerManager,
-        taskId: ctx.taskId,
+        sandboxId: ctx.sandboxId,
       };
 
       // Future-proofing: if sub-agent itself has coordination:spawn_agent

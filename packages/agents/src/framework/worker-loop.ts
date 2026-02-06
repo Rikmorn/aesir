@@ -163,7 +163,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
    */
   async function setupSandbox(opts: {
     manager: SandboxManager;
-    taskId: string;
+    sandboxId: string;
     setup?:
       | {
           repoUrl: string;
@@ -174,16 +174,19 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
     logger: PinoLogger;
   }): Promise<void> {
     // 1. Spawn (reuses if already running)
-    await opts.manager.spawn({ taskId: opts.taskId });
-    opts.logger.info({ taskId: opts.taskId }, "Sandbox container ready");
+    await opts.manager.spawn({ taskId: opts.sandboxId });
+    opts.logger.info({ sandboxId: opts.sandboxId }, "Sandbox container ready");
 
     // 2. Check if repo already cloned (resume case)
-    const check = await opts.manager.execute(opts.taskId, {
+    const check = await opts.manager.execute(opts.sandboxId, {
       command: ["test", "-d", "/workspace/repo/.git"],
       timeoutMs: 5000,
     });
     if (check.exitCode === 0) {
-      opts.logger.info({ taskId: opts.taskId }, "Sandbox repo already present");
+      opts.logger.info(
+        { sandboxId: opts.sandboxId },
+        "Sandbox repo already present",
+      );
       return;
     }
 
@@ -194,7 +197,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         logger: opts.logger,
       });
       if (opts.setup.githubToken) {
-        await git.configureCredentials(opts.taskId, opts.setup.githubToken);
+        await git.configureCredentials(opts.sandboxId, opts.setup.githubToken);
       }
       const cloneOpts: {
         branch?: string;
@@ -204,7 +207,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         cloneOpts.branch = opts.setup.baseBranch;
       }
       const result = await git.cloneRepository(
-        opts.taskId,
+        opts.sandboxId,
         opts.setup.repoUrl,
         cloneOpts,
       );
@@ -214,7 +217,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         );
       }
       opts.logger.info(
-        { taskId: opts.taskId, repoUrl: opts.setup.repoUrl },
+        { sandboxId: opts.sandboxId, repoUrl: opts.setup.repoUrl },
         "Repository cloned into sandbox",
       );
     }
@@ -440,7 +443,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
       if (needsSandbox && sandboxManager) {
         await setupSandbox({
           manager: sandboxManager,
-          taskId: conv.id,
+          sandboxId: conv.id,
           setup: sandboxSetup,
           logger: childLogger,
         });
@@ -462,7 +465,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         ...(needsSandbox &&
           sandboxManager && {
             containerManager: sandboxManager,
-            taskId: conv.id,
+            sandboxId: conv.id,
           }),
         ...(hasSpawnAgent &&
           tokenBudget && {

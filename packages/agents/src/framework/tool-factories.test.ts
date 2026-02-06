@@ -44,7 +44,7 @@ function createMockContext(): ToolContext {
     containerManager: {
       execute: vi.fn(),
     } as unknown as DevContainerManager,
-    taskId: "test-task",
+    sandboxId: "test-task",
     logger: createMockLogger(),
   };
 }

@@ -20,7 +20,7 @@ const inputSchema = z.object({
  * as a string, or an error if the file doesn't exist or can't be read.
  */
 export function createReadFileTool(deps: CodebaseToolDeps): ToolDefinition {
-  const { containerManager, taskId, logger } = deps;
+  const { containerManager, sandboxId, logger } = deps;
 
   return {
     name: "read_file",
@@ -47,7 +47,7 @@ export function createReadFileTool(deps: CodebaseToolDeps): ToolDefinition {
       }
 
       try {
-        const result = await containerManager.execute(taskId, {
+        const result = await containerManager.execute(sandboxId, {
           command: ["cat", path],
           workdir: "/workspace/repo",
           timeoutMs: 30_000,
@@ -69,7 +69,7 @@ export function createReadFileTool(deps: CodebaseToolDeps): ToolDefinition {
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Unknown error reading file";
-        logger.error({ err, path, taskId }, "read_file tool error");
+        logger.error({ err, path, sandboxId }, "read_file tool error");
         return { content: message, isError: true };
       }
     },

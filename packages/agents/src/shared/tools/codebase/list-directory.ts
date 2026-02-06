@@ -27,7 +27,7 @@ const inputSchema = z.object({
 export function createListDirectoryTool(
   deps: CodebaseToolDeps,
 ): ToolDefinition {
-  const { containerManager, taskId, logger } = deps;
+  const { containerManager, sandboxId, logger } = deps;
 
   return {
     name: "list_directory",
@@ -54,7 +54,7 @@ export function createListDirectoryTool(
       }
 
       try {
-        const result = await containerManager.execute(taskId, {
+        const result = await containerManager.execute(sandboxId, {
           command: ["ls", "-la", dirPath],
           workdir: "/workspace/repo",
           timeoutMs: 10_000,
@@ -81,7 +81,7 @@ export function createListDirectoryTool(
             ? err.message
             : "Unknown error listing directory";
         logger.error(
-          { err, path: dirPath, taskId },
+          { err, path: dirPath, sandboxId },
           "list_directory tool error",
         );
         return { content: message, isError: true };

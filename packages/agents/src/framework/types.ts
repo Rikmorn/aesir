@@ -316,8 +316,8 @@ export interface ToolContext {
   correlationId: string;
   /** Container manager for codebase tools (optional -- not all agents use containers) */
   containerManager?: DevContainerManager | undefined;
-  /** Task ID identifying which dev container to use (optional) */
-  taskId?: string | undefined;
+  /** Sandbox container ID identifying which dev container to use (optional) */
+  sandboxId?: string | undefined;
   /** Logger instance */
   logger: PinoLogger;
   /** Spawn dependencies for sub-agent execution (populated by worker loop when agent has coordination:spawn_agent) */
