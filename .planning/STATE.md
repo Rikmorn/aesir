@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.5 Agentic Conversations -- Phase 57 in progress, Plan 01 complete
+**Current focus:** v2.5 Agentic Conversations -- Phase 57 complete, ready for Phase 58
 
 ## Current Position
 
 Phase: 57 of 59 (Conversation Reopening)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-06 -- Completed 57-01-PLAN.md (conversation reopening backend)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-06 -- Completed 57-02-PLAN.md (dashboard reopen UI)
 
-Progress: [█████░░░░░] 50% (Phase 57: 1/2 plans complete)
+Progress: [██████████] 100% (Phase 57: 2/2 plans complete)
 
 ## Milestone History
 
@@ -30,9 +30,9 @@ Progress: [█████░░░░░] 50% (Phase 57: 1/2 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 5m 03s
-- Total execution time: 15m 10s
+- Total plans completed: 4
+- Average duration: 4m 59s
+- Total execution time: 19m 47s
 
 ## Accumulated Context
 
@@ -51,13 +51,14 @@ See PROJECT.md Key Decisions table for full history.
 | ERROR-RECOVERY-DECOMP | Error recovery decomposed into 3 constraints + Example #3 (no diagnostic categories) | 56-02 |
 | WORLD-STATE-XML-TAGS | World-state injection uses <world_state> XML tags in user message for reopen context | 57-01 |
 | FIFO-EVICTION-TS | FIFO eviction on delivered_signal_ids done in TypeScript (not SQL) for pattern consistency | 57-01 |
+| REOPEN-DIALOG-PLACEMENT | ReopenDialog placed in shared flex row with connection status indicator | 57-02 |
+| QUEUED-SSE-ACTIVE | Added queued to SSE isActive check for early connection after reopen | 57-02 |
 
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
 2. **Run dev-agent container as non-root** (infrastructure)
 3. **11 tests skipped pending infrastructure** (testing)
-4. **Dashboard schema mirror needs agent.reopened and reopen_count** (Plan 02)
 
 ### Blockers/Concerns
 
@@ -65,10 +66,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-06T21:17Z
-Stopped at: Completed 57-01-PLAN.md (conversation reopening backend)
+Last session: 2026-02-06T21:26Z
+Stopped at: Completed 57-02-PLAN.md (dashboard reopen UI)
 Resume file: None
-Next action: Execute Phase 57 Plan 02 (dashboard reopen UI)
+Next action: Begin Phase 58
 
 ---
-*Updated: 2026-02-06 -- Phase 57 Plan 01 complete (backend infrastructure shipped)*
+*Updated: 2026-02-06 -- Phase 57 complete (conversation reopening: backend + dashboard shipped)*
