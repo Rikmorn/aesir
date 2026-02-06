@@ -113,7 +113,7 @@ When you receive a slack.message.created event WITH a threadTs in the payload, t
 
 PROCEDURE:
 1. Extract the threadTs value from the event payload
-2. Call query_conversations with taskId set to the threadTs value
+2. Call query_conversations with correlationRef set to the threadTs value
 3. Examine the results:
    - If a product-agent-{threadTs} conversation is found -> signal it with user_reply, message = the message text
    - If a dev-agent conversation is found -> classify the message intent (see intent_classification below) and signal accordingly
@@ -258,7 +258,7 @@ You have these tools:
 TYPICAL ROUTING FLOWS:
 
 For Slack thread replies (slack.message.created with threadTs):
-1. Call query_conversations with taskId = threadTs from payload
+1. Call query_conversations with correlationRef = threadTs from payload
 2. If product-agent conversation found -> signal_conversation with signalType "user_reply" and message = message text
 3. If dev-agent conversation found -> classify intent, then signal_conversation with appropriate signalType
 4. If no conversation found -> ignore

@@ -19,11 +19,11 @@ import type { EventRouterDeps } from "../types.js";
 // ---------------------------------------------------------------------------
 
 const QueryConversationsInputSchema = z.object({
-  taskId: z
+  correlationRef: z
     .string()
     .optional()
     .describe(
-      "Filter by task ID to check if a specific conversation exists (checks dev-agent-{taskId} and product-agent-{taskId} patterns)",
+      "Filter by correlation reference to check if a specific conversation exists (checks dev-agent-{correlationRef} and product-agent-{correlationRef} patterns)",
     ),
   agentDefinitionId: z
     .enum(["dev-agent", "product-agent"])
@@ -38,9 +38,9 @@ const QueryConversationsInputSchema = z.object({
 /**
  * Create the query_conversations tool definition.
  *
- * Queries conversations via ConversationExecutor. When a taskId is provided,
- * searches by conversation ID patterns (dev-agent-{taskId} and
- * product-agent-{taskId}). Otherwise lists conversations with optional
+ * Queries conversations via ConversationExecutor. When a correlationRef is provided,
+ * searches by conversation ID patterns (dev-agent-{correlationRef} and
+ * product-agent-{correlationRef}). Otherwise lists conversations with optional
  * agent type filter.
  *
  * @param deps - Event router dependencies (needs executor)
@@ -63,11 +63,11 @@ export function createQueryConversationsTool(
         };
       }
 
-      const { taskId, agentDefinitionId } = parsed.data;
+      const { correlationRef, agentDefinitionId } = parsed.data;
 
       try {
-        // If taskId provided, search by conversation ID patterns
-        if (taskId) {
+        // If correlationRef provided, search by conversation ID patterns
+        if (correlationRef) {
           const results: Array<{
             conversationId: string;
             status: string;
@@ -75,7 +75,10 @@ export function createQueryConversationsTool(
           }> = [];
 
           // Check both dev-agent and product-agent patterns
-          const patterns = [`dev-agent-${taskId}`, `product-agent-${taskId}`];
+          const patterns = [
+            `dev-agent-${correlationRef}`,
+            `product-agent-${correlationRef}`,
+          ];
 
           for (const conversationId of patterns) {
             const info = await deps.executor.get(conversationId);
