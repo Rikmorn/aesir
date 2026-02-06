@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.5 Agentic Conversations -- Phase 56 complete, ready for Phase 57
+**Current focus:** v2.5 Agentic Conversations -- Phase 57 in progress, Plan 01 complete
 
 ## Current Position
 
-Phase: 56 of 59 (Goal-Oriented Prompt Rewrites)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-06 -- Completed 56-02-PLAN.md (dev-agent prompt rewrite)
+Phase: 57 of 59 (Conversation Reopening)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-06 -- Completed 57-01-PLAN.md (conversation reopening backend)
 
-Progress: [██████████] 100% (Phase 56: 2/2 plans complete)
+Progress: [█████░░░░░] 50% (Phase 57: 1/2 plans complete)
 
 ## Milestone History
 
@@ -30,9 +30,9 @@ Progress: [██████████] 100% (Phase 56: 2/2 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 4m 44s
-- Total execution time: 9m 28s
+- Total plans completed: 3
+- Average duration: 5m 03s
+- Total execution time: 15m 10s
 
 ## Accumulated Context
 
@@ -49,12 +49,15 @@ See PROJECT.md Key Decisions table for full history.
 | DROP-MODEL-NATIVE-DEV | 7 rules dropped as model-native (dev-agent) | 56-02 |
 | WAIT-FOR-CONSTRAINT | wait_for added as explicit constraint (framework-critical, conversation dies without it) | 56-02 |
 | ERROR-RECOVERY-DECOMP | Error recovery decomposed into 3 constraints + Example #3 (no diagnostic categories) | 56-02 |
+| WORLD-STATE-XML-TAGS | World-state injection uses <world_state> XML tags in user message for reopen context | 57-01 |
+| FIFO-EVICTION-TS | FIFO eviction on delivered_signal_ids done in TypeScript (not SQL) for pattern consistency | 57-01 |
 
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
 2. **Run dev-agent container as non-root** (infrastructure)
 3. **11 tests skipped pending infrastructure** (testing)
+4. **Dashboard schema mirror needs agent.reopened and reopen_count** (Plan 02)
 
 ### Blockers/Concerns
 
@@ -62,10 +65,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-06T20:19Z
-Stopped at: Completed 56-02-PLAN.md (dev-agent prompt rewrite) -- Phase 56 complete
+Last session: 2026-02-06T21:17Z
+Stopped at: Completed 57-01-PLAN.md (conversation reopening backend)
 Resume file: None
-Next action: Plan and execute Phase 57 (Conversation Reopening) or next v2.5 phase
+Next action: Execute Phase 57 Plan 02 (dashboard reopen UI)
 
 ---
-*Updated: 2026-02-06 -- Phase 56 complete (both prompt rewrites shipped)*
+*Updated: 2026-02-06 -- Phase 57 Plan 01 complete (backend infrastructure shipped)*
