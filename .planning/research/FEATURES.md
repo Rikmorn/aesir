@@ -1,378 +1,399 @@
-# Feature Landscape: v2.3 Unified Agent Framework
+# Feature Landscape: v2.5 Agentic Conversations
 
-**Domain:** Unified agent framework replacing per-agent services and Temporal orchestration with declarative agent definitions, conversation-based execution, and event-sourced persistence.
-**Researched:** 2026-02-01
-**Overall Confidence:** HIGH (patterns well-established across OpenAI Agents SDK, Claude Code, Google ADK, CrewAI, AutoGen/Microsoft Agent Framework, Anthropic SDK compaction API)
-**Context:** v2.3 milestone -- replacing Temporal with ConversationExecutor, unifying persistence into an event log, making agents declarative config
+**Domain:** Task primitives, conversation reopening, agent handoffs, integration event correlation, and goal-oriented prompt rewrites for an existing agentic development platform.
+**Researched:** 2026-02-06
+**Overall Confidence:** MEDIUM-HIGH (task primitives and handoff patterns well-established across frameworks; prompt rewrite evaluation is nascent; integration correlation is bespoke)
+**Context:** v2.5 milestone -- adding continuity across conversations, task-based coordination, bidirectional event correlation, and replacing procedural prompts with goal-oriented reasoning patterns.
+
+---
+
+## Competitor/Framework Analysis
+
+Before categorizing features, here is what production agent frameworks actually provide for the capabilities v2.5 targets.
+
+### Task Primitives / Units of Work
+
+| Framework | Task Model | Hierarchy | Delegation | Context Passing | Status |
+|-----------|-----------|-----------|------------|-----------------|--------|
+| **OpenAI Agents SDK** | No explicit task primitive. Work is modeled as "handoffs" between agents. The conversation IS the work unit. | Flat. No parent-child task model. Handoff chains are linear. | `transfer_to_agent()` tool call. One-way control transfer. Full conversation history passes by default, filterable via `input_filter`. | Full conversation history, optionally filtered. `on_handoff` callback for side effects. Structured input via `input_type` param. | Production (2025 GA). Provider-agnostic. |
+| **CrewAI** | First-class `Task` objects with description, expected_output, agent assignment, and context dependencies. Tasks are the core orchestration unit. | Hierarchical process with manager agent. Manager allocates tasks based on agent capabilities. No explicit parent_id -- hierarchy via process structure. | `allow_delegation=True` enables agents to ask each other for help. A2A protocol for cross-crew delegation. | Task context passed as structured descriptions. Agent memory (short-term, long-term, entity) enables cross-task learning. | Production. 20K+ GitHub stars. |
+| **LangGraph** | No explicit task primitive. State graph nodes are the work units. State is the coordination mechanism. | Graph-based. Nodes can branch, merge, loop. Not strictly hierarchical but supports hierarchical patterns. | Node transitions. State passed via shared `TypedDict` with reducer functions. | Explicit state schema with Annotated types. Full checkpoint persistence via PostgresSaver. Thread-based conversation continuity. | Production. Recommended over LangChain for agents. |
+| **Google ADK** | No explicit task primitive. Agents form a tree via `sub_agents`. Work is delegated via `transfer_to_agent()` or `AgentTool` invocation. | Explicit parent-child tree structure. Single-parent rule enforced. Three workflow agents: Sequential, Parallel, Loop. | LLM-driven delegation (transfer_to_agent) or explicit invocation (AgentTool). | Shared `InvocationContext` with `context.state` dictionary. `output_key` auto-saves agent output to state. | Production (2025). |
+| **Microsoft Agent Framework** | Multi-step workflow processes. "Task adherence" as governance feature. Converges AutoGen + Semantic Kernel. | Multi-level hierarchies supported. Manager-worker pattern in AutoGen. | Agent-to-agent delegation via conversation patterns. Manager allocates based on capabilities. | Shared session state. Message-passing between agents. | Public preview. GA targeted Q1 2026. |
+
+**Key insight:** No major framework has an explicit "task" table as a first-class database entity the way Aesir v2.5 proposes. OpenAI and LangGraph treat conversations as the work unit. CrewAI has Task objects but they are in-memory orchestration primitives, not persisted coordination entities. Aesir's task primitive -- a persisted, polymorphic, hierarchical coordination entity that groups conversations -- is genuinely novel.
+
+**Confidence: HIGH** -- Direct examination of official documentation for all five frameworks.
+
+### Conversation Reopening / Continuity
+
+| System | Model | Reopen Trigger | Context on Reopen | Reopen vs New | Status |
+|--------|-------|----------------|-------------------|---------------|--------|
+| **Zendesk** | Solved -> Open (customer reply). Closed is terminal -- creates follow-up ticket referencing original. 4-day solved-to-closed timer (configurable). | Customer reply on Solved ticket. | Full ticket history preserved. Reassigned to original solving agent. | Solved: reopen same ticket. Closed (after 4d): new follow-up ticket with original data. | Industry standard (millions of orgs). |
+| **Intercom Fin AI** | Resolved conversations can be reopened by customer follow-up. Fin resumes responding if workflow routes back to it. Only billed once per conversation even across reopens. | Customer message on resolved conversation. 4-min inactivity follow-up. | Full conversation history preserved. Fin re-engages with full context. | Reopen within resolution window. New conversation after closure. | Production (2025). |
+| **LangGraph** | Thread-based. Same `thread_id` = same conversation with accumulated state. Checkpoints enable fault recovery and continuation. | Same thread_id on new invocation. No explicit "reopen" -- threads are inherently persistent. | Full checkpoint state including conversation history, custom state, and pending operations. | Always continuation (no separate reopen concept). | Production. |
+| **Temporal** | Continue-As-New for long-running workflows. Signals on active workflows. Entity workflow pattern = one workflow per entity lifecycle. | Signal delivery. Continue-As-New for history limits. | Carry-over state explicitly passed to new execution. Signal payloads. Must handle deduplication across Continue-As-New boundaries. | Continue-As-New: new execution, same workflow ID. Signals: same execution. | Production (battle-tested). |
+
+**Key insight:** The Zendesk model is the closest analog to Aesir's proposed approach: a grace period (Solved) where the entity can be reopened in-place, and a terminal state (Closed) where follow-ups create new entities linked to the original. Aesir's `reopen` signal on terminal conversations maps to Zendesk's "customer reply on Solved ticket." The task primitive adds what Zendesk lacks: continuity across the follow-up boundary.
+
+**Confidence: HIGH** -- Zendesk documentation is authoritative. LangGraph and Temporal patterns verified against official docs.
+
+### Handoff Patterns
+
+| Framework | Handoff Types | What Transfers | Agent-Authored? | Structured? | Status |
+|-----------|---------------|---------------|-----------------|-------------|--------|
+| **OpenAI Agents SDK** | Single type: `transfer_to_agent()`. Implicit completion handoff (agent returns result). | Full conversation history (default), filterable. Optional structured input via `input_type`. | No. History auto-transferred. Optional `on_handoff` callback for side effects. | Semi-structured. History is raw messages; optional structured input. | Production. |
+| **CrewAI** | Delegation (ask for help), task completion (return result), A2A protocol (cross-crew). | Task description, expected output, agent context. Memory provides cross-task learning. | No. Framework manages context passing between tasks. | Structured task objects. | Production. |
+| **Google ADK** | `transfer_to_agent()` (LLM-driven), `AgentTool` (explicit invocation). | Shared session state via `context.state` dictionary. `output_key` saves outputs. | No. State sharing is automatic. | Structured state dictionary. | Production. |
+| **Zendesk** | Escalation (agent to supervisor), transfer (agent to specialist), follow-up (closed to new). | Ticket history, internal notes, customer context. | Partially. Agents write internal notes. But metadata transfer is automatic. | Structured (ticket fields) + unstructured (notes, history). | Industry standard. |
+| **Intercom** | Handover (Fin to human), escalation (guided by rules), follow-up. | Full conversation history. Custom attributes. AI-generated summary. | No. Automated summaries. Escalation rules configured by admins. | Mixed. Structured routing rules, unstructured conversation. | Production. |
+
+**Key insight:** Aesir's agent-authored handoffs are a genuine differentiator. No major framework gives agents explicit authorship of handoff context. They either auto-transfer full history (OpenAI) or auto-generate summaries (Intercom). The v2.5 design vision correctly identifies why this matters: "The agent knows what's important. An auto-summary of a 50-message conversation treats everything equally."
+
+However, agent-authored handoffs have a risk: if the agent writes a poor handoff, the receiving agent starts with bad context. No framework has solved this quality problem because no framework has attempted agent-authored handoffs at this level.
+
+**Confidence: HIGH** -- Official documentation reviewed for all frameworks.
+
+### Integration Event Correlation
+
+| System | Outgoing Correlation | Incoming Correlation | Bidirectional? | Status |
+|--------|---------------------|---------------------|----------------|--------|
+| **GitHub Apps (Probot)** | Create artifact -> receive artifact ID in response. Store mapping app-side. | Webhook payloads include PR number, issue number, sender, repo. Check run/suite IDs for CI. | Manual. App must maintain its own correlation store. GitHub provides no built-in "this PR belongs to this workflow" mapping. | Standard pattern. |
+| **Linear Agent Sessions** | Agent session created automatically on mention/delegation. Session tracks lifecycle. | Webhook payloads include `actor.type: "application"` to identify agent-initiated changes. Issue ID stable across webhooks. | Semi-automatic. Linear's agent session model provides some correlation. Webhook `actor` field helps distinguish agent vs human changes. | Production (2025). |
+| **Slack Apps** | Send message -> receive `ts` (timestamp ID). Use `ts` as `threadTs` for threading. | Events API delivers `message` events with `channel`, `ts`, `thread_ts`. | Manual. App must store `channel + thread_ts -> task` mapping. Slack provides no built-in correlation. | Standard pattern. |
+| **Temporal** | Workflow ID used as correlation key across all activities and signals. WorkflowId + RunId injected into all logs/traces. | Child workflow IDs derived from parent. Signal routing by workflow ID. | Automatic within Temporal. External correlation requires custom implementation. | Production. |
+
+**Key insight:** Aesir's integration correlation tables (one per integration) are the correct architecture. GitHub, Linear, and Slack all return artifact IDs on creation and include those IDs in webhook payloads. The integration layer is the right place to maintain the mapping because it processes both sides of the lifecycle. This is exactly the Temporal WorkflowId pattern but applied to external artifacts.
+
+The risk is completeness: you must record every outgoing artifact creation and handle every incoming webhook variant. Missing a correlation means the event falls through to the slow path (LLM classification), which is expensive and potentially wrong.
+
+**Confidence: HIGH** -- GitHub and Slack webhook docs are authoritative. Linear agent session model verified.
+
+### Prompt Engineering Patterns
+
+| Technique | What It Is | Evidence It Works | Applicable To | Confidence |
+|-----------|-----------|-------------------|---------------|------------|
+| **Constitutional constraints** (negative boundaries) | State what the agent must NOT do. Leave positive space for reasoning. Inspired by Constitutional AI (Anthropic 2022). | Anthropic's context engineering guide recommends "clear, direct language at the right altitude -- specific enough to guide behavior, flexible enough to provide strong heuristics." Avoids both brittle hardcoded logic and vague high-level guidance. | Product-agent, dev-agent prompt rewrites. | HIGH -- Anthropic's own recommendation. |
+| **Few-shot with reasoning** | 3-5 examples showing input -> reasoning -> action. The reasoning IS the teaching, not the output format. | Standard few-shot is well-validated. Adding reasoning traces (chain-of-thought) improves performance on complex tasks. OpenAI prompt guide: pin to model snapshots, use evals. | Product-agent (conversation judgment), dev-agent (complexity calibration). | HIGH -- Extensively validated technique. |
+| **Selective chain-of-thought** | Orchestrator agents externalize reasoning in `<reasoning>` blocks. Worker agents skip this overhead. | Anthropic recommends compaction and structured note-taking for long-running agents. Reasoning blocks serve dual purpose: better decisions + observability. Cost: extra output tokens. | Dev-agent, product-agent (orchestrators only). | MEDIUM -- Sound in principle, but impact on decision quality vs token cost is task-specific. |
+| **Structured output at boundaries** | Use XML tags/structured formats only where framework code parses agent output. Everything else in natural language. | Anthropic: "Every tool must justify its existence." Same applies to structured outputs. Over-structuring constrains agent flexibility. | Phase tags, handoff blocks -- already in spec. | HIGH -- Aligns with Anthropic guidance. |
+| **Prompt evals / LLM-as-judge** | Use a stronger model to grade agent outputs. A/B test prompt variants via shadow testing. Track metrics (task completion, hallucination rate, user satisfaction). | Industry consensus by 2025-2026: "evaluations are no longer optional for serious agent products." Braintrust, Maxim AI, Helicone, LangSmith provide tooling. | Validating prompt rewrites before and after. | HIGH -- Industry standard, multiple production tools. |
+
+**Confidence: HIGH** -- Anthropic's own engineering blog and prompt documentation reviewed. Industry evaluation tooling well-established.
 
 ---
 
 ## Table Stakes
 
-Features users expect. Missing any of these means the unified framework is incomplete relative to the v2.2 system it replaces, or deficient compared to production agent frameworks.
+Features that MUST work correctly for v2.5 to be viable. Missing any of these makes the task primitive or conversation reopening fundamentally broken.
 
-### 1. Declarative Agent Definitions
+### 1. Task CRUD and Lifecycle Management
 
-| Feature | Why Expected | Complexity | Existing Dependencies | Notes |
-|---------|--------------|------------|----------------------|-------|
-| **YAML + Markdown agent config** | Industry consensus. Claude Code uses YAML frontmatter + Markdown body. CrewAI uses `agents.yaml` + `tasks.yaml`. OpenAI Agents SDK uses code objects but industry is moving to data. The v2.3 spec proposes `definition.yaml` + `prompt.md`. This is the dominant pattern. | Low | Existing system prompts as constants, existing tool lists in orchestrator code | Claude Code: `---\nname: code-reviewer\ndescription: ...\ntools: Read, Glob, Grep\nmodel: sonnet\n---\nYou are a code reviewer...` CrewAI: separate `agents.yaml` with role/goal/backstory. Aesir's proposed split (YAML config + Markdown prompt) aligns with Claude Code's approach and keeps prompts in their natural format. |
-| **Zod schema validation on load** | All frameworks validate agent definitions at load time. CrewAI fails on malformed YAML with clear errors. OpenAI Agents SDK uses Pydantic for type enforcement. AutoGen validates `Agent` constructor parameters. Runtime errors from invalid definitions are unacceptable. | Low | Existing Zod usage throughout codebase | The `AgentDefinition` Zod schema validates identity fields, tool references, model, guardrails, history config, and triggers. Invalid definitions fail immediately at load time, not at runtime. |
-| **System prompt as primary control surface** | Every framework treats instructions/prompts as the core agent behavior definition. OpenAI: `instructions` field. CrewAI: `role` + `goal` + `backstory`. Claude Code: Markdown body. AutoGen: `system_message`. Anthropic's v2.2 principle: "Prompt Engineering over Code Engineering." | Low | Existing `ORCHESTRATOR_SYSTEM_PROMPT` constants | Move prompt constants to `.md` files verbatim. The framework reads the prompt file alongside the YAML config. No content changes needed -- only the storage location changes. |
-| **Tool references by name (not implementation)** | OpenAI Agents SDK: `tools=[get_weather]` (function objects). CrewAI: tools assigned by name or import. Claude Code: `tools: Read, Glob, Grep`. AutoGen: `tools=[web_search]`. All decouple tool selection from tool implementation. The v2.3 spec uses `"linear:get_issue"` string references resolved at runtime. | Low | Existing tool implementations in `shared/tools/`, existing name-based filtering in orchestrator | The current code already does `["linear_get_issue", ...].includes(t.name)` filtering. This formalizes the pattern with a namespace:tool_name convention. No tool implementations change. |
-| **Model and temperature config per agent** | All frameworks support per-agent model selection. OpenAI: `model="gpt-5-nano"`. Claude Code: `model: sonnet`. CrewAI: `llm: provider/model-id`. AutoGen: `model_client`. Different agents need different models (Haiku for sub-agents, Sonnet for orchestrator). | Low | Existing per-agent model selection (hardcoded in orchestrator configs) | Move from hardcoded model strings to definition YAML fields. The `runAgentLoop()` already accepts model as a parameter. |
-| **Guardrails (maxIterations, tokenBudget)** | Every production framework has hard limits. OpenAI: `reset_tool_choice` to prevent loops. Claude Code: context window as natural bound. AutoGen: retry strategies and timeout settings. LangGraph: configurable recursion limits. Without these, agents spin indefinitely. | Low | Existing `maxIterations ?? 100` and `maxTokenBudget ?? 500_000` | Move from function parameter defaults to definition YAML fields. The `runAgentLoop()` already enforces these limits. |
+| Feature | Why Expected | Complexity | Dependencies | Notes |
+|---------|--------------|------------|--------------|-------|
+| **tasks table with status machine** | Every coordination system has a work unit with statuses. Zendesk: New/Open/Pending/Solved/Closed. Linear: custom workflows. Jira: To Do/In Progress/Done. The status set (created, active, paused, completed, cancelled) maps to standard patterns. | Low | Existing agents schema, existing migration infrastructure | The spec's status set is sound. Note: no "failed" status for tasks (unlike conversations). This is intentional -- task failure is modeled as a handoff (escalation), not a terminal state. This is a good design decision. |
+| **Polymorphic creator/assignee** | The spec correctly uses `creator_type + creator_id` and `assignee_type + assignee_id` instead of direct foreign keys. This supports human-to-agent, agent-to-agent, and (future) agent-to-human assignment without schema changes. | Low | None | Good forward design. CrewAI and Google ADK both assume agent-only assignment. Aesir's polymorphic model is more flexible. No framework surveyed has this. |
+| **Task-conversation linking** | Conversations must be associated with tasks. The `task_id` column on conversations is the minimum viable link. Multiple conversations per task is expected (different phases, retries, follow-ups). | Low | Existing conversations table | Nullable `task_id` is correct for backward compatibility. Must add index on task_id for efficient lookup. |
+| **Agent tools for task management** | `create_task`, `complete_task`, `pause_task`, `handoff_task`, `list_tasks`, `get_task_context` -- these are the agent's interface to the task system. Without them, tasks are invisible to agents. | Medium | Tool registry, MCP client patterns | 6 new tools is significant but follows existing tool factory patterns. Each tool is a thin wrapper around database operations. The critical question: are tools self-contained enough that agents understand when to use each? Anthropic recommends "non-overlapping, purpose-specific" tools. `complete_task` vs `pause_task` vs `handoff_task` have clear boundaries. |
+| **Task context delivery on conversation start** | When a new conversation starts for an existing task, the agent MUST receive the most recent handoff as context. Without this, the conversation starts cold despite having task history. | Medium | Handoff table, conversation start flow | The spec says "most recent handoff as context" with older ones available via `get_task_context`. This is correct -- avoids context bloat while preserving access. Aligns with Anthropic's "just-in-time retrieval" recommendation. |
 
-**Confidence: HIGH** -- Every framework cited uses declarative-ish agent configuration. The specific YAML+Markdown split is validated by Claude Code's production usage.
+**Confidence: HIGH** -- Standard CRUD patterns. Polymorphic assignment validated by examining framework limitations.
 
-### 2. Conversation Executor (Replaces Temporal)
+### 2. Conversation Reopening
 
-| Feature | Why Expected | Complexity | Existing Dependencies | Notes |
-|---------|--------------|------------|----------------------|-------|
-| **start/signal/cancel/get/list API** | The fundamental CRUD+lifecycle for conversations. OpenAI Agents SDK: `session.run()` for start/continue. Google ADK: Runner with event loop. Microsoft Agent Framework: session-based state management. SnapLogic: continuation-based pause/resume. Temporal provided this via workflows -- the executor must match or exceed. | High | Existing Temporal workflow client (`start`, `signal`, `getHandle`, `cancel`, `list`) | This is the highest-complexity feature in v2.3. Must replicate Temporal's durable execution guarantees without Temporal. Postgres-backed for local dev, with interface that supports SQS/EventBridge for production. |
-| **Pause/resume via wait_for tool** | Every agent framework needs external wait capability. Temporal: signals. OpenAI: `pause_turn` stop reason. Google ADK: yield/pause/process/resume cycle. SnapLogic: continuation snapshots. The agent needs to express "I need to wait for X" as a tool call, not as workflow state. | Medium | Existing signal infrastructure (6 signal types in v2.2) | The `wait_for` tool replaces 6 typed Temporal signals with one freeform tool. The agent calls `wait_for({ type: "approval" })`, the framework pauses and persists. This is a structural improvement over Temporal's approach. |
-| **Full conversation history on resume** | The critical improvement over v2.2. Currently, each Temporal activity starts a fresh agent with an LLM-generated summary. Every major framework preserves full history: OpenAI Sessions store complete conversation. LangGraph checkpoints store full state. Google ADK sessions store full event history. | Medium | Existing `runAgentLoop()` accepts messages array | Persist the Anthropic API message array (user/assistant turns with tool_use and tool_result blocks) to Postgres. On resume, load and pass to `runAgentLoop()`. No summaries needed at pause boundaries. |
-| **Deterministic conversation IDs** | Standard pattern for idempotent starts. Temporal: `workflowId` for dedup. OpenAI Conversations API: durable identifier across sessions/devices. The formula `{agentDefinitionId}-{correlationKey}` ensures the same event never creates duplicate conversations. | Low | Existing Temporal `WorkflowExecutionAlreadyStartedError` handling | Replace the error-catching idempotency pattern with deterministic ID construction. Same event, same conversation ID, same result. |
-| **Concurrency control (one loop per conversation)** | Temporal enforces this via workflow execution uniqueness. Google ADK's Runner processes events synchronously per session. Without this guarantee, two simultaneous signal arrivals could run two agent loops for the same conversation, creating race conditions. | Medium | Existing Temporal workflow uniqueness guarantee | Postgres advisory locks or row-level locking on the conversation record. The executor acquires a lock before running the agent loop and releases on completion or pause. |
-| **At-least-once execution** | Temporal's core guarantee: if an activity crashes, it replays. The executor must detect stale "running" conversations (heartbeat timeout) and re-enqueue them. | Medium | Existing Temporal retry/replay infrastructure | Heartbeat column on conversations table. A periodic checker finds conversations with stale heartbeats and re-enqueues. Simpler than Temporal's deterministic replay but sufficient for agent loops. |
-| **Timeout enforcement** | Temporal: workflow-level and activity-level timeouts. The executor must wake paused conversations after N hours if no signal arrives. `wait_for` accepts timeout. The framework delivers a timeout signal when it expires. | Medium | Existing Temporal timeout configuration (24h/72h approval, 7d feedback) | pg_cron or polling-based timeout checker. Finds paused conversations past their timeout and delivers `wait_timeout` signals. The agent decides what to do (escalate, retry, complete). |
-| **Signal queueing for race conditions** | Structural fix for v2.2's retry-with-backoff hack. OpenAI session memory handles this implicitly (SDK manages ordering). Google ADK processes events synchronously (no races). When a signal arrives before the conversation has paused, it must be queued and checked on the next `wait_for` call. | Low | None -- new capability replacing workaround | Store signals on the conversation record. When `wait_for` executes, check queued signals before suspending. If a match exists, resume immediately without pausing. |
+| Feature | Why Expected | Complexity | Dependencies | Notes |
+|---------|--------------|------------|--------------|-------|
+| **Reopen signal on terminal conversations** | Zendesk and Intercom both allow reopening solved/resolved conversations via customer reply. The agent equivalent: a `reopen` signal transitions completed/failed conversations back to `queued`. | Medium | Existing signal infrastructure, existing status machine in executor | Currently, signals on terminal conversations are ignored. The change is surgical: check for `reopen` signal type, transition status to `queued`, deliver signal payload. But: full message history must be loaded, and history may be very long for completed conversations. |
+| **Full prior history on reopen** | When Zendesk reopens a Solved ticket, the agent sees the entire conversation. When LangGraph resumes a thread, full checkpoint state is loaded. The agent MUST have its prior conversation context. | Medium | History manager, existing message persistence | This is where Aesir's existing full-history persistence pays off. Unlike Temporal (which loses history on Continue-As-New), Aesir stores the complete message array. The risk: token budget. A completed conversation + new signal may exceed the model's context window. History compaction must run on reopen. |
+| **Dashboard retry/reopen action** | Operators need manual control. Every helpdesk system has a "reopen" button. The dashboard must expose this for both completed and failed conversations. | Low | Existing dashboard infrastructure, SSE for real-time updates | Low complexity because the dashboard already has conversation detail views. Add a button that calls the `signal` API with type `reopen`. |
+| **Reopen scope boundary** | Only `reopen` signal type triggers this. Other signals on terminal conversations remain ignored. This prevents accidental resurrection of completed work. | Low | Signal routing logic | Important constraint. Without it, any stale webhook could resurrect long-dead conversations. The spec is explicit about this and it is correct. |
 
-**Confidence: HIGH** -- These are the specific capabilities Temporal provides today. Each one has clear prior art in other frameworks. The executor must match all of them.
+**Confidence: HIGH** -- Zendesk and Intercom patterns are well-documented. The executor already has signal infrastructure.
 
-### 3. Unified Event Log
+### 3. Task Handoffs
 
-| Feature | Why Expected | Complexity | Existing Dependencies | Notes |
-|---------|--------------|------------|----------------------|-------|
-| **Append-only event store** | Event sourcing is the standard pattern for agent observability. LangSmith: Run Tree model with nested spans. Langfuse: traces/observations/events built on OpenTelemetry. Google ADK: event-based session history. Every observability platform records events in real-time, not reconstructed afterward. | Medium | Existing `execution_traces` table (records tool calls but NOT tool results -- noted as gap) | The event log replaces three disconnected stores. Events are written when things happen. `append()` is fire-and-forget (void return, buffered writes). Postgres batch inserts with configurable flush interval. |
-| **Event types covering full lifecycle** | LangSmith run types: chain, llm, tool. Langfuse observation types: span, generation, event. Google ADK events: function_call, function_response, text_response, state_change. The v2.3 spec defines: `tool.called`, `tool.succeeded`, `tool.failed`, `llm.response`, `agent.started`, `agent.completed`, `agent.paused`, `agent.resumed`, `agent.spawned`, `agent.child_completed`, `signal.received`. | Low | Existing trace types in `execution_traces` | The type system covers the full agent lifecycle: tool execution, LLM interaction, agent lifecycle, sub-agent lifecycle, and external signals. Each event carries conversation ID, agent instance ID, sequence number, and timestamp. |
-| **Tool results in events** | The critical gap in v2.2's `execution_traces`. LangSmith traces capture full inputs AND outputs. Langfuse generations capture model responses. Google ADK function_response events carry results. Without tool results, you cannot debug what the agent saw. | Low | None -- this is the gap being filled | `tool.succeeded` events include the tool's result payload. This is the single most important improvement to observability over v2.2. |
-| **Query interface** | All observability platforms support querying by trace/session. LangSmith: filter by trace ID, tags, time range. Langfuse: filter by session, user, time range. The event log needs `query(conversationId, opts)` for debugging and projection building. | Low | Existing PostgreSQL + Drizzle | SQL queries on the `agent_events` table with indexes on `conversation_id + sequence` and `type`. Standard database queries. |
-| **Session projection (fast reads)** | CQRS pattern from event sourcing. Write to the event log, project to optimized read models. The `agent_sessions` table replaces `tasks` with reactively-updated state: status, last event, artifacts. | Medium | Existing `tasks` table (imperatively updated by Temporal activities) | The projection subscribes to events and updates on each `tool.succeeded` (for artifacts) and lifecycle event (for status). Replaces `parsePrInfoFromTrace()` with ground-truth extraction. |
-| **Artifact extraction from tool results** | Tool results contain structured data (PR number, branch name) that must be queryable without replaying the entire conversation. LangSmith allows custom metadata on runs. Langfuse supports scored observations. The tool registry maps tools to artifact keys. | Medium | Existing PR/branch extraction via `parsePrInfoFromTrace()` | When `tool.succeeded` fires for a tool with artifact config AND the result includes `data`, store it in the session projection under the configured key. The tool knows its own output format. |
+| Feature | Why Expected | Complexity | Dependencies | Notes |
+|---------|--------------|------------|--------------|-------|
+| **task_handoffs table** | Persistent record of handoff events. Zendesk has internal notes on transfers. Temporal has event history. The handoff table captures who, what, why at each conversation boundary. | Low | Existing schema patterns | Four handoff types (completion, pause, delegation, escalation) cover the standard patterns. The spec correctly makes this metadata for agents, not framework behavior. |
+| **Agent-authored handoff content** | The core differentiator. Agents write the handoff context, choosing what matters. See Handoff Patterns analysis above. | Medium | Agent tool (`handoff_task`), prompt guidance | **Risk:** Handoff quality depends entirely on prompt engineering. If the agent writes "done" as a completion handoff, the next conversation starts with nothing useful. Prompt examples must demonstrate what good handoffs look like. Few-shot examples with reasoning are critical here. |
+| **Handoff context delivery** | When routing to an existing task, the most recent handoff must be delivered as conversation context. | Medium | Event routing, conversation start flow | Must be injected into the system prompt or initial message. The Anthropic recommendation: use `<context>` tags to separate dynamic per-conversation content from stable instructions. |
+| **Handoff type extensibility** | The spec says "don't pattern-match on handoff_type in framework code." Framework stores and delivers; agent interprets. | Low | None beyond schema | This is correct. OpenAI's handoff is a single type with optional structured input. Aesir adds type metadata but keeps framework behavior type-agnostic. New types (e.g., "review_request", "blocked") can be added via prompt guidance alone. |
 
-**Confidence: HIGH** -- Event sourcing for agent systems is the industry standard. LangSmith, Langfuse, and Google ADK all use append-only event logs with projections.
+**Confidence: HIGH** -- Handoff patterns verified across multiple frameworks. Agent-authored approach is novel but architecturally sound.
 
-### 4. History Management
+### 4. Integration Correlation
 
-| Feature | Why Expected | Complexity | Existing Dependencies | Notes |
-|---------|--------------|------------|----------------------|-------|
-| **Tool output pruning (Phase 1)** | The most impactful, cheapest compaction technique. Claude Code: two-phase (clear old tool results first, then summarize). OpenCode: head+tail preservation (first 500 + last 1500 tokens, truncate middle). Cline: middle-out truncation + dedup. JetBrains NeurIPS 2025: observation masking matched LLM summarization quality, was 7% cheaper, and faster. | Medium | Existing conversation history in Anthropic API format | When conversation exceeds `pruneThreshold`, protect last `protectedMessages` messages. For older messages: keep assistant reasoning, replace tool results with short descriptors. Deduplicate same-file reads (keep only most recent). Head+tail preservation for large results. |
-| **Protected recent messages** | Every compaction implementation protects recent context. Claude Code protects recently accessed files. OpenCode: `PRUNE_PROTECT` guards last 40K tokens. Forge Code: `retention_window` preserves recent messages. The agent needs its recent chain of thought intact. | Low | None -- new parameter on AgentDefinition | `protectedMessages: 20` in the definition. The last N messages are never touched by pruning or summarization. Simple index-based protection. |
-| **Configurable thresholds** | Forge Code supports: `token_threshold`, `message_threshold`, `turn_threshold`, `retention_window`, `eviction_window`. Anthropic SDK: `context_token_threshold` (default 100K). OpenCode: hardcoded at 95%. Community consensus: 70-80% is the right trigger point, not 95%. | Low | None -- new fields on AgentDefinition | `pruneThreshold` and `summaryThreshold` in the definition. Per-agent configuration because different agents have different context needs (product agent: 30K prune, dev agent: 80K prune). |
-| **Structured anchored summarization (Phase 2)** | When pruning alone is not enough, generate a structured summary. Factory.ai found structured summaries preserve file paths and artifact references better than freeform. OpenCode's prompt: "what we did, what we're doing, which files we're working on, what we're going to do next." Claude Code preserves "architectural decisions, unresolved bugs, and implementation details." | High | Event log session projection (for artifact data injection) | The summary has explicit sections: goal, progress, artifacts (from event log -- ground truth, not LLM memory), current state, next steps. Updated incrementally (anchored), not regenerated from scratch. This resists the "summaries of summaries" drift that every research paper identifies as the primary failure mode. |
+| Feature | Why Expected | Complexity | Dependencies | Notes |
+|---------|--------------|------------|--------------|-------|
+| **Per-integration correlation tables** | Maps external artifacts to tasks. `(external_type, external_ref) -> task_id`. Each integration maintains its own table because it processes both outgoing (MCP) and incoming (webhook) traffic. | Low | Integration schema infrastructure (linear.*, github.*, slack.*) | Schema is straightforward. The primary key on `(external_type, external_ref)` enforces one-to-one artifact-to-task mapping. This may be too restrictive -- a PR could relate to multiple tasks (e.g., monorepo with multiple issue fixes). Consider: should this be a unique constraint instead of primary key, or should it support many-to-many? |
+| **Outgoing correlation recording** | When an agent creates a PR, issue, or Slack message via MCP, the integration records the correlation. Agent passes `task_id` as MCP call context. | Medium | MCP client changes (pass task_id), integration endpoint changes (record correlation) | This requires changes to every MCP tool invocation to include task_id context. The MCP client needs a new header or parameter. Integration endpoints need new logic to extract and store the correlation. Not complex per-tool, but multiplicative across all tools. |
+| **Incoming correlation lookup** | When a webhook arrives, the integration looks up the correlation and attaches the task reference before forwarding to the agent service. | Medium | Webhook handler changes in all three integrations | This is the critical path for event routing. Must be fast (database lookup on indexed primary key). Must handle missing correlations gracefully (fall through to existing routing). |
+| **Event routing priority change** | Task reference -> fast-path start -> reasoning path. This inverts the current routing priority from "which agent handles this?" to "which task does this belong to?" | Medium | Event router refactor | Significant change to the routing pipeline. The current EventRouter is pure (no I/O in `handle()`). Adding task lookup makes it async. Consider: should the integration layer attach the task reference before the event reaches the router, or should the router do the lookup? The spec says the integration layer -- this is correct. |
 
-**Confidence: HIGH** -- Compaction is well-studied. The three-phase approach (prune first, summarize second, agent-managed memory future) is backed by JetBrains research and production usage in Claude Code, OpenCode, and Cline.
+**Confidence: MEDIUM-HIGH** -- Architecture is sound but implementation touches many files across multiple packages. The one-to-one constraint on correlation tables needs validation.
 
-### 5. Agent Registry and Single Service
+### 5. Prompt Rewrites (Phase 1)
 
-| Feature | Why Expected | Complexity | Existing Dependencies | Notes |
-|---------|--------------|------------|----------------------|-------|
-| **Single service replacing per-agent services** | Industry consensus: agents are config, not services. Claude Code: single process, agents loaded from files. OpenAI Agents SDK: single process, agents are objects. CrewAI: single process, agents from YAML. AutoGen: single runtime managing multiple agent types. No production framework deploys separate services per agent type. | Medium | Existing `dev-agent/main.ts` (port 3004), `product-agent/main.ts` (port 3005), `router/main.ts` | One `main.ts`, one HTTP server, one port. Routes: `GET /health`, `POST /events`, `GET /conversations/:id`, `POST /conversations/:id/cancel`. All webhook traffic enters through `POST /events` and the event router dispatches. |
-| **Lazy-loading agent registry** | AutoGen: agents registered with factory function, created on first use. CrewAI: YAML loaded at startup. Claude Code: agent files loaded at session start. The registry reads definitions from disk on first `get()` call, caches in memory. | Low | None -- new component | File-based for v2.3. Definitions in `packages/agents/definitions/`. Cached with mtime invalidation (no file watchers). New definition files picked up on next access without restart. |
-| **Factory-based tool registry** | AutoGen: `register()` class method with factory function. Microsoft Agent Framework: `AIFunctionFactory.Create()` with reflection. LangGraph: allowlisted tool registry. The pattern: string reference in, ToolDefinition out, with per-invocation context injection. | Medium | Existing tool implementations in `shared/tools/` | Tool factories registered at startup: `toolRegistry.register("codebase:read_file", (ctx) => createReadFileTool(ctx))`. Each factory receives `ToolContext` (agentId, correlationId, containerManager, logger) and returns a configured `ToolDefinition`. |
-| **Namespace:tool_name convention** | OpenAI: tools are functions with unique names. Claude Code: tools are named (Read, Glob, Grep). MCP: tools have server-scoped names. The namespace convention `codebase:read_file`, `linear:get_issue` groups tools by integration and prevents naming collisions. | Low | Existing tool names (e.g., `linear_get_issue`) | Simple rename from underscore to colon separator. The namespace maps to the integration/toolkit the tool belongs to. Makes tool permissions and auditing straightforward. |
+| Feature | Why Expected | Complexity | Dependencies | Notes |
+|---------|--------------|------------|--------------|-------|
+| **Goal-oriented identity sections** | Replace procedural descriptions with purpose statements. Anthropic: "clear, direct language at the right altitude." | Low | Existing prompt.md files | The current prompts have good identity sections already. The change is reducing the procedural content in `<workflow_guidance>` and `<behavior>` sections. |
+| **Constitutional constraints replacing procedures** | Replace "FIRST do X, THEN do Y" with "never do Z without checking for Q." | Medium | Existing behavior encoded in prompts | This is the highest-value prompt change. The current product-agent prompt has explicit step sequences (e.g., "Steps 1-5 happen in ONE turn"). Replacing these with constraints requires careful testing to ensure the agent still follows the intended behavior without the rails. |
+| **Few-shot examples with reasoning** | 3-5 examples showing input -> reasoning -> action. Teach judgment, not rule-following. | Medium | Prompt guide already written | The Prompt Guide already defines the format. The work is writing high-quality examples that cover common cases, edge cases, and judgment calls. This requires domain expertise about what the agents actually encounter. |
+| **Reduced directive density** | Count MUST/ALWAYS/NEVER directives. Current product-agent has ~15+ strong directives. Target: <10 for orchestrators, <5 for workers. | Low | Directive audit of existing prompts | The Prompt Guide provides the audit methodology. Each directive must pass the test: "Is there a reasonable scenario where the agent should violate this?" |
+| **Reasoning blocks for orchestrators** | `<reasoning>` blocks before significant decisions. Stored in event log. | Low | Event log already captures agent output | The format is already defined in the Prompt Guide. The agent naturally produces reasoning when prompted. The key: tell the agent WHEN to reason (significant decisions) and WHEN to skip (routine operations). |
 
-**Confidence: HIGH** -- Registry + factory pattern is the standard approach across AutoGen, Microsoft Agent Framework, and LangGraph.
+**Confidence: HIGH** -- Prompt engineering patterns well-validated. The Prompt Guide is already written and comprehensive.
 
-### 6. Signal Handling and Event Routing
+### 6. Task Concurrency Serialization
 
-| Feature | Why Expected | Complexity | Existing Dependencies | Notes |
-|---------|--------------|------------|----------------------|-------|
-| **Freeform IncomingEvent shape** | Confluent's event-driven multi-agent patterns use domain events, not integration-specific payloads. Google ADK uses typed events but with extensible schemas. AWS dynamic dispatch converts structured event attributes into semantically classified actions. No predefined enum -- any source can emit events. | Low | Existing 6 typed Temporal signals | Replace `defineSignal<[PlanApprovalPayload]>` with freeform `IncomingEvent { type: "approval", data: {...} }`. The agent speaks domain language ("approval", "pr_merged"), never integration-specific names. |
-| **Adapter normalization** | Google ADK dispatcher pattern: central agent analyzes intent and routes. AWS agentic routing: raw events transformed into context-aware domain events. The Slack adapter maps `block_actions.approve` to `"approval"`. The GitHub adapter maps `pull_request.merged` to `"pr_merged"`. Agents never see raw webhook payloads. | Low | Existing webhook parsing in dev-agent and product-agent API handlers | Extract existing webhook-to-action logic into standalone adapter functions. Each adapter transforms one integration's payloads into `IncomingEvent` objects. The adapter is the only code that knows about integration-specific payload structures. |
-| **Start rules from agent triggers** | CrewAI: tasks define which agent handles them. Google ADK: dispatcher routes to specialist agents. The event router loads triggers from all registered definitions and matches incoming events. When `linear.agent_session.created` arrives, it matches dev-agent's trigger. | Low | Existing hardcoded routing in event handlers | Move routing rules from code to agent definition `triggers` field. The router reads triggers from all registered definitions at startup. Declarative, not imperative. |
-| **Correlation-based signal routing** | Confluent: correlation ID assigned to first event, all subsequent events carry same ID. Arkency: correlation ID + causation ID pattern. The conversation ID is constructed deterministically from correlation data, enabling signal routing without database lookups. | Low | Existing correlation ID pattern in shared/mcp | The formula `{agentDefinitionId}-{correlationKey}` constructs the same conversation ID from both start events and signal events. The router resolves the conversation and delivers the signal. |
-| **Three-layer deduplication** | Webhook delivery dedup (HTTP layer). Conversation start dedup (deterministic IDs). Signal dedup (source + delivery ID). Temporal provided workflow uniqueness. The executor must match or exceed this protection. | Low | Existing `WebhookIdempotencyService` | Layer 1 is unchanged. Layer 2 comes from deterministic conversation IDs (start is idempotent). Layer 3 tracks delivered signal IDs on the conversation record. |
+| Feature | Why Expected | Complexity | Dependencies | Notes |
+|---------|--------------|------------|--------------|-------|
+| **One active conversation per task** | The spec says "Events for the same task are serialized. One problem at a time." This prevents race conditions where two conversations modify the same external artifacts simultaneously. | Medium | Task-conversation relationship, event routing | Temporal's workflow uniqueness guarantee is the closest analog. The implementation: when routing to a task with an active conversation, deliver as signal. When no active conversation, create new one. Must handle edge cases: what if the active conversation is about to complete? Signal queueing handles this. |
+| **Signal queueing for serialized events** | When a second event arrives for a task with an active conversation, it must be queued as a signal and delivered when the active conversation completes or pauses. | Low | Existing signal queueing infrastructure | The existing `queued_signals` JSONB column on conversations already handles this pattern. The change is: look up signals at the task level, not just the conversation level. |
 
-**Confidence: HIGH** -- Event routing with correlation IDs is a well-established distributed systems pattern. The specific application to agent frameworks is validated by Google ADK, Confluent's multi-agent guide, and AWS prescriptive guidance.
+**Confidence: HIGH** -- Direct extension of existing signal queueing patterns.
 
 ---
 
 ## Differentiators
 
-Features that would make Aesir's approach better than alternatives. Not expected by industry standards, but create clear competitive advantage.
+Features that set Aesir apart. Not expected by the ecosystem, but genuinely valuable.
 
-### 1. Event Log as Single Source of Truth (Replacing Three Stores)
+### 1. Persisted Task Primitive (Genuine Innovation)
 
-| Feature | Value Proposition | Complexity | Existing Dependencies | Notes |
-|---------|-------------------|------------|----------------------|-------|
-| **Converging three stores into one** | v2.2 has `execution_traces` (no tool results), `tasks` (imperatively updated), and `context_snapshots` (lossy summaries). Most frameworks have at least two (state + traces). Converging to a single event stream eliminates data consistency issues across stores. Neither LangSmith nor Langfuse handle agent state AND observability in one store. | Medium | All three existing stores (to be replaced) | The event log IS the trace log AND the state projection source. No separate "update task table" step. When a tool succeeds, the event is written once. The session projection is derived, not separately maintained. This is architecturally cleaner than any production framework researched. |
-| **Reactive projections via subscribe** | Standard event sourcing: projections subscribe to the event stream. LangSmith rebuilds dashboards from traces. Langfuse generates scores from observations. But neither offers a programmatic `subscribe()` API for custom projections. The event log's `subscribe(filter, handler)` enables arbitrary downstream consumers without modifying the log. | Medium | EventLog interface (must exist first) | Session projection is the first subscriber. Future subscribers: metrics aggregation, billing, external webhooks, audit log. Adding a new projection requires zero changes to the event log or any existing code. |
-| **Ground truth artifact injection into summaries** | No framework researched injects verified data from the event log into compaction summaries. Claude Code and OpenCode rely entirely on the LLM's memory of file paths and PR numbers. Factory.ai identified artifact loss as the primary failure mode. Anchoring summaries with event-log-sourced artifacts is a genuine improvement. | Low (with event log + session projection) | Session projection with artifacts | The Phase 2 summary's "Artifacts" section is populated from `session.artifacts`, not from the LLM. PR numbers, branch names, and file paths come from ground truth (`tool.succeeded` events), not from the LLM's potentially-lossy memory. |
+| Feature | Value Proposition | Complexity | Dependencies | Notes |
+|---------|-------------------|------------|--------------|-------|
+| **Tasks as first-class database entities** | No major agent framework persists tasks as coordination entities. OpenAI and LangGraph treat conversations as the work unit. CrewAI has in-memory Task objects. Aesir's persisted task table enables: cross-conversation continuity, historical audit, task-based routing, human-agent coordination. | Medium | Schema migration, tool factories | This is the most novel aspect of v2.5. The value compounds over time as tasks accumulate context across multiple conversations. The closest industry analog is project management tools (Linear, Jira) -- but those are external. Aesir has its own internal task graph. |
+| **Task hierarchies (parent-child)** | Google ADK and CrewAI support hierarchical agent structures but not hierarchical task structures. A parent task with subtasks enables: dev-agent creating research/implement/test subtasks, product-agent creating multiple issue-creation subtasks. | Low | `parent_id` column, depth limit check | The depth limit (max 5 levels) prevents circular delegation. Implementation is simple (recursive query or iterative parent check). The value is in prompt guidance: teaching agents to decompose work into subtasks. |
+| **Bidirectional assignment model** | The polymorphic `creator_type + assignee_type` design enables agent-to-human task assignment -- something no surveyed framework supports natively. Today's `request_human_input` becomes a special case of "create task assigned to human." | Low | Already in schema design | Not fully implemented in v2.5 (the agent-to-human notification pathway is future work), but the schema supports it from day one. This avoids a painful migration later. |
 
-**Confidence: HIGH** -- The convergence pattern is well-understood from event sourcing. The specific application to agent frameworks (one event stream for observability + state + history) is novel but architecturally sound.
+**Confidence: HIGH** -- Verified by examining all five major frameworks. None have this.
 
-### 2. Framework-Level History Management (Not Per-Agent Custom Code)
+### 2. Agent-Authored Handoffs
 
-| Feature | Value Proposition | Complexity | Existing Dependencies | Notes |
-|---------|-------------------|------------|----------------------|-------|
-| **Every agent gets compaction via config** | v2.2: only the product agent has `compactConversationHistory()`. Most frameworks require per-agent custom code for history management. Anthropic's SDK `compaction_control` parameter is the closest analogue -- but it's SDK-level, not framework-level. Making compaction a framework concern configured per-agent via `history` fields is cleaner. | Low (once history manager exists) | History manager component | The `history` field on `AgentDefinition` configures thresholds. The framework applies compaction transparently before each `runAgentLoop()` call. Agent code never touches history management. |
-| **Three-phase escalation strategy** | Most tools use one technique. Claude Code: clear tool results, then summarize. OpenCode: prune then summarize. Cline: auto-compact OR manual compact. The three-phase strategy (prune -> structured summary -> future agent-managed memory) applies the cheapest technique first and only escalates when needed. | Low (design decision, not implementation complexity) | Phases 1 and 2 of history manager | Phase 1 (pruning) handles most cases with zero LLM calls. Phase 2 (structured summary) only fires when pruning alone is insufficient. This saves LLM calls and cost compared to always-summarize approaches. JetBrains evidence: pruning-only matched summarization quality and was 7% cheaper. |
+| Feature | Value Proposition | Complexity | Dependencies | Notes |
+|---------|-------------------|------------|--------------|-------|
+| **Agents write their own handoff context** | Every other framework auto-transfers full history or auto-generates summaries. Agent-authored handoffs let the agent curate what matters. A 50-message conversation gets a 200-word handoff highlighting the key insight, not a 5000-word history dump. | Medium | Prompt engineering, `handoff_task` tool | The risk/reward profile is high on both sides. Good handoffs = dramatically better context efficiency. Bad handoffs = worse than auto-summary. Mitigation: few-shot examples in prompts showing good vs bad handoffs. |
+| **Typed handoff strategies** | Completion, pause, delegation, escalation -- each implies different content needs. A completion handoff says "here's what I built." A delegation handoff says "here's what I need you to do." The type guides the agent's writing. | Low | Schema, prompt guidance | The types are metadata, not framework behavior. This is extensible by design -- add new types via prompt guidance alone. |
 
-**Confidence: HIGH** -- Framework-level compaction is validated by Anthropic's `compaction_control` API. The three-phase approach is backed by JetBrains NeurIPS 2025 research.
+**Confidence: MEDIUM** -- No production system uses agent-authored handoffs at this level. Sound in theory, must be validated empirically.
 
-### 3. Structural Race Condition Fix (Signal Queueing)
+### 3. Integration-Layer Correlation (vs Router-Side Matching)
 
-| Feature | Value Proposition | Complexity | Existing Dependencies | Notes |
-|---------|-------------------|------------|----------------------|-------|
-| **Signal queueing eliminates retry-with-backoff** | v2.2 has a known race condition: signals arrive before the workflow starts. The fix is `retry-with-backoff` (a timing-dependent workaround). No framework researched has an explicit signal queueing mechanism -- most avoid the problem by using synchronous event processing (Google ADK) or SDK-managed sessions (OpenAI). Aesir's approach (queue on conversation record, check on `wait_for`) is a structural fix. | Low | Conversation persistence with `queuedSignals` field | Three states when signal arrives: (1) paused with matching type -- resume, (2) paused with wrong type -- reject, (3) running/not yet paused -- queue. When `wait_for` fires, check queue before suspending. If match, resume immediately. No `sleep(500ms)` hacks. |
+| Feature | Value Proposition | Complexity | Dependencies | Notes |
+|---------|-------------------|------------|--------------|-------|
+| **Correlation tables in integration packages** | The integration processes both outgoing (create PR) and incoming (PR review webhook) traffic. It has the most information for mapping artifacts to tasks. This is more reliable than router-side JSONB metadata matching (which is fuzzy). | Medium | Per-integration schema changes, MCP protocol changes | The design matches Temporal's WorkflowId pattern applied to external artifacts. The integration is the boundary where correlation is most accurate. |
+| **Routing priority inversion** | "Which task does this belong to?" instead of "Which agent handles this?" Most events in a mature system are follow-ups, not novel work. Task-first routing is O(1) database lookup vs O(n) LLM classification. | Medium | Event router refactor | This reduces LLM slow-path invocations (expensive) in favor of database lookups (cheap). The savings compound as the system handles more concurrent tasks. |
 
-**Confidence: HIGH** -- This is a direct fix for a documented v2.2 bug with clear implementation path.
+**Confidence: HIGH** -- Temporal's correlation pattern is battle-tested. The integration-layer approach is architecturally sound.
 
-### 4. Zero-Infrastructure Agent Addition
+### 4. Prompt Rewrites as Systematic Upgrade
 
-| Feature | Value Proposition | Complexity | Existing Dependencies | Notes |
-|---------|-------------------|------------|----------------------|-------|
-| **New agent = new definition directory** | Currently: adding an agent requires new service, new Dockerfile, new port, new Temporal worker, ~400 lines of boilerplate. In v2.3: add `definitions/new-agent/definition.yaml` + `prompt.md`. No code changes. No infrastructure changes. Claude Code and CrewAI both achieve this, but they're single-process tools. Achieving this for a production distributed system (webhooks, signals, durable execution) is genuinely harder and more valuable. | Already covered by registry + single service | Agent registry, tool registry, event router | The registry picks up new definitions on next access. Triggers from the definition integrate with the event router. Existing tools are referenced by name. This is the primary developer experience improvement in v2.3. |
+| Feature | Value Proposition | Complexity | Dependencies | Notes |
+|---------|-------------------|------------|--------------|-------|
+| **Formal prompt authoring guide** | The PROMPT_GUIDE.md is a ruleset for prompt quality. No surveyed framework publishes internal prompt authoring standards. This ensures consistency across agents and contributors. | Already done | PROMPT_GUIDE.md exists | The guide is comprehensive: 7 rules, anti-pattern catalog, review checklist. The value is in enforcement -- using it as the standard for v2.5 prompt rewrites. |
+| **Constitutional + few-shot approach** | Replaces state machines with reasoning patterns. More robust to novel inputs. Aligns with Anthropic's own recommendations for context engineering. | Medium | Domain expertise for example writing | The current product-agent prompt has ~15 strong directives and explicit step sequences. Replacing these with 4-5 constraints and 3-5 examples requires deep understanding of what the agent encounters in production. |
 
-**Confidence: HIGH** -- This is a direct consequence of the architecture, not a separate feature to implement. If the registries and single service work, this works.
-
-### 5. Domain-Language Event Normalization
-
-| Feature | Value Proposition | Complexity | Existing Dependencies | Notes |
-|---------|-------------------|------------|----------------------|-------|
-| **Agents think in domain terms, not integration terms** | The adapter layer normalizes `block_actions.approve` to `"approval"` and `pull_request.merged` to `"pr_merged"`. This means agent prompts never mention Slack, GitHub, or Linear event structures. Adding Jira support means adding an adapter -- existing agent prompts and `wait_for` types are unchanged. Google ADK's dispatcher pattern is the closest analogue, but it uses LLM routing (expensive). Aesir's approach uses deterministic adapters (free). | Low | Adapter functions (new code) | Each adapter is a pure function: `(rawPayload) => IncomingEvent | null`. Highly testable, no dependencies, no state. Integration-agnostic agent definitions are the payoff. |
-
-**Confidence: HIGH** -- This is an adapter pattern, one of the simplest and most well-understood patterns in software engineering.
+**Confidence: HIGH** -- Anthropic's own engineering blog validates this approach.
 
 ---
 
 ## Anti-Features
 
-Features to deliberately NOT build in v2.3. These are common traps that add complexity without proportional value for Aesir's specific use case.
+Things to deliberately NOT build. Common mistakes in this domain.
 
-### Architecture Over-Engineering
-
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| **Database-backed agent definitions** | The v2.3 spec supports it (the interface abstracts the backing store), but building DB storage, admin API, and migration tooling for agent definitions is premature. There are 5 agents. They change infrequently. File-based is sufficient and keeps definitions in version control where they belong. | File-based definitions with `AgentRegistry` interface. Database backing is a future extension, not a v2.3 deliverable. |
-| **Kafka/SQS/EventBridge implementations** | The `EventLog` and `ConversationExecutor` interfaces are designed for these backends. But implementing them adds distributed systems complexity (exactly-once delivery, partition ordering, dead letter queues) that is unnecessary for local dev and early production. | Postgres implementations for v2.3. The interfaces support swapping backends later without changing agent or framework code. |
-| **Cross-agent collaboration (agent-to-agent signaling)** | The architecture supports it (agents can signal each other via the executor). But wiring it adds signal type negotiation, dependency tracking between conversations, and deadlock detection. Aesir's current agents don't need this -- the orchestrator spawns sub-agents synchronously. | Sub-agents run inline via `spawn_agent` (same process, separate conversation). Cross-agent signaling is out of scope for v2.3. |
-| **Agent marketplace / third-party definitions** | The framework supports external definitions. But packaging, distribution, sandboxing, and trust verification for third-party agents is a product in itself. | Internal definitions only. The `AgentRegistry` interface supports external sources later. |
-| **Dynamic model selection per request** | RouteLLM and MasRouter dynamically select models based on query complexity. Aesir has 5 agents with fixed model assignments. The complexity of model routing outweighs any cost savings at this scale. | Fixed model per agent in definition YAML. Update the definition to change the model. |
-| **Plugin/middleware architecture for the framework** | Building a general-purpose extensible framework with lifecycle hooks, middleware chains, and plugin registries. The v2.3 spec describes 7 specific components. Building extension points for hypothetical future needs adds accidental complexity. | Build the 7 components as direct implementations. Refactor to extensibility patterns only when a concrete extension need arises. |
-
-### History Management Over-Engineering
+### 1. Auto-Generated Handoffs
 
 | Anti-Feature | Why Avoid | What to Do Instead |
 |--------------|-----------|-------------------|
-| **Phase 3: Agent-managed memory (MemGPT/Letta style)** | Adds `memory:save` and `memory:search` tools. The agent manages its own memory via LLM calls. Adds cost (extra LLM calls), complexity (memory retrieval quality), and a new failure mode (agent forgets to save important things). Not needed when Phase 1+2 handle most cases. | Defer to post-v2.3. The architecture supports it (just add tools to the registry). No framework changes needed when the time comes. |
-| **Opaque/encrypted compression** | OpenAI's `/responses/compact` achieves 99.3% token reduction. But it's a black box -- cannot inspect, debug, or port across providers. Aesir uses Anthropic directly; this is not available. | Phase 1 (pruning) + Phase 2 (structured summary) provide transparent, debuggable compaction. |
-| **Cross-session learning** | Agent improves over time by remembering past tasks. Requires vector store, embedding pipeline, semantic search. Unclear value for Aesir's use case where agents work on discrete tasks with clear boundaries. | Each conversation is independent. Convention discovery happens via codebase tools (read existing code, detect patterns). |
-| **Automatic compaction model selection** | Cline community proposes using cheap models (Llama 3, Mistral) for summarization. Adds multi-model complexity (auth, routing, quality verification). | Use a single `summaryModel` per agent definition (default: Haiku). One model, configured in YAML. |
+| **LLM-generated summaries at conversation boundaries** | Intercom's Fin generates AI summaries on handover. These treat all messages equally, miss the agent's assessment of what matters, and add latency + cost. The v2.5 design vision explicitly rejects this: "An auto-summary of a 50-message conversation treats everything equally. The agent knows that the key insight was on message 37." | Agent writes its own handoff via `handoff_task` tool. Few-shot examples demonstrate good handoff content. If the agent doesn't write one (bug), the framework stores a minimal "no handoff provided" record -- never auto-generates. |
 
-### Observability Over-Engineering
+### 2. Framework Pattern-Matching on Handoff Types
 
 | Anti-Feature | Why Avoid | What to Do Instead |
 |--------------|-----------|-------------------|
-| **Full OpenTelemetry integration** | Langfuse is built on OpenTelemetry. LangSmith uses Run Tree. Both are complex instrumentation frameworks. Aesir's event log already captures everything needed for debugging. Adding OTel spans, exporters, and collectors adds infrastructure complexity. Benchmarks show 5-15% overhead from observability frameworks (LangSmith: ~0%, Langfuse: ~15%, AgentOps: ~12%). | Write events to Postgres directly via the `EventLog` interface. The `subscribe()` API allows adding OTel export as a subscriber later without changing any event-producing code. |
-| **Real-time event streaming dashboard** | WebSocket infrastructure, streaming UI, real-time trace visualization. High complexity, low immediate value when conversations run in the background. | SQL queries on `agent_events` table. Pino logs for development. Dashboard is a future UI concern. |
-| **LLM-as-judge evaluation pipelines** | Braintrust excels at this. LangSmith supports it. But evaluation requires datasets, scoring rubrics, and regression test infrastructure. This is an MLOps concern, not a framework concern. | Monitor via event log queries. Manual evaluation of agent quality through conversation review. Automated evaluation is a separate initiative. |
+| **If/else on handoff_type in executor code** | The spec's expansion constraint #3: "Don't pattern-match on handoff_type in framework code." If you add `if (handoff.type === 'escalation') { notifySlack() }`, you're fighting the agent for control. The agent should decide whether and how to notify. | Store handoff type as metadata. Deliver to receiving agent as context. The agent interprets the type and decides actions. New handoff types can be added without any framework code changes. |
 
-### Signal Handling Over-Engineering
+### 3. Auto-Completion on External Signals
 
 | Anti-Feature | Why Avoid | What to Do Instead |
 |--------------|-----------|-------------------|
-| **LLM-based signal classification** | Using an LLM to classify every incoming signal type. Adds latency and cost to every webhook. The existing smart router already handles ambiguous events via slow-path LLM classification. Signal routing is deterministic (conversation ID + expected wait type). | Deterministic signal matching. The router checks `pendingWait.type` against `signal.type`. Mismatches are rejected, not reclassified. LLM classification only for initial event routing (existing smart router), not for signal delivery. |
-| **Complex event processing (CEP)** | Aggregating multiple events before routing (e.g., "3 PR reviews within 1 hour = ready for merge"). Adds temporal windowing, event buffering, and complex matching rules. | Each event is processed independently. The agent reasons about aggregated state via its tools (e.g., query PR reviews). Business logic stays in the agent, not in event processing infrastructure. |
-| **Bi-directional event bus** | Events flow in AND out of the agent system. Agents publish events that external systems subscribe to. Adds publisher/subscriber infrastructure, event schemas, and API contracts. | Events flow in via `POST /events`. The event log's `subscribe()` API enables outbound event forwarding as a future extension. For v2.3, the agent communicates outward via its tools (Slack, Linear, GitHub MCP calls). |
+| **Task auto-completes when PR merges or issue closes** | The spec's expansion constraint #6: "Don't auto-complete on external signals." A merged PR doesn't mean the task is done -- there might be documentation, deployment verification, or monitoring to follow. The agent decides when work is complete. | Deliver the external signal (pr_merged, issue_closed) to the task's active conversation. The agent evaluates whether the task is actually done and calls `complete_task` if so. |
+
+### 4. Global Orchestrator Agent
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| **A persistent agent that routes all events and manages all tasks** | The spec's open question about a global orchestrator. This creates a bottleneck, single point of failure, and high cost (every event goes through an LLM). LangGraph's recommendation: keep orchestration lightweight and stateless where possible. | Task-first routing (database lookup) for correlated events. Fast-path for unambiguous triggers. LLM slow-path only for genuinely novel/ambiguous events. The routing logic is distributed across the integration layer and event router, not centralized in one agent. |
+
+### 5. Complex Task Status Machine
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| **Adding Zendesk-style intermediate statuses (pending, on-hold, blocked, review)** | Over-engineering the status machine creates framework behavior that fights agent judgment. Zendesk needs 6 statuses because human agents need workflow rails. AI agents reason about their state -- they don't need a status to tell them they're blocked. | Keep 5 statuses (created, active, paused, completed, cancelled). Use handoff types and task metadata for richer state. The agent knows it's blocked; it writes a handoff saying so. Adding a "blocked" status adds framework code without agent value. |
+
+### 6. Eager Context Loading
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| **Loading all task handoffs into the system prompt** | The spec's open question about context pressure. Long-lived tasks accumulate handoffs. Loading all of them wastes context window on potentially irrelevant history. Anthropic's recommendation: "just-in-time retrieval via tools rather than pre-processing all data upfront." | Deliver most recent handoff on conversation start. Provide `get_task_context` tool for the agent to retrieve older handoffs when needed. The agent decides how far back to look. |
+
+### 7. Deterministic Stale Task Cleanup
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| **Framework auto-closes tasks after N days of inactivity** | The spec's open question. Auto-closing may kill work that's legitimately paused (waiting for external dependency, pending human action). Glovo's approach (auto-remove stale feature flags) works for flags but not for work items that may have legitimate long pauses. | Hybrid approach (per spec): framework flags inactive tasks via scheduled job (sends timeout signal), agent decides what to do (follow up, discard, retry). Same pattern as existing `wait_for` timeouts. The framework detects; the agent decides. |
 
 ---
 
 ## Feature Dependencies
 
 ```
-                 Agent Definition Schema (Zod)
-                         |
-              +----------+-----------+
-              |                      |
-              v                      v
-       Agent Registry         Tool Registry
-       (lazy load from        (factory functions,
-        definitions/)          namespace resolution)
-              |                      |
-              +----------+-----------+
-                         |
-                         v
-                    Event Log
-                  (append-only,
-                   buffered writes)
-                         |
-              +----------+-----------+
-              |                      |
-              v                      v
-       Session Projection     History Manager
-       (reactive from         (pruning + summary
-        events, artifacts)     + protected messages)
-              |                      |
-              +----------+-----------+
-                         |
-                         v
-              Conversation Executor
-              (start/signal/cancel/get,
-               concurrency, timeouts,
-               at-least-once)
-                         |
-              +----------+-----------+
-              |                      |
-              v                      v
-        Event Router           wait_for Tool
-        (start rules,          (framework-
-         signal matching,        intercepted
-         adapter normalization)   tool call)
-              |                      |
-              +----------+-----------+
-                         |
-                         v
-                Single HTTP Service
-                (main.ts, one port,
-                 POST /events entry)
-                         |
-                         v
-               Router Adaptation
-               (smart router:
-                Temporal -> executor)
-                         |
-                         v
-              Temporal Removal + Cleanup
-              (delete workflows, signals,
-               per-agent services, old tables)
-                         |
-                         v
-                E2E Validation
-                (dev-agent + product-agent
-                 full workflow smoke test)
+Phase 1: Prompt Rewrites (independent)
+  - No dependencies on other v2.5 features
+  - Can be done in parallel with everything else
+
+Phase 2: Conversation Reopening
+  - Depends on: existing executor signal infrastructure
+  - Partially independent: reopen works without tasks
+
+Phase 3: Task Primitive
+  - tasks table + task_handoffs table (schema)
+  - conversations.task_id column (schema)
+  - 6 agent tools (create_task, complete_task, pause_task, handoff_task, list_tasks, get_task_context)
+  - Integration correlation tables (per integration)
+  - MCP protocol changes (task_id context)
+  - Event routing priority change (task-first lookup)
+  - Depends on: conversation reopening (for task-routed events)
+
+Phase 4: Prompt Evolution
+  - Depends on: task tools being available
+  - Depends on: prompt rewrites establishing the new style
+  - Agents learn to use task lifecycle in their prompts
+
+Dependency chain:
+  Prompt Rewrites ─────────────────────────────────────┐
+                                                        ├──> Prompt Evolution
+  Conversation Reopening ──> Task Primitive ────────────┘
 ```
 
 ### Critical Path
 
-1. **Agent Definition Schema + Registries** -- everything references these
-2. **Event Log + Session Projection** -- executor depends on event recording
-3. **History Manager** -- executor needs compaction before resuming conversations
-4. **Conversation Executor** -- the core replacement for Temporal
-5. **Event Router + Adapters + wait_for** -- connects external events to conversations
-6. **Single Service** -- wires everything together
-7. **Router Adaptation** -- adapt existing smart router from Temporal to executor
-8. **Temporal Removal** -- clean up after cutover
-9. **E2E Validation** -- proves the full flow works
+The critical path is: Conversation Reopening -> Task Primitive -> Prompt Evolution.
 
-### Parallelizable Work
-
-- **Agent definition files** (YAML + Markdown) can be created from existing prompts/configs in parallel with framework code
-- **Event adapters** (Slack, GitHub, Linear) can be built in parallel once `IncomingEvent` shape is defined
-- **History manager** can be built in parallel with conversation executor (they share the definition schema but not implementation)
-- **Database schema + migrations** can be built in parallel with framework components
+Prompt rewrites are independent and should be done first (or in parallel with Phase 2) because they establish the new prompt style that Phase 4 builds on.
 
 ---
 
 ## MVP Recommendation
 
-### Must Have for v2.3 Launch
+For MVP (minimum that delivers value), prioritize:
 
-1. **AgentDefinition schema + validation** -- 5 agents with definition files that produce identical configs to v2.2
-2. **AgentRegistry** -- lazy loading from files, cached with mtime invalidation
-3. **ToolRegistry** -- factory-based resolution with namespace:tool_name convention
-4. **EventLog** -- append-only Postgres store with query, subscribe, flush
-5. **Session projection** -- reactive status + artifact tracking from events
-6. **ConversationExecutor** -- start/signal/cancel/get/list with full conversation persistence
-7. **wait_for tool** -- pause/resume conversations with type matching and timeout
-8. **History manager** -- Phase 1 (tool output pruning) + Phase 2 (structured anchored summarization)
-9. **Event router** -- start rules from triggers + signal matching from correlation
-10. **Event adapters** -- Slack, GitHub, Linear payload normalization
-11. **Single HTTP service** -- one main.ts replacing three per-agent services
-12. **Smart router adaptation** -- Temporal calls to executor calls
-13. **Three-layer deduplication** -- webhook, conversation start, signal
-14. **Signal queueing** -- structural race condition fix
-15. **Timeout enforcement** -- paused conversation wake-up
-16. **Temporal removal** -- delete workflows, signals, per-agent services
+1. **Prompt Rewrites** (Phase 1) -- Highest ROI. Removes the state machine anti-pattern from both orchestrator prompts. No schema changes, no runtime changes. Pure prompt improvement. Testable immediately.
 
-### Defer to Post-v2.3
+2. **Conversation Reopening** (Phase 2) -- Enables follow-up on completed work. Surgical change to executor (allow `reopen` signal on terminal conversations). Dashboard button for manual reopen.
 
-- Agent-managed memory (Phase 3 history)
-- Database-backed agent definitions (admin API)
-- Kafka/SQS/EventBridge event log backends
-- Cross-agent collaboration (agent-to-agent signaling)
-- OpenTelemetry integration
-- Real-time streaming dashboard
-- Cross-session learning
-- Production deployment infrastructure (AWS services)
+3. **Task Primitive core** (Phase 3, partial) -- tasks table, task_handoffs table, conversations.task_id, 6 agent tools. Integration correlation tables.
+
+4. **Event routing changes** (Phase 3, partial) -- Task-first routing. Integration correlation lookup.
+
+5. **Prompt Evolution** (Phase 4) -- Update agent prompts to leverage tasks.
+
+### Defer to Post-v2.5
+
+- **Agent-to-human task notification pathway**: Schema supports it, but the delivery mechanism (Slack DM, email) is future work.
+- **Cross-agent task discovery**: Agents querying each other's tasks for coordination. Useful but not critical for v2.5.
+- **Task analytics / cross-session learning**: Aggregating patterns across completed tasks. Requires task history to accumulate first.
+- **Proactive task creation**: Agents identifying work without event triggers. Requires scheduling mechanism.
+- **Many-to-many artifact correlation**: If a PR fixes multiple issues/tasks, the one-to-one correlation table may need relaxing. Validate against real usage before changing.
 
 ---
 
-## Existing Feature Inventory (Unchanged in v2.3)
+## Spec Validation: Where v2.5 Aligns With and Diverges From Industry
 
-These features already exist and require NO changes. Listed for completeness because they interact with v2.3 features.
+### Strong Alignment
 
-| Feature | Location | How It Interacts with v2.3 |
-|---------|----------|---------------------------|
-| `runAgentLoop()` | `shared/agent-loop/` | Core runtime unchanged. ConversationExecutor calls it with messages + resolved tools. |
-| MCP HTTP protocol | `shared/mcp/client.ts` | Tool factories use `callMcpTool()` unchanged. |
-| MCP tool permissions | Integration DB tables | Same permission checks, invoked through tool registry factories. |
-| MCP rate limiting | Integration HTTP middleware | Same 100 req/min/agent limit applies. |
-| Dev container sandbox | `@aesir/platform` | Codebase tools wrap `DevContainerManager.execute()` unchanged. |
-| Pino structured logging | `@aesir/platform` | Agents use existing logger with correlation IDs. |
-| PostgreSQL + Drizzle ORM | `@aesir/platform` | New tables use same connection, same migration pattern. |
-| Webhook receivers | Integration HTTP servers | Same webhook handling. Events forwarded to single agent service. |
-| OAuth credential storage | Integration DB schemas | Unchanged. MCP tools access credentials as before. |
-| Integration packages | `@aesir/integration-*` | Linear, GitHub, Slack packages unchanged. |
+| Spec Decision | Industry Pattern | Assessment |
+|---------------|-----------------|------------|
+| Nullable task_id on conversations | LangGraph thread-based persistence; backward-compatible by design | Correct. Existing conversations work unchanged. |
+| Integration-layer correlation | Temporal WorkflowId pattern applied to external artifacts | Correct. Integration has the most information for mapping. |
+| Agent-decided task completion | No framework auto-completes on external signals | Correct. Agent judgment > deterministic rules. |
+| Constitutional + few-shot prompts | Anthropic context engineering recommendations | Correct. Well-validated approach. |
+| Serialized task conversations | Temporal workflow uniqueness guarantee | Correct. Prevents race conditions. |
+| Reopen via explicit signal only | Zendesk: customer reply triggers reopen, not system | Correct. Prevents accidental resurrection. |
+| Most recent handoff as default context | Anthropic: just-in-time retrieval over pre-loading | Correct. Token-efficient with tool-based access to history. |
+
+### Productive Divergence (Better Than Industry)
+
+| Spec Decision | Industry Pattern | Assessment |
+|---------------|-----------------|------------|
+| Agent-authored handoffs | OpenAI: auto-transfer full history. Intercom: AI-generated summary. | **Novel and promising.** Higher potential quality but higher risk. Must be validated with good few-shot examples. |
+| Persisted task primitive | No framework has this. Conversations are the work unit everywhere. | **Genuinely innovative.** Enables cross-conversation continuity that no framework provides. The value compounds over time. |
+| Polymorphic creator/assignee | All frameworks assume agent-only assignment. | **Forward-looking.** Costs nothing now, prevents painful migration later. |
+| Handoff type as metadata | OpenAI has one handoff type. | **More flexible.** Types grow via prompt guidance, not framework code. |
+
+### Potential Concerns
+
+| Spec Decision | Concern | Mitigation |
+|---------------|---------|------------|
+| One-to-one correlation (PK on external_type + external_ref) | Monorepo PRs fixing multiple issues would need multiple tasks or a junction table. | Monitor real usage. If one-to-many is needed, change PK to unique constraint + add task_id to composite. |
+| Agent-authored handoff quality | No production system has validated this pattern. Bad handoffs = worse than auto-summary. | Few-shot examples in prompts showing good vs bad handoffs. Monitoring handoff token counts as a proxy for quality. |
+| 6 new tools at once | Anthropic recommends minimal, non-overlapping tool sets. 6 tools is a significant addition. | The tools have clear boundaries (create vs complete vs pause vs handoff vs list vs get_context). Consider: can `complete_task` and `pause_task` be merged into `update_task_status` with a status parameter? This reduces the tool count but makes tool choice less obvious. Recommendation: keep separate for clarity. |
+| Prompt rewrite risk | Removing procedural rails may cause regression in edge cases the procedures handled. | Before/after evaluation using LLM-as-judge on a test suite of real conversations. Shadow testing: run both prompt versions and compare outputs. |
+| Context pressure on long-lived tasks | Handoffs accumulate. `get_task_context` can return a lot of data. | Token budget on handoff content (the spec mentions this as a safety net). Summarization of old handoffs if needed. |
+
+---
+
+## Prioritization Matrix
+
+| Feature | Business Value | Technical Risk | Complexity | Recommendation |
+|---------|---------------|---------------|------------|----------------|
+| Prompt rewrites (Phase 1) | HIGH -- Directly improves agent decision quality | LOW -- Prompts are rollbackable | LOW-MEDIUM | **Do first.** Zero infrastructure risk, immediate quality improvement. |
+| Conversation reopening (Phase 2) | HIGH -- Enables follow-up on existing work | LOW -- Surgical change to existing infrastructure | MEDIUM | **Do second.** Foundation for task-based routing. |
+| Task table + tools (Phase 3a) | HIGH -- Core coordination primitive | MEDIUM -- New schema, new tools | MEDIUM | **Do third.** The new capability that everything else builds on. |
+| Integration correlation (Phase 3b) | HIGH -- Enables task-first routing | MEDIUM -- Touches all three integrations | MEDIUM-HIGH | **Do with Phase 3a.** Critical for event-to-task routing. |
+| Event routing changes (Phase 3c) | HIGH -- Reduces LLM slow-path usage | MEDIUM -- Refactors core routing logic | MEDIUM | **Do with Phase 3b.** Completes the task-first routing pipeline. |
+| Prompt evolution (Phase 4) | HIGH -- Agents leverage task lifecycle | LOW -- Prompt changes only | LOW-MEDIUM | **Do last.** Requires task tools to be available. |
 
 ---
 
 ## Sources
 
-### Agent Definition Formats
-- [OpenAI Agents SDK - Agents](https://openai.github.io/openai-agents-python/agents/) - Agent class API with name, instructions, model, tools, handoffs, hooks
-- [OpenAI Agents SDK - GitHub](https://github.com/openai/openai-agents-python) - Lightweight framework with Agent, Handoff, Guardrail primitives
-- [CrewAI YAML Configuration](https://deepwiki.com/crewAIInc/crewAI/8.2-yaml-configuration) - Declarative agents.yaml and tasks.yaml with variable interpolation
-- [CrewAI Getting Started](https://docs.crewai.com/en/quickstart) - @CrewBase decorator pattern linking YAML to Python
-- [Claude Code Custom Subagents](https://code.claude.com/docs/en/sub-agents) - YAML frontmatter + Markdown body, tools/model/permissionMode fields
-- [AutoGen Agents](https://microsoft.github.io/autogen/stable//user-guide/agentchat-user-guide/tutorial/agents.html) - AssistantAgent with name, model_client, tools, system_message
-- [AutoGen Agent Runtime](https://microsoft.github.io/autogen/stable/user-guide/core-user-guide/framework/agent-and-agent-runtime.html) - Factory-based agent registration with runtime management
+### Production Agent Frameworks (HIGH confidence)
+- [OpenAI Agents SDK -- Handoffs](https://openai.github.io/openai-agents-python/handoffs/)
+- [OpenAI Agents SDK -- Multi-Agent](https://openai.github.io/openai-agents-python/multi_agent/)
+- [CrewAI Documentation -- Agents](https://docs.crewai.com/core-concepts/Agents/)
+- [CrewAI -- A2A Agent Delegation](https://docs.crewai.com/en/learn/a2a-agent-delegation)
+- [LangGraph -- Persistence](https://docs.langchain.com/oss/python/langgraph/persistence)
+- [Google ADK -- Multi-Agents](https://google.github.io/adk-docs/agents/multi-agents/)
+- [Microsoft Agent Framework Introduction](https://azure.microsoft.com/en-us/blog/introducing-microsoft-agent-framework/)
 
-### Conversation Persistence and Pause/Resume
-- [OpenAI Agents SDK Sessions](https://openai.github.io/openai-agents-python/sessions/) - SQLite, SQLAlchemy, Dapr, OpenAI-hosted, encrypted session backends
-- [OpenAI Session Memory Cookbook](https://cookbook.openai.com/examples/agents_sdk/session_memory) - Context engineering with session-based persistence
-- [OpenAI Conversation State](https://platform.openai.com/docs/guides/conversation-state) - Conversations API with durable identifiers
-- [LangGraph Persistence](https://docs.langchain.com/oss/python/langgraph/persistence) - Checkpoint-based state persistence across conversation turns
-- [LangGraph Checkpointing Best Practices](https://sparkco.ai/blog/mastering-langgraph-checkpointing-best-practices-for-2025) - PostgresSaver for production, InMemorySaver for testing
-- [Google ADK Event Loop](https://google.github.io/adk-docs/runtime/event-loop/) - Yield/pause/process/resume cycle with session state management
-- [SnapLogic Agent Continuations](https://www.snaplogic.com/blog/agent-continuations-for-resumable-ai-workflows) - Continuation-based snapshots for pause/resume
-- [Microsoft Agent Framework - Persisted Conversations](https://learn.microsoft.com/en-us/agent-framework/tutorials/agents/persisted-conversation) - Thread serialization with Cosmos DB
+### Helpdesk/Workflow Systems (HIGH confidence)
+- [Zendesk -- About the ticket lifecycle and ticket statuses](https://support.zendesk.com/hc/en-us/articles/8263915942938-About-the-ticket-lifecycle-and-ticket-statuses)
+- [Zendesk -- Updating and solving tickets](https://support.zendesk.com/hc/en-us/articles/4408832151834-Updating-and-solving-tickets)
+- [Intercom -- Fin AI Agent explained](https://www.intercom.com/help/en/articles/7120684-fin-ai-agent-explained)
+- [Intercom -- Fin AI Agent resolutions](https://www.intercom.com/help/en/articles/8205718-fin-ai-agent-resolutions)
+- [Temporal -- Managing very long-running Workflows](https://temporal.io/blog/very-long-running-workflows)
+- [Temporal -- Events and Event History](https://docs.temporal.io/workflow-execution/event)
 
-### Event Sourcing and Observability
-- [LangSmith Tracing Deep Dive](https://medium.com/@aviadr1/langsmith-tracing-deep-dive-beyond-the-docs-75016c91f747) - Run Tree model, run_type classification, context propagation
-- [LangSmith Observability Concepts](https://docs.langchain.com/langsmith/observability-concepts) - Traces, runs, nested spans
-- [Langfuse Tracing Data Model](https://langfuse.com/docs/observability/data-model) - Traces, observations (span/generation/event), OpenTelemetry foundation
-- [Langfuse OpenTelemetry Integration](https://langfuse.com/integrations/native/opentelemetry) - OTel-native SDK with semantic conventions
-- [AI Agent Observability Tools 2026](https://research.aimultiple.com/agentic-monitoring/) - Platform comparison with overhead benchmarks
-- [AgentOps Taxonomy (arXiv)](https://arxiv.org/html/2411.05285v1) - Academic taxonomy of agent traceable artifacts
-- [Event Sourcing Pattern - Azure](https://learn.microsoft.com/en-us/azure/architecture/patterns/event-sourcing) - Append-only logs, projections, replay, snapshots
-- [Event Sourcing - Kurrent](https://www.kurrent.io/event-sourcing) - Projections as read-side optimization, replayability
+### Prompt Engineering (HIGH confidence)
+- [Anthropic -- Effective Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)
+- [Anthropic -- Constitutional AI](https://arxiv.org/abs/2212.08073)
+- [OpenAI -- Prompt Engineering Guide](https://platform.openai.com/docs/guides/prompt-engineering)
+- [Prompt Engineering Guide -- Few-Shot Prompting](https://www.promptingguide.ai/techniques/fewshot)
 
-### History Compaction
-- [Context Compaction Research](https://gist.github.com/martinec/0d078c88b0bdc97fea21fc6d7d596af8) - Claude Code, Codex CLI, OpenCode, Amp comparison
-- [Anthropic Context Compaction Cookbook](https://platform.claude.com/cookbook/tool-use-automatic-context-compaction) - compaction_control API with configurable thresholds
-- [Anthropic Context Editing](https://platform.claude.com/docs/en/build-with-claude/context-editing) - clear_tool_uses and clear_thinking strategies
-- [Anthropic Context Engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) - Context as precious, finite resource
-- [Claude Code Compaction](https://stevekinney.com/courses/ai-development/claude-code-compaction) - Auto-compact triggers at 64-75% context usage
-- [How Claude Code Got Better by Protecting Context](https://hyperdev.matsuoka.com/p/how-claude-code-got-better-by-protecting) - Earlier compaction preserves more working memory
-- [Cline Auto Compact](https://docs.cline.bot/features/auto-compact) - LLM-based summarization with rule-based fallback
-- [OpenCode Context Management](https://deepwiki.com/sst/opencode/2.4-context-management-and-compaction) - 95% threshold, prune then summarize, head+tail preservation
+### Integration Documentation (HIGH confidence)
+- [GitHub -- Webhook events and payloads](https://docs.github.com/en/webhooks/webhook-events-and-payloads)
+- [Linear Developers -- Webhooks](https://linear.app/developers/webhooks)
+- [Linear Developers -- Agent Interaction](https://linear.app/developers/agent-interaction)
+- [Slack Events API](https://docs.slack.dev/apis/events-api/)
 
-### Event Routing and Multi-Agent Patterns
-- [Confluent Event-Driven Multi-Agent Systems](https://www.confluent.io/blog/event-driven-multi-agent-systems/) - Orchestrator-worker, hierarchical, blackboard, market-based patterns
-- [AWS Routing Dynamic Dispatch](https://docs.aws.amazon.com/prescriptive-guidance/latest/agentic-ai-patterns/routing-dynamic-dispatch-patterns.html) - EventBridge-based agentic routing
-- [Google ADK Multi-Agent Patterns](https://developers.googleblog.com/developers-guide-to-multi-agent-patterns-in-adk/) - Dispatcher, sequential pipeline, human-in-the-loop patterns
-- [Confluent Correlation Identifier](https://developer.confluent.io/patterns/event/correlation-identifier/) - UUID-based correlation across event flows
-- [Correlation and Causation IDs](https://blog.arkency.com/correlation-id-and-causation-id-in-evented-systems/) - Correlation ID + causation ID pattern
+### Evaluation and Testing (MEDIUM confidence)
+- [Braintrust -- Best prompt evaluation tools 2025](https://www.braintrust.dev/articles/best-prompt-evaluation-tools-2025)
+- [Maxim AI -- Prompt Evaluation Frameworks](https://www.getmaxim.ai/articles/prompt-evaluation-frameworks-measuring-quality-consistency-and-cost-at-scale/)
+- [AI Agent Evaluations Guide 2025-2026](https://www.xugj520.cn/en/archives/ai-agent-evaluations-guide-2025.html)
 
-### Tool Registries
-- [AutoGen Agent Runtime - Registration](https://microsoft.github.io/autogen/stable/user-guide/core-user-guide/framework/agent-and-agent-runtime.html) - Factory function pattern for agent type registration
-- [Microsoft Agent Framework - AIFunctionFactory](https://medium.com/@venya-brodetskiy/getting-started-with-microsoft-agent-framework-61a1112220f8) - Reflection-based tool schema generation
-- [AgentScope Runtime](https://github.com/agentscope-ai/agentscope-runtime) - White-box adapter pattern with namespace/tag configuration
-
----
-
-*Feature research for v2.3 Unified Agent Framework*
-*Researched: 2026-02-01*
-*Replaces: v2.2 Agentic Architecture feature research (2026-01-29)*
+### Industry Analysis (MEDIUM confidence)
+- [Top 7 Agentic AI Frameworks in 2026](https://www.alphamatch.ai/blog/top-agentic-ai-frameworks-2026)
+- [Taxonomy of Hierarchical Multi-Agent Systems](https://arxiv.org/html/2508.12683)
+- [Google Developers Blog -- Multi-Agent Patterns in ADK](https://developers.googleblog.com/developers-guide-to-multi-agent-patterns-in-adk/)

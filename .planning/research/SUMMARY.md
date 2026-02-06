@@ -1,293 +1,302 @@
 # Project Research Summary
 
-**Project:** Aesir v2.3 Unified Agent Framework
-**Domain:** Replacing Temporal orchestration with Postgres-backed conversation executor
-**Researched:** 2026-02-01
+**Project:** Aesir v2.5 Agentic Conversations
+**Domain:** Agent coordination system with task primitives and conversation continuity
+**Researched:** 2026-02-06
 **Confidence:** HIGH
 
 ## Executive Summary
 
-v2.3 is an architectural shift from Temporal workflows to a Postgres-backed ConversationExecutor that treats agent loops as the primary state machine. The core finding: **Aesir uses approximately 5% of Temporal's capabilities** and can replace it with well-established Postgres patterns without sacrificing durability guarantees. The `SELECT FOR UPDATE SKIP LOCKED` job queue pattern (used by pg-boss, Solid Queue, DBOS, Inngest) is battle-tested at production scale for exactly this use case.
+v2.5 Agentic Conversations adds task primitives, conversation reopening, and integration correlation to the existing Postgres-backed agent system. The research across stack, features, architecture, and pitfalls converges on a clear conclusion: this is an evolutionary milestone, not a revolutionary rewrite. Zero new runtime dependencies are needed -- the task primitive is a Postgres table, correlation tables live in existing integration schemas, and conversation reopening is a surgical extension of the existing signal mechanism.
 
-The recommended approach consolidates three disconnected persistence stores (execution_traces, tasks, context_snapshots) into a unified event log with reactive session projections. This eliminates the data consistency problems inherent in maintaining separate imperative stores while providing better observability than v2.2's incomplete trace logging. The single-service consolidation (from 4 containers to 1) is architecturally sound -- agent definitions become configuration files, not deployed services.
+The recommended approach is incremental deployment in four phases: prompt rewrites first (zero infrastructure risk, immediate quality improvement), conversation reopening second (establishes the signal pattern needed by task routing), task primitive with tools third (the new coordination layer), and prompt evolution fourth (agents learn to leverage tasks). This ordering minimizes risk by building on validated infrastructure before introducing novel capabilities. Each phase is independently deployable and backward-compatible.
 
-**Key risks:** JSONB write amplification on the messages column (CRITICAL), stale conversation detection without proper heartbeats (CRITICAL), and event log sequence gaps (CRITICAL). All three are preventable with careful implementation. The migration from Temporal requires a structured drain strategy due to workflows paused for hours/days waiting for approvals. Total effort: 15-18 development days plus 7-day drain window.
+The critical risk is not technical complexity but behavioral correctness. The task primitive is genuinely novel -- no major agent framework persists tasks as first-class database entities. Agent-authored handoffs are untested at this scale. Prompt rewrites from procedural state machines to constitutional constraints require systematic validation to prevent silent regression. The mitigation is evaluation-first: behavioral test suites before prompt changes, integration tests before correlation deployment, and explicit world-state injection when reopening conversations to prevent the agent from acting on stale context.
 
 ## Key Findings
 
 ### Recommended Stack
 
-**Core recommendation:** Custom Postgres-backed executor for conversation orchestration, pg-boss for timeout scheduling, Drizzle ORM for schema management. No new job queue library needed for the core executor -- the conversation table IS the queue. The `SELECT FOR UPDATE SKIP LOCKED` pattern provides exactly the concurrency control needed with ~50 lines of SQL.
+v2.5 requires zero new runtime dependencies. The stack work is schema definitions (Drizzle ORM), validation (Zod), tool registration (existing ToolRegistry), and prompt rewrites (markdown files). The existing Postgres + Drizzle + @anthropic-ai/sdk + pg-boss stack handles everything.
 
 **Core technologies:**
-- **Custom SKIP LOCKED executor** (not pg-boss/graphile-worker) -- conversation semantics (signal queueing, wait type matching, idempotent start) don't map to generic job queues. The conversation table is queried by status, pending_wait type, and conversation ID -- these are domain queries that libraries force into jobs/tasks/queues awkwardly.
-- **pg-boss v12.8.0** for timeout scheduling only -- "wake this conversation in 72 hours" is a pure delayed-job problem that pg-boss solves with `startAfter` API, Postgres-backed persistence, and distributed worker support. Rolling a custom timeout scheduler would reinvent pg-boss badly.
-- **Event log as append-only Postgres table** (not event sourcing library) -- batch INSERT via Drizzle ORM with LISTEN/NOTIFY for reactive subscriptions. Implementation is ~200 lines of TypeScript, no library needed.
-- **Conversation history as JSONB column** -- write-rarely/read-fully pattern makes TOAST acceptable. Conversations persist only on pause/complete (not every tool call), avoiding write amplification. Phase 1 pruning keeps sizes 60-80% smaller. LZ4 compression available on Postgres 14+.
+- **Drizzle ORM 0.45.1** -- Schema for tasks, task_handoffs, task_correlations tables following existing patterns (agentsSchema, per-integration schemas, composite indexes)
+- **Zod 3.25.67** -- Input validation for 6 new task tools, task lifecycle state machine, handoff content schema enforcement
+- **Existing ToolRegistry** -- Registers new `task:` namespace (6 tools) alongside existing coordination, codebase, and integration tools
+- **Existing MCP client** -- Extends headers with X-Task-ID for correlation recording (same pattern as X-Agent-ID and X-Correlation-ID)
+- **PostgreSQL advisory locks** -- Recommended for task-level event serialization to avoid deadlock with conversation-level SKIP LOCKED
 
-**Removed dependencies:**
-- All @temporalio/* packages from agents and platform
-- Temporal server + UI from Docker Compose (saves ~1GB container images)
-- Temporal PostgreSQL schema
+**Critical implementation note:** The existing schema.drizzle.ts contains a legacy `tasks` table from v1/v2. The v2.5 migration must handle this collision -- either drop the legacy table (if empty) or use a different name for the new primitive.
 
 ### Expected Features
 
+The feature research validates the v2.5 spec against production agent frameworks and helpdesk systems. Task primitives are genuinely novel -- OpenAI, LangGraph, CrewAI, and Google ADK all treat conversations as the work unit, not tasks. Aesir's persisted, polymorphic, hierarchical task entity enables cross-conversation continuity that no framework provides.
+
 **Must have (table stakes):**
-- **Declarative agent definitions** (YAML + Markdown) -- industry consensus pattern from Claude Code, CrewAI, OpenAI Agents SDK. Every production framework treats prompts/instructions as first-class configuration, not hardcoded constants.
-- **Conversation executor** (start/signal/cancel/get/list API) -- replaces Temporal with Postgres-backed durable execution. Must match or exceed Temporal's guarantees: pause/resume via wait_for tool, full conversation history on resume, deterministic conversation IDs, concurrency control (one loop per conversation), at-least-once execution, timeout enforcement, signal queueing for race conditions.
-- **Unified event log** -- append-only event store with tool results (critical gap in v2.2's execution_traces). Event types: tool.called, tool.succeeded, tool.failed, llm.response, agent.started/completed/paused/resumed, signal.received. Session projection reactively updates from events.
-- **History management** (tool output pruning + structured summarization) -- every agent gets compaction via config. Phase 1 pruning (keep reasoning, replace tool results with descriptors, deduplicate) handles most cases with zero LLM calls. Phase 2 structured summaries inject ground-truth artifacts from event log projection, preventing drift.
-- **Single service consolidating 4 containers** -- agents are config, not services. No production framework deploys separate services per agent type. Single HTTP service with agent registry, tool registry, event router.
-- **Signal handling with freeform IncomingEvent shape** -- domain events (approval, pr_merged), not integration-specific payloads. Adapter normalization layer (Slack, GitHub, Linear) transforms webhooks into domain language. Agents never see raw webhook payloads.
+- Task CRUD with status machine (created, active, paused, completed, cancelled) -- standard coordination pattern
+- Task-conversation linking via nullable task_id FK -- backward-compatible
+- Conversation reopening via reopen signal on terminal conversations -- Zendesk/Intercom pattern
+- Integration correlation tables (per-integration) mapping external artifacts to tasks -- Temporal WorkflowId pattern
+- 6 agent tools for task lifecycle (create, complete, pause, handoff, list, get_context) -- agent-facing interface
+- Task-aware event routing with serialization (one active conversation per task) -- prevents race conditions
 
 **Should have (differentiators):**
-- **Event log as single source of truth** (replacing three stores) -- v2.2 has execution_traces (no tool results), tasks (imperatively updated), context_snapshots (lossy summaries). Converging to one event stream eliminates data consistency issues. Neither LangSmith nor Langfuse handle agent state AND observability in one store.
-- **Framework-level history management** (not per-agent custom code) -- v2.2 only product agent has compactConversationHistory(). Making compaction a framework concern configured per-agent via history fields is cleaner. Three-phase escalation (prune -> summary -> future agent memory) applies cheapest technique first.
-- **Structural race condition fix** (signal queueing) -- v2.2 has retry-with-backoff hack for signals arriving before workflow starts. v2.3 queues signals on conversation record, checks on wait_for. Three states: paused/matching (resume), paused/wrong type (reject), running (queue). No timing-dependent retries.
-- **Zero-infrastructure agent addition** -- new agent = new definition directory (YAML + prompt.md). No code changes, no infrastructure changes. The registry picks up new definitions on next access.
-- **Domain-language event normalization** -- adapter pattern transforms block_actions.approve to "approval", pull_request.merged to "pr_merged". Agent prompts never mention Slack/GitHub/Linear event structures. Integration-agnostic agent definitions.
+- Agent-authored handoffs -- no framework does this; higher potential quality but higher risk
+- Polymorphic creator/assignee (agent-to-agent, agent-to-human, human-to-agent) -- forward-looking design
+- Task hierarchies with parent-child relationships (max depth 5) -- enables work decomposition
+- Constitutional + few-shot prompt rewrites -- validated by Anthropic's own guidance for Opus 4.6
+- Integration-layer correlation recording (not router-side matching) -- most accurate boundary
+- Routing priority inversion (task reference -> fast-path start -> slow path) -- O(1) DB lookup vs O(n) LLM classification
 
-**Defer (v2+ or anti-features):**
-- Agent-managed memory (MemGPT/Letta style with memory:save/search tools)
-- Database-backed agent definitions (admin API, migration tooling)
-- Kafka/SQS/EventBridge event log backends
-- Cross-agent collaboration (agent-to-agent signaling)
-- OpenTelemetry integration
-- Real-time streaming dashboard
-- Cross-session learning
+**Defer (v2+):**
+- Agent-to-human task notification pathway (schema supports it, delivery mechanism is future work)
+- Cross-agent task discovery for coordination (requires task history to accumulate first)
+- Task analytics / cross-session learning (aggregating patterns across completed tasks)
+- Proactive task creation (agents identifying work without event triggers, needs scheduling)
+- Many-to-many artifact correlation (current design is one-to-one via primary key)
 
 ### Architecture Approach
 
-The core architectural bet: **Postgres is sufficient for Aesir's durability requirements.** Temporal provides enterprise-grade durable execution (replay, distributed task queues, visibility queries), but Aesir uses ~5% of those capabilities. Actual requirements: persist conversation state, route signals to paused conversations, enforce timeouts, detect stale executions, ensure at-least-once processing. Postgres handles all of these with SELECT FOR UPDATE SKIP LOCKED, heartbeat columns, polling-based timeout checks, and row-level locking.
+The architecture research confirms that v2.5 is additive, not disruptive. New components (TaskService, 6 task tools, correlation stores per integration) plug into existing infrastructure. Modified components (ConversationExecutor, event routing, MCP client) extend existing patterns without breaking interfaces.
 
 **Major components:**
-1. **ConversationExecutor** -- Postgres-backed durable orchestration. Worker polling loop claims queued conversations via SKIP LOCKED, runs agent loop, persists on pause/complete. Heartbeat updates detect stale conversations. Concurrency invariant: exactly one agent loop per conversation at any time.
-2. **EventLog** -- append-only Postgres table (agent_events) with buffered batch writes. Events recorded when things happen, not reconstructed afterward. LISTEN/NOTIFY for reactive subscriptions, polling fallback. Sequence per conversation is gapless (use MAX(sequence) + 1 within conversation scope).
-3. **SessionProjection** -- reactively updated agent_sessions table subscribing to EventLog. Replaces tasks table with ground-truth artifact extraction (PR numbers, branch names from tool.succeeded events). No more parsePrInfoFromTrace() scanning.
-4. **AgentRegistry** -- lazy-loading from definitions/ with mtime-based cache invalidation. Zod validation on load. Version pinning (running conversations stay pinned to definition version they started with).
-5. **ToolRegistry** -- factory-based resolution with namespace:tool_name convention (codebase:read_file, linear:get_issue). Each factory receives ToolContext (agentId, correlationId, containerManager) and returns configured ToolDefinition.
-6. **EventRouter** -- loads start rules from all registered definitions, matches incoming events. Adapters normalize integration payloads to IncomingEvent objects. Correlation-based signal routing resolves conversation ID from correlation key.
-7. **HistoryManager** -- three-phase compaction strategy. Phase 1 (pruning): protect last N messages, replace old tool results with descriptors, deduplicate same-file reads, head+tail preservation. Phase 2 (structured summary): anchored summary with artifact section populated from session projection (ground truth, not LLM memory).
+1. **TaskService** (`framework/task-service.ts`) -- Thin persistence layer for CRUD on tasks/handoffs, no business logic (agent-first principle)
+2. **Task tools** (`shared/tools/task/`) -- 6 tools in new `task:` namespace, registered via existing ToolRegistry with taskToolAdapter for DB injection
+3. **Correlation stores** (per integration) -- `task_correlations` table in linear.*, github.*, slack.* schemas with (external_type, external_ref) primary key
+4. **MCP header extension** -- X-Task-ID added when ToolContext has taskId, integration endpoints record correlation post-success
+5. **Conversation reopening** -- Extend signal() to handle reopen on terminal status, transition to queued, append signal as user message
+6. **Task-aware routing** -- Pre-router lookup in routeEvent() before EventRouter.handle(), uses FOR UPDATE on task row for serialization
+7. **Task context injection** -- In worker-loop executeConversation(), fetch latest handoff and inject as <task_context> block before history compaction
 
-**Critical dependency flow:**
-- Agent definition schema -> AgentRegistry + ToolRegistry
-- EventLog -> SessionProjection + HistoryManager
-- ConversationExecutor depends on: AgentRegistry, ToolRegistry, EventLog, HistoryManager
-- EventRouter depends on: AgentRegistry (triggers), ConversationExecutor
-- Single service wires all components together
+**Critical pattern: Lock ordering** -- If task and conversation both need locks, always acquire task lock first (via advisory lock) then conversation lock (SKIP LOCKED). This prevents deadlock. Recommendation: Use PostgreSQL advisory locks (`pg_advisory_xact_lock(hashtext(task_id))`) for task serialization to keep locks in separate spaces.
+
+**ToolContext.taskId collision** -- Existing field is used for sandbox container ID. Must rename to sandboxId before adding v2.5's task_id field. Affects 10 files: types.ts, worker-loop.ts, 5 codebase tool factories, CodebaseToolDeps type.
 
 ### Critical Pitfalls
 
-1. **JSONB Conversation Messages Becomes Write Amplification Bomb** -- PostgreSQL's MVCC means every UPDATE to messages column rewrites entire JSONB blob. For 500KB conversation, every tool call generates 500KB row rewrite + WAL entry + dead tuple + index updates. TOAST compressed JSONB is 10x slower than inline (7,624ms vs 746ms per 1M row scan). **Prevention:** Persist messages only at lifecycle boundaries (pause/complete/fail), NOT every tool call. During agent loop, messages live in memory only. Consider separate conversation_messages table for append-only INSERTs instead of UPDATE of entire JSONB. Use LZ4 compression. Tune autovacuum aggressively.
+The pitfalls research identified 7 CRITICAL, 6 MAJOR, 7 MODERATE, and 3 MINOR pitfalls across the four phases. The three highest-severity pitfalls require explicit mitigation:
 
-2. **Stale Running Conversation Detection Without Proper Heartbeats** -- Agent loops run 5-30 minutes. Process could crash, container OOM-killed, database connection drop. Conversation shows "running" but nothing actually running. Simple timeout causes either killing legitimate slow conversations or leaving abandoned conversations stuck for hours. **Prevention:** Implement heartbeats (onHeartbeat callback updates last_heartbeat_at). Use claimed_by column with worker ID. Separate claiming (short transaction with SKIP LOCKED + SET status = running, COMMIT) from executing agent loop. Use pg_advisory_xact_lock or row-level lock to ensure one process per conversation.
+1. **Conversation Reopening Creates Split-Brain Between History and World State** -- When a conversation completes at T1 and reopens at T2, the agent receives full prior history (factual about what happened) but the world may have changed (PR merged, issue closed, branch deleted). The agent acts confidently on stale information. **Prevention:** Inject a `<world_state>` context block when reopening that queries current state of known artifacts. Add constitutional constraint: "When resuming, verify current state of artifacts before acting." Signal payload must include delta information, not just "reopen."
 
-3. **Event Log Sequence Gaps Cause Missed Events** -- PostgreSQL sequences are not transactional. Transaction A gets sequence 5, Transaction B gets sequence 6, B commits first. Projection reads up to sequence 6, records "last processed = 6." Transaction A commits with sequence 5. Projection never sees event 5. **Prevention:** Use gapless sequences per conversation (MAX(sequence) + 1 within conversation scope since one agent loop at a time per conversation). Or use transaction ID-based catchup with pg_current_xact_id(). LISTEN/NOTIFY as hint only, always back with polling. Periodic full reconciliation to catch gaps.
+2. **Task-Level Event Serialization Deadlocks with Conversation-Level SKIP LOCKED** -- The task primitive needs locks at the task level to serialize events. The executor uses SKIP LOCKED at the conversation level. If lock acquisition order is inconsistent, deadlock occurs. **Prevention:** Use advisory locks for task serialization (`pg_advisory_xact_lock(hashtext(task_id))`) -- separate lock space from row locks, cannot deadlock. Document canonical lock order: task first, conversation second.
 
-4. **Buffered Event Writes Lose Data on Crash** -- EventLog.append() is void (fire-and-forget). Events buffered in memory and batch-inserted periodically. Process crash between tool call and next flush permanently loses events. Event log cannot be "unified ground truth" AND "fire-and-forget" simultaneously. **Prevention:** Flush events synchronously at lifecycle boundaries (before persisting conversation, before writing session projection, before returning from agent loop). Use WAL-backed buffering (append to local file, replay on crash). Accept tradeoff explicitly (document which event types are "best effort" vs "guaranteed"). Flush on every tool result that produces artifacts.
+3. **Prompt Rewrite Silently Regresses Agent Behavior Without Detection** -- Removing procedural state machines from prompts (10+ if/then rules in product-agent) and replacing with constitutional constraints risks losing hard-won behavioral fixes. Each rule exists because the agent failed without it. A 10% regression (95% -> 85% correct) is invisible without systematic evaluation. **Prevention:** Create behavioral test suite BEFORE rewriting (10-15 real scenarios per agent). Use promptfoo or equivalent for regression testing. Deploy with shadow mode (run both prompts, compare outputs). Rewrite incrementally, one behavioral area at a time.
 
-5. **Signal Arrives Between Agent Loop Exit and Conversation Persist** -- When agent calls wait_for, must: return tool result, exit loop, write agent.paused event, set status to paused, persist conversation, register timeout. Signal arriving between loop exit and persist overwrites queued signal. The v2.2 race condition has merely moved to different window. **Prevention:** Use Postgres row-level locking for conversation updates. Write signal queue separately (signal_inbox table). Atomic transition to paused (single UPDATE with CTE that appends pending signals). Test explicitly (integration test sending signal 0ms after wait_for).
+Additional critical pitfall: **schema.drizzle.ts legacy table collision** -- The existing schema.drizzle.ts already has a `tasks` table from v1/v2. The migration must handle this (drop if empty, or use different name). Test migration against a database with the old table present.
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure:
+Based on research, suggested phase structure starting from Phase 56:
 
-### Phase 1: Database Schema + Core Infrastructure
-**Rationale:** Must establish persistence layer before any framework code. Database schema, migrations, and core event logging need to exist before ConversationExecutor or any component that writes to them.
-**Delivers:** Postgres schema (conversations, agent_events, agent_sessions tables), Drizzle migrations, EventLog implementation (append/query/flush/subscribe), basic SessionProjection
-**Addresses:** CRITICAL-3 (sequence gaps) requires correct schema design upfront. CRITICAL-4 (buffered writes) requires flush policy defined before implementation.
-**Avoids:** CRITICAL-1 (JSONB write amplification) via correct messages column strategy (persist only at boundaries, consider separate messages table). MAJOR-6 (MVCC dead tuples) via autovacuum tuning from day one.
-**Research flag:** Low -- schema design is well-understood from ARCHITECTURE.md analysis.
+### Phase 56: Goal-Oriented Prompt Rewrites
+**Rationale:** Zero infrastructure risk, immediate quality improvement. Establishes the constitutional + few-shot style that Phase 59 builds on. Can be done in parallel with Phase 57 but must complete before Phase 59.
 
-### Phase 2: Agent and Tool Registries
-**Rationale:** ConversationExecutor depends on AgentRegistry (to load definitions) and ToolRegistry (to resolve tools). These can be built in parallel with database schema but must exist before executor.
-**Delivers:** AgentRegistry (lazy loading, mtime caching, Zod validation), ToolRegistry (factory registration, namespace resolution), agent definition files (YAML + prompt.md for dev-agent and product-agent)
-**Addresses:** MODERATE-2 (version pinning orphaned definitions) requires version handling in registry design. MINOR-1 (hot reload inconsistency) requires atomic definition loading.
-**Uses:** Existing system prompts converted to .md files, existing tool implementations wrapped in factories
-**Research flag:** Low -- file loading + caching is standard pattern (ARCHITECTURE.md confirms).
+**Delivers:**
+- Product-agent prompt rewritten (removes state machine, adds constitutional constraints + few-shot examples)
+- Dev-agent prompt rewritten (removes complexity classification, adds judgment-based guidance)
+- Behavioral test suite for both agents (10-15 scenarios each, baseline established)
 
-### Phase 3: History Manager
-**Rationale:** Can be built in parallel with registries. ConversationExecutor needs it but doesn't depend on registries. Phase 1 pruning is critical for keeping conversation sizes manageable.
-**Delivers:** Phase 1 tool output pruning (protect N messages, replace old tool results, deduplicate, head+tail), Phase 2 structured summarization with artifact injection from session projection
-**Addresses:** MAJOR-3 (compaction drift) requires careful implementation and testing with real conversations. MODERATE-5 (pruning removes needed info) requires generous protectedMessages config.
-**Implements:** Three-phase escalation strategy from FEATURES.md research
-**Research flag:** Medium -- Phase 2 summarization needs empirical validation with real dev-agent conversations.
+**Addresses:**
+- MODERATE-6 (constitutional constraint conflicts) via explicit priority and pair testing
+- MODERATE-4 (stale few-shot examples) via abstract examples
+- CRITICAL-3 (prompt regression) via test suite
 
-### Phase 4: Conversation Executor (Core)
-**Rationale:** This is the Temporal replacement and the highest-complexity component. Requires database schema (Phase 1), registries (Phase 2), and history manager (Phase 3). The critical path bottleneck.
-**Delivers:** ConversationExecutor (start/signal/cancel/get/list), worker polling loop with SKIP LOCKED, heartbeat mechanism, stale conversation detection, wait_for tool implementation, concurrency control (one loop per conversation), signal queueing for race condition fix
-**Addresses:** CRITICAL-2 (stale detection) is the hardest problem -- requires heartbeats, claimed_by column, atomic claiming. MAJOR-1 (signal race during persist) requires row-level locking and atomic transitions. MAJOR-4 (memory pressure) requires concurrency limits and heap size configuration.
-**Uses:** All previous phases (database, registries, history manager)
-**Research flag:** High -- most complex component with most critical pitfalls. Needs careful implementation and extensive integration testing.
+**Avoids:** All the procedural state machine anti-patterns documented in PROMPT_GUIDE.md and CRITICAL-3 pitfall.
 
-### Phase 5: Timeout Scheduling
-**Rationale:** Depends on ConversationExecutor (delivers timeout signals to conversations). Can be built after core executor works but before event routing (timeout signals are internal, not from webhooks).
-**Delivers:** pg-boss integration for timeout scheduling, timeout signal delivery, timeout cancellation on resume
-**Addresses:** Part of ConversationExecutor requirement (timeout enforcement). Uses pg-boss startAfter API from STACK.md recommendation.
-**Research flag:** Low -- pg-boss is well-documented, timeout pattern is straightforward.
+**Research flag:** Standard patterns (Anthropic's official guidance), no deeper research needed.
 
-### Phase 6: Event Router + Adapters
-**Rationale:** Requires ConversationExecutor to exist (routes events to it). Adapters transform integration payloads. Start rules from agent definitions in registry.
-**Delivers:** EventRouter (start rules, signal matching, correlation-based routing), event adapters (Slack, GitHub, Linear payload normalization to IncomingEvent)
-**Addresses:** MINOR-2 (signal dedup ID for internal sources) requires adapter implementation. MAJOR-1 (signal race) requires careful signal delivery logic.
-**Uses:** AgentRegistry (triggers), ConversationExecutor (start/signal)
-**Research flag:** Low -- adapter pattern is well-understood (FEATURES.md validation).
+---
 
-### Phase 7: Single Service Consolidation
-**Rationale:** Wires all framework components together. Replaces dev-agent, product-agent, router services with single HTTP service and worker loop.
-**Delivers:** Single main.ts service with HTTP routes (/health, /events, /conversations/:id, /conversations/:id/cancel), worker polling loop, graceful shutdown with conversation draining, Docker Compose updates (remove 6 services, add 1)
-**Addresses:** MODERATE-3 (graceful shutdown) requires drain logic and stop_grace_period tuning. MODERATE-4 (event table growth) requires retention policy planning.
-**Implements:** Bootstrap sequence from ARCHITECTURE.md (env validation -> DB connect -> migrations -> registries -> event log -> session projection -> executor -> router -> HTTP server -> worker loop)
-**Research flag:** Low -- mechanical consolidation, HTTP routing is straightforward.
+### Phase 57: Conversation Reopening
+**Rationale:** Surgical change to existing executor. Establishes the "signal on terminal conversation" pattern that Phase 58's task routing depends on. Minimal schema change (one new event type).
 
-### Phase 8: Smart Router Adaptation
-**Rationale:** Existing smart router uses Temporal client. Must adapt to use ConversationExecutor instead. Requires single service (Phase 7) to exist.
-**Delivers:** Smart router adapted from Temporal workflowClient to ConversationExecutor, fast-path and slow-path routing unchanged, LLM classification unchanged
-**Uses:** ConversationExecutor API instead of Temporal client API
-**Research flag:** Low -- wrapper replacement, logic unchanged.
+**Delivers:**
+- `signal()` method extended to handle `reopen` signal type on completed/failed conversations
+- Transition logic: terminal status -> queued, append signal as user message, reset retry count
+- New event type: `agent.reopened` for observability
+- Dashboard reopen button (POST /conversations/:id/reopen)
 
-### Phase 9: Integration Testing + Validation
-**Rationale:** Before cutover, validate full lifecycle: start -> pause -> signal -> resume -> complete. Test all critical paths and edge cases.
-**Delivers:** Integration tests (full dev-agent flow, product-agent flow, signal queueing, timeout enforcement, stale detection), smoke tests with real LLM calls and webhooks
-**Addresses:** All critical pitfalls require explicit testing. MAJOR-1 (signal race) needs test sending signal 0ms after wait_for. CRITICAL-2 (stale detection) needs test killing process mid-loop.
-**Research flag:** Medium -- integration testing with Docker, webhooks, and LLM calls requires testcontainers setup.
+**Uses:** Existing signal infrastructure, FOR UPDATE lock pattern, existing message persistence
 
-### Phase 10: Temporal Migration + Cutover
-**Rationale:** After validation passes, cut over to v2.3. Drain existing Temporal workflows (up to 7 days for workflows waiting on approvals/PR feedback).
-**Delivers:** Feature flag (USE_V23_EXECUTOR=true) routing new events to executor, Temporal drain monitoring (verify no running workflows after 7 days), dual-mode signal routing during transition
-**Addresses:** MAJOR-5 (Temporal drain long tail) requires migration signals to gracefully terminate waiting workflows, hard cutoff date for forced termination.
-**Research flag:** Medium -- drain strategy needs careful execution, dual-mode routing adds complexity.
+**Addresses:**
+- CRITICAL-1 (stale world state) via context injection block in reopening flow
+- MODERATE-5 (history explosion) via handoff-based context recommendation
+- MINOR-3 (signal dedup array growth) via array capping
 
-### Phase 11: Cleanup + Documentation
-**Rationale:** After Temporal is fully drained, remove all Temporal code, services, and documentation references.
-**Delivers:** Delete packages/agents/src/shared/temporal/, delete per-agent main.ts and worker.ts, remove @temporalio/* from package.json, remove Temporal services from Docker Compose, drop old DB tables (tasks, context_snapshots, execution_traces), update CLAUDE.md
-**Research flag:** Low -- mechanical deletion.
+**Avoids:** New execution path confusion by using existing signal mechanism. Terminal status handling remains explicit (only `reopen` type triggers transition).
+
+**Research flag:** Standard patterns (Zendesk/Intercom reopening), no deeper research needed.
+
+---
+
+### Phase 58: Task Primitive and Task-Aware Routing
+**Rationale:** Core coordination capability. Three sub-phases (schema + service, agent tools, routing) must be done sequentially within this phase. Depends on Phase 57 for conversation reopening (used by task routing).
+
+**Sub-phase 58a: Schema + TaskService + ToolContext Rename**
+**Delivers:**
+- Migration: tasks, task_handoffs tables in agents schema; task_id column on conversations
+- Handle schema.drizzle.ts legacy table collision (verify state, DROP or rename)
+- TaskService factory (CRUD for tasks/handoffs, thin persistence layer)
+- Rename ToolContext.taskId to sandboxId (affects 10 files)
+- Add task, handoff ID generators to createId in @aesir/types
+
+**Sub-phase 58b: Agent Tools**
+**Delivers:**
+- 6 tool implementations in shared/tools/task/ (create_task, complete_task, pause_task, handoff_task, list_tasks, get_task_context)
+- Task tool adapter pattern (inject TaskService via closure)
+- Register tools in tool-factories.ts under new `task:` namespace
+- Add tools to agent definition YAML files
+- Set taskId in ToolContext from conv.task_id in worker-loop
+
+**Sub-phase 58c: Task-Aware Routing + Integration Correlation**
+**Delivers:**
+- Task correlation tables in linear.*, github.*, slack.* schemas (external_type, external_ref PK)
+- Correlation store per integration (record, lookup methods)
+- MCP header extension: X-Task-ID in callMcpTool(), correlation recording in integration endpoints
+- Task routing pre-check in routeEvent() with FOR UPDATE on task row (advisory lock recommended)
+- Task context injection in worker-loop executeConversation() (latest handoff as <task_context>)
+- Add taskId to NormalizedEvent, IncomingEvent schemas
+- Integration webhook handlers: correlation lookup before event dispatch
+
+**Uses:** Existing Drizzle ORM patterns, existing ToolRegistry, existing MCP client, existing EventRouter (extended), existing DB transaction patterns
+
+**Implements:** TaskService component, task tools, correlation stores, task-aware routing layer
+
+**Addresses:**
+- CRITICAL-2 (deadlock) via advisory locks for task serialization
+- CRITICAL-4 (schema collision) via explicit migration handling
+- MAJOR-1 (correlation recording failure) via optimistic correlation or reconciliation job
+- MAJOR-2 (task metadata bloat) via Zod schema with size limits
+- MAJOR-5 (backward compatibility) via hasTask helper, null-safe code paths
+- MAJOR-6 (circular delegation) via ancestry checks, max_subtasks_per_task limit
+
+**Avoids:** Framework pattern-matching on handoff types (agent decides), auto-completion on external signals (agent decides), eager context loading (deliver latest handoff, tool for full history).
+
+**Research flag:** Integration-specific edge cases need testing (Slack thread forking, GitHub force push, Linear status changes) -- these are MODERATE severity, handle as known limitations with fallback to slow path.
+
+---
+
+### Phase 59: Prompt Evolution for Task Lifecycle
+**Rationale:** Agents learn to leverage task tools. Depends on Phase 58b (task tools exist) and Phase 56 (constitutional + few-shot style established). Updates all agent prompts, not just orchestrators.
+
+**Delivers:**
+- Update agent prompts to reference task lifecycle (create tasks for decomposition, complete on finish, pause with context, handoff with agent-authored content)
+- Add handoff quality examples (few-shot with good/bad handoffs, structured content guidance)
+- Add task-aware context section (<task_context> handling when present, fallback when absent)
+- Constitutional constraint for handoffs: structured content requirements, token budget per handoff
+
+**Uses:** Existing prompt.md structure, task tools from Phase 58b, PROMPT_GUIDE.md patterns
+
+**Addresses:**
+- MAJOR-3 (handoff telephone game) via structured handoff schema, full history access via get_task_context
+- MODERATE-7 (bad handoffs) via structured schema enforcement, size limits, validation
+
+**Avoids:** Prescriptive tool sequences (agent decides when to create/hand off tasks), state machines in natural language.
+
+**Research flag:** Handoff quality validation needed -- this is novel territory, no production validation exists. Consider shadow testing handoff content (LLM-as-judge on handoff quality).
+
+---
 
 ### Phase Ordering Rationale
 
-**Why this order:**
-- **Database schema first** because everything persists to it. No framework code can exist without schema.
-- **Registries next** because they are pure functions (read files, validate, cache) with no external dependencies. Can build in parallel with schema.
-- **History manager in parallel** because it only depends on message array format, not on databases or executors.
-- **Executor is the critical path** -- most complex component, depends on all previous phases, blocks event routing.
-- **Timeout scheduling after core executor** because it delivers signals to executor (internal signal source).
-- **Event routing after executor** because it orchestrates start/signal calls to executor (external signal source).
-- **Single service consolidation wires everything** -- cannot exist until all framework components exist.
-- **Smart router adaptation** is thin wrapper -- quick once single service exists.
-- **Integration testing before cutover** -- validate everything works before touching production.
-- **Temporal migration last** -- only after v2.3 is fully validated.
+- **Phase 56 first:** Prompt rewrites are independent and establish the style for Phase 59. Can be done in parallel with Phase 57 but must complete before Phase 59 to avoid conflicting prompt patterns.
+- **Phase 57 second:** Conversation reopening is the simplest infrastructure change and establishes the signal pattern that Phase 58's task routing uses (reopened conversations are queued, task routing can create new conversations or signal existing ones).
+- **Phase 58 third:** Task primitive is the core capability but requires three sequential sub-phases. Schema + service must exist before tools, tools must exist before routing can use them. Sub-phase 58c (correlation + routing) is the most complex and touches three integration packages.
+- **Phase 59 fourth:** Prompt evolution requires task tools to be available and the constitutional + few-shot style to be established. This is where agents learn to actually use the task lifecycle.
 
-**Why this grouping:**
-- **Phases 1-3 are foundational infrastructure** (database, registries, compaction) that can be built in parallel with careful coordination.
-- **Phase 4 is the executor** (critical path, blocks everything downstream).
-- **Phases 5-6 are signal sources** (timeout scheduler, event router) that deliver events to executor.
-- **Phase 7 is integration** (wiring all components into single service).
-- **Phases 8-9 are adaptation and validation** (prepare for cutover).
-- **Phases 10-11 are migration and cleanup** (replace Temporal, remove old code).
+**Dependency chain visualization:**
+```
+Phase 56 (Prompts) ────────────────────────────────────┐
+                                                        ├──> Phase 59 (Prompt Evolution)
+Phase 57 (Reopening) ──> Phase 58 (Task Primitive) ────┘
+                         (58a -> 58b -> 58c sequentially)
+```
 
-**How this avoids pitfalls:**
-- **CRITICAL-1 (JSONB write amplification)** addressed in Phase 1 (schema design before any code).
-- **CRITICAL-2 (stale detection)** addressed in Phase 4 (heartbeat implementation required for executor).
-- **CRITICAL-3 (sequence gaps)** addressed in Phase 1 (gapless sequence strategy in schema).
-- **CRITICAL-4 (buffered writes data loss)** addressed in Phase 1 (flush policy defined before EventLog implementation).
-- **MAJOR-1 (signal race)** addressed in Phase 4 (atomic persist) and Phase 6 (signal delivery logic).
-- **MAJOR-3 (compaction drift)** addressed in Phase 3 (history manager with testing before integration).
-- **MAJOR-5 (Temporal drain)** addressed in Phase 10 (explicit migration strategy, not assumed).
-- **MAJOR-6 (MVCC dead tuples)** addressed in Phase 1 (autovacuum tuning in schema setup).
+**Risk mitigation through ordering:** Phases 56 and 57 are low-risk infrastructure extensions with clear rollback paths. Phase 58 is higher risk (new schema, new tools, routing changes) but is broken into three sub-phases that can each be validated before proceeding. Phase 59 is prompt-only (rollbackable) but depends on validated infrastructure.
 
 ### Research Flags
 
 **Phases likely needing deeper research during planning:**
-- **Phase 4 (ConversationExecutor)** -- most critical component with most pitfalls. Needs detailed implementation research for heartbeat mechanism, atomic claiming, signal queueing. Consider dedicated research-phase call before implementation.
-- **Phase 9 (Integration Testing)** -- testcontainers setup for Docker-based testing, webhook simulation, real LLM call mocking. May need research on testing patterns for long-running agent loops.
-- **Phase 10 (Temporal Migration)** -- drain strategy needs validation. Consider research on Temporal workflow inspection/migration patterns.
+- **Phase 58c (Integration Correlation):** Each integration has edge cases (Slack thread forking, GitHub force push/branch reuse, Linear status change noise). The research identified these as MODERATE severity -- known limitations with slow-path fallback. During planning, decide which edge cases to handle in v2.5 vs document as known limitations.
 
 **Phases with standard patterns (skip research-phase):**
-- **Phase 1 (Database Schema)** -- Drizzle ORM schema definition is well-understood from existing codebase patterns.
-- **Phase 2 (Registries)** -- file loading + caching is straightforward pattern.
-- **Phase 5 (Timeout Scheduling)** -- pg-boss integration is well-documented.
-- **Phase 6 (Event Router)** -- adapter pattern is well-established.
-- **Phase 7 (Single Service)** -- HTTP server consolidation is mechanical.
-- **Phase 8 (Smart Router Adaptation)** -- wrapper replacement.
-- **Phase 11 (Cleanup)** -- code deletion.
-
-**Phase 3 (History Manager) is borderline** -- Phase 1 pruning is standard (well-researched), Phase 2 summarization may benefit from targeted research on Claude API prompting for structured summaries.
+- **Phase 56:** Anthropic's official prompt engineering guidance is comprehensive. The PROMPT_GUIDE.md is already written. No additional research needed.
+- **Phase 57:** Zendesk/Intercom reopening patterns are well-documented. The existing signal infrastructure is well-understood. No additional research needed.
+- **Phase 58a/58b:** Drizzle ORM patterns, ToolRegistry patterns, and ToolFactory patterns are all established in the codebase. Schema migration for a new table is standard. No additional research needed.
+- **Phase 59:** This builds on Phase 56's style and uses Phase 58's tools. The uncertainty is handoff quality validation (novel), but this is an execution concern, not a research gap.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | **HIGH** | Custom SKIP LOCKED pattern verified across pg-boss, Solid Queue, DBOS, Inngest. pg-boss for timeouts is correct tool for the job. Event log as Postgres table is well-established. JSONB for conversation history is acceptable given write-rarely pattern. All stack decisions backed by production implementations. |
-| Features | **HIGH** | Every table stakes feature validated against production frameworks (Claude Code, OpenAI Agents SDK, CrewAI, AutoGen, LangGraph). Feature dependencies clearly mapped. MVP scope well-defined with explicit anti-features list. Differentiators are architectural consequences, not separate features. |
-| Architecture | **HIGH** (custom build) / **MEDIUM** (external patterns) | ConversationExecutor pattern is well-documented (pg-boss, Solid Queue, DBOS). Event log integration with Drizzle is standard. Single service consolidation is straightforward. JSONB performance analysis is theoretical (not load-tested with Aesir data). History compaction has documented failure modes (Claude Code issues). |
-| Pitfalls | **HIGH** | All critical pitfalls sourced from production post-mortems (Brandur's Postgres queues, pganalyze JSONB benchmarks, Claude Code compaction failures, Event-Driven.io sequence gaps). Mitigation strategies validated across multiple sources. Phase-specific warnings mapped to implementation phases. |
+| Stack | HIGH | Zero new dependencies. All patterns exist in codebase. Schema.drizzle.ts collision identified and mitigated. |
+| Features | HIGH | Task primitives validated against 5 major frameworks (genuinely novel). Conversation reopening validated against Zendesk/Intercom. Integration correlation validated against Temporal WorkflowId pattern. |
+| Architecture | HIGH | Based on direct codebase analysis. All modified components identified. Lock ordering and serialization patterns verified against PostgreSQL docs. |
+| Pitfalls | HIGH | 23 pitfalls identified from PostgreSQL docs, prompt engineering literature, multi-agent system research, and direct codebase analysis. Each pitfall has prevention strategy and warning signs. |
 
-**Overall confidence:** **HIGH**
+**Overall confidence:** HIGH
 
-Research is comprehensive with cross-verification across multiple production systems. The core technical bet (Postgres as durable executor) is validated by pg-boss (215K weekly downloads), Solid Queue (Rails production usage), and DBOS (VC-backed company built entirely on this pattern). All critical pitfalls have documented mitigations from real-world implementations.
+The research converges on a clear implementation path. The stack is proven, the features are validated against production systems, the architecture is additive, and the pitfalls are well-characterized with concrete prevention strategies.
 
 ### Gaps to Address
 
-**Areas where research was inconclusive or needs validation during implementation:**
+**Agent-authored handoff quality:** No production system has validated agent-authored handoffs at this level. The research identifies this as a differentiator but also a risk (MAJOR-3 telephone game effect, MODERATE-7 bad handoffs). **Mitigation during planning:** Define structured handoff schema with required fields. Add handoff size limits. Include handoff quality examples in prompts. Consider LLM-as-judge evaluation for handoff content quality.
 
-- **Actual conversation memory footprint in Node.js** -- MAJOR-4 estimates 500KB-5MB per conversation but needs measurement with real Anthropic SDK payloads. Profile memory during real dev-agent conversation before setting concurrency limits. **Resolution:** Phase 9 integration testing includes memory profiling.
+**Integration correlation edge cases:** The one-to-one correlation model (PK on external_type + external_ref) may be too restrictive for monorepo PRs fixing multiple issues. Slack thread forking, GitHub force push, and Linear status change noise are documented edge cases. **Mitigation during planning:** Accept one-to-one as MVP constraint. Route edge cases to slow path. Monitor correlation miss rate. Add many-to-many support in later milestone if needed.
 
-- **Optimal event buffer flush interval** -- CRITICAL-4 prevention requires balancing performance (too frequent = overhead) vs data loss risk (too infrequent = loss). **Resolution:** Start with conservative 1-second flush, benchmark during Phase 1 EventLog implementation, tune based on observed event volumes.
+**Conversation reopening world state drift:** The CRITICAL-1 pitfall (stale context on reopen) requires explicit world-state injection. The architecture research defines the pattern (context injection block), but the specific implementation needs validation. **Mitigation during planning:** Define which artifacts to query on reopen (correlated PRs, issues, threads). Implement context injection in Phase 57. Test with real external state changes between conversation runs.
 
-- **History compaction trigger thresholds** -- Spec says 80K tokens for pruning, 120K for summarization. Needs empirical validation with real dev-agent conversations. **Resolution:** Phase 3 history manager includes testing with saved v2.2 conversation histories. Adjust thresholds based on observed behavior.
-
-- **Worker polling interval** -- Trade-off between responsiveness (5s = responsive signal delivery) and database load (5s = ~12 queries/minute). **Resolution:** Start with 5-second interval as recommended in ARCHITECTURE.md, monitor pg_stat_user_tables for query load, adjust if needed.
-
-- **Conversation cleanup policy** -- When should completed conversations be archived? Spec mentions retention but no specific policy. Without cleanup, conversations table grows indefinitely. **Resolution:** Define retention policy in Phase 1 schema design. Recommend 30-day retention with monthly partitioning.
-
-- **Sub-agent persistence strategy** -- Spec says sub-agents "run inline" but if a sub-agent runs 10+ minutes, its state is at risk on process crash. **Resolution:** Clarify in Phase 4 ConversationExecutor design. Recommendation: sub-agents inherit parent conversation's persistence (saved on parent pause/complete).
-
-- **Dual-mode routing during Temporal transition** -- Phase 10 requires routing signals to correct system (Temporal vs v2.3) during drain period. **Resolution:** Design signal router version check in Phase 10 planning. Check both Temporal (via workflow client) and v2.3 (via conversation ID lookup) for each signal.
+**Prompt regression detection:** The behavioral test suite created in Phase 56 is new infrastructure. The project does not currently have prompt evaluation tooling. **Mitigation during planning:** Choose evaluation tool (promptfoo recommended), define test case format, establish baseline before rewrite. This is a one-time setup cost that pays dividends across all future prompt changes.
 
 ## Sources
 
 ### Primary (HIGH confidence)
 
-**Stack Research:**
-- [Graphile Worker GitHub](https://github.com/graphile/worker) -- MIT, SKIP LOCKED implementation
-- [pg-boss GitHub](https://github.com/timgit/pg-boss) -- MIT, 12.8.0, 215K weekly downloads
-- [DBOS: Postgres for Everything](https://www.dbos.dev/blog/postgres-durable-execution) -- SELECT FOR UPDATE SKIP LOCKED pattern
-- [Solid Queue (Rails)](https://github.com/rails/solid_queue) -- Postgres job queue with heartbeat pattern
-- [PostgreSQL JSONB TOAST Performance](https://pganalyze.com/blog/5mins-postgres-jsonb-toast) -- 2KB threshold, 10x slowdown benchmarks
-- [Anthropic Context Compaction Cookbook](https://platform.claude.com/cookbook/tool-use-automatic-context-compaction) -- compaction_control API
+**Stack research:**
+- Anthropic Prompting Best Practices (Claude 4.6): https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-4-best-practices
+- Drizzle ORM Schema Declaration: https://orm.drizzle.team/docs/sql-schema-declaration
+- PostgreSQL Explicit Locking Documentation: https://www.postgresql.org/docs/current/explicit-locking.html
+- Existing codebase (packages/agents/src/framework/, packages/agents/src/shared/db/schema.ts, packages/integrations/*/src/db/schema.ts)
 
-**Features Research:**
-- [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/agents/) -- Agent class API, session persistence
-- [CrewAI YAML Configuration](https://deepwiki.com/crewAIInc/crewAI/8.2-yaml-configuration) -- Declarative agents.yaml
-- [Claude Code Custom Subagents](https://code.claude.com/docs/en/sub-agents) -- YAML frontmatter + Markdown
-- [LangGraph Persistence](https://docs.langchain.com/oss/python/langgraph/persistence) -- Checkpoint-based state
-- [LangSmith Tracing](https://medium.com/@aviadr1/langsmith-tracing-deep-dive-beyond-the-docs-75016c91f747) -- Run Tree model
-- [Langfuse Data Model](https://langfuse.com/docs/observability/data-model) -- Traces/observations/events
+**Features research:**
+- OpenAI Agents SDK Handoffs: https://openai.github.io/openai-agents-python/handoffs/
+- CrewAI A2A Agent Delegation: https://docs.crewai.com/en/learn/a2a-agent-delegation
+- LangGraph Persistence: https://docs.langchain.com/oss/python/langgraph/persistence
+- Google ADK Multi-Agents: https://google.github.io/adk-docs/agents/multi-agents/
+- Zendesk Ticket Lifecycle: https://support.zendesk.com/hc/en-us/articles/8263915942938-About-the-ticket-lifecycle-and-ticket-statuses
+- Intercom Fin AI Agent: https://www.intercom.com/help/en/articles/7120684-fin-ai-agent-explained
+- Temporal Continue-As-New: https://docs.temporal.io/workflow-execution/continue-as-new
+- GitHub Webhook Events: https://docs.github.com/en/webhooks/webhook-events-and-payloads
+- Linear Developers Webhooks: https://linear.app/developers/webhooks
 
-**Architecture Research:**
-- Codebase analysis (orchestrator-workflow.ts, run-agent-loop.ts, schema.ts, docker-compose.yml) -- Current v2.2 architecture
-- v2.3 spec (2.3-spec.md, 1712 lines) -- Target architecture
-- [Armin Ronacher: Postgres Workflows](https://lucumr.pocoo.org/2024/11/18/absurd-workflows/) -- Postgres-as-job-queue patterns
-- Drizzle ORM documentation -- LISTEN/NOTIFY gap, batch insert patterns
+**Architecture research:**
+- Existing codebase (direct analysis of conversation-executor.ts, event-router.ts, worker-loop.ts, tool-factories.ts, mcp/client.ts)
+- .planning/specs/2.5-agentic-conversations.md (implementation spec)
+- .planning/specs/2.5-design-vision.md (architectural rationale)
+- packages/agents/definitions/PROMPT_GUIDE.md (prompt authoring guide)
 
-**Pitfalls Research:**
-- [Brandur: Postgres Job Queues & Failure By MVCC](https://brandur.org/postgres-queues) -- Dead tuple accumulation
-- [Event-Driven.io: Postgres Sequences Issues](https://event-driven.io/en/ordering_in_postgres_outbox/) -- Sequence gap problem
-- [Recall.ai: LISTEN/NOTIFY Does Not Scale](https://www.recall.ai/blog/postgres-listen-notify-does-not-scale) -- Notification limitations
-- [Claude Code Issue #18211, #19739, #5677](https://github.com/anthropics/claude-code/issues/) -- Compaction failure modes
-- [Evan Jones: Large JSON Performance](https://www.evanjones.ca/postgres-large-json-performance.html) -- JSONB benchmarks
+**Pitfalls research:**
+- PostgreSQL JSONB and TOAST Performance: https://pganalyze.com/blog/5mins-postgres-jsonb-toast
+- Debugging Deadlocks in Postgres (incident.io): https://incident.io/blog/debugging-deadlocks-in-postgres
+- promptfoo regression testing: https://github.com/promptfoo/promptfoo
+- Best Prompt Evaluation Tools 2025 (Braintrust): https://www.braintrust.dev/articles/best-prompt-evaluation-tools-2025
+- Constitutional AI (Anthropic): https://arxiv.org/abs/2212.08073
+- How Agent Handoffs Work (Towards Data Science): https://towardsdatascience.com/how-agent-handoffs-work-in-multi-agent-systems/
+- Zendesk Context Panel: https://internalnote.com/context-in-zendesk/
 
 ### Secondary (MEDIUM confidence)
 
-- [Context Compaction Research (Gist)](https://gist.github.com/martinec/0d078c88b0bdc97fea21fc6d7d596af8) -- Claude Code, OpenCode, Amp comparison
-- [Confluent: Event-Driven Multi-Agent Systems](https://www.confluent.io/blog/event-driven-multi-agent-systems/) -- Orchestrator-worker patterns
-- [AWS Routing Dynamic Dispatch](https://docs.aws.amazon.com/prescriptive-guidance/latest/agentic-ai-patterns/routing-dynamic-dispatch-patterns.html) -- EventBridge-based routing
-- [Google ADK Multi-Agent Patterns](https://developers.googleblog.com/developers-guide-to-multi-agent-patterns-in-adk/) -- Dispatcher, pipeline patterns
+**Features research:**
+- Microsoft Agent Framework Introduction: https://azure.microsoft.com/en-us/blog/introducing-microsoft-agent-framework/
+- Top 7 Agentic AI Frameworks in 2026: https://www.alphamatch.ai/blog/top-agentic-ai-frameworks-2026
+- Taxonomy of Hierarchical Multi-Agent Systems: https://arxiv.org/html/2508.12683
 
-### Tertiary (LOW confidence)
-
-- [Long Quanzheng: Workflow Should Be Code](https://medium.com/@qlong/workflow-should-be-code-but-durable-execution-is-not-the-only-way-519f7682360c) -- Custom workflow engine pitfalls (anecdotal)
+**Pitfalls research:**
+- AI Agent Failures: Prompt Design Fixes: https://ctimes.tech/en/2026/01/08/ai-agent-failures-prompt-design-fixes-4-common-issues/
+- Agent Handoffs Without Chaos: https://medium.com/@Quaxel/your-first-multi-agent-handoff-without-chaos-a9fe116c7812
+- Slack thread_ts limitations: https://api.slack.com/incoming-webhooks
+- CircleCI webhook duplication: https://support.circleci.com/hc/en-us/articles/115013353748-Troubleshooting-duplicate-builds-triggered-upon-every-commit-push
 
 ---
-*Research completed: 2026-02-01*
+*Research completed: 2026-02-06*
 *Ready for roadmap: yes*

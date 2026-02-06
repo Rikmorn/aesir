@@ -1,972 +1,848 @@
-# Architecture Patterns: Unified Agent Framework (v2.3)
+# Architecture Patterns: v2.5 Agentic Conversations
 
-**Domain:** Agentic development platform -- replacing Temporal workflows + 3 persistence stores with a unified conversation-based framework
-**Researched:** 2026-02-01
-**Overall confidence:** HIGH (codebase analysis) / MEDIUM (external patterns)
+**Domain:** Task primitives, conversation reopening, and integration correlation for an existing agentic development platform
+**Researched:** 2026-02-06
+**Confidence:** HIGH (based on direct codebase analysis of existing components)
 
----
+## System Overview
 
-## Table of Contents
+v2.5 introduces three interconnected capabilities into the existing Aesir architecture:
 
-1. [Executive Summary](#1-executive-summary)
-2. [ConversationExecutor as Temporal Replacement](#2-conversationexecutor-as-temporal-replacement)
-3. [Event Log Integration with Drizzle ORM](#3-event-log-integration-with-drizzle-orm)
-4. [Single Service Consolidation](#4-single-service-consolidation)
-5. [Agent Registry + Definition Loading](#5-agent-registry--definition-loading)
-6. [Conversation History as JSONB](#6-conversation-history-as-jsonb)
-7. [Migration Sequence: Temporal to Custom Orchestration](#7-migration-sequence-temporal-to-custom-orchestration)
-8. [Data Flow: Full Pause/Resume Cycle](#8-data-flow-full-pauseresume-cycle)
-9. [Suggested Build Order](#9-suggested-build-order)
-10. [Component Interface Summary](#10-component-interface-summary)
-11. [Performance Implications](#11-performance-implications)
-12. [Sources and Confidence Assessment](#12-sources-and-confidence-assessment)
+1. **Task primitive** -- A first-class entity (`agents.tasks`) that groups related conversations and provides continuity across interactions
+2. **Conversation reopening** -- Allowing terminal conversations (completed/failed) to receive a `reopen` signal and re-enter the work loop
+3. **Integration correlation** -- Each integration maintains a `task_correlations` table to map external artifacts (PRs, issues, threads) back to tasks
 
----
+These features touch every layer of the existing architecture but are designed to be additive -- no existing interfaces break, no existing behavior changes for conversations without tasks.
 
-## 1. Executive Summary
-
-v2.3 removes Temporal as the orchestration layer and replaces it with a Postgres-backed `ConversationExecutor` that treats the agent loop as the only state machine. Three disconnected persistence stores (`execution_traces`, `tasks`, `context_snapshots`) converge into a unified event log with reactive session projections. Per-agent services (dev-agent:3004, product-agent:3005, router:3006) merge into a single HTTP service with an agent registry.
-
-The core architectural bet: **Postgres is sufficient for Aesir's durability requirements.** Temporal provides enterprise-grade durable execution (replay, distributed task queues, visibility queries), but Aesir uses approximately 5% of those capabilities. The actual requirements are: persist conversation state, route signals to paused conversations, enforce timeouts, detect stale executions, and ensure at-least-once processing. Postgres can handle all of these with well-established patterns.
-
-**Key finding from research:** The `SELECT FOR UPDATE SKIP LOCKED` pattern used by PgBoss, Solid Queue (Rails), DBOS, and Inngest is the battle-tested approach for Postgres-backed job queues. It provides exactly the concurrency control needed: only one worker processes a conversation at a time, other workers skip locked rows and pick up different work.
-
-**What changes and what stays the same:**
-
-| Layer | Current (v2.2) | Target (v2.3) | Risk |
-|-------|----------------|---------------|------|
-| Agent loop | `runAgentLoop()` | Unchanged | None |
-| Orchestration | Temporal workflows | ConversationExecutor (Postgres) | MEDIUM |
-| Persistence | 3 stores (traces, tasks, snapshots) | Event log + session projection | LOW |
-| Services | 4 containers (dev-agent, worker, product-agent, router) | 1 container | LOW |
-| Agent config | Hardcoded constants | Declarative YAML + prompt.md | LOW |
-| Signal handling | 5 typed Temporal signals | Freeform IncomingEvent + adapters | LOW |
-| Tool registry | Inline toolkit factories | Centralized registry with factories | LOW |
-| Context persistence | LLM summaries at activity boundaries | Full conversation history (compacted) | MEDIUM |
-
----
-
-## 2. ConversationExecutor as Temporal Replacement
-
-### 2.1 What Temporal Currently Provides
-
-Reading the current `orchestrator-workflow.ts` (613 lines), Temporal provides:
-
-1. **Durable signal waits** (`wf.condition(() => state.approval !== null, "72 hours")`) -- conversation pauses until external event or timeout
-2. **Activity retries** (`maximumAttempts: 2`, exponential backoff) -- restart agent loop on failure
-3. **Phase machine** (pre_approval -> awaiting_approval -> post_approval -> awaiting_pr -> addressing_feedback -> complete) -- deterministic state transitions
-4. **Heartbeat detection** (`heartbeatTimeout: "5 minutes"`) -- detect stuck activities
-5. **Signal handlers** (4 typed signals: planApproval, prFeedback, prCompletion, escalationResolved)
-6. **Workflow queries** (orchestratorStatusQuery for current phase/PR info)
-
-Of these, **items 1, 2, 4, and 5 are essential**. Item 3 (phase machine) is the thing v2.3 explicitly removes -- the agent loop replaces it. Item 6 is replaced by the session projection.
-
-### 2.2 The Postgres-Backed Executor Pattern
-
-**Confidence: HIGH** (verified across DBOS, PgBoss, Solid Queue, Inngest)
-
-The pattern has three components:
-
-**Component A: Job Queue (replaces Temporal task queue)**
-
-```sql
--- Conceptual, not literal SQL
-SELECT id, conversation_id FROM conversations
-WHERE status = 'queued'
-ORDER BY updated_at ASC
-FOR UPDATE SKIP LOCKED
-LIMIT 1;
-```
-
-- `FOR UPDATE` locks the row -- no other worker can claim it
-- `SKIP LOCKED` means other workers skip locked rows and find different work
-- Transaction commit releases the lock
-- If the worker crashes, the transaction rolls back and the row becomes available again
-
-**Component B: Signal Routing (replaces Temporal signals)**
-
-When a webhook arrives:
-
-```
-1. Adapter normalizes payload -> IncomingEvent
-2. Router resolves conversation ID from correlation key
-3. Load conversation from DB
-4. If paused + matching wait type:
-   - Append signal as user message to messages[]
-   - Set status = "queued" (ready to resume)
-   - Worker picks it up via Component A
-5. If running or not yet paused:
-   - Append to queued_signals[] JSONB column
-   - Checked when agent next calls wait_for
-```
-
-**Component C: Timeout Enforcement (replaces Temporal timers)**
-
-Two options, both viable for Aesir's scale:
-
-| Option | How | Pros | Cons |
-|--------|-----|------|------|
-| **Polling (recommended)** | Worker scans for `WHERE status = 'paused' AND timeout_at < NOW()` every 30s | Simple, no dependencies, works everywhere | 30s worst-case latency on timeout |
-| pg_cron | Scheduled function runs timeout check | Exact timing | Requires extension, adds operational surface |
-
-**Recommendation: Polling.** Aesir's timeouts are 24h, 72h, 7d. A 30-second check interval means worst-case 30 seconds of delay on a 72-hour timeout. The simplicity wins decisively.
-
-### 2.3 Concurrency Control: The Critical Invariant
-
-**The invariant: exactly one agent loop runs per conversation at any time.**
-
-Temporal enforces this automatically (one workflow execution per workflow ID). The Postgres executor must enforce it explicitly.
-
-The approach:
-
-1. **Conversation status column** acts as a state lock:
-   - `queued` -- waiting for a worker to pick it up
-   - `running` -- a worker is executing the agent loop
-   - `paused` -- waiting for an external signal
-   - `completed` / `failed` -- terminal states
-
-2. **Worker claims a conversation** by atomically updating `status = 'running'` within the `SELECT FOR UPDATE SKIP LOCKED` transaction. If two workers try to claim the same conversation, only one succeeds.
-
-3. **Heartbeat column** (`last_heartbeat_at`) is updated by the worker every N seconds during agent loop execution. A separate sweep query detects stale conversations:
-
-```sql
-UPDATE conversations
-SET status = 'queued', last_heartbeat_at = NULL
-WHERE status = 'running'
-  AND last_heartbeat_at < NOW() - INTERVAL '5 minutes';
-```
-
-This provides at-least-once execution. If a worker crashes, the conversation is re-enqueued after the heartbeat timeout.
-
-### 2.4 The `wait_for` Tool: Framework-Intercepted Sentinel
-
-The `wait_for` tool is the mechanism by which agents pause conversations. It is NOT a normal tool -- the framework intercepts it before execution.
-
-**How it integrates with `runAgentLoop()`:**
-
-The current `runAgentLoop()` has a tool execution loop (lines 489-567 in `run-agent-loop.ts`). The framework needs to detect `wait_for` tool calls and exit the loop:
-
-```
-1. LLM returns tool_use block with name "wait_for"
-2. Framework intercepts BEFORE executing the tool
-3. Framework returns tool_result: "Conversation paused. Waiting for: {type}"
-4. Framework sets a flag to exit the loop after sending the tool_result
-5. Agent loop completes normally with the tool_result in conversation history
-6. Executor persists conversation (messages include the wait_for + result)
-7. Executor sets status = "paused", pendingWait = { type, metadata }
-```
-
-**Key design decision:** The `wait_for` tool result IS added to the conversation history before persisting. When the agent resumes, it sees:
-
-```
-[assistant]: I need human approval for this plan. [tool_use: wait_for({type: "approval"})]
-[user]: [tool_result: "Conversation paused. Waiting for: approval"]
-[user]: "Plan approved by John Smith. Feedback: 'Looks good, proceed.'"
-```
-
-The agent has full context of what it was doing, why it paused, and what the response was.
-
-**Integration point with existing `runAgentLoop()`:**
-
-The current loop does NOT need modification for `wait_for` to work. The executor can achieve this by:
-
-1. Registering `wait_for` as a regular tool whose `execute` function sets a side-channel flag
-2. After each tool execution cycle, checking the flag
-3. If set, the executor breaks out of the agent loop by using the existing `abortSignal`
-
-Alternatively, `runAgentLoop()` could be extended with a new option: `messages?: Anthropic.MessageParam[]` to accept a pre-populated conversation history for resume (the spec notes this need). This is a minimal change -- the current `buildInitialMessage` logic is bypassed when `messages` is provided.
-
-### 2.5 Failure Modes and Mitigations
-
-| Failure | Detection | Recovery | v2.2 Equivalent |
-|---------|-----------|----------|-----------------|
-| Worker crashes mid-loop | Heartbeat timeout (5 min) | Re-enqueue conversation | Temporal activity retry |
-| DB connection lost during persist | Write failure throws | Agent loop re-runs on next pickup | Temporal event history |
-| Signal arrives for wrong conversation | `pendingWait.type` mismatch | Log and reject signal | Temporal signal typing |
-| Duplicate signal (webhook retry) | Dedup by signal source + ID | No-op, return success | Webhook idempotency layer |
-| Conversation stuck in "running" | Heartbeat sweep query | Re-enqueue after timeout | Temporal heartbeat timeout |
-| Total timeout exceeded | Polling check on `timeout_at` | Wake with timeout signal | Temporal `wf.condition` timeout |
-
-### 2.6 What Temporal Capabilities Are Genuinely Lost
-
-Being honest about tradeoffs:
-
-| Temporal Capability | Impact on Aesir | Mitigation |
-|---------------------|-----------------|------------|
-| **Deterministic replay** | Cannot replay exact execution sequence for debugging | Event log provides full trace (better than replay for debugging) |
-| **Workflow versioning** | Cannot run v1 and v2 workflows side-by-side | Agent definition versioning serves the same purpose |
-| **Visibility queries** | Cannot use Temporal UI for workflow inspection | Session projection + admin API provide equivalent data |
-| **Distributed task queues** | Cannot scale workers across machines | Postgres `FOR UPDATE SKIP LOCKED` supports multiple workers on same DB |
-| **Activity retry with backoff** | Must implement retry logic manually | Agent loop already has rate-limit retry (3 attempts, 30s backoff); executor adds outer retry |
-
-**Assessment:** None of these are blockers. The event log + session projection provides better observability than Temporal's visibility queries for Aesir's use case (agent behavior debugging). Distributed scaling is not needed at current volume.
-
----
-
-## 3. Event Log Integration with Drizzle ORM
-
-### 3.1 Schema Design
-
-The spec defines three new tables (Appendix B.3). They map to the existing Drizzle ORM pattern used throughout Aesir (`pgSchema("agents")` + table definitions).
-
-**New tables replacing existing ones:**
-
-| New Table | Replaces | Purpose |
-|-----------|----------|---------|
-| `agent_events` | `execution_traces` | Append-only event stream with tool results |
-| `agent_sessions` | `tasks` | Materialized projection (status, artifacts) |
-| `conversations` | `context_snapshots` | Full conversation state + message history |
-
-The `agent_events` table has a unique constraint on `(conversation_id, sequence)` ensuring monotonic ordering per conversation. This is the primary query pattern and the main index.
-
-### 3.2 Write Path: Buffered Batch Inserts
-
-**Confidence: HIGH** (same pattern as existing `trace-recorder.ts`, proven at Aesir's scale)
-
-The current `trace-recorder.ts` already implements buffered fire-and-forget writes. The event log follows the same pattern but fixes the gap (tool results ARE recorded).
-
-```
-Agent loop executes tool
-  -> onToolCall callback fires
-  -> EventLog.append({ type: "tool.called", ... })  // void, non-blocking
-  -> Tool executes
-  -> onToolResult callback fires
-  -> EventLog.append({ type: "tool.succeeded", ... })  // void, non-blocking
-
-Background:
-  Buffer accumulates events
-  Every 100ms OR when buffer hits 50 events:
-    Batch INSERT into agent_events
-    Update agent_sessions projection
-```
-
-**Key implementation detail:** The `append()` method is synchronous (void return). Events are buffered in memory and flushed periodically. The `flush()` method is called explicitly at conversation pause points and shutdown.
-
-**Drizzle ORM integration:** Batch insert uses Drizzle's `.insert().values([...])` syntax. The existing pattern in `task-store.ts` and `trace-recorder.ts` confirms this works with the `agents` schema.
-
-### 3.3 Read Path: Filtered Queries
-
-Event queries use the spec's `EventQueryOpts` interface:
-
-```typescript
-// Query by conversation (primary pattern)
-db.select().from(agentEvents)
-  .where(eq(agentEvents.conversationId, conversationId))
-  .orderBy(agentEvents.sequence);
-
-// Query by type (observability)
-db.select().from(agentEvents)
-  .where(and(
-    eq(agentEvents.conversationId, conversationId),
-    inArray(agentEvents.type, ["tool.succeeded", "tool.failed"])
-  ));
-```
-
-The `(conversation_id, sequence)` index handles the primary query pattern efficiently. Per-conversation event counts are expected to be 100-500 (based on current `execution_traces` data: 100-500 traces per task, 10-50 tasks/day from `cost-tracking.ts`).
-
-### 3.4 LISTEN/NOTIFY Analysis
-
-**Confidence: MEDIUM** (researched Drizzle ORM support, found gap)
-
-The spec mentions `LISTEN/NOTIFY or polling for subscriptions`. Research finding: **Drizzle ORM does NOT support LISTEN/NOTIFY natively.** The Drizzle connection uses `node-postgres` (`pg`) under the hood, and LISTEN/NOTIFY requires a dedicated raw `pg.Client` connection that stays open for notification delivery.
-
-**Options:**
-
-| Option | How | Complexity |
-|--------|-----|------------|
-| **Polling (recommended for v2.3)** | Session projection queries `agent_sessions` on interval | Trivial |
-| Raw pg Client | Maintain separate connection outside Drizzle for LISTEN/NOTIFY | Medium -- connection lifecycle management |
-| pg-listen library | Wrapper around pg LISTEN/NOTIFY with reconnection | Low -- but adds dependency |
-
-**Recommendation: Polling for v2.3.** The `subscribe()` method on EventLog is used by the session projection (which is the only subscriber in v2.3 scope). Polling the events table every 100ms for new events per active conversation is sufficient and avoids adding a separate connection management layer.
-
-The `EventLog.subscribe()` interface is designed so that a LISTEN/NOTIFY implementation can be swapped in later without changing callers. The interface abstracts the delivery mechanism.
-
-### 3.5 Session Projection: Reactive Updates
-
-The `agent_sessions` table is a materialized view of the event stream. It replaces the `tasks` table with reactively computed fields instead of imperatively set fields.
-
-**How it updates:**
-
-```
-Event arrives: tool.succeeded for "github:create_pull_request"
-  -> Session projection checks: does this tool have artifact config?
-  -> Yes: artifact key = "github:pr"
-  -> Extract result.data from event payload
-  -> UPSERT agent_sessions SET artifacts = jsonb_set(artifacts, '{github:pr}', ...)
-```
-
-**What this replaces in the current codebase:**
-
-Currently, `parsePrInfoFromTrace()` in `orchestrator-activities.ts` (line ~60) scans the agent's trace array after the loop completes looking for `github_create_pull_request` tool calls. If the agent creates a PR in an unexpected phase, the parsing misses it. The event log approach records the PR data when the tool succeeds -- no scanning, no phase assumptions.
-
----
-
-## 4. Single Service Consolidation
-
-### 4.1 What Gets Merged
-
-Currently 4 agent-related containers in `docker-compose.yml`:
-
-| Container | Port | Entry Point | Purpose |
-|-----------|------|-------------|---------|
-| `dev-agent` | 3004 | `dist/dev-agent/main.js` | HTTP for dev-agent events |
-| `dev-agent-worker` | none | `dist/dev-agent/worker.js` | Temporal worker |
-| `product-agent` | 3005 | `dist/product-agent/main.js` | HTTP + embedded Temporal worker |
-| `router` | 3006 | `dist/router/main.js` | Event classification |
-
-These become **one container**:
-
-| Container | Port | Entry Point | Purpose |
-|-----------|------|-------------|---------|
-| `agent-service` | 3004 | `dist/main.js` | HTTP + worker polling loop |
-
-### 4.2 HTTP Router Composition
-
-All three current services use Node.js `http.createServer()` (not Express). The dev-agent `main.ts` shows the pattern:
-
-```typescript
-const server = createServer(async (req, res) => {
-  if (req.method === "GET" && req.url === "/health") { ... }
-  if (req.method === "POST" && req.url === "/events") { ... }
-});
-```
-
-The merged service adds routes:
-
-```
-GET  /health                        -- combined health check
-POST /events                        -- webhook events (from integrations)
-GET  /conversations/:id             -- query conversation state
-POST /conversations/:id/cancel      -- cancel a conversation
-```
-
-This is straightforward composition -- a single `createServer` with a URL matcher. No Express needed, no additional dependency.
-
-### 4.3 Docker Compose Migration
-
-**Removed services:** `dev-agent`, `dev-agent-worker`, `product-agent`, `router`, `temporal`, `temporal-ui`
-
-**Modified services:**
-
-| Service | Change |
-|---------|--------|
-| `nginx` | Remove routing for `/agent/`, `/router/`; add single route to `agent-service` |
-| Integration services | Change `ROUTER_URL` from `http://router:3006/events` to `http://agent-service:3004/events` |
-
-**New service:**
-
-```yaml
-agent-service:
-  build: { context: ., dockerfile: Dockerfile }
-  container_name: aesir-agent-service
-  user: root  # Docker socket for DevContainerManager
-  depends_on:
-    postgresql: { condition: service_healthy }
-    linear-integration: { condition: service_healthy }
-    github-integration: { condition: service_healthy }
-    slack-integration: { condition: service_healthy }
-  environment:
-    # Same as current dev-agent + product-agent combined
-    # MINUS all TEMPORAL_* vars
-  volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-  command: ["node", "dist/main.js"]
-  ports: ["3004:3004"]
-```
-
-**Net reduction:** 6 services removed (dev-agent, dev-agent-worker, product-agent, router, temporal, temporal-ui), 1 added (agent-service). Total service count drops from 10 to 5 (postgresql, 3 integrations, agent-service, nginx).
-
-### 4.4 Bootstrap Sequence
-
-The single service `main.ts` bootstrap order matters for dependency injection:
-
-```
-1. Load environment config (Zod validation, fail fast)
-2. Connect to PostgreSQL (Drizzle ORM)
-3. Run migrations (optional, can be gated by env flag)
-4. Create AgentRegistry (lazy-loading from definitions/)
-5. Create ToolRegistry, register all tool factories
-6. Create EventLog (Postgres-backed, buffered writes)
-7. Create SessionProjection (subscribes to EventLog)
-8. Create ConversationExecutor (uses EventLog, AgentRegistry, ToolRegistry)
-9. Create EventRouter (loads start rules from AgentRegistry)
-10. Start HTTP server (routes to EventRouter, Executor)
-11. Start worker polling loop (claims queued conversations)
-12. Register graceful shutdown (flush EventLog, close DB)
-```
-
-**Key integration point:** Step 5 (ToolRegistry) needs the `DevContainerManager` for codebase tools. The current `worker.ts` creates this with Docker socket access. The merged service inherits this -- same Docker socket mount, same container manager initialization.
-
----
-
-## 5. Agent Registry + Definition Loading
-
-### 5.1 Lazy Loading with mtime Invalidation
-
-**Confidence: HIGH** (well-established pattern: Logstash, Metricbeat, OpenCode)
-
-Agent definitions live in `packages/agents/definitions/`, one directory per agent. The registry loads on first `get()` call and caches. Cache invalidation uses file `mtime` (modification time):
-
-```
-registry.get("dev-agent"):
-  1. Check in-memory cache for "dev-agent"
-  2. If cached:
-     a. stat() the definition file
-     b. Compare mtime to cached mtime
-     c. If unchanged: return cached definition (fast path)
-     d. If changed: reload from disk, update cache
-  3. If not cached:
-     a. Read definition.yaml + prompt.md
-     b. Parse YAML, validate with Zod schema
-     c. Assemble AgentDefinition object
-     d. Cache with mtime
-     e. Return
-```
-
-**Why NOT file watchers (fs.watch/chokidar):**
-
-| Concern | File Watcher | mtime Check |
-|---------|-------------|-------------|
-| Cross-platform reliability | fs.watch is unreliable on Docker volumes, NFS | `stat()` works everywhere |
-| Resource usage | Holds inotify/kqueue handles per file | Zero idle cost |
-| Complexity | Event handler, debouncing, error recovery | Single `stat()` call |
-| Docker compatibility | Known issues with bind mounts | Works reliably |
-
-The mtime check adds ~1ms of latency per `get()` call (filesystem stat). Given that `get()` is called once per conversation start (not per tool call), this is negligible.
-
-### 5.2 Schema Validation
-
-Each definition file is validated against a Zod schema on load:
-
-```typescript
-const AgentDefinitionSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  description: z.string(),
-  version: z.string(),
-  model: z.string(),
-  temperature: z.number().optional().default(0),
-  tools: z.array(z.string()),           // Validated against ToolRegistry
-  subAgents: z.record(z.string()).optional(),
-  maxIterations: z.number(),
-  tokenBudget: z.number(),
-  history: z.object({
-    pruneThreshold: z.number(),
-    protectedMessages: z.number(),
-    summaryThreshold: z.number(),
-    summaryModel: z.string(),
-  }),
-  triggers: z.array(z.object({ event: z.string() })).optional(),
-});
-```
-
-**Validation timing:** On load (first `get()` or cache invalidation). Invalid definitions throw immediately -- fail fast, loud error in logs. This matches Aesir's existing pattern (env validation via Zod fails at startup).
-
-### 5.3 Version Pinning
-
-When a conversation starts, the executor records the `agentDefinitionVersion` from the definition. On resume, the executor loads the definition by `id + version`:
-
-```
-registry.get("dev-agent", "1")
-```
-
-If the version file has been updated to "2" between pauses, the resumed conversation still uses version "1". This prevents mid-conversation behavior changes -- the agent that resumes is the same agent that paused.
-
-**Implementation:** The registry caches by `id:version` composite key. Multiple versions of the same agent can coexist in cache.
-
----
-
-## 6. Conversation History as JSONB
-
-### 6.1 TOAST Performance Analysis
-
-**Confidence: MEDIUM** (researched Postgres JSONB internals, applied to Aesir's expected data)
-
-PostgreSQL stores JSONB using TOAST (The Oversized Attribute Storage Technique). When a JSONB column exceeds ~2KB, Postgres compresses and stores it out-of-line. The concern: does this affect performance for conversation histories that grow to 50-200KB?
-
-**Aesir's expected conversation sizes:**
-
-| Conversation Type | Turns | Estimated Size | TOAST Behavior |
-|-------------------|-------|----------------|---------------|
-| Product agent (short) | 5-20 turns | 10-30KB | Out-of-line, compressed |
-| Dev agent (simple task) | 20-50 iterations | 30-80KB | Out-of-line, compressed |
-| Dev agent (complex task) | 50-100 iterations | 80-200KB | Out-of-line, compressed |
-| Dev agent after compaction | Any | 20-60KB | Out-of-line, compressed |
-
-**The performance concern:**
-
-TOAST has write amplification. Updating a JSONB column rewrites the entire TOAST value, not just the changed part. For a 100KB conversation, every message append means rewriting 100KB.
-
-**Why this is acceptable for Aesir:**
-
-1. **Write frequency is low.** The conversation is only written at two points: (a) when the agent calls `wait_for` (pause), and (b) when the conversation completes. During agent execution, the conversation lives in memory. There is NOT a write per tool call.
-
-2. **Single read + single write per execution cycle.** The executor reads the conversation once (on resume), runs the agent loop entirely in memory, and writes once (on pause/complete). This is 2 I/O operations per execution cycle, regardless of conversation size.
-
-3. **History compaction limits growth.** The three-phase compaction strategy (tool output pruning at 80K tokens, structured summary at 120K tokens) keeps conversation sizes bounded. A compacted 200-message conversation is typically 20-60KB.
-
-4. **The alternative is worse.** Normalizing messages into separate rows (one row per message) adds JOIN complexity, loses atomic consistency (partial writes), and makes the resume path slower (N queries instead of 1).
-
-### 6.2 Size Estimates
-
-Anthropic's message format includes content blocks. A typical tool-use turn:
-
-```json
-{
-  "role": "assistant",
-  "content": [
-    { "type": "text", "text": "I'll read the configuration file..." },
-    { "type": "tool_use", "id": "toolu_01...", "name": "read_file", "input": {"path": "config.ts"} }
-  ]
-}
-```
-
-Plus the tool result:
-
-```json
-{
-  "role": "user",
-  "content": [
-    { "type": "tool_result", "tool_use_id": "toolu_01...", "content": "export const config = {...}" }
-  ]
-}
-```
-
-**Per-iteration size estimate:**
-- Assistant turn with tool call: ~200-500 bytes (reasoning + tool use block)
-- Tool result: 100-10,000 bytes (depends on file size)
-- After pruning (old turns): 200-500 bytes (reasoning kept, result replaced with descriptor)
-
-**Total estimate for a 50-iteration dev agent conversation:**
-- Raw (no compaction): ~150KB (average 3KB per iteration with file contents)
-- After Phase 1 pruning: ~40KB (keep 20 recent messages raw, prune older tool results)
-- After Phase 2 summary: ~25KB (oldest section replaced with structured summary)
-
-### 6.3 Mitigation: LZ4 Compression (Optional)
-
-PostgreSQL's default TOAST compression is pglz (moderate compression, moderate speed). For better compression on JSONB:
-
-- **pglz (default):** ~40% compression ratio on JSON. No configuration needed.
-- **lz4 (Postgres 14+):** Faster compression/decompression, similar ratio. Set with `ALTER TABLE ... ALTER COLUMN ... SET COMPRESSION lz4`.
-
-Aesir uses Postgres 15 (from `docker-compose.yml`: `postgres:15-alpine`), so lz4 is available.
-
-**Recommendation:** Use default pglz for v2.3 launch. Monitor TOAST sizes via `pg_column_size()`. Switch to lz4 if write latency becomes an issue. This is a DBA-level change, not a code change.
-
----
-
-## 7. Migration Sequence: Temporal to Custom Orchestration
-
-### 7.1 Drain Strategy
-
-Temporal workflows in Aesir are short-lived relative to most Temporal deployments:
-
-| Workflow | Typical Duration | Max Duration |
-|----------|-----------------|--------------|
-| Dev agent (with approval) | 1-72 hours | 7 days (feedback timeout) |
-| Dev agent (autonomous) | 5-30 minutes | 45 minutes (activity timeout) |
-| Product agent | 5-60 minutes | 24 hours (conversation timeout) |
-
-**Drain approach:**
-1. Stop routing NEW events to Temporal workflows (redirect to v2.3 executor)
-2. Let existing workflows complete naturally (max 7 days)
-3. After drain period, verify no running workflows via Temporal UI
-4. Remove Temporal infrastructure
-
-**This is straightforward because:**
-- No long-running workflows (everything completes within 7 days)
-- No workflow dependencies (workflows don't spawn other workflows)
-- Feature flag on the event router: `USE_V23_EXECUTOR=true` switches all new events
-
-### 7.2 Gotchas
-
-| Gotcha | Impact | Mitigation |
-|--------|--------|------------|
-| In-flight workflows during cutover | Existing workflows need Temporal to complete | Keep Temporal running for drain period (7 days) |
-| Temporal DB shares PostgreSQL | Temporal's `temporal` database shares the same Postgres instance | Temporal stores data in its own schemas; dropping Temporal services doesn't affect Aesir schemas |
-| Signal handlers registered at workflow start | Can't change signal routing mid-workflow | Only affects draining workflows; new conversations use executor |
-| Temporal worker shutdown | Must gracefully finish current activity before stopping | Docker Compose `stop_grace_period: 60s` gives activity time to complete |
-| Database migration timing | Old tables must exist for drain period, new tables for v2.3 | Create new tables first, drop old tables after drain completes |
-
-### 7.3 Phase Sequence
-
-```
-Phase A: Build framework (parallel with v2.2 running)
-  - All new code in src/framework/ and definitions/
-  - New DB tables created alongside old ones
-  - Nothing breaks, nothing changes for v2.2
-
-Phase B: Wire and validate
-  - Build single main.ts that can run alongside old services
-  - Integration test: start -> pause -> signal -> resume
-  - Smoke test with real LLM calls
-
-Phase C: Cut over
-  - Set USE_V23_EXECUTOR=true
-  - New events go through v2.3 executor
-  - Monitor both systems during drain period
-  - After 7 days: verify Temporal is empty
-
-Phase D: Clean up
-  - Remove Temporal services from Docker Compose
-  - Remove @temporalio/* from package.json
-  - Delete packages/agents/src/shared/temporal/
-  - Delete per-agent main.ts and worker.ts
-  - Drop old DB tables (tasks, context_snapshots, execution_traces)
-  - Update CLAUDE.md
-```
-
-**Effort estimates per phase:**
-
-| Phase | Duration | Risk | Blockers |
-|-------|----------|------|----------|
-| A: Build | 3-5 days | LOW | None -- greenfield |
-| B: Wire | 2-3 days | MEDIUM | Integration testing requires all services running |
-| C: Cut over | 1 day + 7-day drain | LOW | Just a flag flip |
-| D: Clean up | 1-2 days | LOW | Mechanical deletion |
-
----
-
-## 8. Data Flow: Full Pause/Resume Cycle
-
-### 8.1 Complete Trace: Webhook to wait_for to Resume
-
-```
-PHASE 1: Initial Start
-=======================
-
-1. Linear webhook fires (issue.agent_session.created)
-   -> POST /events on agent-service:3004
-
-2. Adapter normalizes:
-   IncomingEvent { type: "linear.agent_session.created", correlationKey: "{issueId}", ... }
-
-3. EventRouter checks start rules:
-   - dev-agent definition has trigger: { event: "linear.agent_session.created" }
-   - Construct conversation ID: "dev-agent-{issueId}"
-
-4. executor.start({
-     agentDefinitionId: "dev-agent",
-     conversationId: "dev-agent-{issueId}",
-     message: "Resolve Linear issue AES-42: 'Add /healthz endpoint'",
-   })
-
-5. Executor creates conversation record:
-   INSERT INTO conversations (id, status, messages, ...)
-   VALUES ("dev-agent-{issueId}", "queued", '[{"role":"user","content":"..."}]', ...)
-
-6. Executor appends event:
-   EventLog.append({ type: "agent.started", conversationId: "dev-agent-{issueId}" })
-
-7. HTTP handler returns 200 to webhook (non-blocking)
-
-PHASE 2: Agent Execution
-=========================
-
-8. Worker polling loop picks up queued conversation:
-   SELECT ... FROM conversations WHERE status = 'queued' FOR UPDATE SKIP LOCKED
-
-9. Worker updates: status = "running", last_heartbeat_at = NOW()
-
-10. Worker loads AgentDefinition from registry:
-    registry.get("dev-agent", "1")
-
-11. Worker resolves tools:
-    toolRegistry.resolve(definition.tools, { containerManager, agentId, ... })
-
-12. Worker calls runAgentLoop({
-      systemPrompt: definition.systemPrompt,
-      tools: resolvedTools,
-      messages: conversation.messages,  // <-- NEW: pre-populated history
-      maxIterations: definition.maxIterations,
-      tokenBudget: ...,
-      onToolCall: (call) => eventLog.append({ type: "tool.called", ... }),
-    })
-
-13. Agent loop runs:
-    - LLM reasons, calls tools
-    - EventLog records tool.called / tool.succeeded events
-    - Session projection updates reactively (artifacts)
-    - Heartbeat fires every 30s (onHeartbeat callback)
-
-PHASE 3: Pause via wait_for
-=============================
-
-14. Agent decides it needs approval:
-    LLM returns: tool_use { name: "wait_for", input: { type: "approval", reason: "..." } }
-
-15. Framework intercepts wait_for:
-    a. Returns tool_result to conversation: "Conversation paused. Waiting for: approval"
-    b. Sets exit flag
-
-16. Agent loop exits (returns AgentLoopResult)
-
-17. Executor persists:
-    UPDATE conversations
-    SET status = 'paused',
-        messages = $fullHistory,  -- includes wait_for call + result
-        pending_wait = '{"type":"approval","metadata":{...}}',
-        updated_at = NOW()
-    WHERE id = "dev-agent-{issueId}"
-
-18. EventLog.append({ type: "agent.paused", ... })
-19. EventLog.flush()  -- guarantee events are persisted
-
-PHASE 4: Signal Arrives (hours/days later)
-==========================================
-
-20. Slack webhook fires (block_actions.approve button click)
-    -> POST /events on agent-service:3004
-
-21. Adapter normalizes:
-    IncomingEvent {
-      type: "approval",
-      data: { approved: true, feedback: "Looks good" },
-      correlationKey: "{issueId}",
-      message: "Plan approved by John Smith. Feedback: 'Looks good.'"
-    }
-
-22. EventRouter resolves:
-    - Construct conversation ID: "dev-agent-{issueId}"
-    - Load conversation: status = "paused", pendingWait.type = "approval"
-    - Signal type "approval" matches pendingWait.type
-
-23. executor.signal("dev-agent-{issueId}", {
-      type: "approval",
-      data: { approved: true, feedback: "Looks good" },
-    })
-
-24. Executor updates conversation:
-    UPDATE conversations
-    SET status = 'queued',
-        messages = messages || '[{"role":"user","content":"Plan approved by..."}]',
-        pending_wait = NULL,
-        updated_at = NOW()
-    WHERE id = "dev-agent-{issueId}"
-
-25. EventLog.append({ type: "signal.received", ... })
-26. EventLog.append({ type: "agent.resumed", ... })
-
-27. HTTP handler returns 200 to webhook
-
-PHASE 5: Resumed Execution
-===========================
-
-28. Worker polling loop picks up queued conversation (same as step 8)
-
-29. Worker applies history compaction if needed (definition.history config)
-
-30. runAgentLoop({ messages: compactedHistory })
-    - Agent sees EVERYTHING: prior research, plan, wait_for, approval message
-    - Continues naturally from where it left off
-
-31. Agent completes (no more wait_for calls, final text output)
-
-32. Executor updates:
-    UPDATE conversations SET status = 'completed', messages = $final, updated_at = NOW()
-
-33. EventLog.append({ type: "agent.completed", ... })
-```
-
-### 8.2 Failure Points in the Flow
-
-| Step | Failure | Consequence | Recovery |
-|------|---------|-------------|----------|
-| 5 | DB write fails | Conversation never created | Webhook retry delivers same event; executor.start() idempotent |
-| 9 | Worker crashes after claiming | Conversation stuck in "running" | Heartbeat sweep re-enqueues after 5 min |
-| 16 | Agent loop errors (LLM failure) | Conversation in "running" with partial trace | Heartbeat sweep re-enqueues; agent loop has retry-backoff |
-| 17 | DB write fails on pause | Conversation state lost | Agent loop must re-run from last persisted state |
-| 24 | DB write fails on signal | Signal not delivered | Webhook retry re-delivers signal |
-| 29 | History compaction fails | Conversation too large for context window | Fallback: aggressive pruning or error with escalation |
-
-### 8.3 Signal Queueing: Race Condition Fix
-
-The product agent currently has a retry-with-backoff hack for signals that arrive before the workflow starts. The `orchestrator-workflow.ts` also has timing-sensitive signal handling.
-
-v2.3 fixes this structurally:
-
-```
-Signal arrives for conversation "product-agent-{threadTs}":
-  Case 1: Conversation doesn't exist yet
-    -> Router creates conversation via executor.start() with the event as initial message
-    -> No signal needed -- the message IS the conversation starter
-
-  Case 2: Conversation exists, status = "running"
-    -> Append to queued_signals JSONB column
-    -> When agent calls wait_for, executor checks queued_signals BEFORE pausing
-    -> If matching signal exists: pop from queue, append as user message, continue running
-
-  Case 3: Conversation exists, status = "paused", matching wait type
-    -> Normal resume flow (steps 22-27 above)
-```
-
-This eliminates all timing-dependent retries. The signal is either the conversation starter, queued for later, or delivered immediately.
-
----
-
-## 9. Suggested Build Order
-
-Based on dependency analysis and risk mitigation:
-
-### Phase A: Framework Core (no existing code changes)
-
-| Step | Component | Dependencies | Effort | Risk |
-|------|-----------|-------------|--------|------|
-| A1 | DB schema + migrations | None | 0.5 day | LOW |
-| A2 | EventLog (append, query, flush) | A1 | 1 day | LOW |
-| A3 | SessionProjection | A1, A2 | 0.5 day | LOW |
-| A4 | AgentRegistry + definition loading | None | 1 day | LOW |
-| A5 | ToolRegistry (factory registration, resolve) | None | 0.5 day | LOW |
-| A6 | HistoryManager (pruning + summarization) | None | 1.5 days | MEDIUM |
-| A7 | ConversationExecutor (start, signal, cancel, worker loop) | A1-A5 | 2 days | MEDIUM |
-| A8 | wait_for tool | A7 | 0.5 day | LOW |
-
-**Critical path:** A1 -> A2 -> A7. Everything else can be built in parallel.
-
-### Phase B: Integration (wiring to existing infrastructure)
-
-| Step | Component | Dependencies | Effort | Risk |
-|------|-----------|-------------|--------|------|
-| B1 | Agent definition files (YAML + prompt.md) | A4 | 1 day | LOW |
-| B2 | Event adapters (Slack, GitHub, Linear) | None | 1 day | LOW |
-| B3 | Event router (adapted from current router module) | A4, A7 | 1.5 days | MEDIUM |
-| B4 | Single main.ts service | A1-A8, B1-B3 | 1 day | LOW |
-| B5 | Integration tests (start -> pause -> signal -> resume) | B4 | 1 day | MEDIUM |
-
-### Phase C: Cut Over
-
-| Step | Action | Dependencies | Effort | Risk |
-|------|--------|-------------|--------|------|
-| C1 | Feature flag: new events -> v2.3 executor | B5 passing | 0.5 day | LOW |
-| C2 | Drain Temporal workflows (monitor for 7 days) | C1 | 0 (calendar time) | LOW |
-| C3 | Smoke test: full dev-agent + product-agent flows | C1 | 1 day | MEDIUM |
-
-### Phase D: Cleanup
-
-| Step | Action | Dependencies | Effort | Risk |
-|------|--------|-------------|--------|------|
-| D1 | Delete Temporal code (shared/temporal/) | C2 verified empty | 0.5 day | LOW |
-| D2 | Delete per-agent services (main.ts, worker.ts, api/) | D1 | 0.5 day | LOW |
-| D3 | Remove @temporalio/* from package.json | D1, D2 | 0.5 day | LOW |
-| D4 | Drop old DB tables, update Docker Compose | D1-D3 | 0.5 day | LOW |
-
-**Total estimated effort:** 15-18 days of development + 7 days drain period.
-
----
-
-## 10. Component Interface Summary
+## Component Responsibilities
 
 ### New Components
 
-| Component | Interface | Creates | Consumes |
-|-----------|-----------|---------|----------|
-| `ConversationExecutor` | start(), signal(), get(), cancel(), list(), close() | Conversations, events | AgentRegistry, ToolRegistry, EventLog |
-| `EventLog` | append(), query(), subscribe(), flush(), close() | agent_events rows | DB connection |
-| `SessionProjection` | get(), list() | agent_sessions rows | EventLog subscription |
-| `AgentRegistry` | get(), list() | In-memory cache | Definition files (YAML + MD) |
-| `ToolRegistry` | register(), resolve() | ToolDefinition arrays | Tool factory functions |
-| `EventRouter` | handle() | RouteResult | AgentRegistry (triggers), ConversationExecutor |
-| `HistoryManager` | compact() | Compacted message array | AgentDefinition.history config |
-| Event Adapters (x3) | transform() | IncomingEvent | Raw webhook payloads |
+| Component | Location | Responsibility |
+|-----------|----------|---------------|
+| TaskService | `packages/agents/src/framework/task-service.ts` | CRUD operations on `agents.tasks` and `agents.task_handoffs`, task lifecycle management, concurrency serialization |
+| Task tools (6) | `packages/agents/src/shared/tools/task/` | Agent-facing tool implementations: create_task, complete_task, pause_task, handoff_task, list_tasks, get_task_context |
+| Task correlation store | `packages/integrations/{integration}/src/db/correlation-store.ts` | Per-integration task_correlations CRUD (one per integration package) |
+| Correlation middleware | `packages/integrations/{integration}/src/mcp/correlation-middleware.ts` | MCP response interceptor that records outgoing correlations |
 
 ### Modified Components
 
-| Component | Current | Change |
-|-----------|---------|--------|
-| `runAgentLoop()` | Accepts `initialMessage` + `context` | Add optional `messages` parameter for pre-populated history |
-| `spawn_agent` tool | Inline sub-agent configs | Uses AgentRegistry + ToolRegistry to resolve sub-agent definitions |
-| Smart router module | Uses `workflowClient` (Temporal) | Uses `ConversationExecutor` instead |
-| Docker Compose | 10 services | 5 services (remove Temporal, consolidate agents) |
+| Component | File | What Changes |
+|-----------|------|-------------|
+| ConversationExecutor | `packages/agents/src/framework/conversation-executor.ts` | `signal()` handles `reopen` on terminal conversations |
+| EventRouter | `packages/agents/src/framework/event-router.ts` | No change (task routing added in caller) |
+| Adapters | `packages/agents/src/adapters/*.ts` | Pass through `taskId` field from NormalizedEvent |
+| NormalizedEvent schema | `packages/types/src/events/schema.ts` | Add optional `taskId` field |
+| IncomingEvent schema | `packages/agents/src/adapters/types.ts` | Add optional `taskId` field |
+| Router (core) | `packages/agents/src/router/router.ts` | Task-aware routing before trigger match |
+| ToolContext | `packages/agents/src/framework/types.ts` | Add optional `taskId` to ToolContext (and rename existing `taskId` which is used for sandbox container) |
+| Tool factories | `packages/agents/src/framework/tool-factories.ts` | Register 6 new task tools |
+| DB schema | `packages/agents/src/shared/db/schema.ts` | Add tasks, task_handoffs tables; task_id FK on conversations |
+| Worker loop | `packages/agents/src/framework/worker-loop.ts` | Inject task context into system prompt when conversation has task_id |
+| createId | `packages/types/src/utils/ids.ts` | Add `task` and `handoff` ID generators |
+| Service main | `packages/agents/src/service/main.ts` | Bootstrap TaskService, pass to executor and tool factories |
+| API router | `packages/agents/src/service/api/router.ts` | Add reopen endpoint |
+| Integration webhook handlers | `packages/integrations/*/src/api/webhooks.ts` | Look up task correlation before dispatching event |
+| Integration MCP routes | `packages/integrations/*/src/api/mcp.ts` | Extract X-Task-ID header, record correlation on success |
+| Integration DB schemas | `packages/integrations/*/src/db/schema.ts` | Add task_correlations table |
+| MCP client | `packages/agents/src/shared/mcp/client.ts` | Add X-Task-ID header when taskId is set |
+| MCP types | `packages/agents/src/shared/mcp/types.ts` | Add optional taskId to McpCallOptions |
 
 ### Unchanged Components
 
 | Component | Why Unchanged |
-|-----------|---------------|
-| `runAgentLoop()` (core loop) | The agent loop runtime is the foundation; only the entry point changes |
-| All tool implementations | Tools are execution logic; their definitions move to ToolRegistry but implementations stay |
-| MCP client (`callMcpTool`) | Integration communication protocol unchanged |
-| Integration packages (x3) | Independent services, no Temporal dependency |
-| DevContainerManager | Container lifecycle management unchanged |
-| Platform package | Config, logging, DB connection unchanged |
+|-----------|--------------|
+| EventLog | Append-only events are per-conversation; conversations know their task |
+| SessionProjection | Operates on conversation events, not tasks |
+| HistoryManager | Compaction operates on message arrays; task context injected before history |
+| TimeoutScheduler | Works on conversation-level wait_for timeouts |
+| Agent definitions (YAML) | Only change: add new tool refs to `tools:` list |
+| AgentRegistry | Loads YAML unchanged; new tools are registered, not defined in YAML structure |
 
----
+## Schema Design
 
-## 11. Performance Implications
+### tasks table
 
-### 11.1 Expected Load Profile
+```sql
+CREATE TABLE agents.tasks (
+  id            TEXT PRIMARY KEY,  -- gen via createId.task() -> "task_<nanoid>"
+  parent_id     TEXT REFERENCES agents.tasks(id),
+  creator_type  TEXT NOT NULL CHECK (creator_type IN ('agent', 'human')),
+  creator_id    TEXT NOT NULL,
+  assignee_type TEXT NOT NULL CHECK (assignee_type IN ('agent', 'human')),
+  assignee_id   TEXT NOT NULL,
+  status        TEXT NOT NULL DEFAULT 'created'
+                CHECK (status IN ('created', 'active', 'paused', 'completed', 'cancelled')),
+  title         TEXT NOT NULL,
+  objective     TEXT,
+  metadata      JSONB DEFAULT '{}',
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  completed_at  TIMESTAMPTZ
+);
+```
 
-Based on current system metrics (from `cost-tracking.ts` comments and Temporal workflow observations):
+**Index design:**
 
-| Metric | Current (v2.2) | Expected (v2.3) | Change |
-|--------|----------------|------------------|--------|
-| Concurrent conversations | 1-5 | 1-5 | Same |
-| Events per conversation | 100-500 | 100-500 | Same (event log replaces traces) |
-| Conversation persistence writes | 3-5 per task (activity boundaries) | 2 per task (pause + complete) | Fewer writes |
-| Signal routing latency | 100-500ms (Temporal scheduling) | <50ms (direct DB update + poll) | Faster |
-| Agent loop startup | 200ms (Temporal activity scheduling) | <10ms (in-process) | Much faster |
+```sql
+-- Primary query: "what tasks is this agent working on?"
+CREATE INDEX idx_tasks_assignee ON agents.tasks(assignee_type, assignee_id, status);
 
-### 11.2 Bottleneck Analysis
+-- Subtask lookup: "what are the children of this task?"
+CREATE INDEX idx_tasks_parent ON agents.tasks(parent_id) WHERE parent_id IS NOT NULL;
 
-| Operation | Current Bottleneck | v2.3 Bottleneck | Assessment |
-|-----------|-------------------|-----------------|------------|
-| Webhook -> agent start | Temporal workflow scheduling (100-500ms) | DB insert + poll interval (30s worst case) | Trade-off: higher worst-case latency, but simpler |
-| Signal delivery | Temporal signal + condition wake (100ms) | DB update + poll interval (30s worst case) | Worse worst-case; mitigate with LISTEN/NOTIFY later |
-| Agent resume | Fresh agent loop + context summary read | Full history load from JSONB | Better (richer context), but larger payload |
-| Event recording | Buffered batch INSERT (current pattern) | Same pattern (unchanged) | Same |
+-- Active task queries (dashboard, routing)
+CREATE INDEX idx_tasks_status ON agents.tasks(status) WHERE status IN ('created', 'active', 'paused');
+```
 
-**The 30-second polling interval** is the main performance regression. Temporal's signal delivery is near-instant; polling adds up to 30 seconds of latency. For Aesir's use case (approval responses take minutes to hours), this is acceptable. For more time-sensitive use cases, LISTEN/NOTIFY can be added later.
+**Rationale:**
+- Composite `(assignee_type, assignee_id, status)` index covers the most common query: "find active tasks for agent X." The partial index on active statuses keeps the index small since most tasks eventually complete.
+- The `parent_id` partial index excludes root tasks (where parent_id IS NULL) since those are never looked up by parent.
+- No separate index on `creator_type/creator_id` -- creator queries are infrequent (analytics, not runtime routing).
 
-**Recommendation:** Start with 5-second polling interval for the worker loop (not 30 seconds). This gives responsive signal delivery (5s worst case) at the cost of slightly more DB queries. At 1 query per 5 seconds, this is ~12 queries/minute -- trivial for Postgres.
+**ID generation -- recommendation against human-readable sequential IDs:**
 
-### 11.3 Scaling Considerations
+The spec mentions `gen_task_id()`. The recommendation is to use the existing `createId` pattern (`task_<nanoid>`) rather than a PostgreSQL sequence-based "T-001" style because:
 
-| Scale | Approach |
-|-------|----------|
-| 1-10 concurrent conversations | Single worker, 5s polling. Current setup. |
-| 10-50 concurrent conversations | Multiple workers (same process, concurrent loops). `FOR UPDATE SKIP LOCKED` distributes. |
-| 50-200 concurrent conversations | Multiple worker processes. Same DB, same pattern. |
-| 200+ concurrent conversations | LISTEN/NOTIFY for event-driven wakeup. Consider SQS/EventBridge. |
+1. **Existing convention**: Every table in Aesir uses `prefix_<nanoid>` IDs. Introducing a different pattern creates cognitive overhead.
+2. **No collision across environments**: Sequential IDs collide when syncing dev/staging/production data.
+3. **External reference is the human-readable ID**: Tasks correlate with Linear issue identifiers (e.g., AES-42) which are already human-readable. The task.metadata can store this mapping.
+4. **Simplicity**: No function definition needed, no sequence management, works with Drizzle's `$defaultFn` pattern.
 
-Aesir is currently at 1-5 concurrent conversations. The Postgres-backed approach is appropriate for 10-100x current scale without architectural changes.
+If human-readable task IDs are genuinely needed for debugging, add a `display_id` column with a DB sequence. But the primary key should remain nanoid-based.
 
----
+### task_handoffs table
 
-## 12. Sources and Confidence Assessment
+```sql
+CREATE TABLE agents.task_handoffs (
+  id                TEXT PRIMARY KEY,  -- gen via createId.handoff() -> "ho_<nanoid>"
+  task_id           TEXT NOT NULL REFERENCES agents.tasks(id),
+  conversation_id   TEXT NOT NULL REFERENCES agents.conversations(id),
+  handoff_type      TEXT NOT NULL CHECK (handoff_type IN ('completion', 'pause', 'delegation', 'escalation')),
+  context           JSONB NOT NULL,  -- agent-authored context
+  author_type       TEXT NOT NULL CHECK (author_type IN ('agent', 'human')),
+  author_id         TEXT NOT NULL,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
-### Sources Used
+CREATE INDEX idx_handoffs_task ON agents.task_handoffs(task_id, created_at);
+```
 
-| Source | Type | Confidence | Used For |
-|--------|------|------------|----------|
-| Codebase analysis (orchestrator-workflow.ts, run-agent-loop.ts, schema.ts, task-store.ts, docker-compose.yml, all main.ts files) | Primary | HIGH | Current architecture understanding |
-| v2.3 spec (2.3-spec.md, 1712 lines) | Primary | HIGH | Target architecture |
-| [DBOS: Postgres for Everything](https://www.dbos.dev/blog/postgres-durable-execution) | Official blog | HIGH | SELECT FOR UPDATE SKIP LOCKED pattern |
-| [Armin Ronacher: Absurd Postgres Workflows](https://lucumr.pocoo.org/2024/11/18/absurd-workflows/) | Blog | MEDIUM | Postgres-as-job-queue patterns |
-| [PgBoss: Postgres job queue](https://github.com/timgit/pg-boss) | Open source | HIGH | Polling + SKIP LOCKED implementation |
-| [Solid Queue (Rails)](https://github.com/rails/solid_queue) | Open source | MEDIUM | Postgres job queue patterns |
-| Drizzle ORM documentation | Official | HIGH | LISTEN/NOTIFY gap, batch insert patterns |
-| PostgreSQL TOAST documentation | Official | HIGH | JSONB performance characteristics |
+**Design notes:**
+- `context` is JSONB, not text. This allows structured handoff content (summary, key decisions, artifacts, open questions) rather than free-form text. The agent writes structured JSON via the tool schema.
+- No `updated_at` -- handoffs are append-only records. A new handoff is created, not an update to an existing one.
+- The `(task_id, created_at)` index supports "get most recent handoff for task" efficiently.
 
-### Confidence Assessment
+### conversations addition
+
+```sql
+ALTER TABLE agents.conversations ADD COLUMN task_id TEXT REFERENCES agents.tasks(id);
+CREATE INDEX idx_conversations_task ON agents.conversations(task_id) WHERE task_id IS NOT NULL;
+```
+
+**Nullable FK rationale:** Backward compatibility. Existing conversations (and future conversations without tasks) don't require a task. The partial index keeps it efficient.
+
+### Integration correlation tables
+
+Each integration gets an identical table in its own schema:
+
+```sql
+-- In linear.*, github.*, slack.* schemas respectively
+CREATE TABLE {schema}.task_correlations (
+  external_type   TEXT NOT NULL,       -- e.g., 'pull_request', 'issue', 'thread'
+  external_ref    TEXT NOT NULL,       -- e.g., '42' (PR number), 'AES-123' (issue ID), 'C123:1234.5678' (channel:ts)
+  task_id         TEXT NOT NULL,       -- References agents.tasks(id) -- no FK (cross-schema)
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (external_type, external_ref)
+);
+
+CREATE INDEX idx_task_correlations_task ON {schema}.task_correlations(task_id);
+```
+
+**Cross-schema FK decision:** No foreign key from `{integration}.task_correlations.task_id` to `agents.tasks.id`. Reason: integration packages are independently deployable and must not have schema-level dependencies on the agents schema. Task ID validity is enforced at the application layer.
+
+**External type taxonomy:**
+
+| Integration | external_type | external_ref format |
+|-------------|--------------|-------------------|
+| GitHub | `pull_request` | `{owner}/{repo}#{number}` e.g., `acme/api#42` |
+| GitHub | `branch` | `{owner}/{repo}:{branch}` e.g., `acme/api:feature/AES-123` |
+| Linear | `issue` | Linear issue ID e.g., `AES-123` |
+| Slack | `thread` | `{channelId}:{thread_ts}` e.g., `C0123ABC:1706745600.123456` |
+| Slack | `message` | `{channelId}:{message_ts}` |
+
+## Data Flow
+
+### Flow 1: Agent creates artifact with task correlation (outgoing)
+
+```
+Agent calls create_pull_request tool
+  -> MCP wrapper adds X-Task-ID header from ToolContext.taskId
+  -> callMcpTool() sends POST /mcp/tools/create_pull_request
+     with X-Task-ID: task_abc123
+  -> GitHub integration receives request
+  -> Executes create_pull_request against GitHub API
+  -> On success: records correlation
+     INSERT INTO github.task_correlations
+       (external_type, external_ref, task_id)
+     VALUES ('pull_request', 'acme/api#42', 'task_abc123')
+  -> Returns result to agent
+```
+
+**Where correlation recording happens:** In the MCP HTTP route handler (`packages/integrations/github/src/api/mcp.ts`), after the tool handler returns success. This is a post-success hook, not middleware, because we only record correlations for successful operations.
+
+**Key design decision:** Correlation recording is fire-and-forget. If it fails (DB error), the tool result still returns success to the agent. A missing correlation means the incoming webhook won't auto-route to the task, but the event will still reach slow-path routing.
+
+### Flow 2: Webhook arrives with task correlation (incoming)
+
+```
+GitHub sends PR review webhook
+  -> GitHub integration verifies signature, deduplicates
+  -> BEFORE normalizing: look up correlation
+     SELECT task_id FROM github.task_correlations
+     WHERE external_type = 'pull_request' AND external_ref = 'acme/api#42'
+  -> Found task_id = 'task_abc123'
+  -> Normalize event with task_id attached:
+     NormalizedEvent { ..., taskId: 'task_abc123' }
+  -> Dispatch to agent service POST /events
+  -> Agent service adapter passes taskId through:
+     IncomingEvent { ..., taskId: 'task_abc123' }
+  -> Router: task reference exists!
+     -> Look up active conversation for task
+     -> If active/waiting: deliver as signal
+     -> If no active conversation: create new conversation with handoff context
+  -> Falls through to existing trigger/signal logic only if no task reference
+```
+
+### Flow 3: Conversation reopening
+
+```
+Dashboard user clicks "Reopen" on a completed conversation
+  -> POST /conversations/:id/reopen { message: "PR review requires changes" }
+  -> ConversationExecutor.signal(id, { type: 'reopen', message, source: 'dashboard' })
+  -> signal() handler: conversation status is 'completed'
+     -> Current behavior: reject (terminal status)
+     -> NEW behavior for type === 'reopen':
+        1. Transition status: completed -> queued
+        2. Append signal as user message to existing messages array
+        3. Reset retry_count to 0
+        4. Clear error_message
+        5. Append event: agent.reopened (new event type)
+        6. Return { action: 'resumed' }
+  -> Worker loop picks up queued conversation on next poll
+  -> Agent receives full prior history + reopen context
+```
+
+**Race condition analysis:**
+
+The race between "conversation completing" and "reopen signal arriving" is handled by the existing `FOR UPDATE` lock in `signal()`:
+
+1. If signal arrives during the executor's post-loop DB write, the signal's `FOR UPDATE` will block until the executor's transaction commits.
+2. Once the executor commits `status: 'completed'`, the signal's transaction sees the terminal status and can apply the reopen logic.
+3. If the executor hasn't committed yet (status still 'running'), the signal queues normally and is consumed when the conversation transitions.
+
+**This is safe because the existing SKIP LOCKED + FOR UPDATE pattern already serializes all mutations on a conversation row.**
+
+### Flow 4: Task-aware event routing
+
+```
+Event arrives at routeEvent()
+  |
+  v
+Adapter pipeline (existing)
+  -> Produces IncomingEvent with optional taskId
+  |
+  v
+Task-aware routing (NEW -- before EventRouter.handle())
+  |
+  +-- Has taskId?
+  |     |
+  |     +-- Look up task in DB
+  |     |     |
+  |     |     +-- Task has active/waiting conversation?
+  |     |     |     -> Deliver as signal to that conversation
+  |     |     |
+  |     |     +-- Task has no active conversation?
+  |     |           -> Start new conversation for task's assignee agent
+  |     |           -> Inject most recent handoff as context
+  |     |
+  |     +-- Task not found? (stale correlation)
+  |           -> Fall through to existing routing
+  |
+  +-- No taskId?
+        -> Existing EventRouter.handle() (unchanged)
+        -> start / signal / ignore / slow_path
+```
+
+**Where the task lookup happens:** In `routeEvent()` in `packages/agents/src/router/router.ts`, as a new code block BEFORE the existing `deps.eventRouter.handle(incomingEvent)` call. NOT in the adapter layer (adapters are pure transforms) and NOT in EventRouter (which is synchronous and should not do DB I/O).
+
+## Architectural Patterns
+
+### Pattern 1: TaskService as a Thin Persistence Layer
+
+**What:** A factory function `createTaskService({ db, logger })` that provides CRUD for tasks and handoffs, plus task-level queries. No business logic beyond data validation.
+
+**Why:** Task lifecycle decisions (when to complete, when to pause, what to hand off) belong to the agent via tools. The TaskService is infrastructure, not behavior. This follows the agent-first principle.
+
+**Interface:**
+
+```typescript
+interface TaskService {
+  create(params: CreateTaskParams): Promise<string>;       // Returns task ID
+  get(taskId: string): Promise<Task | null>;
+  update(taskId: string, updates: TaskUpdate): Promise<void>;
+  list(filters: TaskListFilters): Promise<Task[]>;
+  addHandoff(params: AddHandoffParams): Promise<string>;   // Returns handoff ID
+  getLatestHandoff(taskId: string): Promise<TaskHandoff | null>;
+  getHandoffs(taskId: string): Promise<TaskHandoff[]>;
+  findActiveConversation(taskId: string): Promise<string | null>; // Returns conversation ID
+}
+```
+
+**Database access pattern for tools:** Tools call TaskService methods, NOT raw DB queries. This provides a single point for validation, logging, and future concerns (notifications, audit trail).
+
+```
+Agent tool (create_task)
+  -> TaskService.create({ ... })
+    -> Validates: parent depth < 5, no cycles, creator/assignee valid
+    -> INSERT INTO agents.tasks
+    -> Returns task ID
+```
+
+### Pattern 2: MCP Header Extension for Task Context
+
+**What:** Add `X-Task-ID` as an optional standard header in MCP calls. The MCP client adds it when ToolContext.taskId is set. Integration MCP handlers read it and pass to correlation recording.
+
+**Why headers over parameters:**
+1. **Non-invasive**: Existing tool parameter schemas don't change. No migration of tool definitions.
+2. **Consistent**: Same pattern as X-Agent-ID and X-Correlation-ID.
+3. **Optional**: Integrations that don't support correlation yet simply ignore the header.
+4. **Already precedented**: The MCP protocol already uses X-Agent-ID and X-Correlation-ID headers.
+
+**Changes to MCP client (`packages/agents/src/shared/mcp/client.ts`):**
+
+```typescript
+// In callMcpTool():
+const headers: Record<string, string> = {
+  'Content-Type': 'application/json',
+  'X-Agent-ID': agentId,
+  'X-Correlation-ID': correlationId,
+};
+if (options.taskId) {
+  headers['X-Task-ID'] = options.taskId;
+}
+```
+
+**Changes to McpCallOptions type (`packages/agents/src/shared/mcp/types.ts`):**
+
+```typescript
+interface McpCallOptions {
+  integration: McpIntegration;
+  tool: string;
+  params: Record<string, unknown>;
+  agentId: string;
+  correlationId: string;
+  taskId?: string;  // NEW
+}
+```
+
+**Changes to MCP tool wrappers (`packages/agents/src/shared/tools/integration/`):**
+
+The McpToolDeps interface gains an optional `taskId` field. Each integration's tool wrapper reads `ToolContext.taskId` and passes it through in the `callMcpTool()` options.
+
+### Pattern 3: Conversation Reopening via Signal Extension
+
+**What:** Extend the existing `signal()` method to handle a special `reopen` signal type on terminal conversations, rather than adding a separate `reopen()` method.
+
+**Why signal extension over new method:**
+1. **Signal is already the mechanism for external input** to conversations. Reopening is external input.
+2. **Deduplication, validation, and event logging** are already handled by signal(). No duplication.
+3. **The router can use the same dispatch path** -- route to signal, whether the conversation is waiting or completed.
+4. **Dashboard reopen** is just `executor.signal(id, { type: 'reopen', ... })`.
+
+**Specific changes to `signal()` in conversation-executor.ts (lines ~451-459):**
+
+The current terminal status block:
+```typescript
+// Terminal status
+logger.warn({ conversationId, status }, "Signal rejected: conversation in terminal state");
+return { action: "rejected" };
+```
+
+Becomes:
+```typescript
+// Terminal status
+if (signal.type === 'reopen') {
+  // Build signal message
+  const signalContent = signal.message ??
+    `Conversation reopened. Data: ${JSON.stringify(signal.data ?? {})}`;
+  const signalMessage = { role: 'user', content: signalContent };
+  const updatedMessages = [...((row.messages ?? []) as unknown[]), signalMessage];
+
+  await tx.update(conversations).set({
+    status: 'queued',
+    messages: updatedMessages,
+    retry_count: 0,
+    error_message: null,
+    pending_wait: null,
+    claimed_by: null,
+    claimed_at: null,
+    last_heartbeat_at: null,
+    delivered_signal_ids: deliveredIds,
+    updated_at: new Date(),
+  }).where(eq(conversations.id, conversationId));
+
+  // Append reopened event
+  await eventLog.initSequence(conversationId);
+  eventLog.append({
+    conversationId,
+    agentDefinitionId: row.agent_definition_id,
+    agentDefinitionVersion: row.agent_definition_version,
+    agentInstanceId: `reopen-${conversationId}`,
+    type: 'agent.reopened',
+    payload: {
+      signalType: signal.type,
+      source: signal.source,
+      previousStatus: status,
+    },
+  });
+  await eventLog.flush();
+
+  logger.info({ conversationId, previousStatus: status }, 'Conversation reopened');
+  return { action: 'resumed' };
+}
+
+// Other signals on terminal conversations remain rejected
+logger.warn({ conversationId, status }, "Signal rejected: conversation in terminal state");
+return { action: "rejected" };
+```
+
+**Full history preservation:** Yes. Reopened conversations keep their entire message history. The reopen signal is appended as a new user message. When the worker loop picks it up, it goes through the normal `isResumed` path (existingMessages.length > 1), gets history compaction via HistoryManager, and resumes with full context.
+
+**Worker loop changes for reopened conversations:** NONE. Reopened conversations are `status: 'queued'` -- the worker loop claims and executes them identically to any other queued conversation. No special claiming logic needed.
+
+**New event type:** Add `agent.reopened` to `agentEventTypeValues` in schema.ts. This is purely observability -- the framework doesn't branch on it.
+
+### Pattern 4: Task Context Injection into Prompts
+
+**What:** When the worker loop starts executing a conversation with a `task_id`, it fetches the most recent handoff and injects it as a `<task_context>` block in the initial message.
+
+**Where:** In `executeConversation()` in `worker-loop.ts`, after loading the agent definition (step 1) and before building the `AgentLoopOptions` (step 8). Specifically, after the queued-signal check (step 6) and before history compaction (step 7). This is the same pattern used in `routeEvent()` for workspace_context and slack_context injection.
+
+**Implementation approach:**
+
+```typescript
+// In executeConversation(), between step 6 and step 7:
+if (conv.task_id && taskService) {
+  const task = await taskService.get(conv.task_id);
+  const latestHandoff = await taskService.getLatestHandoff(conv.task_id);
+
+  if (task) {
+    const taskContextLines: string[] = [
+      '<task_context>',
+      `Task: ${task.title}`,
+      `Task ID: ${task.id}`,
+      `Status: ${task.status}`,
+    ];
+
+    if (task.objective) taskContextLines.push(`Objective: ${task.objective}`);
+
+    if (latestHandoff) {
+      taskContextLines.push('');
+      taskContextLines.push('Most recent handoff:');
+      taskContextLines.push(`Type: ${latestHandoff.handoff_type}`);
+      // Truncate handoff context to prevent token budget blowout
+      const contextStr = JSON.stringify(latestHandoff.context);
+      const truncated = contextStr.length > 4000
+        ? contextStr.slice(0, 4000) + '... [truncated, use get_task_context for full history]'
+        : contextStr;
+      taskContextLines.push(`Context: ${truncated}`);
+    }
+
+    taskContextLines.push('</task_context>');
+
+    // Prepend to first message
+    const taskContextBlock = taskContextLines.join('\n');
+    const firstMsg = currentMessages[0];
+    if (firstMsg && typeof firstMsg.content === 'string') {
+      currentMessages[0] = {
+        ...firstMsg,
+        content: `${taskContextBlock}\n\n${firstMsg.content}`,
+      };
+    }
+  }
+}
+```
+
+**Token budget considerations:** Handoff context is agent-authored (agents control the size). The `get_task_context` tool provides full history for agents that need it; the auto-injected context is just the latest handoff. This keeps the injection bounded. A 4000-character cap on the handoff JSON provides a safety net -- agents needing more context use the tool.
+
+### Pattern 5: Task-Level Event Serialization
+
+**What:** When two events arrive for the same task simultaneously, only one gets a conversation. The second becomes a signal queued on that conversation.
+
+**Why:** The spec says "one problem at a time." Concurrent conversations for the same task would create conflicting work (two agents editing the same branch, two PRs for the same issue).
+
+**Implementation:**
+
+Serialization happens at the router level using `SELECT ... FOR UPDATE` on the task row:
+
+```typescript
+// In routeEvent(), task-aware routing block:
+async function routeToTask(
+  taskId: string,
+  event: IncomingEvent,
+  deps: RouteEventDeps
+): Promise<RouteEventResult | null> {
+  return await deps.db.transaction(async (tx) => {
+    // Lock task row -- serializes concurrent events for same task
+    const [task] = await tx
+      .select()
+      .from(tasks)
+      .where(eq(tasks.id, taskId))
+      .for('update');
+
+    if (!task) return null; // Stale correlation, fall through
+
+    // Find active conversation for this task
+    const [activeConv] = await tx
+      .select({ id: conversations.id, status: conversations.status })
+      .from(conversations)
+      .where(
+        and(
+          eq(conversations.task_id, taskId),
+          inArray(conversations.status, ['running', 'queued', 'waiting'])
+        )
+      )
+      .limit(1);
+
+    if (activeConv) {
+      // Signal will be delivered after transaction commits
+      return { type: 'signal', conversationId: activeConv.id };
+    }
+
+    // No active conversation -- will start new one after transaction commits
+    return { type: 'start', agentDefinitionId: task.assignee_id };
+  });
+  // Then outside the transaction: execute the routing decision
+}
+```
+
+**Row-level lock on task, not conversation:** The lock is on `agents.tasks` row, not `agents.conversations`. This serializes at the task level -- even when no conversation exists yet, the second event waits for the first's conversation creation to commit.
+
+**Lock duration:** Very short. The transaction only does SELECT + SELECT, then returns a routing decision. The actual conversation creation/signal delivery happens OUTSIDE the transaction via executor.start() or executor.signal(). This prevents long-held locks.
+
+**RouteEventDeps change:** The routeEvent deps need access to a database client. Currently RouteEventDeps has executor, eventRouter, logger, and config values. Add `db` (or `taskService` which wraps db) so the task lookup query can execute.
+
+### Pattern 6: Tool Namespace for Tasks
+
+**What:** New `task:` namespace with 6 tools, registered via the existing ToolRegistry pattern.
+
+**Why a new namespace (not coordination):** Tasks are a domain concept, not coordination infrastructure. Coordination tools (spawn_agent, wait_for, request_human_input) manage the execution lifecycle. Task tools manage the work lifecycle. Separating them keeps the namespaces semantically clean and allows agents to have task tools without coordination tools (or vice versa).
+
+**Tool adapter pattern:**
+
+```typescript
+function taskToolAdapter(
+  createFn: (service: TaskService, ctx: ToolContext) => ToolDefinition,
+  taskService: TaskService,
+): (ctx: ToolContext) => ToolDefinition {
+  return (ctx: ToolContext) => createFn(taskService, ctx);
+}
+
+// In registerAllTools():
+export function registerAllTools(options: RegisterAllToolsOptions): void {
+  const { registry, logger, taskService } = options;  // taskService added to options
+
+  // ... existing 28 tools ...
+
+  // Task tools (6)
+  if (taskService) {
+    registry.register('task:create_task', taskToolAdapter(createCreateTaskTool, taskService));
+    registry.register('task:complete_task', taskToolAdapter(createCompleteTaskTool, taskService));
+    registry.register('task:pause_task', taskToolAdapter(createPauseTaskTool, taskService));
+    registry.register('task:handoff_task', taskToolAdapter(createHandoffTaskTool, taskService));
+    registry.register('task:list_tasks', taskToolAdapter(createListTasksTool, taskService));
+    registry.register('task:get_task_context', taskToolAdapter(createGetTaskContextTool, taskService));
+  }
+}
+```
+
+**Handoff tool -- what context the agent provides:**
+
+The `handoff_task` tool schema:
+```json
+{
+  "task_id": "string (required)",
+  "handoff_type": "enum: completion | pause | delegation | escalation (required)",
+  "context": {
+    "summary": "string (required) -- what happened",
+    "key_decisions": "string[] (optional) -- important decisions made",
+    "artifacts": "object (optional) -- references to created artifacts",
+    "open_questions": "string[] (optional) -- unresolved issues",
+    "next_steps": "string (optional) -- recommendation for next agent"
+  }
+}
+```
+
+The agent decides what to include. The tool validates the required `summary` field but doesn't enforce the optional fields. This follows the "agents author handoffs" principle.
+
+## Anti-Patterns to Avoid
+
+### Anti-Pattern 1: Task State Machine in Framework Code
+
+**What to avoid:** Don't add framework code that pattern-matches on handoff_type or auto-transitions task status based on external signals.
+
+**Why:** Per the spec's expansion constraints: "Don't pattern-match on handoff_type in framework code" and "Task completion is agent-decided." The framework stores and delivers; the agent interprets.
+
+**Exception:** The `complete_task` and `pause_task` tools DO transition task status -- but these are agent-initiated, not framework-initiated. The agent calls the tool when it decides the task is done.
+
+### Anti-Pattern 2: Correlation in Router Instead of Integration
+
+**What to avoid:** Don't do correlation lookup in the agent-service's EventRouter or adapter layer.
+
+**Why:** The integration processes both sides of the artifact lifecycle (outgoing creation + incoming webhook). It has the most context for reliable correlation. If the router did correlation, it would need to query integration-owned tables (cross-schema dependency) or maintain a separate correlation store (duplication).
+
+### Anti-Pattern 3: Auto-Completing Tasks on External Signals
+
+**What to avoid:** Don't add framework logic like "when PR merged, auto-complete the task."
+
+**Why:** The agent should decide when a task is complete. A merged PR might not mean the task is done (could need docs, follow-up, verification). The agent receives the PR merged signal, evaluates whether the task is complete, and calls `complete_task` if so.
+
+## Critical Integration Detail: ToolContext.taskId Collision
+
+**Existing usage:** `ToolContext.taskId` already exists in `packages/agents/src/framework/types.ts` (line 320):
+
+```typescript
+export interface ToolContext {
+  agentId: string;
+  correlationId: string;
+  containerManager?: DevContainerManager | undefined;
+  taskId?: string | undefined;  // <-- Currently used as sandbox container identifier
+  logger: PinoLogger;
+  spawnDeps?: SpawnAgentDeps | undefined;
+}
+```
+
+This `taskId` is set to the conversation ID (`conv.id`) in the worker loop (line 465) and passed to DevContainerManager for sandbox identification:
+
+```typescript
+const toolContext: ToolContext = {
+  agentId: conv.agent_definition_id,
+  correlationId: conv.id,
+  logger: childLogger,
+  ...(needsSandbox && sandboxManager && {
+    containerManager: sandboxManager,
+    taskId: conv.id,  // <-- conversation ID used as container ID
+  }),
+  // ...
+};
+```
+
+**Resolution:** Rename the existing field to `sandboxId` (or `containerId`). This is an internal interface change affecting:
+1. `packages/agents/src/framework/types.ts` -- ToolContext interface
+2. `packages/agents/src/framework/worker-loop.ts` -- where it's set
+3. `packages/agents/src/shared/tools/codebase/*.ts` -- where it's read (5 tool factories)
+4. `packages/agents/src/shared/tools/types.ts` -- CodebaseToolDeps type if it references taskId
+
+Then `taskId` can be used for the v2.5 task primitive (the `agents.tasks.id`), set from `conv.task_id`.
+
+**This should be done in the same phase as the task primitive schema** to avoid a confusing intermediate state where `taskId` means "container ID."
+
+## Dashboard API Endpoints
+
+### POST /conversations/:id/reopen
+
+```typescript
+// In main.ts, alongside existing conversation endpoints:
+app.post('/conversations/:id/reopen', async (req, res) => {
+  try {
+    const { message } = req.body as { message?: string };
+    const result = await executor.signal(req.params.id, {
+      type: 'reopen',
+      message: message || 'Conversation reopened via dashboard',
+      source: 'dashboard',
+      data: {},
+    });
+
+    if (result.action === 'rejected') {
+      // Conversation might not exist or might not be in terminal state
+      res.status(409).json({ error: 'Cannot reopen this conversation' });
+      return;
+    }
+    res.json({ reopened: true, action: result.action });
+  } catch (error) {
+    logger.error({ err: error, conversationId: req.params.id },
+      'POST /conversations/:id/reopen failed');
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+```
+
+**No separate retry endpoint needed.** Reopening IS the retry mechanism. The reopened conversation goes through the normal execution path with full history context.
+
+## Suggested Build Order (Dependency-Driven)
+
+### Phase 1: Prompt Rewrites (independent, no code changes)
+- Rewrite product-agent/prompt.md and dev-agent/prompt.md
+- No framework changes, no schema changes
+- Can be done in parallel with Phase 2
+
+### Phase 2: Conversation Reopening
+**Dependencies:** None (extends existing executor)
+**Files changed:**
+1. `packages/agents/src/shared/db/schema.ts` -- add `agent.reopened` to event type enum
+2. `packages/agents/src/shared/db/schema.drizzle.ts` -- mirror the enum change
+3. Migration file for the enum change
+4. `packages/agents/src/framework/conversation-executor.ts` -- reopen handling in signal()
+5. `packages/agents/src/service/main.ts` -- add POST /conversations/:id/reopen endpoint
+6. Dashboard: add reopen button (minimal -- single HTTP POST)
+
+**Why first (after prompts):** Simplest infrastructure change. No new tables, no new tools. Establishes the "signal on terminal conversation" pattern that task routing depends on.
+
+### Phase 3: Task Primitive (schema + service + tools)
+**Dependencies:** Phase 2 (reopening used by task-aware routing)
+
+**3a: Schema + Service + ToolContext Rename**
+1. Rename ToolContext.taskId to sandboxId (codebase tools, worker-loop, types)
+2. Add tasks, task_handoffs tables to schema.ts + schema.drizzle.ts
+3. Add task_id column to conversations
+4. Migration
+5. Add `task` and `handoff` to createId in ids.ts
+6. Implement TaskService factory (`framework/task-service.ts`)
+7. Bootstrap TaskService in main.ts
+
+**3b: Agent Tools**
+1. Create 6 tool implementations in `shared/tools/task/`
+2. Register in tool-factories.ts (new `task:` namespace)
+3. Add tools to agent definition YAML files
+4. Wire TaskService into registerAllTools via options
+5. Add taskId to ToolContext, set from conv.task_id in worker-loop
+
+**3c: Task-Aware Routing**
+1. Add taskId to NormalizedEvent schema, IncomingEvent schema
+2. Pass through in adapters
+3. Add task routing pre-check in routeEvent()
+4. Implement task-level serialization (FOR UPDATE on task row)
+5. Add db/taskService to RouteEventDeps
+6. Task context injection in worker-loop executeConversation()
+
+### Phase 4: Integration Correlation
+**Dependencies:** Phase 3a (tasks table must exist)
+
+**4a: Integration Schema + Store (per integration)**
+1. Add task_correlations table to each integration's schema.ts + schema.drizzle.ts
+2. Implement correlation store per integration
+3. Migration per integration
+
+**4b: Outgoing Correlation (MCP changes)**
+1. Add taskId to McpCallOptions in mcp/types.ts
+2. Add X-Task-ID header in mcp/client.ts callMcpTool()
+3. Update MCP tool wrapper (McpToolDeps) to pass taskId from ToolContext
+4. Add correlation recording in each integration's MCP route handler (post-success hook)
+
+**4c: Incoming Correlation (Webhook changes)**
+1. Add correlation lookup in each integration's webhook handler
+2. Attach taskId to NormalizedEvent before dispatch
+3. End-to-end test: create artifact via MCP -> receive webhook -> auto-route to task
+
+### Phase 5: Prompt Evolution
+**Dependencies:** Phase 3b (task tools exist), Phase 4 (correlation works)
+- Update all agent prompts to leverage task lifecycle
+- Add handoff examples to few-shot sections
+- Guide agents on when to create/complete/hand off tasks
+
+## Concurrency Deep Dive
+
+### Race: Two events for the same task arrive simultaneously
+
+**Scenario:** PR review and CI failure both arrive for task T123 within milliseconds.
+
+**Mechanism:** Both events hit `routeEvent()`. Both attempt the task-aware routing block.
+
+**Serialization:** The `SELECT ... FOR UPDATE` on the task row in the routing transaction means:
+1. Event A acquires lock on task T123
+2. Event A sees no active conversation, creates one via `executor.start()`
+3. Event A's transaction commits, releasing the lock
+4. Event B acquires lock on task T123
+5. Event B sees the newly created active conversation
+6. Event B delivers as signal to that conversation
+
+**Lock contention is minimal** because the routing transaction is short (two SELECTs + a routing decision return). The actual conversation creation happens outside the transaction.
+
+### Race: Signal arrives during conversation completion write
+
+**Already handled** by the existing `FOR UPDATE` in `signal()`. The signal's FOR UPDATE blocks until the executor's write transaction commits, then sees the final status and acts accordingly.
+
+### Race: Two agents create artifacts referencing the same external entity
+
+**Scenario:** Two conversations both create a PR for the same repo.
+
+**Handled by:** The `PRIMARY KEY (external_type, external_ref)` on task_correlations. The second INSERT fails with a unique violation. The correlation recording is fire-and-forget, so this silently fails. The first correlation wins.
+
+**This is correct behavior:** The first task to create the artifact "owns" it for routing purposes.
+
+### Race: Conversation reopened while task is being completed by another conversation
+
+**Scenario:** Dashboard user clicks "reopen" on conversation A while conversation B (for the same task) calls `complete_task`.
+
+**Not a data integrity issue:** Reopening conversation A doesn't affect the task status. The reopened conversation will see the task's current status when it resumes. If the task is completed, the agent can check via `get_task_context` and decide whether to do more work or gracefully exit.
+
+## Sources
+
+All findings are based on direct analysis of the existing Aesir codebase:
+
+**Framework core:**
+- `packages/agents/src/framework/conversation-executor.ts` -- signal handling, terminal status logic (lines 296-460)
+- `packages/agents/src/framework/event-router.ts` -- routing decision structure, SIGNAL_AGENT_MAP
+- `packages/agents/src/framework/worker-loop.ts` -- conversation execution, context injection, sandbox setup
+- `packages/agents/src/framework/types.ts` -- ToolContext (line 312-325), interfaces, schemas
+- `packages/agents/src/framework/tool-factories.ts` -- tool registration patterns (28 tools, 4 namespaces)
+- `packages/agents/src/framework/tool-registry.ts` -- namespace:tool_name resolution
+
+**Router and adapters:**
+- `packages/agents/src/router/router.ts` -- routeEvent() flow, enrichment patterns
+- `packages/agents/src/router/types.ts` -- RouteEventDeps, RouteEventResult
+- `packages/agents/src/adapters/types.ts` -- IncomingEvent, SIGNAL_TYPE_MAP
+- `packages/agents/src/adapters/github.ts` -- adapter transform pattern, BRANCH_TASK_REGEX
+
+**Database schemas:**
+- `packages/agents/src/shared/db/schema.ts` -- conversations, agent_events, agent_sessions definitions
+- `packages/agents/src/shared/db/schema.drizzle.ts` -- drizzle-kit version (retains legacy tables)
+- `packages/integrations/github/src/db/schema.ts` -- credentials, webhook_deliveries, mcp_tool_permissions
+- `packages/integrations/linear/src/db/schema.ts` -- same pattern as github
+- `packages/integrations/slack/src/db/schema.ts` -- installations, event_deliveries, mcp_tool_permissions
+
+**MCP protocol:**
+- `packages/agents/src/shared/mcp/client.ts` -- callMcpTool(), header pattern
+- `packages/agents/src/shared/mcp/types.ts` -- McpCallOptions interface
+- `packages/types/src/mcp/types.ts` -- MCPToolContext, MCPToolResult (server-side)
+- `packages/integrations/github/src/api/mcp.ts` -- MCP HTTP route handler pattern
+
+**Integration event flow:**
+- `packages/integrations/github/src/api/webhooks.ts` -- webhook handler, dispatch flow
+- `packages/integrations/github/src/dispatcher/client.ts` -- fire-and-forget HTTP dispatch
+- `packages/integrations/github/src/dispatcher/normalize.ts` -- event normalization
+- `packages/types/src/events/schema.ts` -- NormalizedEvent schema
+
+**Service and bootstrapping:**
+- `packages/agents/src/service/main.ts` -- bootstrap sequence, route deps
+- `packages/agents/src/service/api/router.ts` -- API endpoint pattern
+- `packages/types/src/utils/ids.ts` -- createId pattern
+
+**Spec documents:**
+- `.planning/specs/2.5-agentic-conversations.md` -- implementation spec
+- `.planning/specs/2.5-design-vision.md` -- architectural rationale and expansion constraints
+
+## Confidence Assessment
 
 | Area | Confidence | Reason |
-|------|-----------|--------|
-| ConversationExecutor pattern | HIGH | `FOR UPDATE SKIP LOCKED` is battle-tested across PgBoss, Solid Queue, DBOS |
-| Event log design | HIGH | Direct application of existing trace-recorder pattern with fixes for known gaps |
-| Single service consolidation | HIGH | Mechanical change -- all services already use same `createServer()` pattern |
-| Agent registry | HIGH | Simple file loading + mtime caching, well-established pattern |
-| JSONB performance | MEDIUM | Theoretical analysis backed by Postgres documentation, but no load testing on Aesir's actual data |
-| Migration sequence | MEDIUM | Drain strategy is sound but depends on no long-running workflows being stuck |
-| Polling vs LISTEN/NOTIFY | MEDIUM | Polling is correct for v2.3 scale; LISTEN/NOTIFY gap in Drizzle is a real constraint |
-
-### Open Questions
-
-1. **Worker polling interval:** 5 seconds recommended, but needs tuning based on actual webhook delivery patterns. Too frequent = wasted queries. Too infrequent = noticeable signal delivery latency.
-
-2. **History compaction trigger:** The spec says 80K tokens for pruning threshold. Needs empirical validation with real dev-agent conversations to confirm this is the right threshold.
-
-3. **Conversation cleanup policy:** When should completed conversations be archived? The spec mentions retention but doesn't specify a policy. Without cleanup, the conversations table grows indefinitely.
-
-4. **Multiple workers in single process:** The spec implies a single worker loop, but for resilience, the service should support concurrent conversation processing. Needs a worker pool design (e.g., `Promise.allSettled` with N concurrent workers).
-
-5. **Error escalation path:** When a conversation fails repeatedly (agent loop errors on every attempt), what is the escalation mechanism? Temporal has retry policies with max attempts. The executor needs equivalent logic.
+|------|------------|--------|
+| Schema design | HIGH | Based on existing Drizzle patterns, Postgres conventions, and direct codebase analysis |
+| Conversation reopening | HIGH | Clean extension of existing signal() with well-understood FOR UPDATE serialization |
+| MCP header extension | HIGH | Follows established X-Agent-ID / X-Correlation-ID pattern exactly |
+| Task-aware routing | HIGH | routeEvent() is the correct injection point; FOR UPDATE provides serialization |
+| Tool registration | HIGH | Follows exact pattern of existing 28 tools across 4 namespaces |
+| Integration correlation | MEDIUM | Design is sound but implementation touches 3 independent packages; needs per-integration testing |
+| ToolContext.taskId rename | HIGH | Confirmed collision via direct code reading; rename is straightforward but touches ~10 files |
+| Token budget for task context | MEDIUM | 4000-char cap is a reasonable heuristic; needs tuning based on real handoff sizes |
+| Build order | HIGH | Dependency chain is clear from code analysis; each phase builds on verified prior work |

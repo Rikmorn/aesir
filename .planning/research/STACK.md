@@ -1,675 +1,668 @@
-# Technology Stack: v2.3 Unified Agent Framework
+# Technology Stack: v2.5 Agentic Conversations
 
-**Project:** Aesir v2.3 -- Replace Temporal with Postgres-backed ConversationExecutor
-**Researched:** 2026-02-01
+**Project:** Aesir v2.5 -- Task primitives, conversation reopening, goal-oriented prompt rewrites
+**Researched:** 2026-02-06
 **Research mode:** Stack dimension for subsequent milestone
-**Overall confidence:** HIGH (custom build over library for core, pg-boss for scheduling)
+**Overall confidence:** HIGH (no new runtime dependencies; extends existing Postgres + Drizzle + Zod stack)
 
 ---
 
 ## Executive Summary
 
-The v2.3 migration from Temporal to a Postgres-backed ConversationExecutor does NOT require a new job queue library for the core conversation execution loop. The ConversationExecutor's primary job -- "run an agent loop for this conversation" -- is a simple `SELECT FOR UPDATE SKIP LOCKED` pattern that fits in ~50 lines of SQL, not a generic job queue problem. Adding pg-boss or graphile-worker for this core concern would introduce an abstraction layer that fights the conversation-specific semantics (signal queueing, pending wait matching, conversation-level locking).
+v2.5 requires **zero new runtime dependencies**. The task primitive, conversation reopening, integration correlation tables, and prompt rewrites are all implementable within the existing stack: PostgreSQL + Drizzle ORM for schema, Zod for validation, the existing ToolRegistry for new agent tools, and the existing @anthropic-ai/sdk for agent loops.
 
-However, **pg-boss IS recommended for timeout scheduling** -- the "wake this conversation in 72 hours" problem. This is a pure delayed-job problem that pg-boss solves with its `startAfter` API, PostgreSQL-backed persistence, and distributed worker support. Rolling a custom timeout scheduler would be reinventing pg-boss badly.
+This is by design. The v2.5 spec describes a coordination layer built on top of the existing ConversationExecutor, not a replacement for it. The task primitive is a Postgres table with Drizzle schema definitions. The correlation tables live in integration schemas. The prompt rewrites are markdown files. The new tools are ToolFactory implementations registered in the existing registry.
 
-The event log is a straightforward append-only table with batch inserts and LISTEN/NOTIFY for reactive subscriptions. No event sourcing library is needed -- Drizzle ORM handles the schema, and the implementation is ~200 lines of TypeScript.
+The primary stack work is:
+1. **New Drizzle schema definitions** for tasks, task_handoffs, and task_correlations tables
+2. **New Zod schemas** for task lifecycle validation and tool input/output
+3. **New tool factories** (6 task tools) registered in the existing ToolRegistry
+4. **Prompt rewrites** following the existing PROMPT_GUIDE.md structure
+5. **Executor modifications** for conversation reopening (signal handling on terminal states)
+6. **Event router modifications** for task-based routing priority
 
-Conversation history stored as JSONB in a single row is viable for Aesir's scale (conversations with 100 tool calls = ~200KB-2MB). The 2KB TOAST threshold is not a concern because conversations are written infrequently (on pause/complete, not every tool call) and reads are full-row loads (no partial JSONB queries).
-
-**Net dependency changes:** Add `pg-boss@^12.8.0`. Remove `@temporalio/client`, `@temporalio/worker`, `@temporalio/workflow`, `@temporalio/activity` (from `@aesir/agents`) and `@temporalio/client`, `@temporalio/worker`, `@temporalio/workflow` (from `@aesir/platform`). Remove Temporal server + UI from Docker Compose (saves ~1GB of container images and a dedicated PostgreSQL schema).
-
----
-
-## 1. Postgres Job Queue for Conversation Execution
-
-### Recommendation: Custom SKIP LOCKED (NOT a job queue library)
-
-| Property | Value |
-|----------|-------|
-| Approach | Custom `SELECT FOR UPDATE SKIP LOCKED` on `conversations` table |
-| Implementation | ~50 lines of SQL in a polling loop, ~150 lines TypeScript wrapper |
-| Confidence | **HIGH** -- well-documented pattern, used by pg-boss and graphile-worker internally |
-
-### Why custom over a library
-
-The ConversationExecutor has conversation-specific semantics that generic job queues don't model:
-
-1. **Signal queueing**: When a signal arrives for a running conversation, it must be appended to `queued_signals` on the conversation row -- not create a new job.
-2. **Wait type matching**: When resuming a paused conversation, the executor must check `pending_wait.type` matches the signal type. Generic queues don't have this concept.
-3. **Idempotent start**: `executor.start()` with an existing conversation ID returns the existing conversation -- not an error or duplicate job.
-4. **Conversation-level locking**: Only one agent loop per conversation. This is a row-level lock on the conversation, not a queue-level concurrency limit.
-5. **Status-based routing**: The executor needs to query `WHERE status = 'paused' AND pending_wait->>'type' = $1` -- this is a conversation query, not a job dequeue.
-
-A generic job queue would force mapping these semantics into jobs/tasks/queues, adding indirection without value. The conversation table IS the queue.
-
-### The core pattern
-
-```sql
--- Dequeue a conversation that needs processing
-BEGIN;
-SELECT * FROM agents.conversations
-  WHERE status = 'queued'  -- or 'resuming'
-  ORDER BY updated_at ASC
-  FOR UPDATE SKIP LOCKED
-  LIMIT 1;
-
--- Mark as running (within same transaction)
-UPDATE agents.conversations
-  SET status = 'running', updated_at = NOW()
-  WHERE id = $1;
-COMMIT;
-
--- Run agent loop (outside transaction -- long-running)
--- On completion: UPDATE status = 'completed' / 'paused'
--- On crash: transaction was committed with 'running' status
---   -> stale job detector picks it up (see heartbeat pattern below)
-```
-
-### Crash recovery
-
-Conversations in `running` status with `updated_at` older than the heartbeat threshold (e.g., 5 minutes) are considered stale and re-queued. The agent loop updates `updated_at` periodically (heartbeat) via a simple `UPDATE conversations SET updated_at = NOW() WHERE id = $1`.
-
-```sql
--- Stale job recovery (runs on a timer, e.g., every 60 seconds)
-UPDATE agents.conversations
-  SET status = 'queued', updated_at = NOW()
-  WHERE status = 'running'
-    AND updated_at < NOW() - INTERVAL '5 minutes';
-```
-
-### Polling + LISTEN/NOTIFY hybrid
-
-- **LISTEN/NOTIFY** for instant wakeup when a new conversation is queued or signaled
-- **Polling fallback** every 5 seconds to catch any missed notifications (LISTEN/NOTIFY is ephemeral)
-- This is the exact pattern graphile-worker uses internally
-
-```typescript
-// Pseudocode for the worker loop
-const POLL_INTERVAL = 5000; // 5 seconds
-
-async function startWorker(pool: Pool) {
-  // Set up LISTEN for instant notification
-  const listenConn = await pool.connect();
-  await listenConn.query('LISTEN conversation_ready');
-  listenConn.on('notification', () => tryProcessNext());
-
-  // Polling fallback
-  setInterval(() => tryProcessNext(), POLL_INTERVAL);
-}
-```
-
-### Performance characteristics
-
-| Metric | Expected Value | Source |
-|--------|---------------|--------|
-| Dequeue latency (LISTEN/NOTIFY) | <3ms | Graphile Worker benchmarks |
-| Dequeue latency (polling, 5s interval) | 0-5000ms avg 2500ms | Math |
-| Throughput (queue) | ~99,600 jobs/sec (12-core DB) | Graphile Worker benchmarks |
-| Throughput (process) | N/A -- limited by LLM API, not queue | Agent loops are minutes, not milliseconds |
-| Concurrent conversations | Limited by Node.js concurrency + LLM rate limits | Practically 5-20 concurrent |
-
-For Aesir's workload (agent loops that run for minutes, limited by LLM API throughput), queue performance is irrelevant. The bottleneck is always the Anthropic API, not the job dequeue.
-
-### Alternatives considered and rejected
-
-| Library | Version | Why Not |
-|---------|---------|---------|
-| **pg-boss** | 12.8.0 | Good library, but adds abstraction over what is fundamentally a conversation table query. pg-boss manages its own schema (`pgboss.*`), its own connection pool, and its own job lifecycle. The ConversationExecutor needs to query conversations by status, pending_wait type, and conversation ID -- these are domain queries that don't map to pg-boss's queue/job model cleanly. Would need to maintain both a pg-boss job AND a conversation record, with synchronization between them. |
-| **graphile-worker** | 0.16.6 | Same issue as pg-boss plus: last published 2+ years ago (0.16.6), unstable API (0.x versioning, "updating to a new minor version may require code modifications"), manages its own schema (`graphile_worker.*`). Excellent for generic background jobs but overkill for conversation-specific execution. |
-| **BullMQ** | N/A | Requires Redis. Adding Redis to the infrastructure contradicts the v2.3 goal of Postgres-only local dev. |
-| **PGMQ** | 1.9.0 | Postgres extension (requires `CREATE EXTENSION pgmq`). Not available on all managed Postgres providers. TypeScript clients are immature (pgmq-js, pgmq-ts). Designed for inter-service messaging, not conversation execution. |
+No new libraries are needed. No architectural patterns change. The existing stack handles everything.
 
 ---
 
-## 2. Timeout Scheduling ("Wake in 72 Hours")
+## 1. Task Primitive Schema (Drizzle ORM)
 
-### Recommendation: pg-boss for delayed jobs
+### Recommendation: Extend existing `agents` schema with new tables
 
 | Property | Value |
 |----------|-------|
-| Package | `pg-boss` |
-| Version | `^12.8.0` (latest: 12.8.0, published 2026-01-30) |
-| Purpose | Schedule timeout wakeups for paused conversations |
-| Confidence | **HIGH** -- verified via npm, GitHub |
-| License | MIT |
-| Weekly downloads | ~215,000 |
-| PostgreSQL | 13+ required |
+| ORM | drizzle-orm@^0.45.1 (existing) |
+| Schema namespace | `agents.*` (existing pgSchema) |
+| Migration tool | drizzle-kit@^0.31.8 (existing) |
+| ID generation | Extend `createId` in `@aesir/types` with `task` and `handoff` prefixes |
+| Confidence | HIGH -- follows exact patterns used by conversations, agentEvents, agentSessions |
 
-### Why pg-boss for timeouts (but not for the core executor)
+### Schema Implementation Approach
 
-Timeouts are a pure delayed-job problem: "run this function at a specific future time." This is exactly what pg-boss's `startAfter` API does. The conversation executor should not poll the conversations table every minute checking for expired timeouts -- that's wasteful and adds latency.
+The spec defines three new tables: `tasks`, `task_handoffs`, and a `task_id` column addition to `conversations`. These follow established Drizzle patterns already in the codebase.
+
+**Pattern to follow (from existing schema.ts):**
 
 ```typescript
-import PgBoss from 'pg-boss';
+// In packages/agents/src/shared/db/schema.ts
+// Uses existing agentsSchema = pgSchema("agents")
 
-const boss = new PgBoss(databaseUrl);
-await boss.start();
+export const taskStatusValues = [
+  "created", "active", "paused", "completed", "cancelled"
+] as const;
+export type TaskStatus = (typeof taskStatusValues)[number];
 
-// When agent calls wait_for with timeout "72h":
-await boss.send('conversation-timeout', {
-  conversationId: 'conv_abc',
-  waitType: 'approval',
-  reason: 'Plan approval timed out',
-}, {
-  startAfter: 72 * 3600, // seconds
-  singletonKey: `timeout-conv_abc`, // prevents duplicate timeouts
-});
+export const handoffTypeValues = [
+  "completion", "pause", "delegation", "escalation"
+] as const;
+export type HandoffType = (typeof handoffTypeValues)[number];
 
-// Worker processes timeouts:
-await boss.work('conversation-timeout', async (job) => {
-  await executor.signal(job.data.conversationId, {
-    type: 'wait_timeout',
-    data: {
-      originalWaitType: job.data.waitType,
-      reason: job.data.reason,
+export const tasks = agentsSchema.table("tasks", {
+  id: text("id").primaryKey().$defaultFn(() => createId.task()),
+  parent_id: text("parent_id"),  // self-referential FK added via SQL migration
+  creator_type: text("creator_type", { enum: ["agent", "human"] }).notNull(),
+  creator_id: text("creator_id").notNull(),
+  assignee_type: text("assignee_type", { enum: ["agent", "human"] }).notNull(),
+  assignee_id: text("assignee_id").notNull(),
+  status: text("status", { enum: taskStatusValues }).notNull().default("created"),
+  title: text("title").notNull(),
+  objective: text("objective"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  completed_at: timestamp("completed_at", { withTimezone: true }),
+}, (table) => [
+  index("idx_tasks_assignee").on(table.assignee_type, table.assignee_id, table.status),
+  index("idx_tasks_parent").on(table.parent_id),
+  index("idx_tasks_status").on(table.status),
+]);
+```
+
+**Critical implementation note:** The `parent_id` self-referential foreign key should be added in the raw SQL migration rather than in the Drizzle schema definition. Drizzle has known issues with self-referential FK declarations in table definitions. Use `references(() => tasks.id)` in the schema file for type safety, but verify the generated migration SQL is correct.
+
+**schema.drizzle.ts synchronization:** The new tables MUST also be added to `schema.drizzle.ts` (the drizzle-kit version). This file retains legacy tables (context_snapshots, tasks, execution_traces) from v1 -- the new `tasks` table has a name collision with the legacy one. The migration must handle this:
+- Option A: Rename legacy `tasks` table to `legacy_tasks` in a prior migration step
+- Option B: Drop the legacy table if confirmed unused (check: it exists in schema.drizzle.ts but not schema.ts, meaning the application code does not reference it)
+- **Recommendation:** Option B. The legacy `tasks` table is a v1 artifact retained only to prevent drizzle-kit from generating DROP TABLE. Since we are adding a new `tasks` table with a completely different schema, we should drop the legacy one in the same migration. Verify the old table is empty first.
+
+### ID Generation Extension
+
+Add to `packages/types/src/utils/ids.ts`:
+
+```typescript
+/** Task ID (agents.tasks) */
+task: () => `task_${nanoid()}`,
+
+/** Task handoff ID (agents.task_handoffs) */
+handoff: () => `hoff_${nanoid()}`,
+
+/** Task correlation ID (integration correlation tables) */
+taskCorrelation: () => `tcor_${nanoid()}`,
+```
+
+This follows the established prefix convention (`aevt_`, `conv_`, `cred_`, etc.) already in use.
+
+### Confidence: HIGH
+
+This is the same pattern used for every table in the system. No new ORM features, no new libraries, no migration tooling changes.
+
+---
+
+## 2. Integration Correlation Tables
+
+### Recommendation: Per-integration tables in respective schemas
+
+| Property | Value |
+|----------|-------|
+| Location | `linear.*`, `github.*`, `slack.*` schemas |
+| Table name | `task_correlations` in each schema |
+| Primary key | Composite `(external_type, external_ref)` |
+| Confidence | HIGH -- follows existing per-schema pattern |
+
+### How Production Systems Handle This
+
+Research into webhook correlation patterns reveals two dominant approaches:
+
+**Approach 1: Centralized correlation table** (common in monoliths)
+A single table maps all external references to internal entities. Simple but creates coupling between services.
+
+**Approach 2: Per-integration correlation** (common in microservices)
+Each integration maintains its own mapping. The integration processes both outgoing artifact creation and incoming webhooks, so it has the most context for correlation.
+
+The spec correctly chooses Approach 2. Each integration already owns its database schema and processes both sides of the lifecycle. GitHub creates PRs (outgoing) and receives PR review webhooks (incoming). Linear creates issues (outgoing) and receives issue update webhooks (incoming).
+
+### Schema Pattern (per integration)
+
+```typescript
+// In packages/integrations/github/src/db/schema.ts
+export const taskCorrelations = githubSchema.table("task_correlations", {
+  external_type: text("external_type").notNull(),   // "pull_request", "branch", "issue"
+  external_ref: text("external_ref").notNull(),      // "org/repo#42", "feature/abc"
+  task_id: text("task_id").notNull(),                // "task_abc123..."
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  // Composite primary key
+  unique("task_correlations_pk").on(table.external_type, table.external_ref),
+  index("idx_task_correlations_task").on(table.task_id),
+]);
+```
+
+### Correlation Flow
+
+The key insight from the research: **the integration layer records correlations at artifact creation time, not the agent**.
+
+Current flow: Agent calls `github:create_pull_request` via MCP -> GitHub integration creates PR -> returns PR URL.
+
+v2.5 flow: Agent calls `github:create_pull_request` via MCP **with task_id in MCP headers** -> GitHub integration creates PR -> records `("pull_request", "org/repo#42", "task_abc123")` in `github.task_correlations` -> returns PR URL.
+
+The `task_id` is passed via the existing MCP header mechanism. The agent already passes `X-Agent-ID` and `X-Correlation-ID` in MCP calls. Adding `X-Task-ID` follows the same pattern.
+
+### What GitHub Webhooks Provide for Correlation
+
+From GitHub docs research (HIGH confidence):
+- `X-GitHub-Delivery`: Unique GUID per delivery (for idempotency -- already tracked in `webhook_deliveries`)
+- `X-GitHub-Event`: Event type header (for routing)
+- Payload contains: `repository.full_name`, `pull_request.number`, `issue.number`, `sender.login`
+
+The correlation lookup is: extract `(external_type, external_ref)` from the webhook payload, query `task_correlations`, attach `task_id` to the forwarded event if found.
+
+For GitHub PRs specifically: `external_type = "pull_request"`, `external_ref = "${owner}/${repo}#${number}"`.
+
+### What Linear Webhooks Provide for Correlation
+
+Linear webhooks include `data.id` (issue UUID) and `data.identifier` (e.g., "ABC-123"). The correlation lookup uses: `external_type = "issue"`, `external_ref = data.identifier`.
+
+### What Slack Events Provide for Correlation
+
+Slack events include `thread_ts` for threaded conversations. The correlation lookup uses: `external_type = "thread"`, `external_ref = "${channel_id}:${thread_ts}"`.
+
+### Confidence: HIGH
+
+Follows existing integration schema patterns. No new libraries needed.
+
+---
+
+## 3. Task Lifecycle Tools (Zod + ToolRegistry)
+
+### Recommendation: 6 new tools registered in existing ToolRegistry
+
+| Property | Value |
+|----------|-------|
+| Tool registration | Existing `coordination:*` namespace pattern |
+| Input validation | Zod schemas (existing pattern) |
+| Tool count | 6 new tools (34 total, up from 28) |
+| Confidence | HIGH -- follows exact ToolFactory pattern |
+
+### New Tools
+
+| Tool | Namespace:Name | Input Schema | Returns |
+|------|---------------|--------------|---------|
+| Create task | `task:create_task` | `{ title, objective?, assignee_type, assignee_id, parent_id?, metadata? }` | `{ task_id, status }` |
+| Complete task | `task:complete_task` | `{ task_id, summary, artifacts? }` | `{ status }` |
+| Pause task | `task:pause_task` | `{ task_id, reason, resume_conditions? }` | `{ status }` |
+| Handoff task | `task:handoff_task` | `{ task_id, handoff_type, context, target_assignee_type?, target_assignee_id? }` | `{ handoff_id }` |
+| List tasks | `task:list_tasks` | `{ assignee_type?, assignee_id?, status?, parent_id?, limit? }` | `{ tasks[] }` |
+| Get task context | `task:get_task_context` | `{ task_id, include_handoffs?, include_conversations? }` | `{ task, handoffs[], conversations[] }` |
+
+### Tool Namespace Decision
+
+The spec describes these as "new tools available to all agents." The question is namespace: `coordination:create_task` or `task:create_task`?
+
+**Recommendation: `task:*` namespace.** Rationale:
+- The `coordination:*` namespace currently has 3 tools (spawn_agent, request_human_input, wait_for) that are about conversation-level coordination
+- Task tools are about task-level coordination -- a higher abstraction
+- A dedicated namespace makes it clear in agent definitions which tools are task-related
+- The ToolRegistry supports any namespace (lowercase regex: `^[a-z]+:[a-z_]+$`)
+
+This means the tool reference regex already supports it -- no framework changes needed.
+
+### ToolFactory Implementation Pattern
+
+Each task tool follows the existing factory pattern:
+
+```typescript
+// packages/agents/src/shared/tools/task/create-task.ts
+export function createCreateTaskTool(ctx: ToolContext): ToolDefinition {
+  return {
+    name: "create_task",
+    description: "Create a new task...",
+    input_schema: { /* Zod-derived JSON schema */ },
+    async execute(input) {
+      const validated = CreateTaskInputSchema.parse(input);
+      // DB insert into agents.tasks
+      // Record in event log
+      return { task_id, status: "created" };
     },
-    source: 'internal:scheduler',
-  });
-});
-```
-
-### Key pg-boss features used
-
-| Feature | How Used |
-|---------|----------|
-| `startAfter` | Schedule timeout at specific future time (seconds, ISO string, or Date) |
-| `singletonKey` | Prevent duplicate timeouts per conversation (cancel old, create new on re-pause) |
-| Dead letter queue | Capture failed timeout deliveries for debugging |
-| Retry with backoff | Retry if signal delivery fails (e.g., database temporarily unavailable) |
-| `deleteQueue` / job cancellation | Cancel pending timeout when conversation resumes before timeout fires |
-
-### Integration with existing stack
-
-pg-boss creates its own schema (`pgboss` by default, configurable). It manages its own connection pool internally but can be initialized with a connection string that points to the existing Aesir PostgreSQL instance. No separate database needed.
-
-```typescript
-// In the single service bootstrap:
-const boss = new PgBoss({
-  connectionString: config.database.url,
-  schema: 'pgboss', // Separate schema, no conflicts with agents.*
-});
-await boss.start();
-```
-
-pg-boss handles its own migration on first `start()` call -- no manual migration needed. It also handles cleanup of completed jobs automatically.
-
-### Alternatives considered and rejected
-
-| Approach | Why Not |
-|----------|---------|
-| **pg_cron** | PostgreSQL extension -- requires `CREATE EXTENSION pg_cron` which needs superuser privileges and is not available on all managed Postgres instances. Also can only execute SQL, not Node.js functions. Would need a pg_cron job that inserts into a polling table, which the Node.js process then polls -- adding unnecessary indirection. |
-| **Custom polling** | Polling the conversations table every minute for expired timeouts works but adds database load proportional to the number of paused conversations. pg-boss's `startAfter` is indexed and only checks jobs that are due -- O(ready jobs) not O(all paused conversations). |
-| **node-cron / setTimeout** | In-memory only. Lost on process restart. setTimeout maxes out at ~24 days (2^31 ms). Not suitable for 72-hour or 7-day timeouts that must survive restarts. |
-| **graphile-worker run_at** | Would work technically (graphile-worker supports `runAt` for future scheduling). But graphile-worker 0.16.6 was last published 2+ years ago, has 0.x versioning indicating unstable API, and has 3x fewer weekly downloads than pg-boss. pg-boss is the safer long-term bet. |
-
----
-
-## 3. Event Log Implementation
-
-### Recommendation: Custom append-only table with buffered writes
-
-| Property | Value |
-|----------|-------|
-| Approach | Custom `agent_events` table, batch INSERT via Drizzle ORM |
-| Buffer strategy | In-memory buffer, flush every 1 second OR every 50 events (whichever first) |
-| Subscription | LISTEN/NOTIFY for reactive projections + in-process EventEmitter |
-| Confidence | **HIGH** -- standard pattern, no library needed |
-
-### Why no event sourcing library
-
-TypeScript event sourcing libraries (e.g., `@eventstore/db-client`, `emmett`) are designed for multi-aggregate event stores with projections, snapshots, and read models. Aesir's event log is simpler:
-
-- Single aggregate type (conversation)
-- Append-only (no versioning conflicts)
-- Two consumers (session projection + observability)
-- No need for event replay/rebuilding (conversation history is the source of truth, not the event log)
-
-The event log is fundamentally a logging table with structured data. Drizzle ORM + a ~200-line TypeScript wrapper handles this cleanly.
-
-### Buffered write implementation
-
-```typescript
-class PostgresEventLog implements EventLog {
-  private buffer: AgentEvent[] = [];
-  private flushTimer: NodeJS.Timeout;
-
-  append(event: AgentEvent): void {
-    this.buffer.push(event);
-    if (this.buffer.length >= 50) {
-      void this.flush();
-    }
-  }
-
-  async flush(): Promise<void> {
-    if (this.buffer.length === 0) return;
-    const batch = this.buffer.splice(0);
-    await db.insert(agentEvents).values(batch);
-
-    // Notify subscribers via LISTEN/NOTIFY
-    for (const event of batch) {
-      await db.execute(sql`NOTIFY agent_events, ${event.conversationId}`);
-    }
-
-    // In-process subscribers (session projection)
-    for (const event of batch) {
-      this.emitter.emit('event', event);
-    }
-  }
+  };
 }
 ```
 
-### LISTEN/NOTIFY for subscriptions
+**Critical design question:** Task tools need database access, but the current `ToolContext` does not include a `db` reference. Current tools either are stateless (coordination), use MCP HTTP calls (integration), or use a container manager (codebase).
 
-Used for the session projection to update `agent_sessions` reactively. The notification carries the conversation ID; the projection queries the event log for new events.
+**Options:**
+1. Add `db` to ToolContext -- breaks existing interface, task tools become the only ones using it
+2. Inject `db` via closure at registration time -- cleaner, task tool factories are curried
+3. Task tools use MCP to talk to agent-service -- adds unnecessary HTTP hop for internal state
 
-**Important limitation**: LISTEN/NOTIFY payloads are limited to ~8000 bytes. Do NOT put event data in the notification -- only the conversation ID. The subscriber queries the event log for full event data.
+**Recommendation: Option 2 (closure injection).** The task tool factories receive `db` at registration time:
 
-**Hybrid approach**: The session projection subscribes both via in-process EventEmitter (for events generated locally) and via LISTEN/NOTIFY (for events generated by other processes). The in-process path is the primary path; LISTEN/NOTIFY is for multi-process scenarios.
+```typescript
+// In tool-factories.ts
+function taskAdapter(
+  createFn: (db: NodePgDatabase, ctx: ToolContext) => ToolDefinition,
+  db: NodePgDatabase,
+): (ctx: ToolContext) => ToolDefinition {
+  return (ctx: ToolContext) => createFn(db, ctx);
+}
 
-### Performance characteristics
+// Registration
+registry.register("task:create_task", taskAdapter(createCreateTaskTool, db));
+```
 
-| Metric | Expected Value | Notes |
-|--------|---------------|-------|
-| Event write throughput | ~10,000 events/sec (batched) | Well within Postgres batch INSERT capability |
-| Event write latency (caller) | 0ms (fire-and-forget) | `append()` is void, returns immediately |
-| Event write latency (persistence) | 1-50ms (batch flush) | 1s timer or 50-event threshold |
-| LISTEN/NOTIFY latency | <5ms | Postgres built-in, very fast |
-| Event query (by conversation) | <10ms | Indexed on `(conversation_id, sequence)` |
-| Storage per event | ~200-500 bytes | JSONB payload + metadata columns |
-| Storage for 100-event conversation | ~20-50 KB | Well under TOAST threshold for individual events |
+This follows the pattern already used by `codebaseAdapter` and `mcpAdapter` -- different adapters bridge different dependency shapes to the ToolContext interface.
 
-### Event payload sizing
+### Confidence: HIGH
 
-Individual events are small (tool name, parameters, result summary). The large tool outputs (file contents, search results) are in the conversation history, not duplicated in events. Events record WHAT happened (tool called, tool succeeded) with metadata, not the full tool input/output.
-
-This keeps individual event rows well under the 2KB TOAST threshold, avoiding the performance cliff documented in PostgreSQL JSONB research.
+Follows existing ToolFactory and ToolRegistry patterns exactly. Zod for validation, Drizzle for persistence.
 
 ---
 
-## 4. Conversation History Persistence
+## 4. Conversation Reopening
 
-### Recommendation: JSONB column on conversations table, full row replacement on write
+### Recommendation: Extend ConversationExecutor.signal() to handle terminal states
 
 | Property | Value |
 |----------|-------|
-| Storage | `messages JSONB NOT NULL DEFAULT '[]'` on `agents.conversations` |
-| Write pattern | Full replacement (`UPDATE ... SET messages = $1`) on pause/complete |
-| Read pattern | Full row load (`SELECT * FROM conversations WHERE id = $1`) |
-| Confidence | **HIGH** -- standard pattern, TOAST is acceptable for write-rarely/read-fully |
+| Framework changes | Modify `signal()` method in ConversationExecutor |
+| New signal type | `reopen` |
+| Status transitions | `completed` -> `queued`, `failed` -> `queued` |
+| Confidence | HIGH -- minimal change to existing pattern |
 
-### Row size analysis
+### How Other Systems Handle This
 
-A conversation with 100 tool calls includes:
-- ~100 `tool_use` content blocks (tool name + input): ~200 bytes each = ~20KB
-- ~100 `tool_result` content blocks (tool output): ~500 bytes to 5KB each
-- ~50 assistant text blocks (reasoning): ~200 bytes each = ~10KB
-- ~10 user messages: ~500 bytes each = ~5KB
+**Temporal Continue-As-New (HIGH confidence -- official docs verified):**
+Temporal's approach creates a *new* workflow execution with the same Workflow ID but a different Run ID. It explicitly clears event history and starts fresh, passing only selected state forward as arguments. This is designed for event history size limits (50K events / 50MB), not for conversation reopening.
 
-**Estimated sizes:**
+**Key insight:** Temporal does NOT reopen workflows. It creates new executions linked by Workflow ID. The old execution is immutable.
 
-| Conversation Type | Tool Calls | Estimated JSONB Size | TOAST? |
-|-------------------|-----------|---------------------|--------|
-| Product agent (simple) | 5-10 | 10-30 KB | Yes, but read-only so acceptable |
-| Product agent (complex) | 20-30 | 50-100 KB | Yes |
-| Dev agent (research+plan) | 30-50 | 100-300 KB | Yes |
-| Dev agent (full lifecycle) | 80-100 | 200 KB - 2 MB | Yes |
-| Dev agent (with large files) | 100+ | 1-5 MB | Yes, approaching upper comfort zone |
+**LangGraph Checkpointing (MEDIUM confidence -- multiple sources agree):**
+LangGraph uses checkpointers (MemorySaver, PostgresSaver) that save state at every node execution. Conversations are resumed by loading the checkpoint for a `thread_id`. This is closer to Aesir's model -- the same conversation is continued, not a new one created.
 
-**After history compaction (Phase 1 tool output pruning):**
+**Key insight:** LangGraph preserves full history on resume. The agent sees everything that happened before.
 
-| Conversation Type | Before Compaction | After Compaction |
-|-------------------|------------------|-----------------|
-| Product agent | 10-100 KB | 5-30 KB |
-| Dev agent (research+plan) | 100-300 KB | 30-80 KB |
-| Dev agent (full lifecycle) | 200 KB - 2 MB | 50-200 KB |
+**Zendesk Ticket Reopening (HIGH confidence -- official docs verified):**
+Zendesk follows a state machine: New -> Open -> Pending -> Solved -> Reopened. When a requester replies to a solved ticket, it transitions to "Reopened" status and is reassigned to the agent who solved it. The full conversation history is preserved.
 
-### Why single JSONB column is acceptable
+**Key insight:** Zendesk tracks reopening as a distinct status, not just reverting to "open". This provides observability into how often tickets are reopened.
 
-1. **Write frequency is LOW**: Conversations are written on pause (hours between writes) and complete (once). Not on every tool call. This avoids the TOAST write amplification problem.
+### Aesir's Approach Validated
 
-2. **Reads are full-row**: When resuming a conversation, the executor loads the entire messages array to pass to `runAgentLoop()`. No partial JSONB queries, no path-based access. TOAST decompression happens once per load.
+The spec's approach (signal on terminal conversation -> transition to `queued` -> agent receives full prior history plus signal context) aligns with the LangGraph/Zendesk pattern rather than the Temporal pattern. This is correct because:
 
-3. **No indexing on messages**: We never query "find conversations where tool X was called." The event log handles that. Messages are an opaque blob from PostgreSQL's perspective.
+1. **Aesir conversations have manageable history** -- the HistoryManager already handles compaction for long conversations
+2. **Full context matters** -- the agent needs to understand what it did before to handle follow-up events correctly
+3. **Temporal's "new execution" pattern is for scale limits** that don't apply here (Aesir conversations are 50-500 messages, not 50K events)
 
-4. **History compaction keeps sizes manageable**: Phase 1 pruning (tool output truncation) reduces conversation sizes by 60-80%. A 2MB pre-compaction conversation becomes ~400KB after pruning.
+**Implementation is minimal:** The `signal()` method currently rejects signals on `completed`/`failed` conversations with `{ action: "rejected" }`. The change is:
+- For `type: "reopen"` signals on terminal conversations: transition status to `queued`, append the signal to the message history, and return `{ action: "resumed" }`
+- All other signal types on terminal conversations: still rejected
 
-5. **Anthropic API limit is 16MB**: The API itself caps total text bytes at 16MB. Conversations that approach this are already too large for the LLM and will trigger compaction. PostgreSQL can store up to 255MB in JSONB.
+**Should we add a "reopened" status like Zendesk?** No. The existing status values (`queued`, `running`, `waiting`, `completed`, `failed`, `cancelled`) are sufficient. The reopening is an event (recorded in agent_events), not a persistent status. Once reopened, the conversation is `queued` and follows the normal lifecycle. Adding a "reopened" status would require changes throughout the executor, worker loop, and dashboard for minimal observability gain -- the event log already records the reopening.
 
-### Alternative considered: normalized messages table
+### Confidence: HIGH
 
-Storing each message as a separate row (`conversation_id`, `sequence`, `role`, `content JSONB`) would avoid TOAST entirely for most messages. However:
-
-- **Reconstruction cost**: Loading 100+ rows and assembling them into an ordered array adds query complexity and latency.
-- **Atomic writes**: Updating conversation history on pause requires inserting/updating multiple rows atomically (transaction), vs. a single UPDATE.
-- **Compaction complexity**: Pruning old tool outputs requires updating individual rows, not replacing the whole array.
-- **No real benefit**: The write-rarely/read-fully pattern makes TOAST acceptable. The overhead of TOAST decompression on a 500KB blob is ~1-5ms -- negligible compared to the LLM API call that follows.
-
-**Verdict**: Single JSONB column is the pragmatic choice. If conversations grow beyond 5MB regularly (unlikely with compaction), revisit this decision.
-
-### LZ4 compression recommendation
-
-PostgreSQL 14+ supports LZ4 TOAST compression, which is faster than the default pglz:
-
-```sql
-ALTER TABLE agents.conversations
-  ALTER COLUMN messages SET COMPRESSION lz4;
-```
-
-This reduces TOAST decompression time for large conversations. Since Aesir already uses PostgreSQL 15 (per docker-compose.yml: `postgres:15-alpine`), LZ4 is available.
+Minimal executor change. No new libraries. Validated by patterns in LangGraph and Zendesk.
 
 ---
 
-## 5. Concurrency Control
+## 5. Event Router Modifications for Task-Based Routing
 
-### Recommendation: SELECT FOR UPDATE SKIP LOCKED for conversation processing, advisory locks NOT needed
+### Recommendation: Add task lookup before existing routing logic
 
 | Property | Value |
 |----------|-------|
-| Primary mechanism | `SELECT FOR UPDATE SKIP LOCKED` on conversations table |
-| Heartbeat | `UPDATE updated_at` every 60 seconds during agent loop |
-| Stale detection | Conversations with `status = 'running'` and `updated_at > 5 minutes ago` |
-| Confidence | **HIGH** -- standard PostgreSQL pattern |
+| Change location | EventRouter.handle() and integration adapters |
+| New routing priority | task reference -> start rule -> signal rule -> slow path |
+| Confidence | HIGH -- additive change to existing router |
 
-### Why SKIP LOCKED, not advisory locks
+### Current Router Flow
 
-| Criterion | `SELECT FOR UPDATE SKIP LOCKED` | Advisory Locks |
-|-----------|-------------------------------|----------------|
-| Tied to row? | Yes -- locks the conversation row | No -- arbitrary integer key |
-| Automatic release | Transaction end | Session end (or explicit unlock) |
-| Risk of leak | Low -- transaction scope | Higher -- session scope can outlive intent |
-| Queue pattern | Native support | Must implement manually |
-| Visibility | `pg_locks` shows row locks | `pg_locks` shows advisory locks |
-| Use in Aesir | Worker dequeues conversation, locks row, processes, commits | Would need `pg_advisory_xact_lock(hash(conv_id))` -- same effect, more ceremony |
-
-Advisory locks would work but add unnecessary complexity:
-- Must hash conversation IDs to integers (advisory locks use bigint keys)
-- Must choose between session-level (risk of leak if connection pooling) and transaction-level (same as FOR UPDATE)
-- No benefit over row-level locking for this use case
-
-### Dual-phase locking pattern
-
-The conversation processing uses two phases:
-
-**Phase 1: Dequeue (short transaction)**
-```sql
-BEGIN;
-SELECT id, messages, agent_definition_id, ...
-  FROM agents.conversations
-  WHERE status = 'queued'
-  FOR UPDATE SKIP LOCKED
-  LIMIT 1;
-
-UPDATE agents.conversations
-  SET status = 'running', updated_at = NOW()
-  WHERE id = $1;
-COMMIT;
--- Lock released here
+```
+1. Ignore check (IGNORE_EVENT_TYPES set)
+2. Start rule check (eventType -> agentDefinitionId)
+3. Signal rule check (SIGNAL_AGENT_MAP)
+4. Slow-path fallthrough
 ```
 
-**Phase 2: Process (no transaction held)**
-The agent loop runs for minutes. No database transaction is held open during this time. The `status = 'running'` flag IS the lock -- other workers won't dequeue it because it's not `queued`.
+### v2.5 Router Flow
 
-Heartbeat updates (`UPDATE updated_at WHERE id = $1 AND status = 'running'`) are individual short transactions, not part of a long-held lock.
-
-**Phase 3: Complete (short transaction)**
-```sql
-BEGIN;
-UPDATE agents.conversations
-  SET status = 'paused',  -- or 'completed' / 'failed'
-      messages = $2,
-      pending_wait = $3,
-      updated_at = NOW()
-  WHERE id = $1 AND status = 'running';
-COMMIT;
+```
+0. Task reference check (event.taskId from integration correlation)
+1. Ignore check
+2. Start rule check (also creates a task for new starts)
+3. Signal rule check
+4. Slow-path fallthrough
 ```
 
-### Signal delivery concurrency
+The key change: `IncomingEvent` gains an optional `taskId` field. Integration adapters populate this field by querying their `task_correlations` table before forwarding events.
 
-When a signal arrives for a conversation that is currently `running`:
-
-```sql
--- Atomic append to queued_signals (no lock needed -- single UPDATE)
-UPDATE agents.conversations
-  SET queued_signals = queued_signals || $2::jsonb,
-      updated_at = NOW()
-  WHERE id = $1;
+```typescript
+// Extend IncomingEventSchema
+export const IncomingEventSchema = z.object({
+  type: z.string().min(1),
+  data: z.record(z.unknown()),
+  source: z.string().min(1),
+  correlationKey: z.string().optional(),
+  deduplicationId: z.string().optional(),
+  message: z.string().optional(),
+  taskId: z.string().optional(),  // NEW: from integration correlation lookup
+});
 ```
 
-This uses PostgreSQL's JSONB concatenation operator (`||`), which is atomic. No explicit lock needed -- the UPDATE itself acquires a row-level lock for the duration of the statement.
+When `taskId` is present, the router queries the task to find:
+- Active/waiting conversation -> deliver as signal (serialized via existing signal mechanism)
+- No active conversation -> create new conversation in task with most recent handoff as initial context
 
-When a signal arrives for a `paused` conversation with matching wait type:
+This query requires database access, which the current synchronous `handle()` method does not have. The router needs to become async for the task lookup path, or the task lookup happens in the caller (webhook handler) before calling `handle()`.
 
-```sql
-BEGIN;
-SELECT * FROM agents.conversations
-  WHERE id = $1 AND status = 'paused'
-  FOR UPDATE;  -- Not SKIP LOCKED -- we want THIS specific conversation
+**Recommendation:** Keep `handle()` synchronous for non-task events (performance). Add a separate `handleWithTask()` async method for task-aware routing. The webhook handler calls the integration adapter (which does correlation lookup), then calls the appropriate router method based on whether `taskId` is present.
 
-UPDATE agents.conversations
-  SET status = 'queued',  -- Ready for worker to pick up
-      updated_at = NOW()
-  WHERE id = $1;
-COMMIT;
+### Confidence: HIGH
 
--- Notify worker
-NOTIFY conversation_ready;
-```
+Additive change. Existing routing paths unchanged. No new libraries.
 
 ---
 
-## 6. Temporal Dependency Removal
+## 6. Prompt Engineering Patterns
 
-### What gets removed
+### Recommendation: Follow PROMPT_GUIDE.md structure with validated patterns
 
-#### npm packages
+| Property | Value |
+|----------|-------|
+| Prompt structure | identity -> constraints -> examples -> tools -> context (existing guide) |
+| New techniques | Constitutional constraints, few-shot with reasoning, selective CoT |
+| Confidence | HIGH -- validated by Anthropic's official prompt engineering docs |
 
-| Package | Current Location | Impact |
-|---------|-----------------|--------|
-| `@temporalio/client` | `@aesir/agents`, `@aesir/platform` | Temporal client for starting/signaling workflows |
-| `@temporalio/worker` | `@aesir/agents`, `@aesir/platform` | Temporal worker runtime (includes native bridge binary ~50MB) |
-| `@temporalio/workflow` | `@aesir/agents`, `@aesir/platform` | Temporal workflow definitions (determinism constraints) |
-| `@temporalio/activity` | `@aesir/agents` | Temporal activity context (heartbeat, info) |
+### Research Findings on Prompt Patterns
 
-**Installation impact**: The `@temporalio/worker` package includes a native Rust binary (`@temporalio/core-bridge`) that is ~50MB and requires platform-specific builds. Removing it significantly reduces `node_modules` size and eliminates platform-specific build issues.
+**Anthropic's Official Guidance (HIGH confidence -- official docs, February 2026):**
 
-#### Source files affected
+1. **Be explicit with instructions** -- Claude Opus 4.6 follows instructions more precisely. Reduce MUST/ALWAYS/NEVER to normal language ("Use this tool when..." not "CRITICAL: You MUST use this tool").
 
-**Files importing from `@temporalio/*` (26 files total):**
+2. **XML tags for structure** -- Official recommendation for separating sections. `<identity>`, `<constraints>`, `<examples>`, `<context>` -- exactly the pattern in PROMPT_GUIDE.md.
 
-In `@aesir/agents` (active code, must be replaced/deleted):
-- `src/shared/temporal/` -- entire directory (workflows, activities, signals, types)
-- `src/router/types.ts` -- `Client` type from `@temporalio/client`
-- `src/router/main.ts` -- `Client, Connection` from `@temporalio/client`
-- `src/router/tools/start-workflow.ts` -- `WorkflowExecutionAlreadyStartedError`
-- `src/dev-agent/main.ts` -- `Client, Connection` from `@temporalio/client`
-- `src/dev-agent/worker.ts` -- Worker, NativeConnection from `@temporalio/worker`
-- `src/dev-agent/api/events.ts` -- `Client` type
-- `src/dev-agent/api/routes.ts` -- `Client` type
-- `src/dev-agent/api/signal-handler.ts` -- `Client` type
-- `src/dev-agent/integration.test.ts` -- `Client` type
-- `src/product-agent/main.ts` -- `Client, Connection` from `@temporalio/client`
-- `src/product-agent/worker.ts` -- Worker, NativeConnection from `@temporalio/worker`
-- `src/product-agent/api/events.ts` -- `Client` type
+3. **Context awareness** -- Claude 4.5+ models track remaining context window. Long-lived task conversations benefit from prompts that tell the agent about context compaction: "Your context window will be compacted as it approaches limits. Save progress state before transitions."
 
-In `@aesir/platform` (shared infrastructure):
-- `src/temporal/worker.ts` -- `NativeConnection, Runtime, Worker`
-- `src/temporal/client.ts` -- `Client, Connection, WorkflowHandle`
-- `src/temporal/signals.ts` -- `wf` from `@temporalio/workflow`
-- `src/temporal/workflows/approval-workflow.ts` -- `wf`, `proxyActivities`
+4. **Avoid directive stacking** -- Claude Opus 4.6 overtriggers on aggressive language from older prompts. The existing product-agent prompt has exactly this problem (CRITICAL, IMPORTANT, MUST throughout).
 
-In `.planning/` (documentation only, not runtime):
-- 8 files in planning docs reference Temporal -- these need doc updates, not code changes
+5. **Action-oriented by default** -- Claude Opus 4.6 defaults to taking action. The prompt should guide when NOT to act rather than when TO act.
 
-#### Docker Compose changes
+6. **Subagent orchestration is native** -- Claude Opus 4.6 recognizes when to delegate. The dev-agent prompt can rely more on model judgment and less on prescriptive delegation rules.
 
-Services to remove from `docker-compose.yml`:
+**OpenAI Agents SDK Prompt Patterns (MEDIUM confidence -- official docs):**
 
-| Service | Image | Purpose | Impact |
-|---------|-------|---------|--------|
-| `temporal` | `temporalio/auto-setup:1.24.2` | Temporal server + schema auto-setup | Frees port 7233, removes PostgreSQL schema |
-| `temporal-ui` | `temporalio/ui:2.26.2` | Temporal Web UI | Frees port 8080 |
-| `dev-agent-worker` | Custom (Dockerfile) | Temporal worker for dev-agent | Merged into single service |
+The OpenAI Agents SDK uses minimal prompts with structured handoff descriptions. Agents receive an `instructions` field (equivalent to system prompt) plus dynamically generated tool descriptions. Handoffs are represented as tool descriptions, not prompt sections -- the model decides when to hand off based on the handoff tool's description.
 
-Services to modify:
+Relevant pattern for Aesir: Task handoff tools should have descriptive tool descriptions that guide the model's decision, rather than encoding handoff logic in the system prompt.
 
-| Service | Change |
-|---------|--------|
-| `dev-agent` | Remove `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE` env vars. Change command. Remove dependency on `temporal`. |
-| `product-agent` | **Delete entirely** -- merged into single agent service |
-| `router` | Remove `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE` env vars. Merge into single agent service. |
-| `nginx` | Update routing -- fewer upstream services |
+**Claude Code System Prompt Analysis (MEDIUM confidence -- community extraction):**
 
-Services to add:
+Claude Code's system prompt (as of v2.1.33, February 2026) uses:
+- Hierarchical sections with XML tags
+- `<available_skills>` dynamically generated per request
+- Context-dependent sections that are conditionally included
+- A compact identity section followed by tool descriptions
 
-| Service | Purpose |
-|---------|---------|
-| `agent-service` | Single service replacing dev-agent + product-agent + router + dev-agent-worker |
+Relevant pattern: The `<tools>` section in Aesir prompts is currently static. With task tools added, the tool list grows to 34+ tools. Consider the Claude Code pattern of grouping tools by category in the description.
 
-**Net Docker change**: Remove 3 services (temporal, temporal-ui, dev-agent-worker), delete 2 services (product-agent, router), modify 1 (dev-agent -> agent-service). From 10 services to 6 services.
+### Prompt Rewrite Strategy
 
-#### Volume changes
+The existing prompts have specific issues that the rewrite addresses:
 
-The `temporal-postgresql` volume stores Temporal's internal schema and workflow history. This can be removed. The Aesir PostgreSQL database (`temporal` user/db) is shared with Temporal -- after removing Temporal, consider renaming the database to `aesir` in a future cleanup, though this is cosmetic.
+**product-agent prompt issues:**
+- Full state machine in `<behavior>` section (CLEAR REQUEST, VAGUE REQUEST, USER CONFIRMS, etc.)
+- Prescriptive tool sequences ("1. FIRST, search... 2. If duplicates... 3. If no duplicates...")
+- Directive stacking ("CRITICAL RULES", "IMPORTANT: Steps 1-5 happen in ONE turn")
+- Intent classification lists ("yes", "looks good", "go ahead", "create it", "ship it")
 
-#### PostgreSQL schema impact
+**dev-agent prompt issues:**
+- Complexity classification gate (SIMPLE TASKS, MODERATE TASKS, COMPLEX TASKS)
+- Prescriptive tool sequences per complexity level
+- Error recovery flowchart with step numbers
+- Explicit sub-agent brief template that's overly rigid
 
-Temporal's `auto-setup` creates several schemas in the shared PostgreSQL database:
-- `temporal` schema (workflow execution history, tasks, visibility)
-- `temporal_visibility` schema (search attributes)
+Both prompts should be rewritten to:
+1. **Goal-oriented identity** (2-3 sentences)
+2. **Constitutional constraints** (5-8 genuine safety boundaries)
+3. **Few-shot examples with reasoning** (3-5 scenarios per agent)
+4. **Tool section** (framework-injected, but can include category descriptions)
+5. **Context section** (per-conversation, includes task handoff if reopening)
 
-These schemas will no longer be used and can be dropped. The `agents.*` schema gets new tables (`agent_events`, `agent_sessions`, updated `conversations`) and drops old tables (`tasks`, `context_snapshots`, `execution_traces`).
+### What NOT to Change in Prompts
 
-### What does NOT break
+- `<phase>` tags MUST remain -- the executor parses them
+- `wait_for` guidance must remain -- this is framework behavior, not agent judgment
+- `<slack_context>` handling in product-agent must remain -- these are runtime parameters
+- The `<reasoning>` block pattern for orchestrators is good -- keep it
 
-| Component | Why Safe |
-|-----------|---------|
-| MCP layer | Zero Temporal dependency. Pure HTTP. |
-| Integration packages | Zero Temporal dependency. Independent services. |
-| Agent loop (`runAgentLoop`) | Zero Temporal dependency. Pure Anthropic SDK. |
-| Tool definitions | Zero Temporal dependency. Pure functions. |
-| Platform (db, logging, config, sandbox) | Temporal code is in its own `temporal/` subdirectory. Other platform code is unaffected. |
-| Drizzle ORM migrations | Independent of Temporal. |
-| Docker networking | Temporal used its own port (7233). Removing it doesn't affect service-to-service networking. |
+### Confidence: HIGH
 
-### Migration risk: Running workflows during cutover
-
-Current Temporal workflows (orchestrator + product-agent) are long-running (can be paused for days waiting for approval). The migration plan must account for:
-
-1. **Drain existing workflows**: Stop accepting new events that would start Temporal workflows. Let running workflows complete naturally or force-terminate them.
-2. **No mixed-mode**: Do NOT run old Temporal workflows and new ConversationExecutor simultaneously. The signal routing (webhook -> which system?) would be ambiguous.
-3. **Acceptable data loss**: In-flight workflows at cutover time will be lost. This is acceptable because: (a) workflows are retryable (just re-trigger from Linear/Slack), (b) the number of in-flight workflows at any time is typically 0-3.
+Anthropic's official docs validate the PROMPT_GUIDE.md approach. The specific rewrite targets are clear from examining the existing prompts.
 
 ---
 
-## Recommended Stack Summary
+## 7. What NOT to Use (and Why)
 
-### New Dependencies
+### No Task Queue Library for Task Lifecycle
 
-| Package | Version | Purpose | Confidence |
-|---------|---------|---------|------------|
-| `pg-boss` | `^12.8.0` | Timeout scheduling for paused conversations | HIGH |
+Considered: pg-boss for task lifecycle management.
 
-### Removed Dependencies
+**Why not:** Tasks are not jobs. Tasks are long-lived coordination entities that persist across multiple conversations and can remain active for days or weeks. pg-boss is designed for fire-and-forget job execution with retries and timeouts. The task lifecycle (created -> active -> paused -> completed) is managed by agents through tools, not by a job queue.
 
-| Package | Current Version | Package(s) |
-|---------|----------------|------------|
-| `@temporalio/client` | ^1.14.1 | `@aesir/agents`, `@aesir/platform` |
-| `@temporalio/worker` | ^1.14.1 | `@aesir/agents`, `@aesir/platform` |
-| `@temporalio/workflow` | ^1.14.1 | `@aesir/agents`, `@aesir/platform` |
-| `@temporalio/activity` | ^1.14.1 | `@aesir/agents` |
+pg-boss remains in use for its existing purpose: timeout scheduling for `wait_for` signals.
 
-### Unchanged Dependencies (used by new code)
+### No State Machine Library for Task Status
 
-| Package | Version | Used For |
-|---------|---------|----------|
-| `drizzle-orm` | ^0.45.1 | Schema definition for new tables, queries |
-| `postgres` | ^3.4.7 | PostgreSQL client (LISTEN/NOTIFY, raw queries) |
-| `pg` | ^8.17.2 | PostgreSQL client (pg-boss uses this internally) |
-| `zod` | 3.25.67 | Schema validation for AgentDefinition, events |
-| `@anthropic-ai/sdk` | ^0.72.0 | Agent loop (unchanged) |
-| `express` | ^4.21.0 | HTTP server for single agent service |
-| `nanoid` | ^5.1.6 | ID generation for events, conversations |
-| `pino` (via @aesir/platform) | N/A | Logging |
+Considered: xstate, robot, or similar state machine libraries for task status transitions.
 
-### Installation
+**Why not:** Task status transitions are simple: `created -> active -> paused -> completed/cancelled`, with `paused <-> active` being bidirectional. This fits in a Zod enum with a transition validation function (~20 lines). A state machine library adds dependency weight for a trivial problem. The conversations table already manages a similar state machine without one.
 
-```bash
-# Add new dependency
-pnpm --filter @aesir/agents add pg-boss@^12.8.0
+### No Vector Database for Task Search
 
-# Remove Temporal from agents
-pnpm --filter @aesir/agents remove @temporalio/client @temporalio/worker @temporalio/workflow @temporalio/activity
+Considered: pgvector extension for semantic task search.
 
-# Remove Temporal from platform
-pnpm --filter @aesir/platform remove @temporalio/client @temporalio/worker @temporalio/workflow
+**Why not:** Task search is by assignee, status, and parent -- all exact-match queries on indexed columns. The `list_tasks` tool uses SQL WHERE clauses, not semantic similarity. If semantic search becomes needed later (e.g., "find tasks related to authentication"), it can be added without changing the schema -- pgvector extends existing tables.
+
+### No Separate Correlation Service
+
+Considered: Dedicated microservice for event-to-task correlation.
+
+**Why not:** Integrations already process both sides of the lifecycle. Adding a separate service means either:
+- Integrations call the correlation service (adds latency and a new failure mode)
+- The correlation service duplicates integration logic (maintainability nightmare)
+
+The integration owning its own correlation table is simpler and more reliable.
+
+### No Workflow Engine for Task Orchestration
+
+Considered: Temporal, Inngest, or similar workflow engines for orchestrating multi-conversation tasks.
+
+**Why not:** The entire point of v2.3 was removing Temporal in favor of Postgres-backed execution. Task orchestration is agent-decided, not framework-orchestrated. The agent reasons about what to do next; the framework provides persistence and tool access. Adding a workflow engine would be the anti-pattern the CLAUDE.md explicitly warns against: "Adding deterministic overrides that fight the agent for control."
+
+### No Change to LLM SDK
+
+Considered: Switching to Vercel AI SDK, LangChain.js, or similar abstraction layers.
+
+**Why not:** The existing `@anthropic-ai/sdk` is used directly for tool-use loops. The agent loop (~200 lines) calls the Anthropic API, processes tool calls, and loops. Adding an abstraction layer provides no value -- Aesir only uses one LLM provider, and the direct SDK gives full control over message format, tool schemas, and error handling.
+
+---
+
+## 8. Existing Stack Versions (Verified)
+
+| Package | Version | Status | Notes |
+|---------|---------|--------|-------|
+| drizzle-orm | ^0.45.1 | Current | Supports all needed features (pgSchema, composite indexes, self-refs) |
+| drizzle-kit | ^0.31.8 | Current | Generates migrations from schema diffs |
+| zod | 3.25.67 | Current | Exact version pinned; used for all validation |
+| @anthropic-ai/sdk | ^0.72.0 | Current | Native tool-use loops |
+| pg-boss | ^12.8.0 | Current | Timeout scheduling only (not for tasks) |
+| nanoid | ^5.1.6 | Current | ID generation with prefixes |
+| zod-to-json-schema | ^3.24.5 | Current | Tool input schema generation |
+
+No version bumps needed for v2.5 features.
+
+---
+
+## 9. Patterns from Production Agent Frameworks
+
+### OpenAI Agents SDK Handoff Pattern (HIGH confidence)
+
+**How it works:** Handoffs are represented as tools to the LLM. Each handoff becomes a `transfer_to_<agent_name>` tool. When the LLM selects this tool:
+1. The `on_handoff` callback runs (can validate input, transform state)
+2. `input_filter` transforms the conversation history for the receiving agent
+3. The receiving agent takes over with the filtered history
+
+**Relevance to Aesir v2.5:** The task handoff tools in the spec are conceptually similar -- they are tools that the agent calls to transfer work. Key difference: OpenAI handoffs happen within a single run (synchronous transfer), while Aesir handoffs happen across conversations (asynchronous, mediated by task).
+
+**Pattern to adopt:** The `input_filter` concept maps to Aesir's "context pressure management." When a task has many handoffs, only the most recent is delivered as context. This is exactly what OpenAI's `input_filter` does -- selectively passing history.
+
+**Pattern to NOT adopt:** OpenAI represents each possible target agent as a separate handoff tool. Aesir should use a single `task:handoff_task` tool with a `handoff_type` parameter. The agent decides the type; the framework doesn't need a separate tool per handoff target.
+
+### CrewAI Task Delegation (MEDIUM confidence)
+
+**How it works:** CrewAI defines `Task` objects with `description` and `expected_output` fields. An agent analyzes the task and decides between local execution or delegation to another agent. The `allow_delegation` flag controls whether delegation is possible.
+
+**Relevance to Aesir v2.5:** The `Task` schema in CrewAI is simpler than Aesir's spec but validates the core concept: tasks have a description (objective), expected output (acceptance criteria), and delegation capability. CrewAI's `trust_remote_completion_status` flag (whether to trust the delegatee's completion signal) maps to the spec's "Task completion is agent-decided" principle.
+
+**Pattern to adopt:** CrewAI's explicit `expected_output` field is worth considering as a structured field in the `tasks` table instead of relying solely on the `objective` text. However, since Aesir agents already handle this through handoff context, a separate field adds complexity without clear benefit.
+
+### AutoGen Conversation Patterns (MEDIUM confidence)
+
+**How it works:** AutoGen supports sequential, concurrent, hierarchical, and group chat patterns. Agents communicate through message-passing in shared conversation threads. A supervisor agent can direct subordinate agents.
+
+**Relevance to Aesir v2.5:** AutoGen's hierarchical pattern (supervisor -> workers) maps to Aesir's orchestrator -> sub-agent pattern. The key difference: AutoGen agents share a conversation context, while Aesir agents have isolated conversations linked by tasks. Aesir's approach is more robust (isolation prevents context pollution) but requires explicit handoff context.
+
+**Pattern validation:** AutoGen's hierarchical pattern confirms that the spec's model (orchestrator creates tasks, workers execute, orchestrator summarizes) is a well-established pattern in the multi-agent community.
+
+### Temporal Continue-As-New (HIGH confidence)
+
+**How it works:** Creates a new workflow execution with the same Workflow ID but different Run ID. Event history is cleared. Selected state is passed forward as arguments to the new execution.
+
+**Relevance to Aesir v2.5:** This is the wrong pattern for conversation reopening. Temporal's Continue-As-New is for event history limits, not for continuing a conversation. Aesir's approach (reopen existing conversation with full history) is correct because:
+- Conversation history is manageable (HistoryManager handles compaction)
+- Context matters for follow-up handling
+- The agent needs to know what it did before
+
+**However:** Temporal's concept of an "Execution Chain" (linked executions sharing a Workflow ID) validates the spec's concept of a task linking multiple conversations. A task IS the equivalent of a Temporal Workflow ID -- it provides continuity across multiple conversation executions.
+
+---
+
+## 10. Integration Points with Existing Stack
+
+### ToolContext Extension
+
+The `ToolContext` interface may need a `taskId` field for task tools to know which task they're operating within:
+
+```typescript
+export interface ToolContext {
+  agentId: string;
+  correlationId: string;
+  containerManager?: DevContainerManager | undefined;
+  taskId?: string | undefined;        // existing but different semantics
+  logger: PinoLogger;
+  spawnDeps?: SpawnAgentDeps | undefined;
+  currentTaskId?: string | undefined;  // NEW: the active task for task tools
+}
 ```
 
+Note: There is already a `taskId` field in ToolContext, but it refers to the dev container task ID, not the v2.5 task primitive. A new field name (`currentTaskId` or `activeTaskId`) avoids semantic confusion.
+
+### MCP Header Extension
+
+Add `X-Task-ID` header to MCP calls when the conversation is associated with a task. Integration MCP handlers read this header and record correlation:
+
+```typescript
+// In mcp-wrapper.ts (existing pattern)
+headers: {
+  "Content-Type": "application/json",
+  "X-Agent-ID": deps.agentId,
+  "X-Correlation-ID": deps.correlationId,
+  "X-Task-ID": deps.taskId ?? "",  // NEW
+}
+```
+
+### Event Router Integration
+
+The `IncomingEvent` type gains `taskId?: string`. Integration adapters perform the correlation lookup (async DB query) before constructing the event. The router's synchronous `handle()` method does not need to change -- it receives the pre-resolved task reference.
+
+### Dashboard Integration
+
+The Next.js dashboard at `packages/dashboard/` will need updates to display:
+- Task list view (new page)
+- Task detail view (linked conversations, handoffs, status timeline)
+- Conversation detail view: show parent task if associated
+
+These are frontend-only changes using the existing dashboard patterns (Server Components, local schema, SSE for live updates).
+
 ---
 
-## Decision Matrix
+## 11. Migration Strategy
 
-| Concern | Recommendation | Alternatives Rejected | Rationale |
-|---------|---------------|----------------------|-----------|
-| Conversation execution | Custom SKIP LOCKED | pg-boss, graphile-worker, BullMQ | Conversation semantics don't map to generic job queues |
-| Timeout scheduling | pg-boss `startAfter` | pg_cron, node-cron, custom polling | Pure delayed-job problem; pg-boss solves it with zero infrastructure |
-| Event log writes | Custom batch INSERT | PGMQ, Kafka, event sourcing libs | Simple append-only table; no library needed |
-| Event subscriptions | LISTEN/NOTIFY + polling | PGMQ, Redis pub/sub | Hybrid approach: instant notification + reliable fallback |
-| Conversation storage | JSONB column | Normalized messages table | Write-rarely/read-fully pattern makes TOAST acceptable |
-| Concurrency control | SELECT FOR UPDATE SKIP LOCKED | Advisory locks, application-level locks | Row-level locking is the natural fit for conversation processing |
-| Stale job recovery | Heartbeat + polling | External health checker | Simple, self-contained, no additional infrastructure |
+### Migration Order
 
----
+1. **Schema migration first:** Create `agents.tasks` and `agents.task_handoffs` tables. Add `task_id` column to `agents.conversations`. Create `task_correlations` tables in each integration schema.
 
-## Risk Assessment
+2. **ID generation second:** Add `task`, `handoff`, and `taskCorrelation` to `createId` in `@aesir/types`.
 
-| Risk | Severity | Mitigation |
-|------|----------|------------|
-| JSONB conversation exceeds 5MB | LOW | History compaction triggers at 80K tokens (~320KB). Conversations should rarely exceed 1MB after compaction. |
-| pg-boss schema conflicts with agents schema | LOW | pg-boss uses its own schema (`pgboss`). No namespace collision. |
-| LISTEN/NOTIFY message loss | LOW | Polling fallback every 5 seconds. Messages only contain conversation IDs, not data. |
-| Custom executor has bugs Temporal wouldn't | MEDIUM | The executor is much simpler than Temporal (no replay, no versioning, no determinism constraints). Integration tests cover start/pause/signal/resume/timeout/cancel lifecycle. |
-| pg-boss version instability | LOW | pg-boss is at v12.8.0 (mature), MIT licensed, 215K weekly downloads. Actively maintained. |
-| Long-running transactions during agent loop | LOW | Agent loop runs OUTSIDE any transaction. Only short transactions for dequeue/status-update/complete. Heartbeat updates are individual statements. |
+3. **Tool factories third:** Implement task tool factories and register in `tool-factories.ts`.
+
+4. **Agent definitions fourth:** Add `task:*` tools to agent YAML definitions.
+
+5. **Prompt rewrites fifth:** Rewrite `prompt.md` files for product-agent and dev-agent.
+
+6. **Executor changes sixth:** Modify `signal()` for conversation reopening.
+
+7. **Router changes seventh:** Add task-based routing to event router.
+
+8. **Integration adapter changes eighth:** Add correlation lookup to integration adapters.
+
+### Backward Compatibility
+
+- `task_id` on conversations is nullable -- existing conversations work unchanged
+- New tools are added to agent definitions, not removed
+- Prompt rewrites are backward-compatible (same phase tags, same wait_for patterns)
+- Event router changes are additive (new routing priority before existing logic)
 
 ---
 
 ## Sources
 
-### Postgres Job Queues
-- [Graphile Worker GitHub](https://github.com/graphile/worker) -- MIT, 0.16.6, ~87K weekly downloads
-- [pg-boss GitHub](https://github.com/timgit/pg-boss) -- MIT, 12.8.0, ~215K weekly downloads
-- [The Unreasonable Effectiveness of SKIP LOCKED](https://www.inferable.ai/blog/posts/postgres-skip-locked) -- Pattern documentation
-- [Using FOR UPDATE SKIP LOCKED for Queue-Based Workflows](https://www.netdata.cloud/academy/update-skip-locked/) -- Crash safety and batch processing
+### Official Documentation (HIGH confidence)
+- [Anthropic Prompting Best Practices (Claude 4.6)](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-4-best-practices)
+- [Anthropic Prompt Engineering Overview](https://platform.claude.com/docs/en/docs/build-with-claude/prompt-engineering/overview)
+- [OpenAI Agents SDK Handoffs](https://openai.github.io/openai-agents-python/handoffs/)
+- [Temporal Continue-As-New](https://docs.temporal.io/workflow-execution/continue-as-new)
+- [GitHub Webhook Events and Payloads](https://docs.github.com/en/webhooks/webhook-events-and-payloads)
+- [Zendesk Ticket Lifecycle](https://support.zendesk.com/hc/en-us/articles/8263915942938-About-the-ticket-lifecycle-and-ticket-statuses)
+- [Drizzle ORM Schema Declaration](https://orm.drizzle.team/docs/sql-schema-declaration)
+- [Drizzle ORM Migrations](https://orm.drizzle.team/docs/migrations)
 
-### LISTEN/NOTIFY
-- [Scaling Postgres LISTEN/NOTIFY](https://pgdog.dev/blog/scaling-postgres-listen-notify) -- Limitations and scaling
-- [PostgreSQL LISTEN/NOTIFY for Instant Updates](https://medium.com/@nevilpatel05317/day-4-forget-polling-using-postgresql-listen-notify-for-instant-updates-991d96da72bc)
-- [Cybertec: LISTEN/NOTIFY](https://www.cybertec-postgresql.com/en/listen-notify-automatic-client-notification-in-postgresql/) -- Ephemeral nature documented
+### Community Sources (MEDIUM confidence)
+- [CrewAI A2A Agent Delegation](https://docs.crewai.com/en/learn/a2a-agent-delegation)
+- [LangGraph Checkpointing Best Practices 2025](https://sparkco.ai/blog/mastering-langgraph-checkpointing-best-practices-for-2025)
+- [Claude Code System Prompts Repository](https://github.com/Piebald-AI/claude-code-system-prompts)
+- [AutoGen Multi-Agent Patterns 2025](https://sparkco.ai/blog/deep-dive-into-autogen-multi-agent-patterns-2025)
+- [Temporal + OpenAI Agents SDK Integration](https://temporal.io/blog/announcing-openai-agents-sdk-integration)
 
-### JSONB Performance
-- [5mins of Postgres: JSONB TOAST Performance Cliffs](https://pganalyze.com/blog/5mins-postgres-jsonb-toast) -- 2KB threshold documentation
-- [When To Avoid JSONB](https://www.heap.io/blog/when-to-avoid-jsonb-in-a-postgresql-schema) -- Storage overhead analysis
-- [Postgres Large JSON Value Query Performance](https://www.evanjones.ca/postgres-large-json-performance.html) -- 2-10x slowdown benchmarks
-
-### Event Sourcing
-- [Event Storage in Postgres](https://dev.to/kspeakman/event-storage-in-postgres-4dk2) -- Append-only table patterns
-- [Aggregateless Event Store with TypeScript and PostgreSQL](https://ricofritzsche.me/how-i-built-an-aggregateless-event-store-with-typescript-and-postgresql/) -- TypeScript implementation
-
-### Concurrency Control
-- [PostgreSQL Advisory Locks](https://www.kostolansky.sk/posts/postgresql-advisory-locks/) -- When to use advisory locks
-- [Distributed Locking with Postgres Advisory Locks](https://rclayton.silvrback.com/distributed-locking-with-postgres-advisory-locks) -- Comparison with row locks
-- [PostgreSQL Explicit Locking Documentation](https://www.postgresql.org/docs/current/explicit-locking.html) -- Official reference
-
-### Timeout Scheduling
-- [pg_cron GitHub](https://github.com/citusdata/pg_cron) -- Requires extension, SQL-only execution
-- [pg-boss Deep Dive](https://logsnag.com/blog/deep-dive-into-background-jobs-with-pg-boss-and-typescript) -- startAfter API
-- [pg-boss npm](https://www.npmjs.com/package/pg-boss) -- v12.8.0, latest release
-
-### PGMQ
-- [PGMQ GitHub](https://github.com/pgmq/pgmq) -- v1.9.0, requires extension
-- [pgmq-ts](https://github.com/baz-scm/pgmq-ts) -- TypeScript client, nascent
-
-### Temporal
-- [Temporal TypeScript SDK GitHub](https://github.com/temporalio/sdk-typescript) -- Package structure, migration notes
-- [Temporal TypeScript Troubleshooting](https://legacy-documentation-sdks.temporal.io/typescript/troubleshooting) -- Native bridge issues
+### Codebase Sources (HIGH confidence)
+- `packages/agents/src/shared/db/schema.ts` -- existing Drizzle schema patterns
+- `packages/agents/src/framework/types.ts` -- ToolContext, ToolFactory interfaces
+- `packages/agents/src/framework/tool-factories.ts` -- registration pattern
+- `packages/agents/src/framework/event-router.ts` -- current routing logic
+- `packages/agents/src/adapters/types.ts` -- IncomingEvent schema
+- `packages/types/src/utils/ids.ts` -- ID generation patterns
+- `packages/integrations/github/src/db/schema.ts` -- integration schema pattern
+- `packages/integrations/linear/src/db/schema.ts` -- integration schema pattern
+- `packages/agents/definitions/PROMPT_GUIDE.md` -- prompt authoring guide
+- `.planning/specs/2.5-agentic-conversations.md` -- v2.5 implementation spec
+- `.planning/specs/2.5-design-vision.md` -- v2.5 design vision

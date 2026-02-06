@@ -1,629 +1,796 @@
-# Domain Pitfalls: v2.3 Unified Agent Framework
+# Domain Pitfalls: v2.5 Agentic Conversations
 
-**Domain:** Replacing Temporal orchestration with custom ConversationExecutor, Postgres-backed job queue, unified event log, single agent service
-**Researched:** 2026-02-01
-**Overall confidence:** HIGH (multiple sources, cross-verified with official docs and real-world post-mortems)
+**Domain:** Adding task primitives, conversation reopening, integration correlation, and prompt rewrites to an existing Postgres-backed agent system
+**Researched:** 2026-02-06
+**Overall confidence:** HIGH (analysis grounded in existing codebase, official PostgreSQL documentation, prompt engineering literature, and multi-agent system post-mortems)
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause production outages, data loss, or forced rewrites.
+Mistakes that cause production outages, data corruption, or forced rewrites of recently-shipped work.
 
 ---
 
-### CRITICAL-1: JSONB Conversation Messages Column Becomes a Write Amplification Bomb
+### CRITICAL-1: Conversation Reopening Creates Split-Brain Between Conversation State and World State
+
+**Severity:** CRITICAL
+**Phase to address:** Phase 2 (Conversation Reopening)
 
 **What goes wrong:**
-The v2.3 spec stores `messages: jsonb` as a single column on the `conversations` table. Every time the agent calls a tool or receives an LLM response, the framework appends to this array and persists. With agent loops running 5-30 minutes and making 10-100+ tool calls, this JSONB column grows rapidly. PostgreSQL's MVCC architecture means every UPDATE to a JSONB column rewrites the entire value -- there is no partial update for JSONB. A 500KB conversation history means every tool call generates a 500KB row rewrite plus WAL entry, plus dead tuple, plus index updates.
+A conversation completes at time T1 with world state W1 (e.g., PR #42 is open, Linear issue AES-100 is "In Progress"). At time T2, a `reopen` signal arrives. The conversation is re-queued with its full prior history. The agent resumes and reads its own prior messages: "I created PR #42 and it's ready for review." But at T2, PR #42 may have been merged, closed, force-pushed, or had its branch deleted. The agent's history is factual about what *happened* but wrong about the *current state of the world*.
+
+This is the most dangerous pitfall because the agent will act confidently on stale information. It will not question its own prior messages.
 
 **Why it happens:**
-PostgreSQL treats JSONB as an opaque blob. Any modification triggers full value duplication. Once the JSONB exceeds ~2KB (the TOAST threshold of 2,032 bytes), PostgreSQL stores it out-of-line in TOAST tables. Measured performance: TOAST compressed JSONB is 10x slower than inline uncompressed for reads (746ms vs 7,624ms on 1M rows), and writes are proportionally worse because the entire TOAST value must be duplicated, re-compressed, and WAL-logged.
+The v2.5 spec states: "Agent receives full prior history plus the signal context on resume." History tells the agent what it did, but not what has changed since. The existing history manager compacts old tool results but does not inject fresh state. There is no mechanism in the current executor to refresh external state on reopen.
 
-Additionally, HOT (Heap-Only Tuple) updates are not available for JSONB columns with indexes, meaning every update also rewrites all index entries -- even if the indexed values did not change. This creates a cascading write amplification: row rewrite + TOAST rewrite + WAL entries + index updates + dead tuple accumulation.
+**Real-world analogy:**
+Zendesk and Intercom both handle this by showing agents a *context panel* alongside the ticket history -- displaying the customer's current account state, recent interactions, and any changes since the ticket was last active. They separate "what happened" (ticket history) from "what is true now" (live context panel). Aesir needs an equivalent.
 
 **Consequences:**
-- WAL generation balloons proportionally to conversation size, impacting replication lag
-- Dead tuple accumulation overwhelms autovacuum on the conversations table
-- Table bloat degrades query performance for all conversation operations
-- At 10MB+ JSONB (realistic for long agent sessions with tool results), each UPDATE could generate 10MB+ of WAL per tool call
-- Transaction ID wraparound risk if vacuum cannot keep pace
-
-**Specific numbers (from pganalyze benchmarks):**
-- Inline uncompressed JSONB: 746ms per 1M row scan
-- TOAST compressed JSONB: 7,624ms per 1M row scan (10.2x slower)
-- TOAST uncompressed JSONB: 3,393ms per 1M row scan (4.5x slower)
-- Every UPDATE duplicates the full TOAST value regardless of change size
+- Agent creates duplicate PRs because it thinks the original was never created (correlation not checked)
+- Agent updates a Linear issue that was already moved to a different state by a human
+- Agent writes code on a branch that no longer exists (force-pushed or deleted)
+- Agent reports success based on stale information ("PR #42 is ready for review" when it was already merged)
+- User trust erodes: the agent confidently states things that are demonstrably false
 
 **Prevention:**
-1. **Do NOT persist the full messages array in JSONB on every tool call.** Instead, persist only at lifecycle boundaries: when the conversation pauses (wait_for), completes, or fails. During the active agent loop, messages live in memory only.
-2. **Consider a separate `conversation_messages` table** with one row per message (conversation_id, sequence, role, content, timestamp). Appending becomes an O(1) INSERT instead of an O(n) UPDATE of the entire JSONB blob.
-3. **If you keep JSONB, use LZ4 compression** (`ALTER TABLE conversations ALTER COLUMN messages SET COMPRESSION lz4`) -- it is consistently 2x faster than the default PGLZ for TOAST operations.
-4. **Set TOAST storage to EXTERNAL** (uncompressed out-of-line) if read performance matters more than disk space: `ALTER TABLE conversations ALTER COLUMN messages SET STORAGE EXTERNAL`.
-5. **Tune autovacuum aggressively** for the conversations table: `autovacuum_vacuum_scale_factor = 0.01`, `autovacuum_vacuum_threshold = 50`.
+1. **Inject a `<world_state>` context block when reopening.** Before re-queuing the conversation, the executor (or routing layer) should query current state of known artifacts (via MCP tools or correlation lookups) and inject a summary as a system-level context block. This is the "Zendesk context panel" equivalent.
+2. **Add a constitutional constraint to reopened-conversation prompts:** "When resuming a previous conversation, verify the current state of any artifacts you previously created before acting on them. Your history is accurate about what you did, but the world may have changed."
+3. **Signal payload must include delta information.** The `reopen` signal should carry what changed, not just that something happened. "PR #42 received a review with requested changes" is actionable; "reopen" alone is not.
+4. **Do NOT rely on the agent to self-correct.** The agent cannot know what it does not know. If the PR was deleted, no amount of prompt guidance will make the agent check for it unless the context injection tells it to.
 
 **Warning signs:**
-- `pg_stat_user_tables.n_dead_tup` growing faster than `n_tup_upd` on conversations table
-- WAL generation rate spikes during agent loops (monitor `pg_stat_wal`)
-- Replication lag increases during active agent sessions
-- `pg_total_relation_size('conversations')` grows much larger than live data size
+- Agent messages reference artifacts that no longer exist in their stated form
+- Agent attempts to update resources that return 404 or conflict errors
+- Agent creates duplicate artifacts (PRs, issues) because it cannot see the existing ones
 
-**Severity:** CRITICAL -- will cause production degradation within weeks of deployment under real workload
-**Phase:** Must be addressed in Phase A (framework implementation). Design the persistence strategy before writing ConversationExecutor.
-
-**Sources:**
-- [pganalyze: Postgres performance cliffs with JSONB and TOAST](https://pganalyze.com/blog/5mins-postgres-jsonb-toast)
-- [Evan Jones: Postgres large JSON performance](https://www.evanjones.ca/postgres-large-json-performance.html)
-- [Nick Drane: Hidden costs of PostgreSQL JSONB](https://nickdrane.com/hidden-costs-of-postgresql-jsonb/)
-- [MongoDB Engineering: No HOT updates on JSONB (write amplification)](https://dev.to/mongodb/no-hot-updates-on-jsonb-13k7)
+**Confidence:** HIGH -- this is a fundamental design challenge, not speculative. Every helpdesk system that supports ticket reopening has had to solve this exact problem.
 
 ---
 
-### CRITICAL-2: Stale Running Conversation Detection Is Harder Than It Looks
+### CRITICAL-2: Task-Level Event Serialization Deadlocks with Conversation-Level SKIP LOCKED
+
+**Severity:** CRITICAL
+**Phase to address:** Phase 3 (Task Primitive)
 
 **What goes wrong:**
-The v2.3 spec requires "at-least-once execution: stale running conversations detected and re-enqueued." This is the single hardest problem when replacing Temporal. Temporal's activity heartbeats and task queue mechanics handle this transparently. Building it from scratch requires solving: How do you know a conversation is stale vs. still running? How do you avoid two agent loops running for the same conversation simultaneously? How do you handle the case where the process dies between "claimed job" and "started agent loop"?
+The v2.5 spec introduces task-level serialization: "Events for the same task are serialized. Second event queued as signal, delivered when active conversation completes or pauses." The existing system uses `FOR UPDATE SKIP LOCKED` on the conversations table. The new system needs to also lock at the task level to serialize events. If these two locking mechanisms are not carefully ordered, a deadlock occurs:
+
+- Worker A holds conversation lock for conv-1 (task T1), tries to acquire task lock for T1 to write a handoff
+- Worker B holds task lock for T1 (processing a new event), tries to acquire conversation lock for conv-1 to deliver a signal
+
+PostgreSQL will detect and abort one transaction, but the retry loop may recreate the same conditions.
 
 **Why it happens:**
-Agent loops run 5-30 minutes. During that time, the process could crash, the container could be OOM-killed, or the database connection could drop. The conversation record shows `status: "running"` but nothing is actually running. Without heartbeats, there is no way to distinguish "running but slow" from "crashed and abandoned."
-
-If you use a simple timeout ("anything running > 45 minutes is stale"), you will either:
-- Set the timeout too low and kill legitimate long-running conversations
-- Set the timeout too high and leave abandoned conversations stuck for hours
-
-If you use a polling-based reaper ("check every 60s for conversations older than X"), you create a thundering herd when the reaper reclaims 50 conversations simultaneously.
+The current `claimConversations()` function uses a CTE with `FOR UPDATE SKIP LOCKED` on `agents.conversations`. The task primitive introduces a second lockable entity (`agents.tasks`). Any operation that needs to lock both must acquire them in a consistent order. The v2.5 spec does not specify a lock acquisition order.
 
 **Consequences:**
-- Stuck conversations that never complete (user waiting for approval that will never come)
-- Duplicate execution (two agent loops running for the same conversation, making duplicate API calls, creating duplicate PRs)
-- Race conditions between the reaper and the still-running loop (reaper marks it stale, loop tries to persist, both claim ownership)
+- Intermittent deadlock errors under concurrent load
+- Conversation retries that consume the retry budget on infrastructure errors (not agent errors)
+- Worker starvation if one task's conversations keep deadlocking
+- Non-reproducible in single-conversation testing; only surfaces under concurrent multi-task load
 
 **Prevention:**
-1. **Implement heartbeats.** The agent loop's `onHeartbeat` callback (already used for Temporal in v2.2) should UPDATE a `last_heartbeat_at` timestamp on the conversation record. River Queue (Go + Postgres) and Solid Queue (Rails + Postgres) both use this pattern with configurable intervals (default 60s) and thresholds (default 5 minutes).
-2. **Use a `claimed_by` column** with the process/worker ID. On startup, each worker generates a unique ID. When claiming a conversation, SET `claimed_by = worker_id, last_heartbeat_at = now()`. The reaper only reclaims conversations where `claimed_by` refers to a dead worker OR `last_heartbeat_at` is older than the threshold.
-3. **Separate claiming from executing.** Use the pattern from Postgres job queue best practices: atomic claim (UPDATE with SKIP LOCKED + SET status = 'running', COMMIT immediately), then execute the agent loop, then UPDATE status = 'completed/paused/failed'. This means the "running" status is committed before the agent loop starts, so crash detection works.
-4. **Concurrency lock per conversation.** Use `pg_advisory_xact_lock(hashtext(conversation_id))` or a row-level lock to ensure only one process executes a conversation at a time. Check the lock before starting the agent loop.
+1. **Define and enforce a canonical lock order: task first, then conversation.** Document this as an invariant. All code paths that touch both tables must acquire the task lock before the conversation lock.
+2. **Use advisory locks for task-level serialization** instead of row locks on the tasks table. `pg_advisory_xact_lock(hashtext(task_id))` provides the serialization without competing with the SKIP LOCKED mechanism on conversations. Advisory locks live in a separate lock space and cannot deadlock with row locks.
+3. **Add a deadlock detection metric.** Monitor `pg_stat_activity` for `deadlock` wait events. Any non-zero count is a bug.
+4. **Test with concurrent event delivery to the same task.** The unit test suite for the task primitive must include a test that fires 10+ events at the same task concurrently and verifies no deadlocks.
 
 **Warning signs:**
-- Conversations stuck in "running" status for > max expected duration
-- Heartbeat timestamps not advancing for running conversations
-- Multiple log entries for the same conversation_id from different workers
+- `ERROR: deadlock detected` in PostgreSQL logs
+- Conversations failing with retry exhaustion on infrastructure errors
+- Inconsistent behavior under load that disappears during debugging
 
-**Severity:** CRITICAL -- without this, the system has no crash recovery and conversations silently die
-**Phase:** Must be addressed in Phase A (ConversationExecutor implementation). This is the core durability guarantee.
-
-**Sources:**
-- [Solid Queue: Heartbeat and process pruning](https://github.com/rails/solid_queue)
-- [River Queue: Maintenance services and stuck job rescue](https://riverqueue.com/docs/maintenance-services)
-- [Brandur: Postgres Job Queues & Failure By MVCC](https://brandur.org/postgres-queues)
+**Confidence:** HIGH -- deadlocks between two-level locking are a well-documented PostgreSQL pitfall. The incident.io engineering blog documents an extended debugging session for exactly this pattern in a queue system.
 
 ---
 
-### CRITICAL-3: Event Log Sequence Gaps Cause Missed Events in Projections
+### CRITICAL-3: Prompt Rewrite Silently Regresses Agent Behavior Without Detection
+
+**Severity:** CRITICAL
+**Phase to address:** Phase 1 (Prompt Rewrites)
 
 **What goes wrong:**
-The v2.3 spec uses a `sequence` column on `agent_events` with a unique constraint per conversation. PostgreSQL sequences (`SERIAL`/`BIGSERIAL`) are not transactional -- they increment on `nextval()` and do not roll back if the transaction fails. This creates gaps. If the session projection uses "process events after sequence N" to catch up, it will skip events whose transactions committed out of order.
+The v2.5 spec calls for rewriting product-agent and dev-agent prompts from procedural state machines to constitutional + few-shot style. The current product-agent prompt has 10+ behavioral rules encoded as if/then branches (CLEAR REQUEST flow, VAGUE REQUEST flow, USER CONFIRMS flow, etc.). These encode hard-won behavioral fixes -- each rule exists because the agent failed without it. When you rewrite the prompt to constitutional style, you remove the explicit rules but may not capture the *reason* for the rule in the constitutional constraint.
 
-Concrete scenario: Transaction A gets sequence 5, Transaction B gets sequence 6. Transaction B commits first. The projection reads up to sequence 6 and records "last processed = 6." Transaction A then commits with sequence 5. The projection never sees event 5.
+Example: The current product-agent prompt has "IMPORTANT: Steps 1-5 happen in ONE turn." This exists because the agent was observed splitting the duplicate search and draft into separate turns, causing a confusing multi-message flow for users. A constitutional rewrite might say "Never ask the user to wait unnecessarily" -- which is vaguer and may not prevent the same split-turn behavior.
 
 **Why it happens:**
-PostgreSQL sequences prioritize performance over gap-free ordering. `nextval()` is not rolled back on transaction abort, and concurrent transactions get interleaved sequence numbers. This is by design -- gap-free sequences require table-level locks that serialize all writes.
+Prompt rewrites are behavioral changes, not code refactors. You cannot run a linter or type checker to verify that the new prompt produces the same outputs for the same inputs. LLM behavior is probabilistic -- the same input might produce correct output 95% of the time with the old prompt and 85% of the time with the new one. This 10% regression is invisible without systematic evaluation.
+
+The Prompt Authoring Guide correctly warns against state machines in natural language, but the transition from state machine to constitutional constraints requires understanding *why each rule exists*, not just removing rules.
 
 **Consequences:**
-- Session projection misses events, showing stale status (e.g., still "running" when actually "completed")
-- Artifact extraction fails (PR number from `tool.succeeded` event is never projected)
-- Real-time subscribers via `EventLog.subscribe()` miss events permanently
-- Silent data loss that is extremely difficult to debug because the events DO exist in the table -- they were just skipped by the catchup query
+- Agent starts asking unnecessary clarifying questions (lost the "clear request" fast path)
+- Agent forgets to search for duplicates before creating issues (lost the explicit "search first" instruction)
+- Agent creates issues without user confirmation (lost the explicit "confirm before creating" instruction)
+- Dev-agent skips human approval for complex changes (lost the explicit approval gate)
+- Behavioral regressions are noticed by users, not tests, eroding trust in the rewrite
 
 **Prevention:**
-1. **Use transaction ID-based catchup instead of sequence numbers.** Oskar Dudycz's research (Event-Driven.io) demonstrates using `pg_current_xact_id()` stored alongside each event and `pg_snapshot_xmin(pg_current_snapshot())` to determine the safe watermark. Events are only "safe to process" when their transaction ID is below the minimum active transaction.
-2. **For the append-only event log, consider gapless sequences per conversation.** Since events within a single conversation are sequential (one agent loop at a time), you can safely use `MAX(sequence) + 1` within the conversation scope without global contention. The unique constraint `(conversation_id, sequence)` enforces this.
-3. **LISTEN/NOTIFY as hint only, always back with polling.** The spec mentions LISTEN/NOTIFY for subscription. Notifications are ephemeral -- lost during disconnection, no replay, fire-and-forget. Always pair with polling-based catchup on reconnect.
-4. **Projection should re-scan periodically.** Even with correct watermarking, run a periodic full reconciliation that replays recent events to catch any gaps. This is defense in depth.
+1. **Create a behavioral test suite BEFORE rewriting prompts.** Document 10-15 real conversation scenarios for each agent with expected behavior. Include: clear request, vague request, duplicate found, user confirms, user cancels, multi-issue, tool failure. Run them against the current prompt to establish baseline.
+2. **Use promptfoo or equivalent** for regression testing. Define test cases as YAML with expected outputs (tool calls made, messages sent, phase tags emitted). Run against both old and new prompts.
+3. **For each if/then rule removed, document WHY it existed** and verify the constitutional constraint covers the same failure mode. Create a traceability matrix: old rule -> failure it prevented -> new constraint that covers it.
+4. **Deploy prompt changes with a shadow mode.** Run both old and new prompts in parallel on the same inputs, compare outputs, flag divergences. This requires framework support (not currently in v2.3).
+5. **Rewrite incrementally, not all at once.** Rewrite one behavioral area at a time (e.g., duplicate detection first), validate, then move to the next. The spec says "Both agents rewritten in parallel" -- this means two agents simultaneously, but each agent's prompt should still be rewritten incrementally within that parallel track.
 
 **Warning signs:**
-- Session projection shows "running" but events table has "agent.completed" event
-- Artifact fields empty despite successful tool calls in event log
-- Subscribers receive events out of order
+- Agent behavior changes that users report ("it used to do X, now it does Y")
+- Phase tag distribution shifts (more `clarifying` phases, fewer `complete` phases, or vice versa)
+- Tool call patterns change (fewer `linear_search_issues` calls suggesting duplicate check is being skipped)
+- User satisfaction drops without any infrastructure change
 
-**Severity:** CRITICAL -- causes silent data corruption in the session projection
-**Phase:** Must be addressed in Phase A (EventLog implementation). The sequence strategy must be designed before writing event append/query logic.
-
-**Sources:**
-- [Event-Driven.io: How Postgres sequences issues impact messaging guarantees](https://event-driven.io/en/ordering_in_postgres_outbox/)
-- [SoftwareMill: Implementing event sourcing using a relational database](https://softwaremill.com/implementing-event-sourcing-using-a-relational-database/)
-- [Dev.to: Event Storage in Postgres](https://dev.to/kspeakman/event-storage-in-postgres-4dk2)
+**Confidence:** HIGH -- prompt regression is extensively documented in the prompt engineering literature. Promptfoo, Braintrust, and PromptLayer all exist specifically because this problem is common and hard to detect without tooling.
 
 ---
 
-### CRITICAL-4: Buffered Event Writes Lose Data on Crash
+### CRITICAL-4: schema.drizzle.ts Legacy Table Name Collision with New tasks Table
+
+**Severity:** CRITICAL
+**Phase to address:** Phase 3 (Task Primitive)
 
 **What goes wrong:**
-The v2.3 spec explicitly states: "`append` is void, not async. The caller never waits for persistence. The implementation handles buffering, batching, and flushing internally." This means events are held in memory and batch-inserted periodically. If the process crashes between a tool call and the next flush, those events are permanently lost.
-
-For agent loops running 5-30 minutes making many tool calls, a crash could lose dozens of events. The event log -- which is supposed to be "unified ground truth" -- would have gaps. The session projection would show stale data. And the conversation history (which is the agent's memory) would be missing tool results.
+The existing `schema.drizzle.ts` already contains a `tasks` table definition from the legacy v1/v2 system. It is explicitly retained to "prevent destructive DROP TABLE migrations" (documented in CLAUDE.md Gotchas). The v2.5 spec introduces a new `agents.tasks` table with a completely different schema (polymorphic creator/assignee, parent_id, status enum, etc.). If the migration is generated against the existing `schema.drizzle.ts`, drizzle-kit will attempt to ALTER the existing table instead of creating a new one, potentially corrupting the migration or dropping columns that contain legacy data.
 
 **Why it happens:**
-Buffering is a legitimate optimization for high-throughput event logging. The spec is correct that the agent loop should not block on event I/O. But "fire-and-forget" and "ground truth" are fundamentally contradictory. You cannot be both.
+The CLAUDE.md Gotchas section explicitly warns: "schema.drizzle.ts retains old table definitions to prevent destructive DROP TABLE migrations -- do not clean it up." But the new v2.5 tasks table has the same name in the same schema namespace (`agents.tasks`). Drizzle-kit uses the drizzle schema file to determine what exists and what to change.
 
 **Consequences:**
-- Lost events mean incomplete execution history (debugging becomes impossible)
-- Session projection artifacts are missing (PR number not recorded even though PR was created)
-- If conversation resumes after crash, agent sees incomplete history and may repeat actions
-- Violates the v2.3 promise that events are "written when things happen, not reconstructed afterward"
+- Migration attempts ALTER TABLE on legacy tasks instead of creating new schema
+- Legacy task data could be corrupted or dropped
+- Migration may fail if column types are incompatible
+- If migration succeeds but is wrong, rolling back becomes difficult
 
 **Prevention:**
-1. **Flush events synchronously at lifecycle boundaries.** At minimum, flush before: persisting conversation state (pause/complete), writing to the session projection, and returning from the agent loop. The `flush()` method exists in the spec -- use it at these critical points.
-2. **Use WAL-backed buffering.** Instead of in-memory buffer only, write events to a local WAL file (append-only, fast) and batch-insert to Postgres asynchronously. On crash recovery, replay the local WAL. This is the pattern used by most serious event log implementations.
-3. **Accept the tradeoff explicitly.** If some events (tool.called, llm.response) can be lost without consequence, document which event types are "best effort" vs "guaranteed." Reserve synchronous writes for lifecycle events (agent.started, agent.paused, agent.completed, signal.received) that affect correctness.
-4. **Flush on every tool result that produces artifacts.** If a tool has artifact config, its `tool.succeeded` event MUST be flushed synchronously because the session projection depends on it.
+1. **Check if legacy `agents.tasks` table has any data in production/development databases.** If it is empty, the safest approach is to DROP it in a separate migration first, then create the new table.
+2. **If legacy data exists, use a different table name** for the v2.5 task primitive (e.g., `agents.work_tasks` or `agents.task_items`) to avoid the collision entirely.
+3. **If using the same name, write the migration manually** instead of relying on drizzle-kit generation. Explicitly DROP the old table (after verifying it is unused) and CREATE the new one in the same migration.
+4. **Update `schema.drizzle.ts` carefully.** Replace the old `tasks` definition with the new one, and verify the generated migration is an explicit DROP + CREATE, not an ALTER.
+5. **Test the migration against a database with the old table present.** Do not assume a fresh database test covers this case.
 
 **Warning signs:**
-- Events table has fewer entries than expected for completed conversations
-- Session projection artifacts are intermittently missing
-- Gap between `agent.started` and first `tool.called` event is suspiciously large (indicates lost events in between)
+- Drizzle-kit generating ALTER TABLE instead of CREATE TABLE
+- Migration errors referencing columns that should not exist
+- `schema.drizzle.ts` having two task-related definitions
 
-**Severity:** CRITICAL -- undermines the core value proposition of the unified event log
-**Phase:** Must be addressed in Phase A (EventLog implementation). Define flush policy before implementing the buffer.
+**Confidence:** HIGH -- this is directly observable in the existing codebase. The legacy `tasks` table definition is at lines 116-157 of `schema.drizzle.ts`.
 
 ---
 
 ## Major Pitfalls
 
-Mistakes that cause degraded reliability, difficult debugging, or significant rework.
+Mistakes that cause significant rework, architectural debt, or multi-day debugging sessions.
 
 ---
 
-### MAJOR-1: Signal Arrives Between Agent Loop Exit and Conversation Persist
+### MAJOR-1: Integration Correlation Recording Fails Silently When MCP Call Succeeds
+
+**Severity:** MAJOR
+**Phase to address:** Phase 3 (Task Primitive)
 
 **What goes wrong:**
-The pause/resume sequence has a critical window. When the agent calls `wait_for`, the framework must: (1) return tool result to agent, (2) let the agent loop exit, (3) write agent.paused event, (4) set conversation status to "paused", (5) persist conversation to storage, (6) register timeout. Between steps 2 and 5, the conversation is logically paused but the status has not been committed to the database.
+The v2.5 spec describes a two-step process: (1) agent calls MCP tool to create an artifact (e.g., `github_create_pull_request`), (2) integration records the correlation (PR #42 -> task T123). The spec says "Agent passes task_id as MCP call context." But if the MCP call succeeds (PR created) and then the correlation recording fails (DB error, timeout, integration crash), you have an artifact that exists in the external system but is invisible to the task routing system.
 
-If a signal arrives during this window (e.g., the human clicks "approve" in Slack within milliseconds of the agent posting the approval request), the signal handler queries the database, finds the conversation still in "running" status, and queues the signal. But the signal queueing also depends on the conversation record being up-to-date. If the persist in step 5 overwrites the queued signal, the signal is lost.
+The next webhook for that artifact (e.g., PR review) will arrive with no task correlation, fall through to the slow path, and either create a new conversation or be misrouted.
 
 **Why it happens:**
-The spec's signal queueing design stores signals on the conversation record (`queuedSignals: jsonb`). If the persist operation in step 5 does a full row UPDATE (which is the natural pattern), it will overwrite any signals that were queued between steps 2 and 5.
-
-This is the exact same race condition that exists in v2.2 (the "retry-with-backoff hack for the race condition where a thread reply arrives before the workflow starts"), but the v2.3 spec claims to have eliminated it via signal queueing. The race condition has merely moved to a different window.
+The MCP protocol is a request-response HTTP call. The artifact creation and correlation recording happen in the same integration service, but there is no transactional guarantee between "call external API" and "record correlation in database." External API calls cannot participate in database transactions.
 
 **Consequences:**
-- Lost signals (approval clicks that never wake the conversation)
-- User confusion (they clicked approve but nothing happened)
-- Silent failure (no error, no log, the signal just disappeared)
+- Orphaned artifacts that are invisible to the task system
+- Webhook events for those artifacts get misrouted
+- Agent creates duplicate artifacts because it cannot find the original via task correlation
+- Debugging is difficult because the MCP call logs show success but no correlation exists
 
 **Prevention:**
-1. **Use Postgres row-level locking for conversation updates.** All operations that modify the conversation record (persist, signal delivery, signal queueing) should acquire a `FOR UPDATE` lock on the conversation row first. This serializes concurrent modifications.
-2. **Write signal queue separately from conversation state.** Use a separate `signal_inbox` table: INSERT the signal there, then the executor checks this table when resuming. This decouples signal delivery from conversation persistence.
-3. **Atomic transition to paused.** The persist operation should be a single UPDATE that atomically sets `status = 'paused'` AND appends any pending signals from the signal inbox. Use a CTE:
-   ```sql
-   WITH pending AS (
-     DELETE FROM signal_inbox WHERE conversation_id = $1 RETURNING *
-   )
-   UPDATE conversations SET
-     status = 'paused',
-     messages = $2,
-     pending_wait = $3,
-     queued_signals = queued_signals || (SELECT jsonb_agg(signal) FROM pending)
-   WHERE id = $1
-   ```
-4. **Test this explicitly.** Write an integration test that sends a signal 0ms after the agent calls wait_for. This is the exact scenario that broke v2.2.
+1. **Record the correlation BEFORE calling the external API (optimistic correlation).** Insert the correlation record with a `pending` status, call the external API, then update to `confirmed`. If the API call fails, delete the pending correlation. This ensures the correlation exists even if the post-API-call recording fails.
+2. **Alternative: Record correlation in the same transaction as the webhook receipt.** When the first webhook arrives for a new artifact, check if the artifact was recently created by an agent (via MCP call logs or event log) and create the correlation retroactively.
+3. **Add a reconciliation job** that periodically scans recent MCP `create_*` tool events in the event log and verifies that corresponding correlation records exist. Flag any orphaned artifacts.
+4. **Make the MCP tool return the correlation ID** so the agent can verify the correlation was recorded. If the tool response does not include a correlation confirmation, the agent should log a warning.
 
 **Warning signs:**
-- Conversations stuck in "paused" with no pending signals despite user having clicked approve
-- Slack approval button clicks that produce no visible effect
-- Signal.received events in the event log that correspond to no agent.resumed event
+- MCP tool.succeeded events with no corresponding correlation record
+- Webhook events hitting the slow path that should have been routed via task correlation
+- Agent creating duplicate artifacts for the same task
 
-**Severity:** MAJOR -- intermittent signal loss under real-world timing conditions
-**Phase:** Must be addressed in Phase A/B (ConversationExecutor + signal handling). Requires careful transaction design.
+**Confidence:** HIGH -- this is the classic distributed systems "exactly once" problem. The two-step pattern (call API, record locally) is inherently unreliable without compensation.
 
 ---
 
-### MAJOR-2: LISTEN/NOTIFY Is Not a Reliable Subscription Mechanism
+### MAJOR-2: Task Metadata JSONB Grows Unbounded as Conversations Accumulate
+
+**Severity:** MAJOR
+**Phase to address:** Phase 3 (Task Primitive)
 
 **What goes wrong:**
-The v2.3 spec mentions "LISTEN/NOTIFY or polling for subscriptions" for the event log. Teams often start with LISTEN/NOTIFY because it feels elegant and real-time. But PostgreSQL notifications are ephemeral and have several dangerous failure modes:
+The `tasks.metadata` column is JSONB with `DEFAULT '{}'`. The v2.5 spec does not specify any schema or size constraints on this field. Over time, agents, tools, or framework code will add metadata to tasks: artifact references, conversation summaries, intermediate results, error logs, integration-specific data. Once multiple conversations contribute metadata to a single task, the JSONB grows without bound.
 
-1. **Lost during disconnection:** If the listener process restarts, disconnects, or the connection drops, all notifications sent during the disconnection period are permanently lost. There is no replay or catch-up mechanism.
-2. **Not delivered during transactions:** If a NOTIFY is executed inside a transaction, it is not delivered until the transaction commits. If the listener is also in a transaction, the notification is buffered until that transaction completes.
-3. **Race condition on first listen:** There is a documented race condition when setting up a listener -- notifications committed concurrently with the LISTEN command may or may not be received.
-4. **Queue can fill up:** The notification queue (8GB by default) can fill if a listener enters a long transaction, causing all NOTIFYing transactions to fail at commit.
-5. **Unreliable over network:** LISTEN/NOTIFY behaves differently over remote connections vs local connections. Over remote/proxied connections, notifications may only arrive after actively executing a query on the connection.
-
-**Consequences:**
-- Session projection falls behind (events written but projection never updated)
-- Real-time subscribers miss events
-- Entire system appears to "freeze" because projections stop updating
-
-**Prevention:**
-1. **Use LISTEN/NOTIFY only as an optimization hint.** It tells the subscriber "something happened, go poll now." The subscriber must always have a polling fallback that catches up from the last processed event.
-2. **Implement the three-step reconnection pattern:** (a) subscribe with LISTEN, (b) query current state to establish baseline, (c) handle incoming notifications knowing they may duplicate what was just queried.
-3. **Poll on a timer regardless.** Every 1-5 seconds, query for new events since last processed. LISTEN/NOTIFY just makes this more responsive by triggering an immediate poll.
-4. **Consider skipping LISTEN/NOTIFY entirely for v2.3.** Simple polling with a 1-second interval is sufficient for local dev (the stated target). The EventLog interface supports swapping implementations later.
-
-**Warning signs:**
-- Session projection status differs from event log ground truth
-- Subscribers work in development but fail intermittently in Docker (network layer difference)
-- Events accumulate in the table but projections stop updating
-
-**Severity:** MAJOR -- causes intermittent projection staleness that is hard to reproduce and debug
-**Phase:** Should be addressed in Phase A (EventLog subscription implementation). Design for polling-first, LISTEN/NOTIFY as optional enhancement.
-
-**Sources:**
-- [PostgreSQL Documentation: NOTIFY](https://www.postgresql.org/docs/current/sql-notify.html)
-- [Recall.ai: Postgres LISTEN/NOTIFY does not scale](https://www.recall.ai/blog/postgres-listen-notify-does-not-scale)
-- [EDB: How LISTEN and NOTIFY syntax promote high availability](https://www.enterprisedb.com/blog/listening-postgres-how-listen-and-notify-syntax-promote-high-availability-application-layer)
-
----
-
-### MAJOR-3: History Compaction Loses Critical Information (Summarization Drift)
-
-**What goes wrong:**
-The v2.3 spec proposes a three-phase history compaction strategy. Phase 1 (tool output pruning) is well-researched and safe. Phase 2 (structured anchored summarization) is where things go wrong. Claude Code's production experience (2025-2026) has documented extensive failure modes with conversation compaction:
-
-1. **Specification drift:** The summarization model paraphrases exact requirements into "goals" and "intents." After compaction, the agent treats precise specifications as approximate guidelines.
-2. **Framework rule paraphrasing:** When compaction occurs, behavioral instructions from the system prompt get paraphrased in the summary. Post-compaction, the agent sees "framework already discussed" in the summary and does not re-read source rules. Paraphrased rules lose precision, causing behavioral drift.
-3. **Summaries of summaries degrade exponentially.** The spec tries to address this with "anchored, not regenerated" summaries. But even anchored summaries drift over multiple compaction cycles because each merge operation introduces small inaccuracies that compound.
-4. **Dead-end sessions.** If compaction itself fails (the summary exceeds the context window, or the summarization model produces garbage), the conversation may become unrecoverable.
-
-**Consequences:**
-- Agent behavior changes after compaction (makes different decisions than it would have with full context)
-- File paths and exact error messages lost despite "artifact section populated from event log projection"
-- Long-running conversations (spanning multiple compaction cycles) gradually lose coherence
-- Impossible to debug because the agent is acting on information you cannot see (the summary replaced the original context)
-
-**Prevention:**
-1. **Phase 1 (tool output pruning) should be the primary and sufficient strategy.** The JetBrains NeurIPS 2025 research found observation masking matched LLM summarization quality, was 7% cheaper, and was faster. Summarization actually caused agents to run 13-15% longer. Invest heavily in making Phase 1 work well.
-2. **Inject artifact data from event log projection into the summary as structured data, not prose.** The summary should include a machine-readable section:
-   ```
-   ## Artifacts (from event log -- do not modify)
-   - Branch: feature/aes-42
-   - PR: #47 (https://github.com/...)
-   - Files modified: [api/health.ts, main.ts, api/health.test.ts]
-   ```
-3. **Test compaction with real conversations.** Save actual conversation histories from v2.2 (with full tool results), apply compaction, then resume the conversation. Does the agent still make correct decisions?
-4. **Set compaction trigger at 65-75% context capacity,** not 90%+. Community consensus across Claude Code, Cline, and OpenCode: compacting too late leaves insufficient reasoning room.
-5. **Log a diff between pre-compaction and post-compaction context.** Store both versions so you can debug behavioral drift.
-
-**Warning signs:**
-- Agent behavior changes noticeably after compaction (e.g., re-does work it already completed)
-- Agent asks questions it already answered before compaction
-- Token count after compaction is still very high (compaction did not remove enough)
-- Agent ignores file paths or error messages that are in the summary
-
-**Severity:** MAJOR -- causes subtle behavioral degradation that is very difficult to diagnose
-**Phase:** Should be addressed in Phase A (HistoryManager implementation). Test with real conversation data before declaring it complete.
-
-**Sources:**
-- [Claude Code issue #18211: Compaction broken](https://github.com/anthropics/claude-code/issues/18211)
-- [Claude Code issue #19739: Systematic failure patterns](https://github.com/anthropics/claude-code/issues/19739)
-- [Claude Code issue #5677: Compaction failure unable to reduce context](https://github.com/anthropics/claude-code/issues/5677)
-- [Hyperdev: How Claude Code got better by protecting more context](https://hyperdev.matsuoka.com/p/how-claude-code-got-better-by-protecting)
-
----
-
-### MAJOR-4: Single Service Memory Pressure from Concurrent Agent Loops
-
-**What goes wrong:**
-v2.3 consolidates from 3 services to 1 process. Each active agent loop holds: the full conversation message history in memory (~500KB-5MB for long conversations), resolved tool definitions, Anthropic SDK connection state, and any buffered events. With multiple concurrent conversations (dev-agent running a 30-minute implementation while product-agent handles 3 Slack threads), a single Node.js process could easily consume 500MB-2GB of heap.
-
-Node.js has a default V8 heap limit of ~1.7GB (depending on version). Sub-agents compound this -- a dev-agent spawning a researcher and coder means 3 concurrent conversation histories in memory for a single logical workflow.
+This is the same JSONB bloat problem documented in CRITICAL-1 of the v2.3 pitfalls but applied to the tasks table. The v2.3 conversations table already demonstrated this risk with the `messages` column.
 
 **Why it happens:**
-v2.2 naturally isolated agent memory across separate processes (dev-agent:3004, product-agent:3005). v2.3's single process combines all memory into one heap. The Anthropic SDK's streaming responses also hold buffers in memory during active API calls.
+JSONB columns with no schema enforcement attract unstructured data accumulation. Every feature addition adds "just one more field" to metadata. PostgreSQL rewrites the entire JSONB value on every UPDATE, and large JSONB values spill to TOAST storage with the performance cliffs documented in pganalyze benchmarks (10x slower reads for TOAST-compressed vs inline).
 
 **Consequences:**
-- V8 heap exhaustion causes the process to crash (or be OOM-killed by the container runtime)
-- All running conversations are aborted simultaneously (blast radius goes from "one agent" to "all agents")
-- GC pressure causes increased latency and reduced throughput during multi-conversation periods
-- No error isolation -- a memory leak in one agent definition's tool affects all agents
+- Task queries slow down as metadata grows (TOAST decompression on every read)
+- Write amplification on task updates (full JSONB rewrite per update)
+- Index bloat if GIN indexes are added to metadata
+- No way to query specific metadata fields efficiently without extracting to columns
 
 **Prevention:**
-1. **Set `--max-old-space-size` explicitly** in the service startup command. Calculate based on expected concurrent conversations * estimated per-conversation memory. Start with 2GB and monitor.
-2. **Implement a conversation concurrency limit.** The ConversationExecutor should refuse to start new conversations if `active_count >= max_concurrent`. Return a "busy" response and let the event router retry. This is the equivalent of Temporal's worker task queue capacity.
-3. **Track per-conversation memory usage.** Before each agent loop iteration, check `process.memoryUsage().heapUsed`. If approaching the limit, pause the conversation with a "memory pressure" event and resume after other conversations complete.
-4. **Implement graceful shutdown with conversation draining.** On SIGTERM: stop accepting new conversations, wait for running conversations to reach a natural pause point (next wait_for or completion), persist state, then exit. Set a hard timeout (e.g., 30 seconds) after which force-persist and exit.
-5. **Consider Node.js Worker Threads for isolation** (future). Each agent loop could run in a separate Worker Thread with its own V8 isolate, providing memory isolation without the overhead of separate processes.
+1. **Define a Zod schema for `metadata`** and validate on write. Even a permissive schema (`z.record(z.unknown()).refine(jsonSize < 10KB)`) prevents unbounded growth.
+2. **Use the handoffs table for conversation-scoped context**, not task metadata. Metadata should contain only task-level attributes (tags, priority overrides, custom fields), not accumulated conversation data.
+3. **Set a hard size limit** on the metadata column (e.g., 10KB) enforced at the application layer. Log a warning at 5KB.
+4. **Do not add metadata in hot paths.** If the agent loop is updating task metadata on every tool call, extract that to a separate table with append semantics.
 
 **Warning signs:**
-- `process.memoryUsage().heapUsed` exceeding 80% of `--max-old-space-size`
-- Increasing GC pause times visible in event loop lag monitoring
-- OOM kills in container logs
-- All conversations failing simultaneously (indicates shared-fate failure)
+- `pg_column_size(metadata)` increasing over task lifetime
+- Task queries getting slower for long-lived tasks
+- Developers adding arbitrary keys to metadata without schema review
 
-**Severity:** MAJOR -- causes complete system outages when memory limit is exceeded
-**Phase:** Should be addressed in Phase B (single service implementation). Concurrency limits are essential for stability.
+**Confidence:** HIGH -- this is a known PostgreSQL anti-pattern with extensive documentation. Heap's engineering blog specifically warns against unbounded JSONB growth in production systems.
 
 ---
 
-### MAJOR-5: Temporal Workflow Drain During Migration Has a Long Tail
+### MAJOR-3: Handoff Content Degrades Through Delegation Chains (Telephone Game Effect)
+
+**Severity:** MAJOR
+**Phase to address:** Phase 4 (Prompt Evolution)
 
 **What goes wrong:**
-The v2.3 spec says "Drain existing Temporal workflows (short-lived, complete naturally)" in Phase C. But v2.2 workflows are NOT always short-lived. The dev-agent workflow includes:
-- Approval wait: up to 72 hours
-- PR feedback wait: up to 7 days
-- Rejection/re-planning loop: unbounded
+The v2.5 design relies on agent-authored handoffs as the primary context-passing mechanism. When Agent A completes a conversation and writes a handoff, then Agent B starts a new conversation using that handoff as context, the handoff is a *lossy summary*. If Agent B then delegates to Agent C with another handoff, the compression compounds. After 3-4 handoffs, critical details from the original conversation may be entirely lost.
 
-A workflow that is in `awaiting_approval` status when migration begins could be waiting for up to 72 hours before timing out. A workflow in `awaiting_pr` could wait up to 7 days. You cannot simply "drain" these -- they are actively paused waiting for external signals.
+This is the "telephone game" problem documented extensively in multi-agent system literature. Each handoff is a summarization step, and each summarization step loses information that may be relevant downstream.
 
 **Why it happens:**
-The assumption that "v2.2 workflows are short enough to drain" is incorrect. The workflows themselves contain long pause points. The agent loop portions are 5-30 minutes, but the inter-phase waits are hours to days.
+The v2.5 design vision states: "The agent knows what's important. An auto-summary treats everything equally." This is true for single handoffs but breaks down across chains. Agent A knows what was important in *its* conversation but not what will be important for Agent C three handoffs later. Agent A might omit a detail that seems irrelevant to its immediate successor but is critical for a downstream agent.
 
 **Consequences:**
-- Migration is blocked for up to 7 days waiting for all workflows to drain
-- During this window, you must maintain both systems (Temporal + new executor)
-- New events (approvals, PR reviews) must be routed to the correct system
-- If you force-terminate waiting workflows, users lose work (plans that were approved but not yet executed)
+- Downstream agents lack context to make good decisions
+- Agents repeat work because they do not know it was already done
+- Debug investigations require tracing through multiple handoff records to reconstruct what happened
+- Token budgets wasted on agents re-discovering information that was available but lost in a handoff
 
 **Prevention:**
-1. **Implement a "migration signal" for running workflows.** Add a new signal type to the Temporal workflows that causes them to gracefully terminate and output their current state (conversation history, pending approvals, task context). The v2.3 executor can then reconstruct the conversation from this state dump.
-2. **Set a hard migration cutoff date.** Two weeks before migration: stop starting NEW Temporal workflows, route all new events to v2.3. Existing workflows have their full timeout window to complete. After the cutoff, any remaining workflows are terminated with notification to the user.
-3. **Dual-mode signal routing during transition.** For the transition period, the event router must check both: (a) is there a Temporal workflow for this conversation ID? Route signal to Temporal. (b) Is there a v2.3 conversation? Route to executor. This requires maintaining the Temporal client alongside the executor.
-4. **Test the drain with real timing.** Create a test workflow, put it in `awaiting_approval`, then run the migration procedure. Verify the workflow completes or is gracefully migrated.
+1. **The `get_task_context` tool should return ALL handoffs, not just the most recent.** The v2.5 spec says "only deliver most recent by default; older ones available via get_task_context tool." Make sure agents know to call this tool when the most recent handoff references prior work.
+2. **Structured handoff content.** Define a schema for handoffs: `{ summary, artifacts_created: [], decisions_made: [], open_questions: [], key_constraints: [] }`. Structured data resists the telephone game better than free-text summaries because each field is explicitly maintained.
+3. **Include a `handoff_chain_depth` field** on the handoff record. When depth exceeds 3, inject a warning to the receiving agent: "This task has been through multiple handoffs. Review the full handoff history via get_task_context before proceeding."
+4. **Token budget allocation for handoff context.** Reserve a fixed portion of the token budget (e.g., 10%) for handoff context injection. If the handoff history exceeds this allocation, summarize the oldest handoffs but keep the most recent 2-3 intact.
 
 **Warning signs:**
-- Temporal workflows still running days after "migration complete" declaration
-- Users reporting that their approved plans were never executed
-- Duplicate PRs from workflows that were migrated but also continued running in Temporal
+- Agents asking for information that exists in earlier handoffs
+- Agents repeating work already completed in earlier conversations
+- Handoff content getting progressively shorter and less specific through chains
+- Users observing that agents "forgot" what was discussed earlier
 
-**Severity:** MAJOR -- blocks the migration or causes data loss during transition
-**Phase:** Must be planned for in Phase C (cutover). Requires code changes to v2.2 workflows before v2.3 cutover.
+**Confidence:** MEDIUM -- the telephone game effect is well-documented in multi-agent literature, but the severity depends on how deep delegation chains actually get in practice. The v2.5 depth limit of 5 mitigates but does not eliminate this.
 
 ---
 
-### MAJOR-6: Postgres as Job Queue -- MVCC Dead Tuple Accumulation
+### MAJOR-4: Event Router Task Lookup Adds Latency to Every Event, Including Non-Task Events
+
+**Severity:** MAJOR
+**Phase to address:** Phase 3 (Task Primitive)
 
 **What goes wrong:**
-Using Postgres as a job queue (via SKIP LOCKED or similar) is a well-documented pattern, but it has a specific failure mode related to MVCC: dead tuples accumulate in the job table's indexes. When workers claim jobs, the UPDATE creates dead tuples. As dead tuples build up in the B-tree index, each subsequent job claim must scan through an increasingly large number of invisible tuples before finding a workable one.
-
-Brandur Leach documented this failure mode at a real company: "every worker trying to lock a job would cycle through this loop 100,000 times" as dead tuple counts grew, with lock acquisition times going from under 0.01 seconds to 0.1+ seconds.
+The v2.5 routing priority is: (1) has task reference -> route to task, (2) unambiguous trigger -> fast-path start, (3) ambiguous -> reasoning path. Step 1 requires a database lookup on the integration correlation table for every incoming event, even events that have no task association (new issue assignments, first-time Slack messages, etc.). The current EventRouter.handle() is synchronous and pure -- no I/O. Adding a task lookup makes it async and database-dependent.
 
 **Why it happens:**
-Job queues have a pathological access pattern for MVCC: constant INSERTs (new jobs) and UPDATEs (claiming, completing) on the same small set of rows. Unlike normal OLTP workloads where updates are spread across the table, job queue operations concentrate on the "pending" rows, creating hot spots of dead tuples.
+The integration layer is supposed to attach the task reference before forwarding to the agent service ("Integration attaches task reference if correlation exists"). But this means every integration webhook handler now needs to do a correlation table lookup before forwarding. This lookup runs on the hot path of every webhook.
 
 **Consequences:**
-- Job claim latency increases over time (from milliseconds to seconds)
-- Workers appear to "hang" waiting to acquire a job
-- Eventually the system reaches a tipping point where workers cannot claim jobs faster than they are produced
-- Cascading failure: queue depth grows, latency increases, more dead tuples accumulate
+- Added latency (5-50ms per event) for all events, including those that will never match a task
+- Database load increases linearly with event volume
+- If the correlation table query is slow (missing index, table bloat), it becomes a bottleneck for all event routing
+- The previously synchronous EventRouter.handle() becomes async, requiring refactoring of the router
 
 **Prevention:**
-1. **Tune autovacuum specifically for the job/conversation table:** `autovacuum_vacuum_scale_factor = 0.01` (vacuum when 1% of rows are dead, not the default 20%), `autovacuum_vacuum_cost_delay = 0` (no throttling).
-2. **Use a separate table for job queueing** (not the conversations table itself). A `conversation_queue` table with minimal columns (id, conversation_id, status, claimed_at) keeps the hot queue small and easy to vacuum.
-3. **Periodically DELETE completed queue entries** instead of relying on autovacuum alone. Run `DELETE FROM conversation_queue WHERE status = 'completed' AND completed_at < now() - interval '1 hour'` on a schedule.
-4. **Monitor `pg_stat_user_tables` for the queue table:** watch `n_dead_tup`, `last_autovacuum`, and the ratio of dead to live tuples.
+1. **Keep the integration-side correlation lookup, but make it best-effort with a cache.** Cache recent correlations in memory (LRU, 5-minute TTL). Most webhooks arrive in clusters for the same artifact -- the first lookup populates the cache, subsequent ones are free.
+2. **Add the correlation lookup to the integration webhook handler, not the EventRouter.** The EventRouter should remain synchronous with an optional `taskId` field on IncomingEvent. The integration sets it before forwarding. This keeps the router fast and pushes the DB lookup to the boundary.
+3. **Index the correlation table properly.** `PRIMARY KEY (external_type, external_ref)` is already defined in the spec -- verify this is used as a covering index for the lookup.
+4. **Monitor correlation lookup latency** with p50/p95/p99 metrics. Alert if p95 exceeds 10ms.
 
 **Warning signs:**
-- `n_dead_tup / n_live_tup` ratio exceeding 0.5 on queue-related tables
-- Job claim query execution time increasing over days/weeks
-- Autovacuum not running frequently enough on queue tables
+- Event routing latency increasing after task primitive is deployed
+- Correlation table queries appearing in `pg_stat_statements` with high total_exec_time
+- EventRouter tests becoming flaky due to async/database dependency
 
-**Severity:** MAJOR -- causes slow degradation that is hard to diagnose until it becomes critical
-**Phase:** Should be addressed in Phase A (ConversationExecutor Postgres implementation). Design the queue table with autovacuum tuning from day one.
+**Confidence:** HIGH -- the performance impact is directly observable. The current EventRouter is synchronous; making it async is a significant architectural change.
 
-**Sources:**
-- [Brandur: Postgres Job Queues & Failure By MVCC](https://brandur.org/postgres-queues)
-- [Inferable: The Unreasonable Effectiveness of SKIP LOCKED](https://www.inferable.ai/blog/posts/postgres-skip-locked)
+---
+
+### MAJOR-5: Backward Compatibility Break for Conversations Without Tasks
+
+**Severity:** MAJOR
+**Phase to address:** Phase 3 (Task Primitive)
+
+**What goes wrong:**
+The v2.5 spec adds `task_id TEXT REFERENCES agents.tasks(id)` to the conversations table (nullable). Existing conversations have no task_id. The new event routing prioritizes task lookup. If the routing code assumes all conversations have tasks, or if the task-based serialization logic does not handle the null case, existing conversations break.
+
+More subtly: the v2.5 prompts (Phase 4) tell agents to "think in terms of tasks." If an agent receives a conversation without a task context, the prompt's task-oriented guidance creates confusion. The agent tries to call `get_task_context` and gets nothing.
+
+**Why it happens:**
+The spec correctly notes `nullable task_id on conversations` for backward compatibility. But behavioral backward compatibility is harder than schema backward compatibility. Every code path that touches task_id must handle null. Every prompt that references tasks must degrade gracefully when there is no task.
+
+**Consequences:**
+- Existing conversations cannot be signaled or reopened if routing assumes tasks
+- Null pointer / undefined access errors in code that does `conversation.task_id.something`
+- Agent confusion when prompted about tasks but no task exists
+- Dashboard crashes or empty task panels for taskless conversations
+
+**Prevention:**
+1. **Add a `hasTask` helper function** used consistently throughout the codebase: `const hasTask = (conv) => conv.task_id !== null`. All task-related logic is gated behind this check.
+2. **Keep the existing event routing paths intact.** Task lookup is a *new first step*, not a replacement. If no task correlation is found, fall through to the existing start/signal/slow_path routing.
+3. **Prompt guidance must include a "no task" fallback.** "If you are operating within a task, use task tools for context. If no task is available (legacy conversation), operate as you did before."
+4. **Dashboard must handle null task_id gracefully.** The task panel should show "No task associated" instead of crashing.
+5. **Write explicit tests for the null-task-id path** at every layer: executor, router, dashboard, agent tools.
+
+**Warning signs:**
+- TypeError or null reference errors in production logs after deployment
+- Agent tool calls failing because task_id is undefined
+- Dashboard 500 errors on conversation detail pages
+
+**Confidence:** HIGH -- nullable FK backward compatibility is a standard concern, but the behavioral layer (prompts, dashboard, routing) makes it more complex than a simple schema migration.
+
+---
+
+### MAJOR-6: Circular Task Delegation Creates Infinite Loops
+
+**Severity:** MAJOR
+**Phase to address:** Phase 3 (Task Primitive)
+
+**What goes wrong:**
+The v2.5 spec allows agents to create subtasks with `parent_id`. The depth limit is 5 levels. But the spec does not address circular delegation: Agent A creates task T1, delegates subtask T2 to Agent B, which delegates subtask T3 back to Agent A's agent type (or even the same agent instance). If Agent A interprets T3 as a new top-level task, it may create T4 delegating back to Agent B, creating an infinite delegation loop that consumes token budget and database resources.
+
+**Why it happens:**
+The `parent_id` column prevents tree cycles (a task cannot be its own ancestor), but it does not prevent semantic cycles where the same work bounces between agents. The depth limit prevents infinite depth but allows wide delegation at each level.
+
+**Consequences:**
+- Token budget exhausted on delegation overhead instead of actual work
+- Database accumulates dozens of tasks that all describe the same problem
+- Human observing the system sees a cascade of tasks being created with no progress
+- Difficult to detect automatically because each individual delegation is valid
+
+**Prevention:**
+1. **The `create_task` tool should check for semantic cycles.** Before creating a subtask, query the parent chain and reject if the same `assignee_id` + `assignee_type` combination appears more than once in the ancestry.
+2. **Add a `max_subtasks_per_task` limit** (e.g., 10). If a task already has 10 subtasks, the create_task tool should reject with an error message guiding the agent to consolidate.
+3. **Prompt guidance:** "Do not delegate work back to an agent type that delegated to you. If you cannot complete a task, escalate to a human or pause the task with a handoff explaining the blocker."
+4. **Monitor task creation rate per task tree.** Alert if more than 5 tasks are created within a single parent chain in a 10-minute window.
+
+**Warning signs:**
+- Rapid task creation with same or similar titles under the same parent
+- Token budget exhaustion with little actual work output
+- Task trees with depth approaching the limit (4-5 levels)
+
+**Confidence:** MEDIUM -- the depth limit in the spec mitigates this, but semantic cycles (same work bouncing between agents) are a separate concern not addressed by depth limiting.
 
 ---
 
 ## Moderate Pitfalls
 
-Mistakes that cause delays, technical debt, or degraded developer experience.
+Mistakes that cause delays, technical debt, or confusing behavior that requires investigation.
 
 ---
 
-### MODERATE-1: Losing Temporal's Retry Configuration Granularity
+### MODERATE-1: Slack thread_ts Correlation Breaks When Thread Is Forked or Channel Changes
+
+**Severity:** MODERATE
+**Phase to address:** Phase 3 (Task Primitive)
 
 **What goes wrong:**
-The current v2.2 Temporal workflows have carefully tuned retry configurations per activity type:
-- Orchestrator activities: 45-minute timeout, 2 retries, 30s initial interval, 2x backoff, non-retryable error types (TokenBudgetExhaustedError, AgentAbortedError)
-- Infrastructure activities: 5-minute timeout, 3 retries, 5s initial interval
+Slack correlation uses `thread_ts` (the timestamp of the parent message in a thread) as the external reference. But Slack threads can be "forked" -- a reply in a thread can be posted to the channel as a standalone message, creating a new `thread_ts`. If a user replies in the forked thread, the webhook arrives with a different `thread_ts` than the original correlation.
 
-The v2.3 ConversationExecutor must replicate this granularity. A naive implementation will either retry everything (wasting API tokens on re-running 30-minute agent loops that failed due to budget exhaustion) or retry nothing (failing on transient errors that would have recovered).
+Additionally, Slack messages can be shared across channels, and the `thread_ts` is channel-scoped. A message shared to a different channel creates a new `thread_ts` in that channel.
+
+**Why it happens:**
+The Slack Events API sends webhook payloads with `thread_ts` referencing the parent message. But Slack's threading model is more complex than a simple parent-child tree. Thread forking, channel sharing, and reply broadcasting all create situations where the same logical conversation has multiple `thread_ts` values.
+
+**Consequences:**
+- Agent loses context: a user reply in a forked thread creates a new conversation instead of continuing the existing one
+- Duplicate conversations for the same user request
+- Confusing user experience: agent responds in the original thread but user is in the forked thread
 
 **Prevention:**
-1. **Implement per-operation retry configuration.** The ConversationExecutor needs retry policies that distinguish between: agent loop failures (expensive, limited retries), infrastructure operations (cheap, more retries), and transient vs. permanent errors.
-2. **Port the non-retryable error type list** from the Temporal configuration. `TokenBudgetExhaustedError` and `AgentAbortedError` should immediately fail without retry.
-3. **Use exponential backoff with jitter** for retries, not fixed intervals. This prevents thundering herds when multiple conversations fail simultaneously.
+1. **Store both `channel_id` and `thread_ts` in the correlation record.** The composite key prevents cross-channel confusion.
+2. **When correlation lookup fails, check the original message's thread for related correlations** (via `conversations.replies` API).
+3. **Accept that thread forking is an edge case and document it.** The initial implementation should handle the common case (direct thread replies) and route forked threads to the slow path for LLM classification.
+4. **Do not try to solve thread forking in Phase 3.** Flag it as a known limitation and add handling in a later iteration if it proves to be a real problem.
 
-**Severity:** MODERATE -- causes either wasted API spend (unnecessary retries) or reduced reliability (missing retries)
-**Phase:** Phase A (ConversationExecutor implementation)
+**Warning signs:**
+- Users reporting that the agent "forgot" their conversation
+- Duplicate conversations with the same user about the same topic
+- Correlation lookup misses for events that should match
+
+**Confidence:** MEDIUM -- thread forking is a known Slack complexity, but its frequency in practice depends on user behavior. Most Slack conversations stay in their original thread.
 
 ---
 
-### MODERATE-2: Agent Definition Version Pinning Creates Orphaned Definitions
+### MODERATE-2: GitHub PR Correlation Breaks on Force Push, Branch Reuse, or PR Close/Reopen
+
+**Severity:** MODERATE
+**Phase to address:** Phase 3 (Task Primitive)
 
 **What goes wrong:**
-The spec says "Running agents stay pinned to the version they started with." For conversations that pause for days (waiting for approval), the agent definition version at start could be stale by the time it resumes. If the definition has been updated (e.g., prompt fix, new tool), the resumed conversation uses the old version.
+GitHub PR correlation uses PR number as the external reference. But the relationship between a PR and the work it represents is more complex:
 
-This is correct behavior for stability, but it creates operational complexity: you need to maintain all versions of definitions that any running conversation might reference. If you delete or rename an old definition version, all conversations pinned to it will fail on resume.
+1. **Force push:** The PR number stays the same, but the commits change entirely. If the agent wrote the original commits and a human force-pushes different code, the agent's handoff context is stale.
+2. **Branch reuse:** Developer creates PR #42 on branch `feature/auth`, closes it, then creates PR #43 on the same branch. If correlation is branch-based, both PRs map to the same branch correlation.
+3. **PR close/reopen:** A PR can be closed and reopened. The close webhook triggers `pr_closed` signal. If the user then reopens the PR, there is no standard `pr_reopened` event in the current signal type map.
+
+**Why it happens:**
+The GitHub webhook model sends events for PR-level actions, but the correlation between a PR and the work it represents is not one-to-one. Branch reuse, force pushes, and PR lifecycle events create situations where the correlation record does not reflect reality.
+
+**Consequences:**
+- Agent acts on stale PR state after force push
+- Branch-based correlations map to wrong PR after branch reuse
+- PR reopen events are unhandled, creating orphaned work
+- CI/CD events for force-pushed commits route to the wrong conversation
 
 **Prevention:**
-1. **Never delete definition versions in-place.** Mark old versions as deprecated but keep them loadable.
-2. **Set maximum conversation lifetime.** After a configurable period (e.g., 14 days), forcefully expire conversations. This bounds the number of definition versions you need to maintain.
-3. **Log the definition version on resume.** Make it visible when a conversation is running on a stale definition so operators can decide whether to cancel and restart it.
+1. **Correlate on PR number, not branch name.** PR numbers are unique and stable. Branch names are reusable.
+2. **Handle `pull_request.reopened` webhook** as a signal that resumes the task, not a new event.
+3. **On force push events (`push` with `forced: true`), inject a context message** to the active conversation: "Warning: the branch was force-pushed. Your previous commits may no longer be present. Verify the current state before proceeding."
+4. **Add PR `head_sha` to the correlation record** so that stale correlations (where head_sha does not match current PR head) can be detected.
 
-**Severity:** MODERATE -- causes confusion when resumed conversations behave differently than expected
-**Phase:** Phase A (AgentRegistry implementation)
+**Warning signs:**
+- Agent referencing commits that no longer exist in the PR
+- Multiple correlations for the same branch with different PR numbers
+- `pr_closed` signals for PRs that were subsequently reopened
+
+**Confidence:** MEDIUM -- force push and branch reuse are well-known GitHub complexity areas, but their frequency depends on team workflow.
 
 ---
 
-### MODERATE-3: Graceful Shutdown Complexity in Single Service
+### MODERATE-3: Linear Issue Status Changes Incorrectly Trigger Conversation Reopening
+
+**Severity:** MODERATE
+**Phase to address:** Phase 3 (Task Primitive)
 
 **What goes wrong:**
-The single service must handle shutdown gracefully while potentially running multiple agent loops, each in the middle of multi-minute operations. The Node.js process receives SIGTERM, but the agent loops are making Anthropic API calls, executing tools in Docker containers, and writing to the database. Simply killing the process loses all in-flight work.
+Linear sends `issue.updated` webhooks for every status change. The current system explicitly ignores `linear.issue.updated` events (in `IGNORE_EVENT_TYPES`). With task correlation, status changes on correlated issues should route to the associated task. But not all status changes are meaningful: a human moving an issue from "In Progress" to "In Review" should not reopen an agent conversation that completed successfully.
 
-Docker (and Kubernetes) give a limited grace period (default 10-30 seconds) before sending SIGKILL. Agent loops can run for minutes. The grace period is almost certainly insufficient to wait for all loops to complete.
+If every status change on a correlated issue triggers a reopen signal, the agent will be constantly woken up for status changes that require no action.
+
+**Why it happens:**
+The `IGNORE_EVENT_TYPES` set currently blocks all `linear.issue.updated` events. With task correlation, some of these events become relevant (e.g., issue moved back to "Todo" after being "Done" might mean rework is needed). But distinguishing "meaningful" from "noise" status changes requires understanding the workflow semantics.
+
+**Consequences:**
+- Agent reopened repeatedly for status changes that need no action
+- Token budget wasted on the agent reasoning about irrelevant status changes
+- User frustration as the agent re-engages on issues they are actively managing
+- Potential for the agent to take unwanted actions (updating the issue back)
 
 **Prevention:**
-1. **On SIGTERM: immediately stop accepting new conversations** (`server.close()`).
-2. **For running conversations: set a "shutting down" flag** that the agent loop checks between tool calls. When set, the agent loop persists current state and exits at the next natural boundary.
-3. **For paused conversations: no action needed** (already persisted).
-4. **Set Docker's `stop_grace_period` to match expected drain time** (e.g., 60-120 seconds).
-5. **Implement a force-persist fallback.** If the grace period is about to expire, persist whatever state is available (even if mid-tool-call) so the conversation can be recovered by the reaper on restart.
+1. **Define a whitelist of status transitions that trigger reopening.** Only specific transitions should create signals: "Done" -> "Todo" (rework), "Done" -> "In Progress" (revision). Normal forward progression should be ignored.
+2. **Add the previous and new status to the correlation event payload** so the routing layer can filter without LLM involvement.
+3. **Initially, keep `linear.issue.updated` in the ignore list** and only route status changes that arrive via explicit task correlation with meaningful transition data.
+4. **Let the agent decide** by routing the event as a signal with the status change data, but include prompt guidance: "Status changes on your issues are informational. Only take action if the status change indicates rework or a problem."
 
-**Severity:** MODERATE -- causes work loss during deployments and restarts
-**Phase:** Phase B (single service implementation)
+**Warning signs:**
+- Agent conversations reopening frequently for the same issue
+- Agent making no substantive changes after reopening (just acknowledging the status change)
+- Increased LLM costs from unnecessary conversation turns
+
+**Confidence:** HIGH -- Linear webhook volume for status changes is high, and the current system already ignores these events for good reason.
 
 ---
 
-### MODERATE-4: Event Log Table Growth Is Unbounded
+### MODERATE-4: Few-Shot Examples in Prompts Become Stale as Tools Evolve
+
+**Severity:** MODERATE
+**Phase to address:** Phase 1 and Phase 4 (Prompt Rewrites and Prompt Evolution)
 
 **What goes wrong:**
-The `agent_events` table is append-only. Each tool call generates at least 2 events (tool.called + tool.succeeded/tool.failed). Each LLM response generates 1 event. A typical dev-agent conversation produces 50-200 events. With 10 conversations/day, that is 500-2000 events/day. After a year: 180K-730K events.
+The v2.5 prompt rewrite introduces few-shot examples with reasoning. These examples reference specific tool names, parameters, and expected behaviors. When tools change (new parameters added, tool renamed, response format changed), the examples become incorrect. An example showing `linear_create_issue` with parameter `teamId` becomes wrong if the tool is renamed or the parameter changes.
 
-The events include `payload: jsonb` which contains tool results (potentially large). Without a retention policy, the table grows without bound, degrading query performance and consuming disk.
+Worse: the agent may follow the stale example and produce incorrect tool calls, getting errors that it does not understand because the example told it the call was correct.
+
+**Why it happens:**
+Few-shot examples are static text in prompt.md files. They are not validated against the current tool definitions. There is no automated check that example tool calls in prompts match the actual tool schemas. The examples will work when written but drift as tools evolve.
+
+**Consequences:**
+- Agent follows stale examples and gets tool call errors
+- Agent confused by errors because its example said the call was correct
+- Behavioral regression that appears as "the agent got dumber" but is actually a tool/prompt mismatch
 
 **Prevention:**
-1. **Implement a retention policy from day one.** Archive events older than 30 days to a separate `agent_events_archive` table or delete them.
-2. **Partition the events table by month** using Postgres native partitioning. This makes retention trivial (DROP old partitions) and keeps queries on recent data fast.
-3. **Consider partitioning by conversation_id** if queries are always scoped to a conversation. Range partitioning by timestamp is simpler to manage.
-4. **Index only what you query.** The spec's index on `(conversation_id, sequence)` is correct. Avoid adding indexes on payload fields.
+1. **Use abstract examples, not literal tool calls.** Instead of `"Action: Call linear_create_issue with title='...' and teamId='...',"` use `"Action: Create the issue in Linear with the confirmed details."` This decouples examples from tool schemas.
+2. **If literal tool calls are needed in examples, add a `<!-- tools: linear_create_issue, linear_search_issues -->` comment** at the top of the examples section. Build a CI check that verifies all referenced tools exist in the agent's tool list.
+3. **Review prompt examples as part of any tool change.** Add a step to the tool modification checklist: "Check if any prompt.md files reference this tool in examples."
+4. **Keep the number of tool-specific examples minimal.** The Prompt Authoring Guide already recommends 3-5 examples focusing on reasoning, not tool sequences. Follow this guidance strictly.
 
-**Severity:** MODERATE -- causes slow degradation over months, but is easy to fix retroactively
-**Phase:** Phase A (EventLog schema design). Partitioning is much easier to set up before data exists.
+**Warning signs:**
+- Agent tool call errors that match patterns shown in prompt examples
+- Examples referencing tools that no longer exist or have different signatures
+- Behavioral changes after tool updates with no prompt changes
+
+**Confidence:** HIGH -- this is a well-known maintenance burden for few-shot prompts documented in prompt engineering literature.
 
 ---
 
-### MODERATE-5: Tool Output Pruning May Remove Information Needed for Resume
+### MODERATE-5: Conversation Reopening Explodes History Beyond Compaction Capacity
+
+**Severity:** MODERATE
+**Phase to address:** Phase 2 (Conversation Reopening)
 
 **What goes wrong:**
-Phase 1 history compaction replaces old tool results with "short descriptors." But when a conversation resumes after a pause, the agent may need information from those tool results. For example: the agent read a file, analyzed it, called wait_for to get approval, and now resumes. The file contents have been pruned. The agent knows it "read api/health.ts" but not what was in it.
+A conversation completes with 50 messages. It is reopened and the agent processes 30 more messages. It completes again and is reopened again with 20 more messages. The conversation now has 100+ messages, potentially exceeding the history compaction threshold. The history manager compacts, but on the next reopen, the agent receives a compacted history that may have lost important details from the first conversation run.
 
-This is different from the Claude Code failure mode (MAJOR-3) -- here the information was correctly pruned per the rules, but the agent needs it post-resume.
+The existing history manager was designed for single-run conversations. Reopening means conversations can grow indefinitely across multiple runs.
+
+**Why it happens:**
+The current history manager has `pruneThreshold` (default 80,000 tokens) and `protectedMessages` (default protecting recent messages). When a conversation is reopened, the "recent messages" are from the last run, and earlier runs' messages are in the pruning zone. The history manager does not distinguish between "messages from this run" and "messages from a previous run."
+
+**Consequences:**
+- Context from earlier runs is aggressively pruned, losing important decisions and artifacts
+- Token budget consumed by history that is mostly old tool results
+- History compaction creates summaries-of-summaries on multi-reopen conversations (the summary merger mitigates this but adds complexity)
+- Agent performance degrades as the conversation grows across reopens
 
 **Prevention:**
-1. **Protect messages from the last agent loop run, not just the last N messages.** If the agent ran for 50 tool calls, paused, and has been paused for 3 days, protect all 50 tool calls from that run -- they represent the context the agent was working with.
-2. **The `protectedMessages` count should be generous.** 20 messages may not be enough for a dev-agent that reads 10 files and runs 5 commands before pausing. Consider 40-60.
-3. **Inject key file contents from the dev container** into the resume context if they were pruned. The agent can re-read files, but this wastes time and tokens.
+1. **Use handoffs as the primary context-passing mechanism for reopened conversations.** When a conversation completes, the agent writes a handoff. When it reopens, inject the handoff as context rather than preserving the full message history. This bounds the context to handoff size + new messages, not accumulated history.
+2. **Consider resetting the message history on reopen** and injecting only the handoff plus the reopen signal. The full history remains in the database for debugging but is not loaded into the agent's context window.
+3. **If preserving full history, increase the `protectedMessages` count** for reopened conversations to protect the handoff context and the reopen signal.
+4. **Track reopen count on the conversation record.** After N reopens (e.g., 3), suggest creating a new conversation within the task instead of reopening the same one.
 
-**Severity:** MODERATE -- causes agents to re-do work or make decisions without full context
-**Phase:** Phase A (HistoryManager implementation)
+**Warning signs:**
+- Conversations with messages arrays exceeding 200KB
+- History compaction running on every reopen
+- Agent asking for information that was in the pruned history
+- Token budget exhaustion from context window size
+
+**Confidence:** HIGH -- the history manager's behavior with growing conversations is directly observable in the codebase. The single-summary-block-with-merge strategy helps but does not eliminate the accumulation problem.
 
 ---
 
-### MODERATE-6: Deterministic Conversation IDs Collide Across Agent Types
+### MODERATE-6: Constitutional Constraints Conflict With Each Other
+
+**Severity:** MODERATE
+**Phase to address:** Phase 1 (Prompt Rewrites)
 
 **What goes wrong:**
-The spec uses `{agentDefinitionId}-{correlationKey}` as the conversation ID formula. This is correct for preventing duplicate conversations, but creates a coupling: if two different agent types need to process the same correlation key (e.g., both dev-agent and product-agent reacting to the same Linear issue), they will have different conversation IDs. This is fine.
+Constitutional constraints are negative rules ("never do X"). When multiple constraints are added, they can create contradictions that the agent must resolve by guessing which constraint takes priority:
 
-However, if a conversation is cancelled and the same trigger fires again (e.g., user reassigns the Linear issue to the agent), the `start()` call will find the existing cancelled conversation and return it instead of creating a new one. The spec says "If a conversation with that ID already exists and is running/paused, return the existing ID." It does not say what happens if the conversation is completed or failed.
+- "Never create an issue without checking for duplicates" + "Never make the user wait unnecessarily" -> What if the duplicate check takes 10 seconds?
+- "Never create an issue the user hasn't confirmed" + "Never ask more than one question at a time" -> If the user request covers two issues, you cannot confirm both without asking two questions.
+- "Always verify artifact state before acting" + "Minimize token usage" -> Verification costs tokens.
+
+**Why it happens:**
+Each constraint is added to prevent a specific failure mode. But constraints interact in ways that are not obvious when writing them individually. The Prompt Authoring Guide warns against "directive stacking" but does not provide a method for detecting constraint conflicts.
+
+**Consequences:**
+- Agent behavior becomes unpredictable when multiple constraints are activated simultaneously
+- Different conversations resolve the same constraint conflict differently (inconsistent behavior)
+- Debugging becomes difficult because the agent is technically following one constraint while violating another
+- Adding new constraints increases the combinatorial space of potential conflicts
 
 **Prevention:**
-1. **Idempotent start should only apply to running/paused conversations.** For completed/failed/cancelled conversations, either create a new conversation with a version suffix (`dev-agent-ABC-123-v2`) or allow re-starting the same ID (reset status to running, clear messages, start fresh).
-2. **Define the behavior explicitly.** The spec has a gap here. Document what happens for each status: running (return existing), paused (return existing), completed (???), failed (???), cancelled (???).
+1. **Test constraint pairs for conflicts.** For N constraints, test N*(N-1)/2 pairs with scenarios that activate both. This is feasible for 5-7 constraints but not for 15+.
+2. **Explicitly prioritize constraints.** "Safety constraints override efficiency constraints. Correctness constraints override speed constraints." Give the agent a framework for resolving conflicts rather than leaving it to guess.
+3. **Keep the constraint count low.** The Prompt Authoring Guide suggests 10 strong directives maximum for orchestrators. For constitutional constraints specifically, aim for 5-7 per agent.
+4. **Use the few-shot examples to demonstrate constraint resolution.** Include an example where two constraints are in tension and show the reasoning for which one takes priority.
 
-**Severity:** MODERATE -- causes confusion when re-triggering agents for the same issue
-**Phase:** Phase A (ConversationExecutor start logic)
+**Warning signs:**
+- Agent behavior varying for similar inputs (same constraints, different resolution)
+- Agent reasoning (in `<reasoning>` blocks) showing explicit constraint conflict resolution
+- New constraints causing regressions in previously correct behavior
+
+**Confidence:** MEDIUM -- constraint conflicts are documented in the constitutional AI literature (C3AI paper, Anthropic's Constitutional AI research), but the severity depends on how many constraints are added and how well they are tested.
+
+---
+
+### MODERATE-7: Agent Writes Bad Handoffs (Too Long, Missing Key Info, Hallucinated Context)
+
+**Severity:** MODERATE
+**Phase to address:** Phase 4 (Prompt Evolution)
+
+**What goes wrong:**
+The v2.5 design relies on agent-authored handoffs as the primary context bridge between conversations. But the agent is not inherently good at writing handoffs:
+
+1. **Too long:** Agent dumps its entire reasoning into the handoff, consuming the next conversation's token budget.
+2. **Missing key info:** Agent summarizes at the wrong level of abstraction, omitting artifact IDs, branch names, or specific error messages that the next conversation needs.
+3. **Hallucinated context:** Agent includes information in the handoff that is not actually true -- confusing its own reasoning with facts.
+
+**Why it happens:**
+Writing a good handoff requires meta-cognition: understanding what the next agent/conversation will need, not just summarizing what happened. LLMs are generally poor at predicting what information will be needed by a different agent with different tools and context.
+
+**Consequences:**
+- Downstream conversations start with bad context, leading to wrong decisions
+- Token budgets wasted on overly verbose handoffs
+- Debugging requires manual review of handoff content to verify accuracy
+- Trust in the task system erodes if handoff content is unreliable
+
+**Prevention:**
+1. **Enforce a structured handoff schema** via the `complete_task` and `handoff_task` tools. The tool should require specific fields: `summary` (max 500 chars), `artifacts` (list of IDs/URLs), `decisions` (list of key decisions), `blockers` (list of open issues). Reject handoffs that exceed size limits.
+2. **Validate handoff content against known artifacts.** The tool can cross-reference artifact references in the handoff against the task's correlation records. If the handoff references a PR that is not correlated, flag it.
+3. **Include handoff quality examples in prompts.** Show the agent good and bad handoff examples with reasoning about what makes each good or bad.
+4. **Add a handoff size budget.** Handoff context JSONB should be capped at a fixed token count (e.g., 2000 tokens). The tool enforces this limit.
+
+**Warning signs:**
+- Handoff JSONB sizes exceeding 5KB regularly
+- Downstream agents calling `get_task_context` immediately after starting (suggests the handoff was insufficient)
+- Handoff content containing information that contradicts the event log
+
+**Confidence:** MEDIUM -- agent-authored summaries are a known quality challenge, but the structured schema approach mitigates the worst cases.
 
 ---
 
 ## Minor Pitfalls
 
-Mistakes that cause annoyance but are fixable without major rework.
+Mistakes that cause annoyance, minor delays, or cosmetic issues.
 
 ---
 
-### MINOR-1: Definition File Hot Reload Creates Inconsistent State
-
-**What goes wrong:**
-The AgentRegistry uses lazy loading with mtime-based cache invalidation. If a definition file is modified while a conversation is being started, the registry might return the old cached version for the definition lookup but the new version for the tool resolution, creating an inconsistent agent configuration.
-
-**Prevention:** Use a read-through cache that loads definition + tools atomically. Or simply version definitions explicitly and always resolve from the version, not "latest."
+### MINOR-1: Task ID Generation Produces Non-Human-Readable IDs
 
 **Severity:** MINOR
-**Phase:** Phase A (AgentRegistry)
-
----
-
-### MINOR-2: Signal Dedup ID Not Specified for All Sources
+**Phase to address:** Phase 3 (Task Primitive)
 
 **What goes wrong:**
-The spec says signals carry "source + delivery ID" for deduplication. GitHub webhooks provide `X-GitHub-Delivery`, Slack provides `X-Slack-Request-Timestamp`, but timeout signals from internal schedulers and agent-to-agent signals do not have natural delivery IDs. Without a dedup ID, these signals cannot be deduplicated.
+The v2.5 spec defines `gen_task_id()` as the default ID generator for tasks. If this produces opaque IDs (e.g., `task_a7x9Kp2mN4qR8sT1`), they are difficult for humans to reference in Slack conversations, dashboard searches, or debugging sessions. Compare to Linear issue IDs (`AES-42`) which are memorable and typeable.
 
-**Prevention:** Generate deterministic dedup IDs for internal signals: `timeout-{conversationId}-{waitType}-{timestamp}` and `agent-{parentInstanceId}-{childInstanceId}`.
+**Prevention:**
+1. Use a sequential prefix + random suffix: `T-001-abc` (monotonic for ordering, random for uniqueness).
+2. Or use a short nanoid with a prefix: `task_7K2m` (short enough to type, unique enough for the scale).
+3. Whatever format is chosen, ensure it is greppable in logs and does not conflict with existing ID patterns (conversation IDs, event IDs).
 
-**Severity:** MINOR
-**Phase:** Phase B (adapter implementation)
+**Confidence:** MEDIUM -- this is a design choice, not a bug. But poor ID ergonomics compound over time.
 
 ---
 
-### MINOR-3: YAML Definition Parsing Errors Are Confusing
+### MINOR-2: Dashboard Task Panel Requires Schema Extension in lib/schema.ts
+
+**Severity:** MINOR
+**Phase to address:** Phase 3 (Task Primitive)
 
 **What goes wrong:**
-Agent definitions use YAML files that reference system prompts in separate .md files. A typo in the YAML (wrong indentation, missing field) or a missing prompt file will cause a runtime error that may not clearly indicate which definition is broken.
+The v2.4 dashboard uses a local schema (`lib/schema.ts`) that does NOT import from `@aesir/agents` (documented in project memory). Adding task visualization to the dashboard requires adding the tasks table definition to the dashboard's local schema, duplicating the definition. If the tasks schema changes, the dashboard schema must be updated in sync.
 
-**Prevention:** Validate ALL definitions at startup (not lazy load). Fail fast with a clear error message listing the file path and the Zod validation error.
+**Prevention:**
+1. Follow the established pattern: copy the table definition to `packages/dashboard/lib/schema.ts`.
+2. Add a comment linking to the source of truth in `packages/agents/src/shared/db/schema.ts`.
+3. Consider a shared schema package in a future milestone to eliminate duplication.
+
+**Confidence:** HIGH -- this is a direct consequence of the existing dashboard architecture pattern.
+
+---
+
+### MINOR-3: `delivered_signal_ids` JSONB Array Grows Unbounded on Long-Lived Conversations
 
 **Severity:** MINOR
-**Phase:** Phase A (AgentRegistry)
+**Phase to address:** Phase 2 (Conversation Reopening)
+
+**What goes wrong:**
+The `conversations.delivered_signal_ids` column is a JSONB array used for signal deduplication. With conversation reopening, the same conversation receives signals across multiple runs. Each signal's dedup key is appended but never removed. For long-lived tasks with many events, this array grows without bound.
+
+**Prevention:**
+1. Cap the array at the last N entries (e.g., 100). Signals older than the most recent 100 are unlikely to be re-delivered.
+2. Or rotate the array on reopen: clear delivered_signal_ids when a conversation transitions from terminal to queued.
+3. Monitor the array size in production and add a maintenance job if it grows beyond expectations.
+
+**Confidence:** HIGH -- the growth is directly observable from the code. The existing append-only pattern has no cleanup.
 
 ---
 
-## Phase-Specific Warnings
+## Phase-Specific Pitfall Warnings
 
-| Phase | Likely Pitfall | Mitigation |
-|-------|---------------|------------|
-| Phase A: Framework Core | CRITICAL-1 (JSONB write amplification) | Design persistence strategy before writing code. Consider separate messages table. |
-| Phase A: Framework Core | CRITICAL-2 (Stale running detection) | Implement heartbeats from day one. Do not defer to "later." |
-| Phase A: Framework Core | CRITICAL-3 (Sequence gaps in events) | Use per-conversation gapless sequences or transaction ID watermarking. |
-| Phase A: Framework Core | CRITICAL-4 (Buffered event data loss) | Define flush policy explicitly. Synchronous flush at lifecycle boundaries. |
-| Phase A: Framework Core | MAJOR-3 (Compaction drift) | Invest in Phase 1 pruning. Defer Phase 2 summarization until proven necessary. |
-| Phase A: Framework Core | MAJOR-6 (MVCC dead tuples on queue) | Tune autovacuum from day one. Use separate queue table. |
-| Phase B: Wire & Validate | MAJOR-1 (Signal race between pause and persist) | Row-level locking + atomic status transitions. |
-| Phase B: Wire & Validate | MAJOR-4 (Memory pressure) | Implement concurrency limits. Set explicit heap size. |
-| Phase B: Wire & Validate | MODERATE-3 (Graceful shutdown) | Implement drain logic before deploying to Docker. |
-| Phase C: Cutover | MAJOR-5 (Temporal drain long tail) | Plan migration signals. Set hard cutoff date. |
-| Phase D: Cleanup | MODERATE-4 (Event table growth) | Set up partitioning before production data accumulates. |
-
----
-
-## Aesir-Specific Warnings
-
-These pitfalls are specific to Aesir's existing codebase and architecture.
-
-### The Heartbeat Callback Must Be Preserved
-
-v2.2's `runAgentLoop` already accepts an `onHeartbeat` callback (currently wired to Temporal's `Context.current().heartbeat()`). The v2.3 ConversationExecutor must provide its own heartbeat function that updates `last_heartbeat_at` on the conversation record. This is not a new feature -- it is a critical migration of an existing capability.
-
-### The Dev Container Lifecycle Must Be Managed Per-Conversation
-
-v2.2 manages dev containers via Temporal activities (`setupContainerActivity`, `stopContainerActivity`). In v2.3, the ConversationExecutor must handle container lifecycle. Key edge cases:
-- Container must survive across pause/resume (don't stop it on pause if resume is expected within minutes)
-- Container must be stopped on conversation timeout or cancellation
-- Multiple conversations for the same repo should share a container (not create duplicates)
-
-### The Task Store Data Must Be Migrated
-
-v2.2's `tasks` table contains PR numbers, branch names, approval statuses. The v2.3 session projection replaces this. But during Phase C (cutover), any external systems querying the tasks table (webhooks, signal handlers) must be updated to query `agent_sessions` instead. This is a broader change than just database schema -- it affects the signal routing code that maps GitHub PR events to conversations.
+| Phase | Topic | Likely Pitfall | Severity | Mitigation |
+|-------|-------|---------------|----------|------------|
+| Phase 1 | Prompt Rewrites | Silent behavioral regression (CRITICAL-3) | CRITICAL | Behavioral test suite before rewrite |
+| Phase 1 | Prompt Rewrites | Constitutional constraint conflicts (MODERATE-6) | MODERATE | Test constraint pairs, explicit priority |
+| Phase 1 | Prompt Rewrites | Stale few-shot examples (MODERATE-4) | MODERATE | Abstract examples, CI validation |
+| Phase 2 | Conversation Reopening | Stale world state on reopen (CRITICAL-1) | CRITICAL | Context injection block with current state |
+| Phase 2 | Conversation Reopening | History explosion across reopens (MODERATE-5) | MODERATE | Handoff-based context, history reset |
+| Phase 2 | Conversation Reopening | Signal dedup array growth (MINOR-3) | MINOR | Cap array, rotate on reopen |
+| Phase 3 | Task Primitive | Deadlock between task and conversation locks (CRITICAL-2) | CRITICAL | Advisory locks, canonical lock order |
+| Phase 3 | Task Primitive | schema.drizzle.ts legacy table collision (CRITICAL-4) | CRITICAL | Manual migration, verify table state |
+| Phase 3 | Task Primitive | Silent correlation recording failure (MAJOR-1) | MAJOR | Optimistic correlation, reconciliation job |
+| Phase 3 | Task Primitive | Task metadata JSONB bloat (MAJOR-2) | MAJOR | Zod schema, size limits |
+| Phase 3 | Task Primitive | Backward compatibility for null task_id (MAJOR-5) | MAJOR | hasTask helper, null-safe code paths |
+| Phase 3 | Task Primitive | Circular delegation loops (MAJOR-6) | MAJOR | Ancestry checks, subtask limits |
+| Phase 3 | Task Primitive | Event router latency from task lookup (MAJOR-4) | MAJOR | Cache, integration-side lookup |
+| Phase 3 | Task Primitive | Slack thread_ts correlation complexity (MODERATE-1) | MODERATE | Composite key, slow-path fallback |
+| Phase 3 | Task Primitive | GitHub PR correlation edge cases (MODERATE-2) | MODERATE | PR number correlation, head_sha tracking |
+| Phase 3 | Task Primitive | Linear status change noise (MODERATE-3) | MODERATE | Transition whitelist |
+| Phase 4 | Prompt Evolution | Handoff telephone game effect (MAJOR-3) | MAJOR | Structured handoffs, full history access |
+| Phase 4 | Prompt Evolution | Agent writes bad handoffs (MODERATE-7) | MODERATE | Structured schema, size limits, validation |
 
 ---
 
-## Open Questions Requiring Phase-Specific Research
+## "Looks Done But Isn't" Checklist
 
-1. **What is the actual memory footprint of a conversation in Node.js?** The MAJOR-4 pitfall estimates 500KB-5MB, but this needs measurement with real Anthropic SDK payloads. Profile memory during a real dev-agent conversation before setting concurrency limits.
+Items that appear complete after implementing but have hidden failure modes.
 
-2. **What is the optimal flush interval for the event buffer?** Too frequent = performance overhead. Too infrequent = data loss risk. This needs benchmarking against real event volumes.
-
-3. **Can the conversations table use UNLOGGED for the messages column?** UNLOGGED tables skip WAL, dramatically reducing write amplification. The tradeoff: data is lost on crash (but the conversation can be reconstructed from the event log). This is potentially a significant optimization but needs careful analysis.
-
-4. **Should sub-agent conversations be stored in the same table?** The spec says sub-agents "don't go through the executor" and run inline. But if a sub-agent runs for 10+ minutes, its state is also at risk of process crash. Consider whether sub-agents above a certain duration threshold should be persisted.
+- [ ] **Conversation reopening "works" in tests but fails with stale context.** Single-conversation tests do not exercise the world-state drift problem. Must test with actual external state changes between conversation runs.
+- [ ] **Task creation "works" but schema.drizzle.ts migration is wrong.** Testing against a fresh database will not catch the legacy table collision. Must test migration against a database with the old table present.
+- [ ] **Event routing "works" but adds 50ms latency.** Functional tests pass but do not measure latency. Must add performance benchmarks for the routing hot path.
+- [ ] **Prompt rewrites "work" on common cases but regress on edge cases.** Manual testing of 3-4 scenarios does not cover the behavioral space. Must run the full behavioral test suite.
+- [ ] **Integration correlation "works" for create operations but not for the failure case.** Testing the happy path (create artifact, record correlation) does not cover the failure path (create artifact, correlation recording fails). Must test with simulated DB failures during correlation recording.
+- [ ] **Handoff context "works" for single delegation but degrades through chains.** Testing one handoff does not reveal the telephone game effect. Must test with 3+ chained handoffs and verify information retention.
+- [ ] **Task serialization "works" for sequential events but deadlocks under concurrent load.** Single-event tests pass. Must test with 10+ concurrent events targeting the same task.
+- [ ] **Backward compatibility "works" for new conversations but breaks for existing ones.** Testing new conversations with tasks does not cover the null-task-id path. Must test existing conversations survive the migration unchanged.
 
 ---
 
-## Sources Summary
+## Recovery Strategies
 
-| Topic | Key Source | Confidence |
-|-------|-----------|------------|
-| JSONB TOAST performance | [pganalyze benchmarks](https://pganalyze.com/blog/5mins-postgres-jsonb-toast), [Evan Jones measurements](https://www.evanjones.ca/postgres-large-json-performance.html) | HIGH |
-| JSONB write amplification | [MongoDB engineering analysis](https://dev.to/mongodb/no-hot-updates-on-jsonb-13k7) | HIGH |
-| Postgres job queue MVCC failure | [Brandur Leach post-mortem](https://brandur.org/postgres-queues) | HIGH |
-| Sequence gap problem | [Event-Driven.io analysis](https://event-driven.io/en/ordering_in_postgres_outbox/) | HIGH |
-| LISTEN/NOTIFY limitations | [PostgreSQL official docs](https://www.postgresql.org/docs/current/sql-notify.html), [Recall.ai production issues](https://www.recall.ai/blog/postgres-listen-notify-does-not-scale) | HIGH |
-| Heartbeat-based stale detection | [Solid Queue](https://github.com/rails/solid_queue), [River Queue](https://riverqueue.com/docs/maintenance-services) | HIGH |
-| Compaction failure modes | [Claude Code issues #18211, #19739, #5677](https://github.com/anthropics/claude-code/issues/18211) | HIGH |
-| Idle transaction / vacuum blocking | [PostgreSQL docs](https://postgresqlco.nf/doc/en/param/idle_in_transaction_session_timeout/), [CYBERTEC analysis](https://www.cybertec-postgresql.com/en/idle_in_transaction_session_timeout-terminating-idle-transactions-in-postgresql/) | HIGH |
-| Temporal migration strategy | [Temporal Worker Versioning docs](https://docs.temporal.io/production-deployment/worker-deployments/worker-versioning) | HIGH |
-| Node.js graceful shutdown | [Node.js cluster docs](https://nodejs.org/api/cluster.html) | HIGH |
-| Exactly-once vs at-least-once | [Multiple distributed systems sources](https://bravenewgeek.com/you-cannot-have-exactly-once-delivery/) | HIGH |
-| Custom workflow engine pitfalls | [Indeed/iWF experience via Long Quanzheng](https://medium.com/@qlong/workflow-should-be-code-but-durable-execution-is-not-the-only-way-519f7682360c) | MEDIUM |
+When a pitfall is hit in production, what to do.
+
+### Stale Context on Reopen (CRITICAL-1)
+**Detection:** Agent messages reference non-existent artifacts or outdated states.
+**Immediate:** Manually cancel the reopened conversation and start a fresh one with correct context.
+**Root cause fix:** Implement context injection block in the reopening flow.
+
+### Deadlock (CRITICAL-2)
+**Detection:** `deadlock detected` in PostgreSQL logs, conversation retry exhaustion.
+**Immediate:** Kill long-running transactions, increase `max_retries` temporarily.
+**Root cause fix:** Switch to advisory locks for task serialization, enforce canonical lock order.
+
+### Prompt Regression (CRITICAL-3)
+**Detection:** User reports of changed behavior, phase tag distribution shifts.
+**Immediate:** Roll back to previous prompt.md files (they are in git).
+**Root cause fix:** Run behavioral test suite, identify specific regression, adjust constraints or examples.
+
+### Migration Collision (CRITICAL-4)
+**Detection:** Migration errors referencing unexpected columns.
+**Immediate:** Manually fix the migration file before running it.
+**Root cause fix:** Verify legacy table state and write manual migration.
+
+### Orphaned Correlations (MAJOR-1)
+**Detection:** Webhook events hitting slow path that should match correlations.
+**Immediate:** Manually create correlation records for known orphaned artifacts.
+**Root cause fix:** Implement reconciliation job, switch to optimistic correlation pattern.
+
+### Task Metadata Bloat (MAJOR-2)
+**Detection:** Increasing query latency on tasks table, growing `pg_total_relation_size`.
+**Immediate:** Manually truncate oversized metadata fields.
+**Root cause fix:** Add Zod validation with size limits, migrate existing oversized records.
+
+---
+
+## Sources
+
+### PostgreSQL and Database
+- [PostgreSQL Explicit Locking Documentation](https://www.postgresql.org/docs/current/explicit-locking.html) -- advisory locks, deadlock detection, lock ordering
+- [5mins of Postgres: JSONB and TOAST Performance Cliffs](https://pganalyze.com/blog/5mins-postgres-jsonb-toast) -- TOAST compression benchmarks
+- [The Hidden Cost of Using JSONB in Postgres](https://medium.com/@thequeryabhishk/the-hidden-cost-of-using-jsonb-in-postgres-bad78a2bf249) -- write amplification, HOT updates
+- [When To Avoid JSONB In A PostgreSQL Schema (Heap)](https://www.heap.io/blog/when-to-avoid-jsonb-in-a-postgresql-schema) -- unbounded JSONB growth patterns
+- [Debugging Deadlocks in Postgres (incident.io)](https://incident.io/blog/debugging-deadlocks-in-postgres) -- production deadlock debugging
+- [Locks in PostgreSQL -- Concurrency Benefits and Performance Challenges](https://stormatics.tech/blogs/locks-in-postgresql-concurrency) -- lock contention patterns
+
+### Prompt Engineering and LLM Evaluation
+- [promptfoo -- Test your prompts, agents, and RAGs](https://github.com/promptfoo/promptfoo) -- regression testing framework for prompts
+- [The 5 Best Prompt Evaluation Tools in 2025 (Braintrust)](https://www.braintrust.dev/articles/best-prompt-evaluation-tools-2025) -- evaluation tooling landscape
+- [AI Agent Failures: Prompt Design Fixes 4 Common Issues (ctimes)](https://ctimes.tech/en/2026/01/08/ai-agent-failures-prompt-design-fixes-4-common-issues/) -- common agent prompt failures
+- [Avoiding Common Pitfalls in LLM Evaluation (HoneyHive)](https://www.honeyhive.ai/post/avoiding-common-pitfalls-in-llm-evaluation) -- evaluation methodology
+- [C3AI: Crafting and Evaluating Constitutions for Constitutional AI](https://dl.acm.org/doi/10.1145/3696410.3714705) -- constitutional constraint conflict analysis
+- [Constitutional AI: Harmlessness from AI Feedback (Anthropic)](https://arxiv.org/abs/2212.08073) -- foundational constitutional AI research
+
+### Multi-Agent Systems and Handoffs
+- [How Agent Handoffs Work in Multi-Agent Systems (Towards Data Science)](https://towardsdatascience.com/how-agent-handoffs-work-in-multi-agent-systems/) -- handoff patterns and context loss
+- [Best Practices for Multi-Agent Orchestration and Reliable Handoffs (Skywork AI)](https://skywork.ai/blog/ai-agent-orchestration-best-practices-handoffs/) -- structured handoff approaches
+- [Agent-as-Tools vs Handoff in Multi-Agent AI Systems](https://medium.com/@yuxiaojian/agent-as-tools-vs-handoff-in-multi-agent-ai-systems-11f66a0342c4) -- context loss in delegation patterns
+- [Your First Multi-Agent Handoff Without Chaos](https://medium.com/@Quaxel/your-first-multi-agent-handoff-without-chaos-a9fe116c7812) -- handoff failure modes
+
+### Helpdesk Systems (Conversation Reopening Reference)
+- [About the Ticket Lifecycle and Ticket Statuses (Zendesk)](https://support.zendesk.com/hc/en-us/articles/8263915942938-About-the-ticket-lifecycle-and-ticket-statuses) -- ticket reopening mechanics
+- [Closing and Reopening Side Conversations (Zendesk)](https://support.zendesk.com/hc/en-us/articles/4604333207578-Closing-and-reopening-side-conversations) -- context management on reopen
+- [Viewing User Interaction Context in Zendesk](https://internalnote.com/context-in-zendesk/) -- context panel design
+
+### Integration-Specific
+- [Sending Messages Using Incoming Webhooks (Slack)](https://api.slack.com/incoming-webhooks) -- thread_ts limitations
+- [conversations.replies Method (Slack)](https://api.slack.com/methods/conversations.replies) -- thread reply correlation
+- [Webhook Events and Payloads (GitHub Docs)](https://docs.github.com/en/webhooks/webhook-events-and-payloads) -- PR webhook payload structure
+- [Troubleshooting Duplicate Builds (CircleCI)](https://support.circleci.com/hc/en-us/articles/115013353748-Troubleshooting-duplicate-builds-triggered-upon-every-commit-push) -- webhook duplication patterns
+
+### Existing Codebase (primary source of truth)
+- `packages/agents/src/framework/conversation-executor.ts` -- current signal handling, terminal state rejection
+- `packages/agents/src/framework/event-router.ts` -- current synchronous routing, SIGNAL_AGENT_MAP
+- `packages/agents/src/framework/worker-loop.ts` -- SKIP LOCKED claiming, wait_for interception
+- `packages/agents/src/shared/db/schema.ts` -- current conversation schema (no task_id column)
+- `packages/agents/src/shared/db/schema.drizzle.ts` -- legacy tasks table at lines 116-157
+- `packages/agents/src/adapters/types.ts` -- IGNORE_EVENT_TYPES including linear.issue.updated
+- `packages/agents/definitions/product-agent/prompt.md` -- current procedural state machine prompt
+- `packages/agents/definitions/dev-agent/prompt.md` -- current complexity classification prompt
+- `packages/agents/definitions/PROMPT_GUIDE.md` -- constitutional + few-shot authoring guidance
