@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.5 Agentic Conversations -- Phase 58.3 complete, ready for Phase 58.4
+**Current focus:** v2.5 Agentic Conversations -- Phase 58.4 in progress
 
 ## Current Position
 
-Phase: 58.3 of 59 (Integration Correlation)
-Plan: 4 of 4 in current phase
-Status: Phase complete (verified)
-Last activity: 2026-02-07 -- Phase 58.3 verified, all 4 plans complete
+Phase: 58.4 of 59 (Task-Aware Event Routing)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-07 -- Completed 58.4-01-PLAN.md
 
-Progress: [████] 100% (Phase 58.3: 4/4 plans complete)
+Progress: [█░] 50% (Phase 58.4: 1/2 plans complete)
 
 ## Milestone History
 
@@ -30,9 +30,9 @@ Progress: [████] 100% (Phase 58.3: 4/4 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
-- Average duration: 4m 27s
-- Total execution time: 58m 04s
+- Total plans completed: 14
+- Average duration: 4m 24s
+- Total execution time: 61m 45s
 
 ## Accumulated Context
 
@@ -66,6 +66,7 @@ See PROJECT.md Key Decisions table for full history.
 | PAYLOAD-TASKID-INJECT | taskId injected into NormalizedEvent.payload (not new schema field) to keep change contained | 58.3-02 |
 | DB-THREAD-WEBHOOK | db threaded through routes.ts to webhook router for correlation lookups | 58.3-03 |
 | SLACK-CHANNEL-TS-KEY | Slack correlations use channelId:ts composite format matching Slack's message identifier | 58.3-04 |
+| ENRICHMENT-SUBSET-IFACE | EnrichmentDeps uses subset interface pattern to decouple enrichment from full RouteEventDeps | 58.4-01 |
 
 ### Pending Todos
 
@@ -79,10 +80,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-07T13:30Z
-Stopped at: Phase 58.3 verified and complete -- all correlation infrastructure shipped
+Last session: 2026-02-07T22:36Z
+Stopped at: Completed 58.4-01-PLAN.md
 Resume file: None
-Next action: Plan Phase 58.4 (Task-Aware Event Routing)
+Next action: Execute 58.4-02-PLAN.md (task-aware routing logic)
 
 ---
-*Updated: 2026-02-07 -- Phase 58.3 complete (all 4 plans: infrastructure, Linear, GitHub, Slack correlation)*
+*Updated: 2026-02-07 -- Phase 58.4 plan 01 complete (taskId on INSERT, findActiveForTask, enrichment helper)*
