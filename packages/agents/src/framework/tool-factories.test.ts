@@ -8,6 +8,7 @@
 
 import type { DevContainerManager, PinoLogger } from "@aesir/platform";
 import { describe, expect, it, vi } from "vitest";
+import type { TaskService } from "../shared/services/task-service.js";
 import { registerAllTools } from "./tool-factories.js";
 import { createToolRegistry } from "./tool-registry.js";
 import type { AgentDefinition, AgentRegistry, ToolContext } from "./types.js";
@@ -37,6 +38,22 @@ function createMockAgentRegistry(): AgentRegistry {
   };
 }
 
+function createMockTaskService(): TaskService {
+  return {
+    create: vi.fn(),
+    get: vi.fn(),
+    update: vi.fn(),
+    addHandoff: vi.fn(),
+    getHandoffs: vi.fn(),
+    getLatestHandoff: vi.fn(),
+    listByAssignee: vi.fn(),
+    listByParent: vi.fn(),
+    linkConversation: vi.fn(),
+    health: vi.fn().mockResolvedValue({ healthy: true, latencyMs: 1 }),
+    close: vi.fn(),
+  } as unknown as TaskService;
+}
+
 function createMockContext(): ToolContext {
   return {
     agentId: "test-agent",
@@ -56,8 +73,9 @@ function setupRegistry() {
   const logger = createMockLogger();
   const registry = createToolRegistry({ logger });
   const agentRegistry = createMockAgentRegistry();
-  registerAllTools({ registry, agentRegistry, logger });
-  return { registry, logger, agentRegistry };
+  const taskService = createMockTaskService();
+  registerAllTools({ registry, agentRegistry, taskService, logger });
+  return { registry, logger, agentRegistry, taskService };
 }
 
 // ---------------------------------------------------------------------------
@@ -72,9 +90,9 @@ describe("registerAllTools", () => {
       expect(() => setupRegistry()).not.toThrow();
     });
 
-    it("should register exactly 28 tools", () => {
+    it("should register exactly 34 tools", () => {
       const { registry } = setupRegistry();
-      expect(registry.listRegistered()).toHaveLength(28);
+      expect(registry.listRegistered()).toHaveLength(34);
     });
 
     it("should register all expected namespaces", () => {
@@ -83,7 +101,14 @@ describe("registerAllTools", () => {
 
       const namespaces = new Set(registered.map((ref) => ref.split(":")[0]));
       expect(namespaces).toEqual(
-        new Set(["codebase", "linear", "github", "slack", "coordination"]),
+        new Set([
+          "codebase",
+          "linear",
+          "github",
+          "slack",
+          "coordination",
+          "task",
+        ]),
       );
     });
   });
@@ -142,6 +167,17 @@ describe("registerAllTools", () => {
       expect(registry.has("coordination:spawn_agent")).toBe(true);
       expect(registry.has("coordination:request_human_input")).toBe(true);
       expect(registry.has("coordination:wait_for")).toBe(true);
+    });
+
+    it("should register all task tools", () => {
+      const { registry } = setupRegistry();
+
+      expect(registry.has("task:create_task")).toBe(true);
+      expect(registry.has("task:complete_task")).toBe(true);
+      expect(registry.has("task:pause_task")).toBe(true);
+      expect(registry.has("task:handoff_task")).toBe(true);
+      expect(registry.has("task:list_tasks")).toBe(true);
+      expect(registry.has("task:get_task_context")).toBe(true);
     });
   });
 
@@ -262,7 +298,7 @@ describe("registerAllTools", () => {
       const { logger } = setupRegistry();
 
       expect(logger.info).toHaveBeenCalledWith(
-        { toolCount: 28 },
+        { toolCount: 34 },
         "All tool factories registered",
       );
     });

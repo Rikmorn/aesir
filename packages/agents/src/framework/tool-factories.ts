@@ -1,7 +1,7 @@
 /**
  * Tool Factory Registration
  *
- * Registers all 28 tool factories in the ToolRegistry, bridging the v2.3
+ * Registers all 34 tool factories in the ToolRegistry, bridging the v2.3
  * ToolContext interface to the existing v2.2 tool factory signatures.
  *
  * Tool categories:
@@ -11,15 +11,18 @@
  *               get_pull_request, list_pull_requests, merge_pull_request, get_file_contents, list_files
  * - Slack (5): send_message, send_approval_request, get_message, reply_to_thread, list_channels
  * - Coordination (3): spawn_agent, request_human_input, wait_for
+ * - Task (6): create_task, complete_task, pause_task, handoff_task, list_tasks, get_task_context
  *
  * Adapters bridge ToolContext to the existing factory signatures:
  * - Codebase adapter: extracts containerManager, sandboxId, logger from ToolContext
  * - MCP adapter: extracts agentId, correlationId from ToolContext
  * - Coordination tools are either context-free or use placeholder implementations
+ * - Task tools take (TaskService, ToolContext) directly
  */
 
 import type { DevContainerManager, PinoLogger } from "@aesir/platform";
 import type { ToolDefinition } from "../shared/agent-loop/types.js";
+import type { TaskService } from "../shared/services/task-service.js";
 import {
   createListDirectoryTool,
   createReadFileTool,
@@ -33,6 +36,14 @@ import { createGitHubTools } from "../shared/tools/integration/github-tools.js";
 import { createLinearTools } from "../shared/tools/integration/linear-tools.js";
 import type { McpToolDeps } from "../shared/tools/integration/mcp-wrapper.js";
 import { createSlackTools } from "../shared/tools/integration/slack-tools.js";
+import {
+  createCompleteTaskTool,
+  createCreateTaskTool,
+  createGetTaskContextTool,
+  createHandoffTaskTool,
+  createListTasksTool,
+  createPauseTaskTool,
+} from "../shared/tools/task/index.js";
 import type { CodebaseToolDeps } from "../shared/tools/types.js";
 import type { AgentRegistry, ToolContext, ToolRegistry } from "./types.js";
 import {
@@ -50,6 +61,8 @@ export interface RegisterAllToolsOptions {
   registry: ToolRegistry;
   /** AgentRegistry for spawn_agent sub-agent resolution (Phase 40) */
   agentRegistry: AgentRegistry;
+  /** TaskService for task lifecycle operations (Phase 58.2) */
+  taskService: TaskService;
   /** Logger for registration diagnostics */
   logger: PinoLogger;
 }
@@ -107,13 +120,13 @@ function mcpAdapter(
 // ─── Registration ────────────────────────────────────────────────────────────
 
 /**
- * Register all 28 tool factories in the ToolRegistry.
+ * Register all 34 tool factories in the ToolRegistry.
  *
  * This bridges the v2.3 registry-based tool resolution to the existing v2.2
  * tool factory functions. After calling this, `registry.resolve(refs, context)`
  * produces the exact same ToolDefinition[] as the current toolkit factories.
  *
- * @param options - Registry, agent registry, and logger
+ * @param options - Registry, agent registry, task service, and logger
  */
 export function registerAllTools(options: RegisterAllToolsOptions): void {
   const { registry, logger } = options;
@@ -251,6 +264,22 @@ export function registerAllTools(options: RegisterAllToolsOptions): void {
     const defaultState = createDefaultWaitForState();
     return createWaitForTool(defaultState);
   });
+
+  // ── Task tools (6) ──────────────────────────────────────────────────
+
+  const ts = options.taskService;
+  registry.register("task:create_task", (ctx) => createCreateTaskTool(ts, ctx));
+  registry.register("task:complete_task", (ctx) =>
+    createCompleteTaskTool(ts, ctx),
+  );
+  registry.register("task:pause_task", (ctx) => createPauseTaskTool(ts, ctx));
+  registry.register("task:handoff_task", (ctx) =>
+    createHandoffTaskTool(ts, ctx),
+  );
+  registry.register("task:list_tasks", (ctx) => createListTasksTool(ts, ctx));
+  registry.register("task:get_task_context", (ctx) =>
+    createGetTaskContextTool(ts, ctx),
+  );
 
   // ── Summary ────────────────────────────────────────────────────────────
 
