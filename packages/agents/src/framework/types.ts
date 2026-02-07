@@ -478,6 +478,8 @@ export interface StartConversationParams {
   context?: string;
   /** Parent conversation ID for sub-agent tracking */
   parentConversationId?: string;
+  /** Task ID to associate with this conversation on INSERT (v2.5 task routing) */
+  taskId?: string;
 }
 
 /**
@@ -582,6 +584,13 @@ export interface ConversationExecutor {
    * Returns null if the worker loop has not been created yet.
    */
   getWorkerStatus(): WorkerLoopStatus | null;
+
+  /**
+   * Find the most recent active conversation for a task.
+   * Active = running, waiting, or queued status.
+   * Returns null if no active conversation exists.
+   */
+  findActiveForTask(taskId: string): Promise<ConversationInfo | null>;
 }
 
 /**

@@ -66,6 +66,7 @@ function createMockExecutor(): ConversationExecutor {
     startWorker: vi.fn(),
     stopWorker: vi.fn().mockResolvedValue(undefined),
     getWorkerStatus: vi.fn().mockReturnValue(null),
+    findActiveForTask: vi.fn().mockResolvedValue(null),
   };
 }
 

@@ -250,6 +250,7 @@ export function createConversationExecutor(
               status: "queued",
               messages: [{ role: "user", content: fullMessage }],
               parent_conversation_id: params.parentConversationId ?? null,
+              task_id: params.taskId ?? null,
               queued_signals: [],
               delivered_signal_ids: [],
             });
@@ -279,6 +280,7 @@ export function createConversationExecutor(
           status: "queued",
           messages: [{ role: "user", content: fullMessage }],
           parent_conversation_id: params.parentConversationId ?? null,
+          task_id: params.taskId ?? null,
           queued_signals: [],
           delivered_signal_ids: [],
         });
@@ -695,6 +697,30 @@ export function createConversationExecutor(
               .limit(limit);
 
       return rows.map(toConversationInfo);
+    },
+
+    async findActiveForTask(taskId: string): Promise<ConversationInfo | null> {
+      const rows = await db
+        .select({
+          id: conversations.id,
+          agent_definition_id: conversations.agent_definition_id,
+          agent_definition_version: conversations.agent_definition_version,
+          status: conversations.status,
+          created_at: conversations.created_at,
+          updated_at: conversations.updated_at,
+        })
+        .from(conversations)
+        .where(
+          and(
+            eq(conversations.task_id, taskId),
+            sql`${conversations.status} IN ('running', 'waiting', 'queued')`,
+          ),
+        )
+        .orderBy(desc(conversations.created_at))
+        .limit(1);
+
+      if (rows.length === 0 || !rows[0]) return null;
+      return toConversationInfo(rows[0]);
     },
 
     startWorker(): void {

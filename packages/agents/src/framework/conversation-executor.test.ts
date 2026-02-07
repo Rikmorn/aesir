@@ -1199,3 +1199,124 @@ describe("timeout cancellation", () => {
     expect(mockScheduler.close).toHaveBeenCalled();
   });
 });
+
+// ─── start() with taskId ──────────────────────────────────────────────────────
+
+describe("start() -- taskId parameter", () => {
+  let executor: ConversationExecutor;
+  let mockDb: ReturnType<typeof createMockDb>;
+
+  beforeEach(() => {
+    const ctx = createTestOptions();
+    executor = createConversationExecutor(ctx.options);
+    mockDb = ctx.mockDb;
+    // No existing conversation
+    mockDb.setForUpdateResult([]);
+  });
+
+  it("includes task_id in INSERT when taskId is provided", async () => {
+    await executor.start({
+      agentDefinitionId: "dev-agent",
+      correlationKey: "AES-42",
+      initialMessage: "Implement auth",
+      taskId: "task_abc123",
+    });
+
+    expect(mockDb.mocks.insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        task_id: "task_abc123",
+      }),
+    );
+  });
+
+  it("sets task_id to null when taskId is not provided", async () => {
+    await executor.start({
+      agentDefinitionId: "dev-agent",
+      correlationKey: "AES-42",
+      initialMessage: "Implement auth",
+    });
+
+    expect(mockDb.mocks.insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        task_id: null,
+      }),
+    );
+  });
+
+  it("includes task_id in re-triggered conversation INSERT", async () => {
+    mockDb.setForUpdateResult([
+      createMockConversationRow({ status: "completed" }),
+    ]);
+    mockDb.mocks.limit.mockResolvedValue([]);
+
+    await executor.start({
+      agentDefinitionId: "dev-agent",
+      correlationKey: "AES-42",
+      initialMessage: "Retry",
+      taskId: "task_retrigger",
+    });
+
+    expect(mockDb.mocks.insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        task_id: "task_retrigger",
+      }),
+    );
+  });
+});
+
+// ─── findActiveForTask() ──────────────────────────────────────────────────────
+
+describe("findActiveForTask()", () => {
+  let executor: ConversationExecutor;
+  let mockDb: ReturnType<typeof createMockDb>;
+
+  beforeEach(() => {
+    const ctx = createTestOptions();
+    executor = createConversationExecutor(ctx.options);
+    mockDb = ctx.mockDb;
+  });
+
+  it("returns ConversationInfo for active conversation with matching task_id", async () => {
+    const now = new Date("2026-02-07T12:00:00Z");
+    mockDb.mocks.limit.mockResolvedValue([
+      {
+        id: "dev-agent-AES-42",
+        agent_definition_id: "dev-agent",
+        agent_definition_version: "1.0.0",
+        status: "running",
+        created_at: now,
+        updated_at: now,
+      },
+    ]);
+
+    const result = await executor.findActiveForTask("task_abc123");
+
+    expect(result).toEqual({
+      id: "dev-agent-AES-42",
+      agentDefinitionId: "dev-agent",
+      agentDefinitionVersion: "1.0.0",
+      status: "running",
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
+
+  it("returns null when no active conversation exists for task", async () => {
+    mockDb.mocks.limit.mockResolvedValue([]);
+
+    const result = await executor.findActiveForTask("task_nonexistent");
+
+    expect(result).toBeNull();
+  });
+
+  it("calls the DB with correct select fields", async () => {
+    mockDb.mocks.limit.mockResolvedValue([]);
+
+    await executor.findActiveForTask("task_xyz");
+
+    // Verify select was called (query was executed)
+    expect(mockDb.mocks.select).toHaveBeenCalled();
+    expect(mockDb.mocks.from).toHaveBeenCalled();
+    expect(mockDb.mocks.where).toHaveBeenCalled();
+  });
+});
