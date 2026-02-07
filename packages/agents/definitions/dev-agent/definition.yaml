@@ -16,6 +16,12 @@ tools:
   - coordination:spawn_agent
   - coordination:request_human_input
   - coordination:wait_for
+  - task:create_task
+  - task:complete_task
+  - task:pause_task
+  - task:handoff_task
+  - task:list_tasks
+  - task:get_task_context
   - linear:get_issue
   - linear:update_issue_status
   - github:create_branch

@@ -10,6 +10,12 @@ model: claude-sonnet-4-20250514
 
 tools:
   - coordination:wait_for
+  - task:create_task
+  - task:complete_task
+  - task:pause_task
+  - task:handoff_task
+  - task:list_tasks
+  - task:get_task_context
   - linear:create_issue
   - linear:get_issue
   - linear:list_labels

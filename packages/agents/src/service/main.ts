@@ -10,7 +10,7 @@
  *   2. Logger
  *   3. Database pool + Drizzle ORM
  *   4. AgentRegistry (YAML definitions from disk)
- *   5. ToolRegistry (28 tool factories)
+ *   5. ToolRegistry (34 tool factories)
  *   6. EventLog (buffered append-only event recording)
  *   7. SessionProjection (reactive agent_sessions updates)
  *   8. TimeoutScheduler (pg-boss delayed signal delivery)
@@ -45,6 +45,7 @@ import { routeEvent } from "../router/router.js";
 import type { RouteEventDeps } from "../router/types.js";
 import * as schema from "../shared/db/schema.js";
 import { config } from "../shared/env/config.js";
+import { createTaskService } from "../shared/services/task-service.js";
 import { createApiRouter } from "./api/router.js";
 
 // Resolve definitions directory relative to this file's location.
@@ -88,9 +89,18 @@ async function bootstrap(): Promise<void> {
     logger,
   });
 
-  // 4. ToolRegistry -- 28 tool factories
+  // 4. ToolRegistry -- 34 tool factories
   const toolRegistry = createToolRegistry({ logger });
-  registerAllTools({ registry: toolRegistry, agentRegistry, logger });
+
+  // 4b. TaskService -- task lifecycle operations (Phase 58.2)
+  const taskService = createTaskService({ db, logger });
+
+  registerAllTools({
+    registry: toolRegistry,
+    agentRegistry,
+    taskService,
+    logger,
+  });
 
   // 5. EventLog -- buffered append-only event recording
   const eventLog = createEventLog({ db, logger });
