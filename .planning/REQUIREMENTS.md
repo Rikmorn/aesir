@@ -60,17 +60,17 @@
 
 ### Integration Correlation
 
-- [ ] **CORR-01**: `linear.task_correlations` table created (external_type, external_ref, task_id, PK on type+ref)
-- [ ] **CORR-02**: `github.task_correlations` table created (external_type, external_ref, task_id, PK on type+ref)
-- [ ] **CORR-03**: `slack.task_correlations` table created (external_type, external_ref, task_id, PK on type+ref)
-- [ ] **CORR-04**: `X-Task-ID` header added to MCP calls when conversation has a task
-- [ ] **CORR-05**: Linear integration records correlation on outgoing MCP tool calls (fire-and-forget)
-- [ ] **CORR-06**: GitHub integration records correlation on outgoing MCP tool calls (fire-and-forget)
-- [ ] **CORR-07**: Slack integration records correlation on outgoing MCP tool calls (thread_ts as external_ref)
-- [ ] **CORR-08**: Linear integration performs correlation lookup on incoming webhooks, attaches task_id to event
-- [ ] **CORR-09**: GitHub integration performs correlation lookup on incoming webhooks, attaches task_id to event
-- [ ] **CORR-10**: Slack integration performs correlation lookup on incoming webhooks, attaches task_id to event
-- [ ] **CORR-11**: `IncomingEvent` schema extended with optional `taskId` field
+- [x] **CORR-01**: `linear.task_correlations` table created (external_type, external_ref, task_id, PK on type+ref)
+- [x] **CORR-02**: `github.task_correlations` table created (external_type, external_ref, task_id, PK on type+ref)
+- [x] **CORR-03**: `slack.task_correlations` table created (external_type, external_ref, task_id, PK on type+ref)
+- [x] **CORR-04**: `X-Task-ID` header added to MCP calls when conversation has a task
+- [x] **CORR-05**: Linear integration records correlation on outgoing MCP tool calls (fire-and-forget)
+- [x] **CORR-06**: GitHub integration records correlation on outgoing MCP tool calls (fire-and-forget)
+- [x] **CORR-07**: Slack integration records correlation on outgoing MCP tool calls (thread_ts as external_ref)
+- [x] **CORR-08**: Linear integration performs correlation lookup on incoming webhooks, attaches task_id to event
+- [x] **CORR-09**: GitHub integration performs correlation lookup on incoming webhooks, attaches task_id to event
+- [x] **CORR-10**: Slack integration performs correlation lookup on incoming webhooks, attaches task_id to event
+- [x] **CORR-11**: `IncomingEvent` schema extended with optional `taskId` field
 
 *Note: CORR-01/02/03, CORR-05/06/07, and CORR-08/09/10 follow a 3x3 pattern (same requirement per integration). Built once, replicated three times.*
 
@@ -182,17 +182,17 @@ Deferred to post-v2.5 milestones. Tracked but not in current roadmap.
 | TASK-24 | Phase 58.1 | Complete |
 | TASK-25 | Phase 58.1 | Complete |
 | TASK-27 | Phase 58.1 | Complete |
-| CORR-01 | Phase 58.3 | Pending |
-| CORR-02 | Phase 58.3 | Pending |
-| CORR-03 | Phase 58.3 | Pending |
-| CORR-04 | Phase 58.3 | Pending |
-| CORR-05 | Phase 58.3 | Pending |
-| CORR-06 | Phase 58.3 | Pending |
-| CORR-07 | Phase 58.3 | Pending |
-| CORR-08 | Phase 58.3 | Pending |
-| CORR-09 | Phase 58.3 | Pending |
-| CORR-10 | Phase 58.3 | Pending |
-| CORR-11 | Phase 58.3 | Pending |
+| CORR-01 | Phase 58.3 | Complete |
+| CORR-02 | Phase 58.3 | Complete |
+| CORR-03 | Phase 58.3 | Complete |
+| CORR-04 | Phase 58.3 | Complete |
+| CORR-05 | Phase 58.3 | Complete |
+| CORR-06 | Phase 58.3 | Complete |
+| CORR-07 | Phase 58.3 | Complete |
+| CORR-08 | Phase 58.3 | Complete |
+| CORR-09 | Phase 58.3 | Complete |
+| CORR-10 | Phase 58.3 | Complete |
+| CORR-11 | Phase 58.3 | Complete |
 | ROUTE-01 | Phase 58.4 | Pending |
 | ROUTE-02 | Phase 58.4 | Pending |
 | ROUTE-03 | Phase 58.4 | Pending |
@@ -216,4 +216,4 @@ Deferred to post-v2.5 milestones. Tracked but not in current roadmap.
 
 ---
 *Requirements defined: 2026-02-06*
-*Last updated: 2026-02-06 after Phase 57 completion*
+*Last updated: 2026-02-07 after Phase 58.3 completion*

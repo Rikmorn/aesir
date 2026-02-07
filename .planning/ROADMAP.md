@@ -26,7 +26,7 @@ Decimal phases execute between their surrounding integers in numeric order.
 - [x] **Phase 57: Conversation Reopening** - Enable completed/failed conversations to receive reopen signals and resume
 - [x] **Phase 58.1: Task Schema and Service** - Task/handoff data model, TaskService, ToolContext rename, migration
 - [x] **Phase 58.2: Agent Task Tools** - Six task tools, registration, YAML wiring, context injection
-- [ ] **Phase 58.3: Integration Correlation** - Correlation tables per integration, MCP header, outgoing recording, incoming lookup
+- [x] **Phase 58.3: Integration Correlation** - Correlation tables per integration, MCP header, outgoing recording, incoming lookup
 - [ ] **Phase 58.4: Task-Aware Event Routing** - Task-based routing priority, advisory lock serialization, backward compatibility
 - [ ] **Phase 59: Prompt Evolution and Hierarchy Enforcement** - Update all agent prompts to leverage task lifecycle, add hierarchy guardrails (depth, subtask limits, circular delegation prevention)
 
@@ -101,10 +101,10 @@ Plans:
   4. The IncomingEvent schema includes an optional taskId field
 **Plans:** 4 plans
 Plans:
-- [ ] 58.3-01-PLAN.md -- Foundation: MCP X-Task-ID header propagation, task_correlations tables (3 integrations), IncomingEvent taskId
-- [ ] 58.3-02-PLAN.md -- Linear: outgoing correlation recording, incoming webhook lookup
-- [ ] 58.3-03-PLAN.md -- GitHub: outgoing correlation recording, incoming webhook lookup
-- [ ] 58.3-04-PLAN.md -- Slack: outgoing correlation recording, incoming event/interaction lookup
+- [x] 58.3-01-PLAN.md -- Foundation: MCP X-Task-ID header propagation, task_correlations tables (3 integrations), IncomingEvent taskId
+- [x] 58.3-02-PLAN.md -- Linear: outgoing correlation recording, incoming webhook lookup
+- [x] 58.3-03-PLAN.md -- GitHub: outgoing correlation recording, incoming webhook lookup
+- [x] 58.3-04-PLAN.md -- Slack: outgoing correlation recording, incoming event/interaction lookup
 
 ### Phase 58.4: Task-Aware Event Routing
 **Goal**: Incoming events with a task reference route to the correct task's conversation with serialization guarantees
@@ -147,10 +147,10 @@ Phase 57 (Reopening) ──> Phase 58.1 ──> 58.2 ──> 58.3 ──> 58.4 �
 | 57. Conversation Reopening | v2.5 | 11 | 2/2 | Complete | 2026-02-06 |
 | 58.1 Task Schema and Service | v2.5 | 13 | 2/2 | Complete | 2026-02-06 |
 | 58.2 Agent Task Tools | v2.5 | 10 | 3/3 | Complete | 2026-02-07 |
-| 58.3 Integration Correlation | v2.5 | 11 | 0/4 | Not started | - |
+| 58.3 Integration Correlation | v2.5 | 11 | 4/4 | Complete | 2026-02-07 |
 | 58.4 Task-Aware Event Routing | v2.5 | 6 | 0/TBD | Not started | - |
 | 59. Prompt Evolution + Hierarchy | v2.5 | 11 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-07 after Phase 58.3 planned (4 plans in 2 waves)*
+*Last updated: 2026-02-07 after Phase 58.3 complete (4 plans in 2 waves)*
