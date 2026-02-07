@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 58.3 of 59 (Integration Correlation)
-Plan: 2 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-07 -- Completed 58.3-02-PLAN.md (Linear integration correlation)
+Last activity: 2026-02-07 -- Completed 58.3-03-PLAN.md (GitHub integration correlation)
 
-Progress: [██░░] 50% (Phase 58.3: 2/4 plans complete)
+Progress: [███░] 75% (Phase 58.3: 3/4 plans complete)
 
 ## Milestone History
 
@@ -30,9 +30,9 @@ Progress: [██░░] 50% (Phase 58.3: 2/4 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
-- Average duration: 4m 31s
-- Total execution time: 50m 29s
+- Total plans completed: 12
+- Average duration: 4m 29s
+- Total execution time: 54m 09s
 
 ## Accumulated Context
 
@@ -64,6 +64,7 @@ See PROJECT.md Key Decisions table for full history.
 | INJECT-NONFATAL | Task context injection is non-fatal: failure logs error, conversation continues | 58.2-03 |
 | EXACT-OPTIONAL-TYPES | taskId uses `string | undefined` for exactOptionalPropertyTypes compat | 58.3-01 |
 | PAYLOAD-TASKID-INJECT | taskId injected into NormalizedEvent.payload (not new schema field) to keep change contained | 58.3-02 |
+| DB-THREAD-WEBHOOK | db threaded through routes.ts to webhook router for correlation lookups | 58.3-03 |
 
 ### Pending Todos
 
@@ -77,10 +78,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-07T13:20Z
-Stopped at: Completed 58.3-02-PLAN.md (Linear integration correlation)
+Last session: 2026-02-07T13:21Z
+Stopped at: Completed 58.3-03-PLAN.md (GitHub integration correlation)
 Resume file: None
-Next action: Complete 58.3-03 (GitHub) and 58.3-04 (Slack) correlation plans
+Next action: Complete 58.3-04 (Slack) correlation plan
 
 ---
-*Updated: 2026-02-07 -- Phase 58.3 plan 02 complete (Linear bidirectional task correlation: MCP recording + webhook lookup)*
+*Updated: 2026-02-07 -- Phase 58.3 plan 03 complete (GitHub bidirectional task correlation: MCP recording + webhook lookup)*
