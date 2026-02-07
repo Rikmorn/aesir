@@ -227,6 +227,86 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
     }
   }
 
+  // ─── Task Context Builder ─────────────────────────────────────────────
+
+  /**
+   * Build the <task_context> XML block for injection into conversations.
+   * Two modes: metadata-only (no handoffs) or metadata + latest handoff.
+   * Per CONTEXT.md: always inject when task_id exists, truncate at 4000 chars,
+   * include get_task_context pointer only when truncated or multiple handoffs.
+   */
+  function buildTaskContextBlock(
+    task: {
+      id: string;
+      title: string;
+      objective: string | null;
+      status: string;
+      assignee_type: string;
+      assignee_id: string;
+    },
+    latestHandoff: TaskHandoff | null,
+    handoffCount: number,
+  ): string {
+    const lines: string[] = ["<task_context>"];
+    lines.push(`Task: ${task.id}`);
+    lines.push(`Title: ${task.title}`);
+    if (task.objective) lines.push(`Objective: ${task.objective}`);
+    lines.push(`Status: ${task.status}`);
+    lines.push(`Assignee: ${task.assignee_type}:${task.assignee_id}`);
+
+    if (!latestHandoff) {
+      lines.push("");
+      lines.push("No handoffs recorded yet.");
+      lines.push("</task_context>");
+      return lines.join("\n");
+    }
+
+    // Add latest handoff
+    lines.push("");
+    lines.push("--- Latest Handoff ---");
+    lines.push(`Type: ${latestHandoff.handoff_type}`);
+    lines.push(`Author: ${latestHandoff.author_type}:${latestHandoff.author_id}`);
+    lines.push(`Date: ${latestHandoff.created_at.toISOString()}`);
+
+    // Format handoff context fields
+    const ctx = latestHandoff.context as Record<string, unknown>;
+    if (ctx.summary) lines.push(`Summary: ${ctx.summary}`);
+    if (Array.isArray(ctx.key_decisions) && ctx.key_decisions.length > 0) {
+      lines.push("Key Decisions:");
+      for (const d of ctx.key_decisions) lines.push(`  - ${d}`);
+    }
+    if (
+      ctx.artifacts &&
+      typeof ctx.artifacts === "object" &&
+      Object.keys(ctx.artifacts as object).length > 0
+    ) {
+      lines.push(`Artifacts: ${JSON.stringify(ctx.artifacts)}`);
+    }
+    if (Array.isArray(ctx.open_questions) && ctx.open_questions.length > 0) {
+      lines.push("Open Questions:");
+      for (const q of ctx.open_questions) lines.push(`  - ${q}`);
+    }
+    if (ctx.next_steps) lines.push(`Next Steps: ${ctx.next_steps}`);
+
+    // Check total length and apply truncation
+    const closingTag = "</task_context>";
+    let block = lines.join("\n");
+    const MAX_CHARS = 4000;
+
+    if (block.length + closingTag.length + 1 > MAX_CHARS) {
+      // Truncate and add pointer
+      const truncateAt = MAX_CHARS - closingTag.length - 80; // room for truncation note
+      block = block.slice(0, truncateAt);
+      block += "\n...\n[Truncated -- call get_task_context for full history]";
+    } else if (handoffCount > 1) {
+      // Not truncated but multiple handoffs exist -- add pointer
+      block += `\n\n${handoffCount} total handoffs. Call get_task_context for full history.`;
+    }
+
+    block += `\n${closingTag}`;
+    return block;
+  }
+
   // State
   let draining = false;
   let started = false;
@@ -439,6 +519,71 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
               initialContext,
             },
       });
+
+      // 3b. Inject task context if conversation has a task (Phase 58.2, TASK-23)
+      if (conv.task_id && taskService) {
+        try {
+          const task = await taskService.get(conv.task_id);
+          if (task) {
+            const latestHandoff = await taskService.getLatestHandoff(
+              conv.task_id,
+            );
+            // Get handoff count for pointer logic
+            const allHandoffs = await taskService.getHandoffs(conv.task_id);
+            const handoffCount = allHandoffs.length;
+
+            const taskContextBlock = buildTaskContextBlock(
+              task,
+              latestHandoff,
+              handoffCount,
+            );
+
+            if (!isResumed && existingMessages.length > 0) {
+              // New conversation: insert task_context after workspace_context in first message
+              const firstMsg = existingMessages[0];
+              if (firstMsg && typeof firstMsg.content === "string") {
+                // Find the end of </workspace_context> if it exists, insert after it
+                const wsEnd = firstMsg.content.indexOf("</workspace_context>");
+                if (wsEnd >= 0) {
+                  const insertAt = wsEnd + "</workspace_context>".length;
+                  firstMsg.content =
+                    firstMsg.content.slice(0, insertAt) +
+                    "\n\n" +
+                    taskContextBlock +
+                    "\n\n" +
+                    firstMsg.content.slice(insertAt).replace(/^\n+/, "");
+                } else {
+                  // No workspace_context -- prepend task_context to the message
+                  firstMsg.content =
+                    taskContextBlock + "\n\n" + firstMsg.content;
+                }
+              }
+            } else if (isResumed) {
+              // Reopened/resumed conversation: append task_context as user message
+              // This goes alongside <world_state> at the reopen boundary
+              existingMessages.push({
+                role: "user" as const,
+                content: taskContextBlock,
+              });
+            }
+
+            childLogger.info(
+              {
+                taskId: conv.task_id,
+                hasHandoff: !!latestHandoff,
+                handoffCount,
+              },
+              "Task context injected",
+            );
+          }
+        } catch (taskErr) {
+          // Non-fatal: log and continue without task context
+          childLogger.error(
+            { err: taskErr, taskId: conv.task_id },
+            "Failed to inject task context (non-fatal)",
+          );
+        }
+      }
 
       // 4. Setup sandbox if agent uses codebase tools
       const needsSandbox = definition.tools.some((t) =>
