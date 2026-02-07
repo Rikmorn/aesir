@@ -16,6 +16,7 @@ import type { Request, RequestHandler, Response, Router } from "express";
 import { Router as createRouter } from "express";
 import rateLimit from "express-rate-limit";
 import type { GitHubCredentialStore } from "../db/credential-store.js";
+import { recordTaskCorrelation } from "../db/task-correlations.js";
 import {
   type FileToolDeps,
   handleGetFileContents,
@@ -349,12 +350,14 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
         (req.headers["x-correlation-id"] as string) ||
         generateCorrelationId("tool");
       const agentId = req.headers["x-agent-id"] as string;
+      const taskId = req.headers["x-task-id"] as string | undefined;
       const startTime = Date.now();
 
       const requestLogger = childLogger.child({
         correlationId,
         toolName: name,
         agentId,
+        ...(taskId && { taskId }),
       });
 
       if (!agentId) {
@@ -375,6 +378,7 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
           correlationId,
           agentId,
           startTime,
+          ...(taskId !== undefined && { taskId }),
         };
 
         const args = req.body;
@@ -388,14 +392,62 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
 
           case "create_branch":
             result = await handleCreateBranch(context, args, prDeps);
+            if (!result.isError && args && typeof args === "object") {
+              const {
+                owner: bOwner,
+                repo: bRepo,
+                branchName,
+              } = args as Record<string, string>;
+              if (bOwner && bRepo && branchName) {
+                recordTaskCorrelation(
+                  db,
+                  taskId,
+                  "branch",
+                  `${bOwner}/${bRepo}:${branchName}`,
+                  requestLogger,
+                ).catch(() => {});
+              }
+            }
             break;
 
           case "create_commit":
             result = await handleCreateCommit(context, args, prDeps);
+            if (!result.isError) {
+              const commitData = result.structuredContent as
+                | { sha?: string }
+                | undefined;
+              if (commitData?.sha) {
+                recordTaskCorrelation(
+                  db,
+                  taskId,
+                  "commit",
+                  commitData.sha,
+                  requestLogger,
+                ).catch(() => {});
+              }
+            }
             break;
 
           case "create_pull_request":
             result = await handleCreatePR(context, args, prDeps);
+            if (!result.isError && args && typeof args === "object") {
+              const prData = result.structuredContent as
+                | { number?: number }
+                | undefined;
+              const { owner: prOwner, repo: prRepo } = args as Record<
+                string,
+                string
+              >;
+              if (prData?.number && prOwner && prRepo) {
+                recordTaskCorrelation(
+                  db,
+                  taskId,
+                  "pull_request",
+                  `${prOwner}/${prRepo}#${prData.number}`,
+                  requestLogger,
+                ).catch(() => {});
+              }
+            }
             break;
 
           case "get_pull_request":

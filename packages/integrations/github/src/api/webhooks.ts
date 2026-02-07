@@ -10,8 +10,10 @@
 
 import { createHash } from "node:crypto";
 import type { PinoLogger } from "@aesir/platform";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { Request, Response } from "express";
 import { Router } from "express";
+import { lookupTaskCorrelation } from "../db/task-correlations.js";
 import type { WebhookDeliveryStore } from "../db/webhook-delivery-store.js";
 import {
   createDispatcher,
@@ -29,6 +31,7 @@ import { verifySignature } from "../webhooks/signature.js";
 
 export interface WebhookRouterDeps {
   logger: PinoLogger;
+  db: NodePgDatabase;
   deliveryStore: WebhookDeliveryStore;
   onPRReview?: (payload: PRReviewPayload, deliveryId: string) => Promise<void>;
   onPRClosed?: (payload: PRClosedPayload, deliveryId: string) => Promise<void>;
@@ -44,7 +47,7 @@ export interface WebhookRouterDeps {
  * @returns Express router with POST / endpoint
  */
 export function createWebhookRouter(deps: WebhookRouterDeps): Router {
-  const { logger, deliveryStore, onPRReview, onPRClosed } = deps;
+  const { logger, db, deliveryStore, onPRReview, onPRClosed } = deps;
 
   const router = Router();
 
@@ -149,6 +152,20 @@ export function createWebhookRouter(deps: WebhookRouterDeps): Router {
 
         // Normalize and dispatch event (fire-and-forget)
         const normalizedEvent = normalizePRReviewEvent(payload, deliveryId);
+
+        // Look up task correlation for the PR
+        const prRef = `${payload.repository.owner.login}/${payload.repository.name}#${payload.pull_request.number}`;
+        const reviewTaskId = await lookupTaskCorrelation(
+          db,
+          "pull_request",
+          prRef,
+          childLogger,
+        );
+        if (reviewTaskId) {
+          (normalizedEvent.payload as Record<string, unknown>).taskId =
+            reviewTaskId;
+        }
+
         dispatcher.dispatch(normalizedEvent);
 
         childLogger.info(
@@ -157,6 +174,7 @@ export function createWebhookRouter(deps: WebhookRouterDeps): Router {
             prNumber: payload.pull_request.number,
             reviewState: payload.review.state,
             eventId: normalizedEvent.id,
+            ...(reviewTaskId && { taskId: reviewTaskId }),
           },
           "PR review webhook processed and event dispatched",
         );
@@ -193,6 +211,20 @@ export function createWebhookRouter(deps: WebhookRouterDeps): Router {
                 prPayload,
                 deliveryId,
               );
+
+              // Look up task correlation for the PR
+              const closedPrRef = `${prPayload.repository.owner.login}/${prPayload.repository.name}#${prPayload.pull_request.number}`;
+              const closedTaskId = await lookupTaskCorrelation(
+                db,
+                "pull_request",
+                closedPrRef,
+                childLogger,
+              );
+              if (closedTaskId) {
+                (normalizedEvent.payload as Record<string, unknown>).taskId =
+                  closedTaskId;
+              }
+
               dispatcher.dispatch(normalizedEvent);
 
               childLogger.info(
@@ -201,6 +233,7 @@ export function createWebhookRouter(deps: WebhookRouterDeps): Router {
                   merged: prPayload.pull_request.merged,
                   eventId: normalizedEvent.id,
                   eventType: normalizedEvent.type,
+                  ...(closedTaskId && { taskId: closedTaskId }),
                 },
                 "PR closed event dispatched",
               );

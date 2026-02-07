@@ -40,6 +40,7 @@ export async function startServer(): Promise<void> {
   // CRITICAL: Raw body middleware preserves the body for HMAC verification
   const routes = createRoutes({
     logger,
+    db,
     credentialStore,
     deliveryStore,
     clientId: config.github.clientId,

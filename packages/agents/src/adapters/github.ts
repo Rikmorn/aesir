@@ -35,6 +35,7 @@ export function adaptGitHubEvent(event: NormalizedEvent): IncomingEvent | null {
   if (event.source !== "github") return null;
 
   const payload = event.payload as Record<string, unknown>;
+  const taskId = payload.taskId as string | undefined;
 
   switch (event.type) {
     case "github.pull_request.merged": {
@@ -49,6 +50,7 @@ export function adaptGitHubEvent(event: NormalizedEvent): IncomingEvent | null {
         correlationKey: branchMatch[1],
         deduplicationId: event.correlationId,
         message: `PR #${prNumber} (${branchName}) was merged into main.`,
+        ...(taskId !== undefined && { taskId }),
       };
     }
 
@@ -64,6 +66,7 @@ export function adaptGitHubEvent(event: NormalizedEvent): IncomingEvent | null {
         correlationKey: branchMatch[1],
         deduplicationId: event.correlationId,
         message: `PR #${prNumber} (${branchName}) was closed without merging.`,
+        ...(taskId !== undefined && { taskId }),
       };
     }
 
@@ -85,6 +88,7 @@ export function adaptGitHubEvent(event: NormalizedEvent): IncomingEvent | null {
         // No correlationKey -- PR reviews don't include branchName, always goes to slow_path
         deduplicationId: event.correlationId,
         message: `PR #${prNumber} review (${payload.reviewState}): ${(payload.reviewBody as string) || "(no comment)"}`,
+        ...(taskId !== undefined && { taskId }),
       };
     }
 

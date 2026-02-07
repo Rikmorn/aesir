@@ -5,6 +5,7 @@
  */
 
 import { createHttpLogger, type PinoLogger } from "@aesir/platform";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Router } from "express";
 import type { GitHubCredentialStore } from "../db/credential-store.js";
 import type { WebhookDeliveryStore } from "../db/webhook-delivery-store.js";
@@ -14,6 +15,7 @@ import { createWebhookRouter } from "./webhooks.js";
 
 export interface CreateRoutesDeps {
   logger: PinoLogger;
+  db: NodePgDatabase;
   credentialStore: GitHubCredentialStore;
   deliveryStore: WebhookDeliveryStore;
   clientId: string;
@@ -36,6 +38,7 @@ export interface CreateRoutesDeps {
 export function createRoutes(deps: CreateRoutesDeps): Router {
   const {
     logger,
+    db,
     credentialStore,
     deliveryStore,
     clientId,
@@ -54,6 +57,7 @@ export function createRoutes(deps: CreateRoutesDeps): Router {
   // biome-ignore lint/suspicious/noExplicitAny: Conditional property assignment for exactOptionalPropertyTypes
   const webhookDeps: any = {
     logger,
+    db,
     deliveryStore,
   };
 
