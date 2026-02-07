@@ -9,8 +9,10 @@
  */
 
 import type { PinoLogger } from "@aesir/platform";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { Request, Response } from "express";
 import { Router } from "express";
+import { lookupTaskCorrelation } from "../db/task-correlations.js";
 import {
   createDispatcher,
   DISPATCH_ROUTES,
@@ -30,6 +32,7 @@ import type { AgentSessionPayload } from "../webhooks/types.js";
 
 export interface WebhookRouterDeps {
   logger: PinoLogger;
+  db: NodePgDatabase;
   onAgentSession?: (payload: AgentSessionPayload) => Promise<void>;
 }
 
@@ -43,7 +46,7 @@ export interface WebhookRouterDeps {
  * @returns Express router with POST /webhook endpoint
  */
 export function createWebhookRouter(deps: WebhookRouterDeps): Router {
-  const { logger, onAgentSession } = deps;
+  const { logger, db, onAgentSession } = deps;
 
   // Create dispatcher for event routing
   const dispatcher = createDispatcher({
@@ -138,6 +141,19 @@ export function createWebhookRouter(deps: WebhookRouterDeps): Router {
           commentPayload,
           deliveryId,
         );
+
+        // Look up task correlation for the issue (non-fatal)
+        const commentTaskId = await lookupTaskCorrelation(
+          db,
+          "issue",
+          commentPayload.data.issueId,
+          childLogger,
+        );
+        if (commentTaskId) {
+          (normalizedEvent.payload as Record<string, unknown>).taskId =
+            commentTaskId;
+        }
+
         dispatcher.dispatch(normalizedEvent);
 
         childLogger.info(
@@ -145,6 +161,7 @@ export function createWebhookRouter(deps: WebhookRouterDeps): Router {
             commentId: commentPayload.data.id,
             issueId: commentPayload.data.issueId,
             eventId: normalizedEvent.id,
+            ...(commentTaskId && { taskId: commentTaskId }),
           },
           "Comment created event dispatched",
         );
@@ -195,6 +212,19 @@ export function createWebhookRouter(deps: WebhookRouterDeps): Router {
           payload as AgentSessionPayload,
           deliveryId,
         );
+
+        // Look up task correlation for the issue (non-fatal)
+        const sessionTaskId = await lookupTaskCorrelation(
+          db,
+          "issue",
+          payload.agentSession.issueId,
+          childLogger,
+        );
+        if (sessionTaskId) {
+          (normalizedEvent.payload as Record<string, unknown>).taskId =
+            sessionTaskId;
+        }
+
         dispatcher.dispatch(normalizedEvent);
 
         childLogger.info(
@@ -202,6 +232,7 @@ export function createWebhookRouter(deps: WebhookRouterDeps): Router {
             action: payload.action,
             sessionId: payload.agentSession.id,
             eventId: normalizedEvent.id,
+            ...(sessionTaskId && { taskId: sessionTaskId }),
           },
           "AgentSession webhook processed and event dispatched",
         );

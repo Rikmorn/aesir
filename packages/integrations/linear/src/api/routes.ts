@@ -5,6 +5,7 @@
  */
 
 import type { PinoLogger } from "@aesir/platform";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Router } from "express";
 import type { AgentSessionPayload } from "../webhooks/types.js";
 import { createOAuthRouter } from "./oauth.js";
@@ -12,6 +13,7 @@ import { createWebhookRouter } from "./webhooks.js";
 
 export interface CreateRoutesDeps {
   logger: PinoLogger;
+  db: NodePgDatabase;
   onAgentSession?: (payload: AgentSessionPayload) => Promise<void>;
 }
 
@@ -26,7 +28,7 @@ export interface CreateRoutesDeps {
  * @returns Express router with all routes
  */
 export function createRoutes(deps: CreateRoutesDeps): Router {
-  const { logger, onAgentSession } = deps;
+  const { logger, db, onAgentSession } = deps;
 
   const router = Router();
 
@@ -34,8 +36,9 @@ export function createRoutes(deps: CreateRoutesDeps): Router {
   // Build webhook deps conditionally for exactOptionalPropertyTypes
   const webhookDeps: {
     logger: PinoLogger;
+    db: NodePgDatabase;
     onAgentSession?: (payload: AgentSessionPayload) => Promise<void>;
-  } = { logger };
+  } = { logger, db };
 
   if (onAgentSession !== undefined) {
     webhookDeps.onAgentSession = onAgentSession;

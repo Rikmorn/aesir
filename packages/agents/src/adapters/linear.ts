@@ -25,6 +25,7 @@ export function adaptLinearEvent(event: NormalizedEvent): IncomingEvent | null {
   if (event.source !== "linear") return null;
 
   const payload = event.payload as Record<string, unknown>;
+  const taskId = payload.taskId as string | undefined;
 
   switch (event.type) {
     case "linear.agent_session.created": {
@@ -36,6 +37,7 @@ export function adaptLinearEvent(event: NormalizedEvent): IncomingEvent | null {
         correlationKey: issueId,
         deduplicationId: event.correlationId,
         message: `New agent session created for issue ${issueId}`,
+        ...(taskId !== undefined && { taskId }),
       };
     }
 
@@ -70,6 +72,7 @@ export function adaptLinearEvent(event: NormalizedEvent): IncomingEvent | null {
         correlationKey: issueId,
         deduplicationId: event.correlationId,
         message: payload.body as string,
+        ...(taskId !== undefined && { taskId }),
       };
     }
 
@@ -85,6 +88,7 @@ export function adaptLinearEvent(event: NormalizedEvent): IncomingEvent | null {
         correlationKey: issueId,
         deduplicationId: event.correlationId,
         message: (payload.prompt ?? payload.body) as string,
+        ...(taskId !== undefined && { taskId }),
       };
     }
 

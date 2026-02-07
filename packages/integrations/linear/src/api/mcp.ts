@@ -15,6 +15,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { Request, RequestHandler, Response, Router } from "express";
 import { Router as createRouter } from "express";
 import rateLimit from "express-rate-limit";
+import { recordTaskCorrelation } from "../db/task-correlations.js";
 import {
   handleCreateComment,
   handleCreateIssue,
@@ -261,12 +262,14 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
         (req.headers["x-correlation-id"] as string) ||
         generateCorrelationId("tool");
       const agentId = req.headers["x-agent-id"] as string;
+      const taskId = req.headers["x-task-id"] as string | undefined;
       const startTime = Date.now();
 
       const requestLogger = childLogger.child({
         correlationId,
         toolName: name,
         agentId,
+        ...(taskId && { taskId }),
       });
 
       if (!agentId) {
@@ -287,6 +290,7 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
           correlationId,
           agentId,
           startTime,
+          ...(taskId !== undefined && { taskId }),
         };
 
         const args = req.body;
@@ -300,6 +304,20 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
 
           case "create_issue":
             result = await handleCreateIssue(context, args, issueToolDeps);
+            if (!result.isError) {
+              const data = result.structuredContent as
+                | { id: string }
+                | undefined;
+              if (data?.id) {
+                recordTaskCorrelation(
+                  db,
+                  taskId,
+                  "issue",
+                  data.id,
+                  requestLogger,
+                ).catch(() => {});
+              }
+            }
             break;
 
           case "update_issue_status":
@@ -320,6 +338,20 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
 
           case "create_comment":
             result = await handleCreateComment(context, args, issueToolDeps);
+            if (!result.isError) {
+              const data = result.structuredContent as
+                | { id: string }
+                | undefined;
+              if (data?.id) {
+                recordTaskCorrelation(
+                  db,
+                  taskId,
+                  "comment",
+                  data.id,
+                  requestLogger,
+                ).catch(() => {});
+              }
+            }
             break;
 
           case "search_issues":

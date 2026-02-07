@@ -29,6 +29,7 @@ async function main() {
   // CRITICAL: Raw body middleware preserves the body for HMAC verification
   const routes = createRoutes({
     logger,
+    db,
     // Optional: Add onAgentSession handler for webhook processing
     // onAgentSession: async (payload) => {
     //   logger.info({ sessionId: payload.agentSession.id }, "Agent session event");
