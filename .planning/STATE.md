@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 58.3 of 59 (Integration Correlation)
-Plan: 1 of 4 in current phase
+Plan: 2 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-07 -- Completed 58.3-01-PLAN.md (shared correlation infrastructure)
+Last activity: 2026-02-07 -- Completed 58.3-02-PLAN.md (Linear integration correlation)
 
-Progress: [█░░░] 25% (Phase 58.3: 1/4 plans complete)
+Progress: [██░░] 50% (Phase 58.3: 2/4 plans complete)
 
 ## Milestone History
 
@@ -30,9 +30,9 @@ Progress: [█░░░] 25% (Phase 58.3: 1/4 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
-- Average duration: 4m 38s
-- Total execution time: 47m 07s
+- Total plans completed: 11
+- Average duration: 4m 31s
+- Total execution time: 50m 29s
 
 ## Accumulated Context
 
@@ -63,6 +63,7 @@ See PROJECT.md Key Decisions table for full history.
 | INLINE-CLOSURE-REG | Task tools use inline closure pattern with captured ts variable for registration | 58.2-02 |
 | INJECT-NONFATAL | Task context injection is non-fatal: failure logs error, conversation continues | 58.2-03 |
 | EXACT-OPTIONAL-TYPES | taskId uses `string | undefined` for exactOptionalPropertyTypes compat | 58.3-01 |
+| PAYLOAD-TASKID-INJECT | taskId injected into NormalizedEvent.payload (not new schema field) to keep change contained | 58.3-02 |
 
 ### Pending Todos
 
@@ -76,10 +77,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-07T13:13Z
-Stopped at: Completed 58.3-01-PLAN.md (shared correlation infrastructure)
+Last session: 2026-02-07T13:20Z
+Stopped at: Completed 58.3-02-PLAN.md (Linear integration correlation)
 Resume file: None
-Next action: Execute 58.3-02 through 58.3-04 (integration-specific correlation recording)
+Next action: Complete 58.3-03 (GitHub) and 58.3-04 (Slack) correlation plans
 
 ---
-*Updated: 2026-02-07 -- Phase 58.3 plan 01 complete (shared infrastructure: MCP header, task_correlations tables, IncomingEvent extension)*
+*Updated: 2026-02-07 -- Phase 58.3 plan 02 complete (Linear bidirectional task correlation: MCP recording + webhook lookup)*
