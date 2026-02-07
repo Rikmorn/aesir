@@ -56,7 +56,7 @@ function getMcpUrl(integration: McpIntegration): string {
 export async function callMcpTool<T = unknown>(
   options: McpCallOptions,
 ): Promise<T> {
-  const { integration, tool, params, agentId, correlationId } = options;
+  const { integration, tool, params, agentId, correlationId, taskId } = options;
 
   // Build URL
   const baseUrl = getMcpUrl(integration);
@@ -69,6 +69,7 @@ export async function callMcpTool<T = unknown>(
       "Content-Type": "application/json",
       "X-Agent-ID": agentId,
       "X-Correlation-ID": correlationId,
+      ...(taskId && { "X-Task-ID": taskId }),
     },
     body: JSON.stringify(params),
     // Retry configuration: exponential backoff (1s, 2s, 4s) up to 3 retries

@@ -32,6 +32,8 @@ export interface MCPToolContext {
   correlationId: string;
   /** Agent ID from X-Agent-ID header (for permission checks) */
   agentId: string;
+  /** Task ID from X-Task-ID header (v2.5 task correlation) */
+  taskId?: string;
   /** Request start time for duration calculation */
   startTime: number;
 }

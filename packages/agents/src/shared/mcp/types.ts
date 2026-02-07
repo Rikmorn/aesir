@@ -28,6 +28,8 @@ export interface McpCallOptions {
   agentId: string;
   /** Correlation ID for distributed tracing */
   correlationId: string;
+  /** Task ID from conversation's associated task (v2.5 task primitive) */
+  taskId?: string | undefined;
 }
 
 /**

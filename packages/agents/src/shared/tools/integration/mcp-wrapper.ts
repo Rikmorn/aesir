@@ -24,6 +24,8 @@ export interface McpToolDeps {
   agentId: string;
   /** Correlation ID for distributed tracing across MCP calls */
   correlationId: string;
+  /** Task ID from conversation's associated task (v2.5 task primitive) */
+  taskId?: string | undefined;
 }
 
 /**
@@ -77,6 +79,7 @@ export function createMcpToolWrapper(
           params: parsed.data as Record<string, unknown>,
           agentId: deps.agentId,
           correlationId: deps.correlationId,
+          taskId: deps.taskId,
         });
         return { content: JSON.stringify(result, null, 2) };
       } catch (error) {

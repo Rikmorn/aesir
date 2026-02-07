@@ -105,6 +105,7 @@ function mcpAdapter(
     const allTools = createFn({
       agentId: ctx.agentId,
       correlationId: ctx.correlationId,
+      taskId: ctx.taskId,
     });
     const tool = allTools.find((t) => t.name === displayName);
     if (!tool) {
