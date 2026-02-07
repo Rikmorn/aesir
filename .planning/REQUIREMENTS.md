@@ -76,12 +76,12 @@
 
 ### Event Routing
 
-- [ ] **ROUTE-01**: Task-based routing priority: task reference → fast-path start → reasoning path
-- [ ] **ROUTE-02**: When task has active/waiting conversation: deliver event as signal (serialized)
-- [ ] **ROUTE-03**: When task has no active conversation: create new conversation in task with most recent handoff as context
-- [ ] **ROUTE-04**: Task-scoped conversations use correlationKey including task ID + triggering event ID
-- [ ] **ROUTE-05**: Task-level event serialization via PostgreSQL advisory locks (`pg_advisory_xact_lock`)
-- [ ] **ROUTE-06**: Backward compatibility: events without task reference route through existing fast-path/slow-path unchanged
+- [x] **ROUTE-01**: Task-based routing priority: task reference → fast-path start → reasoning path
+- [x] **ROUTE-02**: When task has active/waiting conversation: deliver event as signal (serialized)
+- [x] **ROUTE-03**: When task has no active conversation: create new conversation in task with most recent handoff as context
+- [x] **ROUTE-04**: Task-scoped conversations use correlationKey including task ID + triggering event ID
+- [x] **ROUTE-05**: Task-level event serialization via PostgreSQL advisory locks (`pg_advisory_xact_lock`)
+- [x] **ROUTE-06**: Backward compatibility: events without task reference route through existing fast-path/slow-path unchanged
 
 ### Prompt Evolution
 
@@ -193,12 +193,12 @@ Deferred to post-v2.5 milestones. Tracked but not in current roadmap.
 | CORR-09 | Phase 58.3 | Complete |
 | CORR-10 | Phase 58.3 | Complete |
 | CORR-11 | Phase 58.3 | Complete |
-| ROUTE-01 | Phase 58.4 | Pending |
-| ROUTE-02 | Phase 58.4 | Pending |
-| ROUTE-03 | Phase 58.4 | Pending |
-| ROUTE-04 | Phase 58.4 | Pending |
-| ROUTE-05 | Phase 58.4 | Pending |
-| ROUTE-06 | Phase 58.4 | Pending |
+| ROUTE-01 | Phase 58.4 | Complete |
+| ROUTE-02 | Phase 58.4 | Complete |
+| ROUTE-03 | Phase 58.4 | Complete |
+| ROUTE-04 | Phase 58.4 | Complete |
+| ROUTE-05 | Phase 58.4 | Complete |
+| ROUTE-06 | Phase 58.4 | Complete |
 | EVOL-01 | Phase 59 | Pending |
 | EVOL-02 | Phase 59 | Pending |
 | EVOL-03 | Phase 59 | Pending |

@@ -27,7 +27,7 @@ Decimal phases execute between their surrounding integers in numeric order.
 - [x] **Phase 58.1: Task Schema and Service** - Task/handoff data model, TaskService, ToolContext rename, migration
 - [x] **Phase 58.2: Agent Task Tools** - Six task tools, registration, YAML wiring, context injection
 - [x] **Phase 58.3: Integration Correlation** - Correlation tables per integration, MCP header, outgoing recording, incoming lookup
-- [ ] **Phase 58.4: Task-Aware Event Routing** - Task-based routing priority, advisory lock serialization, backward compatibility
+- [x] **Phase 58.4: Task-Aware Event Routing** - Task-based routing priority, advisory lock serialization, backward compatibility
 - [ ] **Phase 59: Prompt Evolution and Hierarchy Enforcement** - Update all agent prompts to leverage task lifecycle, add hierarchy guardrails (depth, subtask limits, circular delegation prevention)
 
 ## Phase Details
@@ -117,8 +117,8 @@ Plans:
   4. Events without a task reference continue to route through the existing fast-path/slow-path unchanged -- zero regression for non-task workflows
 **Plans:** 2 plans
 Plans:
-- [ ] 58.4-01-PLAN.md -- Executor taskId support, findActiveForTask, enrichment helper extraction
-- [ ] 58.4-02-PLAN.md -- routeViaTask implementation, advisory locks, main.ts wiring, tests
+- [x] 58.4-01-PLAN.md -- Executor taskId support, findActiveForTask, enrichment helper extraction
+- [x] 58.4-02-PLAN.md -- routeViaTask implementation, advisory locks, main.ts wiring, tests
 
 ### Phase 59: Prompt Evolution and Hierarchy Enforcement
 **Goal**: Agents naturally think in terms of tasks, write high-quality handoffs, delegate via subtasks with guardrails, enabling multi-conversation continuity without framework-imposed structure
@@ -151,9 +151,9 @@ Phase 57 (Reopening) ──> Phase 58.1 ──> 58.2 ──> 58.3 ──> 58.4 �
 | 58.1 Task Schema and Service | v2.5 | 13 | 2/2 | Complete | 2026-02-06 |
 | 58.2 Agent Task Tools | v2.5 | 10 | 3/3 | Complete | 2026-02-07 |
 | 58.3 Integration Correlation | v2.5 | 11 | 4/4 | Complete | 2026-02-07 |
-| 58.4 Task-Aware Event Routing | v2.5 | 6 | 0/2 | Not started | - |
+| 58.4 Task-Aware Event Routing | v2.5 | 6 | 2/2 | Complete | 2026-02-07 |
 | 59. Prompt Evolution + Hierarchy | v2.5 | 11 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-07 after Phase 58.4 planned (2 plans in 2 waves)*
+*Last updated: 2026-02-07 after Phase 58.4 complete (2 plans in 2 waves)*
