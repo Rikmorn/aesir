@@ -20,11 +20,13 @@ import type { IncomingEvent } from "./types.js";
  * @returns IncomingEvent with the original event type and payload
  */
 export function adaptPassThrough(event: NormalizedEvent): IncomingEvent {
+  const payload = (event.payload as Record<string, unknown>) ?? {};
   return {
     type: event.type,
-    data: (event.payload as Record<string, unknown>) ?? {},
+    data: payload,
     source: `${event.source}:webhook`,
     // No correlationKey -- always goes to slow_path
     deduplicationId: event.correlationId,
+    ...(typeof payload.taskId === "string" && { taskId: payload.taskId }),
   };
 }
