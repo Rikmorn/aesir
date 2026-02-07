@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.5 Agentic Conversations -- Phase 58.4 in progress
+**Current focus:** v2.5 Agentic Conversations -- Phase 58.4 complete, Phase 59 next
 
 ## Current Position
 
 Phase: 58.4 of 59 (Task-Aware Event Routing)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-07 -- Completed 58.4-01-PLAN.md
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-07 -- Completed 58.4-02-PLAN.md
 
-Progress: [█░] 50% (Phase 58.4: 1/2 plans complete)
+Progress: [██████████████░░] 88% (v2.5: Phases 56-58.4 complete, Phase 59 remaining)
 
 ## Milestone History
 
@@ -30,9 +30,9 @@ Progress: [█░] 50% (Phase 58.4: 1/2 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
-- Average duration: 4m 24s
-- Total execution time: 61m 45s
+- Total plans completed: 15
+- Average duration: 4m 40s
+- Total execution time: 72m 45s
 
 ## Accumulated Context
 
@@ -67,6 +67,9 @@ See PROJECT.md Key Decisions table for full history.
 | DB-THREAD-WEBHOOK | db threaded through routes.ts to webhook router for correlation lookups | 58.3-03 |
 | SLACK-CHANNEL-TS-KEY | Slack correlations use channelId:ts composite format matching Slack's message identifier | 58.3-04 |
 | ENRICHMENT-SUBSET-IFACE | EnrichmentDeps uses subset interface pattern to decouple enrichment from full RouteEventDeps | 58.4-01 |
+| OPTIONAL-DEPS-GUARD | RouteEventDeps taskService/db optional with explicit triple guard for backward compat | 58.4-02 |
+| ADVISORY-LOCK-HASHTEXT | Advisory lock uses pg_advisory_xact_lock(hashtext(taskId)) for string-to-int conversion | 58.4-02 |
+| FALLTHROUGH-STRIP-TASKID | Failed task routing strips taskId from event before EventRouter to prevent orphaned references | 58.4-02 |
 
 ### Pending Todos
 
@@ -80,10 +83,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-07T22:36Z
-Stopped at: Completed 58.4-01-PLAN.md
+Last session: 2026-02-07T22:52Z
+Stopped at: Completed 58.4-02-PLAN.md (Phase 58.4 complete)
 Resume file: None
-Next action: Execute 58.4-02-PLAN.md (task-aware routing logic)
+Next action: Begin Phase 59 (agent prompt evolution for task lifecycle)
 
 ---
-*Updated: 2026-02-07 -- Phase 58.4 plan 01 complete (taskId on INSERT, findActiveForTask, enrichment helper)*
+*Updated: 2026-02-07 -- Phase 58.4 complete (task-aware event routing with advisory lock serialization)*
