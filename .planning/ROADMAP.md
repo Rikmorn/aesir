@@ -99,7 +99,12 @@ Plans:
   2. X-Task-ID header is added to MCP calls when the conversation has a task, and each integration records the correlation on outgoing tool calls (fire-and-forget)
   3. Each integration performs correlation lookup on incoming webhooks and attaches task_id to the event before forwarding
   4. The IncomingEvent schema includes an optional taskId field
-**Plans**: TBD
+**Plans:** 4 plans
+Plans:
+- [ ] 58.3-01-PLAN.md -- Foundation: MCP X-Task-ID header propagation, task_correlations tables (3 integrations), IncomingEvent taskId
+- [ ] 58.3-02-PLAN.md -- Linear: outgoing correlation recording, incoming webhook lookup
+- [ ] 58.3-03-PLAN.md -- GitHub: outgoing correlation recording, incoming webhook lookup
+- [ ] 58.3-04-PLAN.md -- Slack: outgoing correlation recording, incoming event/interaction lookup
 
 ### Phase 58.4: Task-Aware Event Routing
 **Goal**: Incoming events with a task reference route to the correct task's conversation with serialization guarantees
@@ -142,10 +147,10 @@ Phase 57 (Reopening) ──> Phase 58.1 ──> 58.2 ──> 58.3 ──> 58.4 �
 | 57. Conversation Reopening | v2.5 | 11 | 2/2 | Complete | 2026-02-06 |
 | 58.1 Task Schema and Service | v2.5 | 13 | 2/2 | Complete | 2026-02-06 |
 | 58.2 Agent Task Tools | v2.5 | 10 | 3/3 | Complete | 2026-02-07 |
-| 58.3 Integration Correlation | v2.5 | 11 | 0/TBD | Not started | - |
+| 58.3 Integration Correlation | v2.5 | 11 | 0/4 | Not started | - |
 | 58.4 Task-Aware Event Routing | v2.5 | 6 | 0/TBD | Not started | - |
 | 59. Prompt Evolution + Hierarchy | v2.5 | 11 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-07 after Phase 58.2 complete (3/3 plans)*
+*Last updated: 2026-02-07 after Phase 58.3 planned (4 plans in 2 waves)*
