@@ -33,6 +33,8 @@ export const IncomingEventSchema = z.object({
   deduplicationId: z.string().optional(),
   /** Human-readable description for agent context on resume */
   message: z.string().optional(),
+  /** Task ID from correlation lookup (v2.5 task primitive) */
+  taskId: z.string().optional(),
 });
 
 /** Validated IncomingEvent type inferred from the Zod schema */

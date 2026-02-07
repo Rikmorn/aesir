@@ -11,6 +11,7 @@ import {
   boolean,
   index,
   pgSchema,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -128,5 +129,24 @@ export const mcpToolPermissions = slackSchema.table(
       table.agentId,
       table.toolName,
     ),
+  ],
+);
+
+/**
+ * Task Correlations
+ * Maps external integration resources to v2.5 task IDs.
+ */
+export const taskCorrelations = slackSchema.table(
+  "task_correlations",
+  {
+    external_type: text("external_type").notNull(),
+    external_ref: text("external_ref").notNull(),
+    task_id: text("task_id").notNull(),
+    created_at: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.external_type, table.external_ref] }),
   ],
 );

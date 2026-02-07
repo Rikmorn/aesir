@@ -14,6 +14,7 @@ import {
   boolean,
   index,
   pgSchema,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -150,6 +151,29 @@ export const mcpToolPermissions = slackSchema.table(
   ],
 );
 
+/**
+ * Task Correlations
+ *
+ * Maps external integration resources (channels, messages, threads) to v2.5 task IDs.
+ * Used for reverse-lookup: when a webhook arrives for an external resource,
+ * find which task created it to attach task context to the IncomingEvent.
+ */
+export const taskCorrelations = slackSchema.table(
+  "task_correlations",
+  {
+    external_type: text("external_type").notNull(),
+    external_ref: text("external_ref").notNull(),
+    task_id: text("task_id").notNull(),
+    created_at: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    // Composite primary key
+    primaryKey({ columns: [table.external_type, table.external_ref] }),
+  ],
+);
+
 // Type exports
 export type Installation = typeof installations.$inferSelect;
 export type NewInstallation = typeof installations.$inferInsert;
@@ -157,3 +181,5 @@ export type EventDelivery = typeof eventDeliveries.$inferSelect;
 export type NewEventDelivery = typeof eventDeliveries.$inferInsert;
 export type McpToolPermission = typeof mcpToolPermissions.$inferSelect;
 export type NewMcpToolPermission = typeof mcpToolPermissions.$inferInsert;
+export type TaskCorrelation = typeof taskCorrelations.$inferSelect;
+export type NewTaskCorrelation = typeof taskCorrelations.$inferInsert;
