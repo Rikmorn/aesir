@@ -84,7 +84,11 @@ Plans:
   1. An agent can call create_task, complete_task, pause_task, handoff_task, list_tasks, and get_task_context -- all six tools registered under the task: namespace and added to agent definition YAML files
   2. create_task supports optional parent_id for subtask creation (parent-child hierarchy via FK)
   3. When a conversation has a task_id, the worker loop auto-injects a task_context block containing the most recent handoff (truncated at 4000 chars with a pointer to get_task_context for full history)
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 58.2-01-PLAN.md -- TaskService extensions, shared types, six tool factory implementations
+- [ ] 58.2-02-PLAN.md -- Tool registration in ToolRegistry, TaskService bootstrap, YAML definition updates
+- [ ] 58.2-03-PLAN.md -- Task context auto-injection in worker loop
 
 ### Phase 58.3: Integration Correlation
 **Goal**: External artifacts (issues, PRs, threads) are automatically correlated to tasks via outgoing MCP recording and incoming webhook lookup
@@ -137,11 +141,11 @@ Phase 57 (Reopening) ──> Phase 58.1 ──> 58.2 ──> 58.3 ──> 58.4 �
 | 56. Prompt Rewrites | v2.5 | 6 | 2/2 | Complete | 2026-02-06 |
 | 57. Conversation Reopening | v2.5 | 11 | 2/2 | Complete | 2026-02-06 |
 | 58.1 Task Schema and Service | v2.5 | 13 | 2/2 | Complete | 2026-02-06 |
-| 58.2 Agent Task Tools | v2.5 | 10 | 0/TBD | Not started | - |
+| 58.2 Agent Task Tools | v2.5 | 10 | 0/3 | Not started | - |
 | 58.3 Integration Correlation | v2.5 | 11 | 0/TBD | Not started | - |
 | 58.4 Task-Aware Event Routing | v2.5 | 6 | 0/TBD | Not started | - |
 | 59. Prompt Evolution + Hierarchy | v2.5 | 11 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-06 after Phase 58.1 execution complete*
+*Last updated: 2026-02-07 after Phase 58.2 planning complete*
