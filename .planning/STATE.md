@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 58.2 of 59 (Agent Task Tools)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-07 -- Completed 58.2-01-PLAN.md (task tool factories)
+Last activity: 2026-02-07 -- Completed 58.2-02-PLAN.md (tool registration and YAML wiring)
 
-Progress: [█░░] 33% (Phase 58.2: 1/3 plans complete)
+Progress: [██░] 67% (Phase 58.2: 2/3 plans complete)
 
 ## Milestone History
 
@@ -30,9 +30,9 @@ Progress: [█░░] 33% (Phase 58.2: 1/3 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
-- Average duration: 5m 13s
-- Total execution time: 36m 42s
+- Total plans completed: 8
+- Average duration: 5m 05s
+- Total execution time: 40m 42s
 
 ## Accumulated Context
 
@@ -59,6 +59,8 @@ See PROJECT.md Key Decisions table for full history.
 | SERVICE-SHAPE-ONLY | TaskService validates data shape (Zod) only; business logic in tool layer (Phase 58.2) | 58.1-02 |
 | INPUT-TYPES | Exported task param types use z.input<> for caller ergonomics with Zod defaults | 58.1-02 |
 | TOOL-FACTORY-SIG | Task tool factories take (taskService, ctx) signature matching adapter pattern | 58.2-01 |
+| TASKSERVICE-REQUIRED | taskService required (not optional) on RegisterAllToolsOptions -- always available | 58.2-02 |
+| INLINE-CLOSURE-REG | Task tools use inline closure pattern with captured ts variable for registration | 58.2-02 |
 
 ### Pending Todos
 
@@ -72,10 +74,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-07T00:18Z
-Stopped at: Completed 58.2-01-PLAN.md (task tool factories)
+Last session: 2026-02-07T00:24Z
+Stopped at: Completed 58.2-02-PLAN.md (tool registration and YAML wiring)
 Resume file: None
-Next action: Execute 58.2-02-PLAN.md (tool registration, context injection, YAML updates)
+Next action: Execute 58.2-03-PLAN.md (context injection)
 
 ---
-*Updated: 2026-02-07 -- Phase 58.2 plan 01 complete (six task tool factories)*
+*Updated: 2026-02-07 -- Phase 58.2 plan 02 complete (tool registration, TaskService bootstrap, YAML updates)*
