@@ -150,6 +150,7 @@ async function bootstrap(): Promise<void> {
       : undefined,
     pollIntervalMs: config.service.workerPollIntervalMs,
     concurrencyLimit: config.service.maxConcurrentConversations,
+    taskService,
   });
 
   // 9. EventRouter -- deterministic event-to-agent routing

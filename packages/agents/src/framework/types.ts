@@ -20,6 +20,7 @@ import type {
   ConversationStatus,
   NewAgentEvent,
 } from "../shared/db/schema.js";
+import type { TaskService } from "../shared/services/task-service.js";
 import type { TimeoutScheduler } from "./timeout-scheduler.js";
 import type { WorkerLoopStatus } from "./worker-loop.js";
 
@@ -621,6 +622,8 @@ export interface ConversationExecutorOptions {
         baseBranch?: string | undefined;
       }
     | undefined;
+  /** TaskService for task context injection in the worker loop (Phase 58.2) */
+  taskService?: TaskService | undefined;
 }
 
 // ─── Non-Retryable Error Classes ────────────────────────────────────────────

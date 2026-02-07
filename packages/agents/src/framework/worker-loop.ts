@@ -27,8 +27,9 @@ import type {
   LLMResponse,
 } from "../shared/agent-loop/types.js";
 import type * as agentsSchemaModule from "../shared/db/schema.js";
-import type { Conversation } from "../shared/db/schema.js";
+import type { Conversation, TaskHandoff } from "../shared/db/schema.js";
 import { conversations } from "../shared/db/schema.js";
+import type { TaskService } from "../shared/services/task-service.js";
 import { storeEventContent } from "./event-content.js";
 import { createHistoryManager } from "./history-manager.js";
 import type { TimeoutScheduler } from "./timeout-scheduler.js";
@@ -87,6 +88,8 @@ export interface WorkerLoopOptions {
         baseBranch?: string | undefined;
       }
     | undefined;
+  /** TaskService for task context injection (Phase 58.2) */
+  taskService?: TaskService | undefined;
 }
 
 /**
@@ -150,6 +153,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
     timeoutScheduler,
     sandboxManager,
     sandboxSetup,
+    taskService,
   } = options;
 
   const logger = parentLogger.child({ component: "worker-loop", workerId });

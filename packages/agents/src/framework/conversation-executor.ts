@@ -122,6 +122,8 @@ export function createConversationExecutor(
         loopOpts.sandboxManager = options.sandboxManager;
       if (options.sandboxSetup !== undefined)
         loopOpts.sandboxSetup = options.sandboxSetup;
+      if (options.taskService !== undefined)
+        loopOpts.taskService = options.taskService;
       workerLoop = createWorkerLoop(loopOpts);
     }
     return workerLoop;
