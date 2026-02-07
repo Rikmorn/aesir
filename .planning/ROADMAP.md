@@ -25,7 +25,7 @@ Decimal phases execute between their surrounding integers in numeric order.
 - [x] **Phase 56: Goal-Oriented Prompt Rewrites** - Rewrite product-agent and dev-agent prompts to constitutional + few-shot style
 - [x] **Phase 57: Conversation Reopening** - Enable completed/failed conversations to receive reopen signals and resume
 - [x] **Phase 58.1: Task Schema and Service** - Task/handoff data model, TaskService, ToolContext rename, migration
-- [ ] **Phase 58.2: Agent Task Tools** - Six task tools, registration, YAML wiring, context injection
+- [x] **Phase 58.2: Agent Task Tools** - Six task tools, registration, YAML wiring, context injection
 - [ ] **Phase 58.3: Integration Correlation** - Correlation tables per integration, MCP header, outgoing recording, incoming lookup
 - [ ] **Phase 58.4: Task-Aware Event Routing** - Task-based routing priority, advisory lock serialization, backward compatibility
 - [ ] **Phase 59: Prompt Evolution and Hierarchy Enforcement** - Update all agent prompts to leverage task lifecycle, add hierarchy guardrails (depth, subtask limits, circular delegation prevention)
@@ -86,9 +86,9 @@ Plans:
   3. When a conversation has a task_id, the worker loop auto-injects a task_context block containing the most recent handoff (truncated at 4000 chars with a pointer to get_task_context for full history)
 **Plans:** 3 plans
 Plans:
-- [ ] 58.2-01-PLAN.md -- TaskService extensions, shared types, six tool factory implementations
-- [ ] 58.2-02-PLAN.md -- Tool registration in ToolRegistry, TaskService bootstrap, YAML definition updates
-- [ ] 58.2-03-PLAN.md -- Task context auto-injection in worker loop
+- [x] 58.2-01-PLAN.md -- TaskService extensions, shared types, six tool factory implementations
+- [x] 58.2-02-PLAN.md -- Tool registration in ToolRegistry, TaskService bootstrap, YAML definition updates
+- [x] 58.2-03-PLAN.md -- Task context auto-injection in worker loop
 
 ### Phase 58.3: Integration Correlation
 **Goal**: External artifacts (issues, PRs, threads) are automatically correlated to tasks via outgoing MCP recording and incoming webhook lookup

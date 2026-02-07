@@ -17,17 +17,17 @@
 
 ### Conversation Reopening
 
-- [ ] **REOPEN-01**: Executor handles `reopen` signal on conversations in `completed` status
-- [ ] **REOPEN-02**: Executor handles `reopen` signal on conversations in `failed` status
-- [ ] **REOPEN-03**: Reopen signal transitions conversation back to `queued` with signal payload available
-- [ ] **REOPEN-04**: Reopened conversation receives full prior history plus signal context
-- [ ] **REOPEN-05**: World-state `<world_state>` context block injected when conversation is reopened (signal payload describes what changed)
-- [ ] **REOPEN-06**: Constitutional constraint added to reopened prompts: verify current state of artifacts before acting
-- [ ] **REOPEN-07**: Dashboard reopen/retry action available on conversation detail view
-- [ ] **REOPEN-08**: Agent service exposes POST /conversations/:id/reopen endpoint
-- [ ] **REOPEN-09**: `agent.reopened` event type added to event log
-- [ ] **REOPEN-10**: Other signal types on terminal conversations still ignored (only `reopen` triggers transition)
-- [ ] **REOPEN-11**: `delivered_signal_ids` capped at 100 entries to prevent unbounded growth
+- [x] **REOPEN-01**: Executor handles `reopen` signal on conversations in `completed` status
+- [x] **REOPEN-02**: Executor handles `reopen` signal on conversations in `failed` status
+- [x] **REOPEN-03**: Reopen signal transitions conversation back to `queued` with signal payload available
+- [x] **REOPEN-04**: Reopened conversation receives full prior history plus signal context
+- [x] **REOPEN-05**: World-state `<world_state>` context block injected when conversation is reopened (signal payload describes what changed)
+- [x] **REOPEN-06**: Constitutional constraint added to reopened prompts: verify current state of artifacts before acting
+- [x] **REOPEN-07**: Dashboard reopen/retry action available on conversation detail view
+- [x] **REOPEN-08**: Agent service exposes POST /conversations/:id/reopen endpoint
+- [x] **REOPEN-09**: `agent.reopened` event type added to event log
+- [x] **REOPEN-10**: Other signal types on terminal conversations still ignored (only `reopen` triggers transition)
+- [x] **REOPEN-11**: `delivered_signal_ids` capped at 100 entries to prevent unbounded growth
 
 ### Task Primitive
 
@@ -39,21 +39,21 @@
 - [x] **TASK-06**: Task status transitions enforced via tools (complete_task rejects cancelled tasks, etc.) with CHECK constraint for valid values
 - [x] **TASK-07**: Handoff context enforced via Zod: `{ summary: string (required, max 2000 chars), key_decisions?, artifacts?, open_questions?, next_steps? }`, capped at ~4KB
 - [x] **TASK-08**: `tasks.metadata` validated with Zod on write, 10KB size limit enforced at application layer
-- [ ] **TASK-09**: `create_task` agent tool implemented (with optional parent_id for subtasks)
-- [ ] **TASK-10**: `complete_task` agent tool implemented (marks task completed with structured completion handoff)
-- [ ] **TASK-11**: `pause_task` agent tool implemented (pauses task with structured pause handoff)
-- [ ] **TASK-12**: `handoff_task` agent tool implemented (writes delegation or escalation handoff)
-- [ ] **TASK-13**: `list_tasks` agent tool implemented (query by assignee, status, or metadata)
-- [ ] **TASK-14**: `get_task_context` agent tool implemented (retrieve handoffs and conversation history for a task)
-- [ ] **TASK-15**: 6 task tools registered in ToolRegistry under `task:` namespace
-- [ ] **TASK-16**: Task tools added to agent definition YAML files
-- [ ] **TASK-17**: Parent-child task hierarchy supported (parent_id FK)
+- [x] **TASK-09**: `create_task` agent tool implemented (with optional parent_id for subtasks)
+- [x] **TASK-10**: `complete_task` agent tool implemented (marks task completed with structured completion handoff)
+- [x] **TASK-11**: `pause_task` agent tool implemented (pauses task with structured pause handoff)
+- [x] **TASK-12**: `handoff_task` agent tool implemented (writes delegation or escalation handoff)
+- [x] **TASK-13**: `list_tasks` agent tool implemented (query by assignee, status, or metadata)
+- [x] **TASK-14**: `get_task_context` agent tool implemented (retrieve handoffs and conversation history for a task)
+- [x] **TASK-15**: 6 task tools registered in ToolRegistry under `task:` namespace
+- [x] **TASK-16**: Task tools added to agent definition YAML files
+- [x] **TASK-17**: Parent-child task hierarchy supported (parent_id FK)
 - [ ] **TASK-18**: Circular delegation prevented: `create_task` checks ancestry for same-assignee cycles
 - [ ] **TASK-19**: Max depth of 5 levels for parent_id chains enforced
 - [ ] **TASK-20**: Max 10 subtasks per parent task enforced
 - [x] **TASK-21**: `ToolContext.taskId` renamed to `sandboxId` (existing sandbox container ID usage)
 - [x] **TASK-22**: New `ToolContext.taskId` set from `conv.task_id` in worker loop
-- [ ] **TASK-23**: Task context auto-injected as `<task_context>` block in worker loop (most recent handoff, truncated at 4000 chars with pointer to `get_task_context`)
+- [x] **TASK-23**: Task context auto-injected as `<task_context>` block in worker loop (most recent handoff, truncated at 4000 chars with pointer to `get_task_context`)
 - [x] **TASK-24**: TaskService factory created with CRUD operations and validation
 - [x] **TASK-25**: Backward compatibility: all code paths handle null task_id gracefully
 - [x] **TASK-27**: Schema migration handles legacy `tasks` table in schema.drizzle.ts (check if empty, drop or rename)
@@ -164,21 +164,21 @@ Deferred to post-v2.5 milestones. Tracked but not in current roadmap.
 | TASK-06 | Phase 58.1 | Complete |
 | TASK-07 | Phase 58.1 | Complete |
 | TASK-08 | Phase 58.1 | Complete |
-| TASK-09 | Phase 58.2 | Pending |
-| TASK-10 | Phase 58.2 | Pending |
-| TASK-11 | Phase 58.2 | Pending |
-| TASK-12 | Phase 58.2 | Pending |
-| TASK-13 | Phase 58.2 | Pending |
-| TASK-14 | Phase 58.2 | Pending |
-| TASK-15 | Phase 58.2 | Pending |
-| TASK-16 | Phase 58.2 | Pending |
-| TASK-17 | Phase 58.2 | Pending |
+| TASK-09 | Phase 58.2 | Complete |
+| TASK-10 | Phase 58.2 | Complete |
+| TASK-11 | Phase 58.2 | Complete |
+| TASK-12 | Phase 58.2 | Complete |
+| TASK-13 | Phase 58.2 | Complete |
+| TASK-14 | Phase 58.2 | Complete |
+| TASK-15 | Phase 58.2 | Complete |
+| TASK-16 | Phase 58.2 | Complete |
+| TASK-17 | Phase 58.2 | Complete |
 | TASK-18 | Phase 59 | Pending |
 | TASK-19 | Phase 59 | Pending |
 | TASK-20 | Phase 59 | Pending |
 | TASK-21 | Phase 58.1 | Complete |
 | TASK-22 | Phase 58.1 | Complete |
-| TASK-23 | Phase 58.2 | Pending |
+| TASK-23 | Phase 58.2 | Complete |
 | TASK-24 | Phase 58.1 | Complete |
 | TASK-25 | Phase 58.1 | Complete |
 | TASK-27 | Phase 58.1 | Complete |
