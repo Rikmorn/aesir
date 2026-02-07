@@ -18,7 +18,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { z } from "zod";
 import type * as agentsSchemaModule from "../db/schema.js";
 import type { Task, TaskHandoff } from "../db/schema.js";
-import { taskHandoffs, tasks } from "../db/schema.js";
+import { conversations, taskHandoffs, tasks } from "../db/schema.js";
 
 // ─── Zod Validation Schemas ─────────────────────────────────────────────────
 
@@ -138,6 +138,11 @@ export interface TaskService {
     assigneeId: string,
     filters?: { status?: string; limit?: number },
   ): Promise<Task[]>;
+  listByParent(
+    parentId: string,
+    filters?: { status?: string; limit?: number },
+  ): Promise<Task[]>;
+  linkConversation(taskId: string, conversationId: string): Promise<void>;
   health(): Promise<{ healthy: boolean; latencyMs: number }>;
   close(): Promise<void>;
 }
@@ -312,6 +317,40 @@ export function createTaskService(options: TaskServiceOptions): TaskService {
         .where(and(...conditions))
         .orderBy(desc(tasks.created_at))
         .limit(limit);
+    },
+
+    async listByParent(parentId, filters) {
+      const validated = ListFiltersSchema.parse(filters);
+      const limit = validated?.limit ?? 50;
+
+      const conditions = [eq(tasks.parent_id, parentId)];
+
+      if (validated?.status) {
+        conditions.push(eq(tasks.status, validated.status));
+      }
+
+      return db
+        .select()
+        .from(tasks)
+        .where(and(...conditions))
+        .orderBy(desc(tasks.created_at))
+        .limit(limit);
+    },
+
+    async linkConversation(taskId, conversationId) {
+      const now = new Date();
+
+      const result = await db
+        .update(conversations)
+        .set({ task_id: taskId, updated_at: now })
+        .where(eq(conversations.id, conversationId))
+        .returning({ id: conversations.id });
+
+      if (result.length === 0) {
+        throw new Error(`Conversation not found: ${conversationId}`);
+      }
+
+      log.info({ taskId, conversationId }, "Conversation linked to task");
     },
 
     async health() {
