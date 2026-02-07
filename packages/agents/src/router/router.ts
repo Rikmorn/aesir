@@ -2,20 +2,132 @@
  * Core Router
  *
  * v2.3 unified event routing pipeline:
- *   adapter pipeline -> EventRouter.handle() -> ConversationExecutor
+ *   adapter pipeline -> [task routing] -> EventRouter.handle() -> ConversationExecutor
  *
  * routeEvent() is the single entry point for all integration events.
- * It transforms NormalizedEvent -> IncomingEvent via adapters, routes
- * via EventRouter, and dispatches to ConversationExecutor.start()/signal().
+ * It transforms NormalizedEvent -> IncomingEvent via adapters, optionally
+ * routes through the task-aware path (Phase 58.4), then routes via
+ * EventRouter and dispatches to ConversationExecutor.start()/signal().
  */
 
+import type { PinoLogger } from "@aesir/platform";
 import type { NormalizedEvent } from "@aesir/types";
+import { sql } from "drizzle-orm";
 import { ALL_ADAPTERS } from "../adapters/index.js";
 import { adaptPassThrough } from "../adapters/pass-through.js";
+import type { IncomingEvent } from "../adapters/types.js";
 import { callMcpTool } from "../shared/mcp/index.js";
 import { enrichInitialMessage } from "./enrichment.js";
 import { routeViaAgentLoopV2 } from "./slow-path.js";
 import type { RouteEventDeps, RouteEventResult } from "./types.js";
+
+// ---------------------------------------------------------------------------
+// Task-Aware Routing (Phase 58.4)
+// ---------------------------------------------------------------------------
+
+/**
+ * Route an event through the task-aware path.
+ *
+ * Uses a PostgreSQL advisory lock (pg_advisory_xact_lock) to serialize
+ * routing decisions for the same task, preventing duplicate conversation
+ * creation from concurrent events.
+ *
+ * Returns RouteEventResult on success, or null to signal fall-through
+ * to EventRouter. Caller catches thrown errors and falls through.
+ *
+ * Per CONTEXT.md locked decisions:
+ * - Signal types preserved (task routing changes destination, not identity)
+ * - Signal payload identical to non-task-routed signals
+ * - All three active statuses (running, waiting, queued) = "active"
+ * - Do NOT check task status -- terminal tasks still receive events
+ * - Non-agent assignees fall through to EventRouter
+ * - CorrelationKey: ${taskId}:${event.deduplicationId || event.type}
+ */
+async function routeViaTask(
+  event: IncomingEvent,
+  deps: RouteEventDeps,
+  logger: PinoLogger,
+): Promise<RouteEventResult | null> {
+  // Caller guarantees these are defined via the guard:
+  //   if (incomingEvent.taskId && deps.taskService && deps.db)
+  const taskId = event.taskId as string;
+  const db = deps.db as NonNullable<typeof deps.db>;
+  const taskService = deps.taskService as NonNullable<typeof deps.taskService>;
+
+  return await db.transaction(async (tx) => {
+    // 1. Advisory lock: serialize events for same task
+    // Uses hashtext() (PG built-in) to convert string to integer lock key.
+    // Transaction-scoped: auto-released on commit/rollback.
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${taskId}))`);
+
+    // 2. Look up task
+    const task = await taskService.get(taskId);
+    if (!task) {
+      logger.warn({ taskId }, "Task not found during task routing");
+      return null; // Fall through, caller strips taskId
+    }
+
+    // 3. Guard: agent assignee only
+    // Per CONTEXT.md: "If assignee_type !== 'agent': fall through to EventRouter"
+    if (task.assignee_type !== "agent") {
+      logger.info(
+        { taskId, assigneeType: task.assignee_type },
+        "Task has non-agent assignee, falling through to EventRouter",
+      );
+      return null;
+    }
+
+    // 4. Find active conversation for this task
+    const activeConv = await deps.executor.findActiveForTask(taskId);
+
+    if (activeConv) {
+      // 5a. Deliver as signal to existing conversation
+      // Per CONTEXT.md: preserve original signal types, no task metadata enrichment
+      const signal = {
+        type: event.type,
+        data: event.data,
+        message: event.message,
+        source: event.source,
+        deduplicationId: event.deduplicationId,
+      };
+
+      logger.info(
+        { taskId, conversationId: activeConv.id, signalType: signal.type },
+        "Task routing: signaling active conversation",
+      );
+
+      const signalResult = await deps.executor.signal(activeConv.id, signal);
+      return {
+        received: true,
+        action: signalResult.action,
+        conversationId: activeConv.id,
+      };
+    }
+
+    // 5b. No active conversation: create new one
+    // Per CONTEXT.md: agent definition from task.assignee_id
+    const agentDefinitionId = task.assignee_id;
+    // Per CONTEXT.md: correlationKey = ${taskId}:${event.deduplicationId || event.type}
+    const correlationKey = `${taskId}:${event.deduplicationId || event.type}`;
+    // Per CONTEXT.md: context enrichment via shared helper (same as existing start path)
+    const initialMessage = enrichInitialMessage(event, deps);
+
+    logger.info(
+      { taskId, agentDefinitionId, correlationKey },
+      "Task routing: creating new conversation",
+    );
+
+    // Per CONTEXT.md: executor.start() sets task_id directly on INSERT
+    const conversationId = await deps.executor.start({
+      agentDefinitionId,
+      correlationKey,
+      initialMessage,
+      taskId,
+    });
+
+    return { received: true, action: "started", conversationId };
+  });
+}
 
 // ---------------------------------------------------------------------------
 // v2.3 Core Routing Function
@@ -66,6 +178,31 @@ export async function routeEvent(
     },
     "Event adapted",
   );
+
+  // 1.5. Task routing branch (early exit)
+  // Per CONTEXT.md: all events with taskId go through task routing regardless of origin
+  if (incomingEvent.taskId && deps.taskService && deps.db) {
+    try {
+      const taskResult = await routeViaTask(incomingEvent, deps, eventLogger);
+      if (taskResult !== null) {
+        eventLogger.info(
+          { taskId: incomingEvent.taskId, action: taskResult.action },
+          "Event routed via task",
+        );
+        return taskResult; // Task routing succeeded -- early exit
+      }
+      // taskResult === null means fall through to EventRouter
+      // Per CONTEXT.md: strip taskId when task lookup fails or non-agent assignee
+      incomingEvent = { ...incomingEvent, taskId: undefined };
+    } catch (error) {
+      // Per CONTEXT.md: advisory lock failure or DB error -> fall through, strip taskId
+      eventLogger.warn(
+        { err: error, taskId: incomingEvent.taskId },
+        "Task routing failed, falling through to EventRouter",
+      );
+      incomingEvent = { ...incomingEvent, taskId: undefined };
+    }
+  }
 
   // 2. EventRouter: deterministic routing decision
   const routeDecision = deps.eventRouter.handle(incomingEvent);

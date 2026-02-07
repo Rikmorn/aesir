@@ -7,7 +7,10 @@
  */
 
 import type { PinoLogger } from "@aesir/platform";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { ConversationExecutor, EventRouter } from "../framework/types.js";
+import type * as agentsSchemaModule from "../shared/db/schema.js";
+import type { TaskService } from "../shared/services/task-service.js";
 
 // ---------------------------------------------------------------------------
 // Route Result
@@ -78,6 +81,10 @@ export interface RouteEventDeps {
   githubRepo?: string | undefined;
   /** GitHub base branch for workspace context (optional, defaults to "main") */
   githubBaseBranch?: string | undefined;
+  /** TaskService for task lookup in task-aware routing (Phase 58.4) */
+  taskService?: TaskService | undefined;
+  /** Database client for advisory lock transactions (Phase 58.4) */
+  db?: NodePgDatabase<typeof agentsSchemaModule> | undefined;
 }
 
 /**
