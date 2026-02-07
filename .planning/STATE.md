@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.5 Agentic Conversations -- Phase 58.1 complete
+**Current focus:** v2.5 Agentic Conversations -- Phase 58.2 in progress
 
 ## Current Position
 
-Phase: 58.1 of 59 (Task Schema and Service)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-06 -- Completed 58.1-02-PLAN.md (task schema and service)
+Phase: 58.2 of 59 (Agent Task Tools)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-07 -- Completed 58.2-01-PLAN.md (task tool factories)
 
-Progress: [██] 100% (Phase 58.1: 2/2 plans complete)
+Progress: [█░░] 33% (Phase 58.2: 1/3 plans complete)
 
 ## Milestone History
 
@@ -30,9 +30,9 @@ Progress: [██] 100% (Phase 58.1: 2/2 plans complete)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 5m 27s
-- Total execution time: 32m 42s
+- Total plans completed: 7
+- Average duration: 5m 13s
+- Total execution time: 36m 42s
 
 ## Accumulated Context
 
@@ -58,6 +58,7 @@ See PROJECT.md Key Decisions table for full history.
 | SELF-REF-FK | Self-referential FK (tasks.parent_id) handled in SQL migration only, not Drizzle references() | 58.1-02 |
 | SERVICE-SHAPE-ONLY | TaskService validates data shape (Zod) only; business logic in tool layer (Phase 58.2) | 58.1-02 |
 | INPUT-TYPES | Exported task param types use z.input<> for caller ergonomics with Zod defaults | 58.1-02 |
+| TOOL-FACTORY-SIG | Task tool factories take (taskService, ctx) signature matching adapter pattern | 58.2-01 |
 
 ### Pending Todos
 
@@ -71,10 +72,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-06T22:29Z
-Stopped at: Completed 58.1-02-PLAN.md (task schema and service)
+Last session: 2026-02-07T00:18Z
+Stopped at: Completed 58.2-01-PLAN.md (task tool factories)
 Resume file: None
-Next action: Execute Phase 58.2 (Agentic Conversations -- agent task tools)
+Next action: Execute 58.2-02-PLAN.md (tool registration, context injection, YAML updates)
 
 ---
-*Updated: 2026-02-06 -- Phase 58.1 complete (task tables, TaskService, ToolContext.taskId wired)*
+*Updated: 2026-02-07 -- Phase 58.2 plan 01 complete (six task tool factories)*
