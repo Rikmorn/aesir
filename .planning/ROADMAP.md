@@ -115,7 +115,10 @@ Plans:
   2. Task-level event serialization via PostgreSQL advisory locks prevents concurrent events from creating duplicate conversations for the same task
   3. Task-scoped conversations use a correlationKey that includes both the task ID and triggering event ID
   4. Events without a task reference continue to route through the existing fast-path/slow-path unchanged -- zero regression for non-task workflows
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 58.4-01-PLAN.md -- Executor taskId support, findActiveForTask, enrichment helper extraction
+- [ ] 58.4-02-PLAN.md -- routeViaTask implementation, advisory locks, main.ts wiring, tests
 
 ### Phase 59: Prompt Evolution and Hierarchy Enforcement
 **Goal**: Agents naturally think in terms of tasks, write high-quality handoffs, delegate via subtasks with guardrails, enabling multi-conversation continuity without framework-imposed structure
@@ -148,9 +151,9 @@ Phase 57 (Reopening) ──> Phase 58.1 ──> 58.2 ──> 58.3 ──> 58.4 �
 | 58.1 Task Schema and Service | v2.5 | 13 | 2/2 | Complete | 2026-02-06 |
 | 58.2 Agent Task Tools | v2.5 | 10 | 3/3 | Complete | 2026-02-07 |
 | 58.3 Integration Correlation | v2.5 | 11 | 4/4 | Complete | 2026-02-07 |
-| 58.4 Task-Aware Event Routing | v2.5 | 6 | 0/TBD | Not started | - |
+| 58.4 Task-Aware Event Routing | v2.5 | 6 | 0/2 | Not started | - |
 | 59. Prompt Evolution + Hierarchy | v2.5 | 11 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-07 after Phase 58.3 complete (4 plans in 2 waves)*
+*Last updated: 2026-02-07 after Phase 58.4 planned (2 plans in 2 waves)*
