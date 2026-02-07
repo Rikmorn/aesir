@@ -14,13 +14,17 @@
 
 import type { PinoLogger } from "@aesir/platform";
 import { createId, type NormalizedEvent } from "@aesir/types";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { Request, Response } from "express";
 import { Router } from "express";
+import { lookupTaskCorrelation } from "../db/task-correlations.js";
 
 /**
  * Dependencies for the interactions router
  */
 export interface InteractionsRouterDeps {
+  /** Database connection for task correlation lookups */
+  db: NodePgDatabase;
   /** Logger instance */
   logger: PinoLogger;
   /** URL to dispatch events to (router /events endpoint) */
@@ -95,7 +99,7 @@ function parseActionId(actionId: string): {
  * @returns Express router with POST /interactions endpoint
  */
 export function createInteractionsRouter(deps: InteractionsRouterDeps): Router {
-  const { logger, dispatchUrl } = deps;
+  const { db, logger, dispatchUrl } = deps;
 
   const router = Router();
 
@@ -165,6 +169,14 @@ export function createInteractionsRouter(deps: InteractionsRouterDeps): Router {
 
       const { isApproval, taskIdentifier } = parsedAction;
 
+      // Look up task correlation for this approval message
+      const correlatedTaskId = await lookupTaskCorrelation(
+        db,
+        "approval",
+        `${channelId}:${messageTs}`,
+        childLogger,
+      );
+
       // Step 5: Normalize to event format for router
       const eventId = createId.event();
       const normalizedEvent: NormalizedEvent = {
@@ -184,6 +196,7 @@ export function createInteractionsRouter(deps: InteractionsRouterDeps): Router {
           messageTs,
           channel: channelId,
           responseUrl: payload.response_url,
+          ...(correlatedTaskId && { taskId: correlatedTaskId }),
         },
       };
 

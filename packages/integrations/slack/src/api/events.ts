@@ -8,9 +8,11 @@
  */
 
 import type { PinoLogger } from "@aesir/platform";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { Request, Response } from "express";
 import { Router } from "express";
 import type { SlackEventDeliveryStore } from "../db/event-delivery-store.js";
+import { lookupTaskCorrelation } from "../db/task-correlations.js";
 import {
   createDispatcher,
   DISPATCH_ROUTES,
@@ -20,6 +22,8 @@ import { createEventHandler } from "../events/handler.js";
 import type { SlackEventPayload } from "../events/types.js";
 
 export interface EventsRouterDeps {
+  /** Database connection for task correlation lookups */
+  db: NodePgDatabase;
   /** Event delivery store for deduplication */
   eventDeliveryStore: SlackEventDeliveryStore;
   /** Logger instance */
@@ -40,7 +44,7 @@ export interface EventsRouterDeps {
  * @returns Express router with POST /events endpoint
  */
 export function createEventsRouter(deps: EventsRouterDeps): Router {
-  const { eventDeliveryStore, logger, onEvent } = deps;
+  const { db, eventDeliveryStore, logger, onEvent } = deps;
 
   const router = Router();
 
@@ -126,6 +130,20 @@ export function createEventsRouter(deps: EventsRouterDeps): Router {
         // Normalize and dispatch event (fire-and-forget)
         const normalizedEvent = normalizeSlackEvent(result.value);
         if (normalizedEvent) {
+          // Look up task correlation for thread replies
+          if (result.value.threadTs) {
+            const correlatedTaskId = await lookupTaskCorrelation(
+              db,
+              "thread",
+              `${result.value.channel}:${result.value.threadTs}`,
+              childLogger,
+            );
+            if (correlatedTaskId) {
+              (normalizedEvent.payload as Record<string, unknown>).taskId =
+                correlatedTaskId;
+            }
+          }
+
           dispatcher.dispatch(normalizedEvent);
           childLogger.info(
             { eventType: normalizedEvent.type, eventId: normalizedEvent.id },

@@ -50,6 +50,7 @@ export function createSlackRouter(deps: SlackRouterDeps): Router {
   // Build events router deps with conditional property for exactOptionalPropertyTypes
   // biome-ignore lint/suspicious/noExplicitAny: Conditional property assignment for exactOptionalPropertyTypes
   const eventsRouterDeps: any = {
+    db,
     eventDeliveryStore,
     logger,
   };

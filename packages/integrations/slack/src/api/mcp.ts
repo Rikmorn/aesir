@@ -34,6 +34,7 @@ import {
   sendMessage,
 } from "../messages/sender.js";
 import type { ApprovalNotification } from "../messages/types.js";
+import { recordTaskCorrelation } from "../db/task-correlations.js";
 
 export interface CreateMCPRouterOptions {
   db: NodePgDatabase;
@@ -200,7 +201,7 @@ const TOOL_DEFINITIONS = [
  * Create Express router for MCP endpoints
  */
 export function createMCPRouter(options: CreateMCPRouterOptions): Router {
-  const { db: _db, credentialStore, logger, teamId = "default" } = options;
+  const { db, credentialStore, logger, teamId = "default" } = options;
 
   const router = createRouter();
 
@@ -275,12 +276,14 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
         (req.headers["x-correlation-id"] as string) ||
         generateCorrelationId("tool");
       const agentId = req.headers["x-agent-id"] as string;
+      const taskId = req.headers["x-task-id"] as string | undefined;
       const startTime = Date.now();
 
       const requestLogger = childLogger.child({
         correlationId,
         toolName: name,
         agentId,
+        ...(taskId && { taskId }),
       });
 
       if (!agentId) {
@@ -379,6 +382,18 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
 
             const sendResult = await sendMessage(sendOptions);
 
+            // Record task correlation (fire-and-forget)
+            // Thread reply: correlate with parent thread; new message: correlate with new thread
+            recordTaskCorrelation(
+              db,
+              taskId,
+              "thread",
+              input.threadTs
+                ? `${input.channel}:${input.threadTs}`
+                : `${sendResult.channel}:${sendResult.ts}`,
+              requestLogger,
+            ).catch(() => {});
+
             const output = MessageOutputSchema.parse({
               ts: sendResult.ts,
               channel: sendResult.channel,
@@ -426,6 +441,15 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
               input.channel,
             );
 
+            // Record task correlation for approval message (fire-and-forget)
+            recordTaskCorrelation(
+              db,
+              taskId,
+              "approval",
+              `${approvalResult.channel}:${approvalResult.ts}`,
+              requestLogger,
+            ).catch(() => {});
+
             responseData = {
               content: [
                 {
@@ -469,6 +493,15 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
               escalationOptions,
               input.channel,
             );
+
+            // Record task correlation for escalation message (fire-and-forget)
+            recordTaskCorrelation(
+              db,
+              taskId,
+              "approval",
+              `${escalationResult.channel}:${escalationResult.ts}`,
+              requestLogger,
+            ).catch(() => {});
 
             responseData = {
               content: [
@@ -597,6 +630,15 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
             }
 
             const replyResult = await sendMessage(replyOptions);
+
+            // Record task correlation for thread reply (fire-and-forget)
+            recordTaskCorrelation(
+              db,
+              taskId,
+              "thread",
+              `${input.channel}:${input.threadTs}`,
+              requestLogger,
+            ).catch(() => {});
 
             responseData = {
               content: [

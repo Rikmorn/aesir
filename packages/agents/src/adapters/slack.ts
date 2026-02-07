@@ -27,6 +27,7 @@ export function adaptSlackEvent(event: NormalizedEvent): IncomingEvent | null {
   if (event.source !== "slack") return null;
 
   const payload = event.payload as Record<string, unknown>;
+  const correlatedTaskId = payload.taskId as string | undefined;
 
   switch (event.type) {
     case "slack.block_actions.approved": {
@@ -38,6 +39,7 @@ export function adaptSlackEvent(event: NormalizedEvent): IncomingEvent | null {
         correlationKey: taskId,
         deduplicationId: event.correlationId,
         message: "Plan approved via Slack button.",
+        ...(correlatedTaskId && { taskId: correlatedTaskId }),
       };
     }
 
@@ -55,6 +57,7 @@ export function adaptSlackEvent(event: NormalizedEvent): IncomingEvent | null {
         deduplicationId: event.correlationId,
         message:
           "Plan rejected via Slack button. Feedback: Rejected via Slack button",
+        ...(correlatedTaskId && { taskId: correlatedTaskId }),
       };
     }
 
@@ -67,6 +70,7 @@ export function adaptSlackEvent(event: NormalizedEvent): IncomingEvent | null {
         correlationKey: taskId,
         deduplicationId: event.correlationId,
         message: "Escalation resolved: retry.",
+        ...(correlatedTaskId && { taskId: correlatedTaskId }),
       };
     }
 
@@ -79,6 +83,7 @@ export function adaptSlackEvent(event: NormalizedEvent): IncomingEvent | null {
         correlationKey: taskId,
         deduplicationId: event.correlationId,
         message: "Escalation resolved: abort.",
+        ...(correlatedTaskId && { taskId: correlatedTaskId }),
       };
     }
 
@@ -97,6 +102,7 @@ export function adaptSlackEvent(event: NormalizedEvent): IncomingEvent | null {
         correlationKey: threadTs,
         deduplicationId: event.correlationId,
         message: payload.text as string,
+        ...(correlatedTaskId && { taskId: correlatedTaskId }),
       };
     }
 
@@ -121,6 +127,7 @@ export function adaptSlackEvent(event: NormalizedEvent): IncomingEvent | null {
         correlationKey: threadTs,
         deduplicationId: event.correlationId,
         message: payload.text as string,
+        ...(correlatedTaskId && { taskId: correlatedTaskId }),
       };
     }
 

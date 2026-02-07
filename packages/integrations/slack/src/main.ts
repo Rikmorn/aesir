@@ -355,6 +355,7 @@ export async function startServer(): Promise<void> {
     // Note: Must be before MCP routes to avoid path conflicts
     const routerUrl = process.env.ROUTER_URL || "http://router:3006/events";
     const interactionsRouter = createInteractionsRouter({
+      db,
       logger: logger.child({ component: "interactions" }),
       dispatchUrl: routerUrl,
     });
@@ -436,6 +437,7 @@ export async function startServer(): Promise<void> {
     // Must be before other Slack routes for correct path handling
     const httpRouterUrl = process.env.ROUTER_URL || "http://router:3006/events";
     const interactionsRouter = createInteractionsRouter({
+      db,
       logger: logger.child({ component: "interactions" }),
       dispatchUrl: httpRouterUrl,
     });
