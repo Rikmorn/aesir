@@ -141,11 +141,11 @@ Phase 57 (Reopening) ──> Phase 58.1 ──> 58.2 ──> 58.3 ──> 58.4 �
 | 56. Prompt Rewrites | v2.5 | 6 | 2/2 | Complete | 2026-02-06 |
 | 57. Conversation Reopening | v2.5 | 11 | 2/2 | Complete | 2026-02-06 |
 | 58.1 Task Schema and Service | v2.5 | 13 | 2/2 | Complete | 2026-02-06 |
-| 58.2 Agent Task Tools | v2.5 | 10 | 0/3 | Not started | - |
+| 58.2 Agent Task Tools | v2.5 | 10 | 3/3 | Complete | 2026-02-07 |
 | 58.3 Integration Correlation | v2.5 | 11 | 0/TBD | Not started | - |
 | 58.4 Task-Aware Event Routing | v2.5 | 6 | 0/TBD | Not started | - |
 | 59. Prompt Evolution + Hierarchy | v2.5 | 11 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-07 after Phase 58.2 planning complete*
+*Last updated: 2026-02-07 after Phase 58.2 complete (3/3 plans)*
