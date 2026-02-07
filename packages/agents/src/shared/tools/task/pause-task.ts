@@ -72,9 +72,7 @@ export function createPauseTaskTool(
           };
         }
 
-        await taskService.update(taskId, { status: "paused" });
-        await taskService.addHandoff({
-          taskId,
+        await taskService.transitionWithHandoff(taskId, "paused", {
           conversationId: ctx.correlationId,
           handoffType: "pause",
           context: {

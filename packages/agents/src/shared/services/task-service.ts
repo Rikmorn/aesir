@@ -128,6 +128,12 @@ export interface TaskService {
   get(taskId: string): Promise<Task | null>;
   update(taskId: string, fields: UpdateTaskParams): Promise<Task>;
   addHandoff(params: AddHandoffParams): Promise<TaskHandoff>;
+  /** Atomically update task status and record a handoff in a single transaction. */
+  transitionWithHandoff(
+    taskId: string,
+    newStatus: string,
+    handoff: Omit<AddHandoffParams, "taskId">,
+  ): Promise<{ task: Task; handoff: TaskHandoff }>;
   getHandoffs(
     taskId: string,
     opts?: { limit?: number },
@@ -274,6 +280,66 @@ export function createTaskService(options: TaskServiceOptions): TaskService {
         "Handoff created",
       );
       return handoff;
+    },
+
+    async transitionWithHandoff(taskId, newStatus, handoff) {
+      const validatedHandoff = AddHandoffParamsSchema.parse({
+        ...handoff,
+        taskId,
+      });
+      const now = new Date();
+      const handoffId = createId.handoff();
+
+      const result = await db.transaction(async (tx) => {
+        const updateValues: Record<string, unknown> = {
+          status: newStatus,
+          updated_at: now,
+        };
+        if (newStatus === "completed") {
+          updateValues.completed_at = now;
+        }
+
+        const [task] = await tx
+          .update(tasks)
+          .set(updateValues)
+          .where(eq(tasks.id, taskId))
+          .returning();
+
+        if (!task) {
+          throw new Error(`Task not found: ${taskId}`);
+        }
+
+        const [handoffRecord] = await tx
+          .insert(taskHandoffs)
+          .values({
+            id: handoffId,
+            task_id: validatedHandoff.taskId,
+            conversation_id: validatedHandoff.conversationId,
+            handoff_type: validatedHandoff.handoffType,
+            context: validatedHandoff.context,
+            author_type: validatedHandoff.authorType,
+            author_id: validatedHandoff.authorId,
+          })
+          .returning();
+
+        if (!handoffRecord) {
+          throw new Error("Failed to create handoff: no row returned");
+        }
+
+        return { task, handoff: handoffRecord };
+      });
+
+      log.info(
+        {
+          taskId,
+          newStatus,
+          handoffId,
+          handoffType: validatedHandoff.handoffType,
+        },
+        "Task transitioned with handoff",
+      );
+
+      return result;
     },
 
     async getHandoffs(taskId, opts) {

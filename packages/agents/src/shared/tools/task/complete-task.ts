@@ -76,9 +76,7 @@ export function createCompleteTaskTool(
           };
         }
 
-        await taskService.update(taskId, { status: "completed" });
-        await taskService.addHandoff({
-          taskId,
+        await taskService.transitionWithHandoff(taskId, "completed", {
           conversationId: ctx.correlationId,
           handoffType: "completion",
           context: {
