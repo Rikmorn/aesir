@@ -8,6 +8,19 @@ An agentic development platform that automates software development workflows --
 
 End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
+## Current Milestone: v2.6 Unified Agent Communication
+
+**Goal:** Replace channel-specific outbound tools with domain-language communication primitives, propagate replyContext from inbound normalizers through the signal pipeline, and build an outbound denormalizer so agents reason about intent while infrastructure handles channel translation.
+
+**Target features:**
+- ReplyContext types and inbound normalizer extension (attach replyContext to all adapters)
+- Signal pipeline propagation (replyContext in signals → structured user messages with `<reply_context>` tags)
+- Outbound denormalizer with Slack, Linear, GitHub dispatchers
+- Unified communication tools: `communication:reply`, `communication:ask`, `communication:notify`
+- Missing MCP tools: expose `linear:create_comment`, add `github:create_pr_comment`
+- Agent definition and prompt updates (domain-language communication, remove channel-specific outbound tools)
+- Router prompt updates (Linear comment routing, replyContext in signals)
+
 ## Current State
 
 **Version:** v2.5 Agentic Conversations shipped (2026-02-08)
@@ -141,7 +154,21 @@ Agent definitions (YAML + prompt.md, constitutional + few-shot style)
 
 ### Active
 
-**Candidates for next milestone:**
+**v2.6 Unified Agent Communication:**
+- [ ] ReplyContext / NotifyTarget / MessageContent type definitions
+- [ ] Inbound normalizer extension (attach replyContext to Slack, Linear, GitHub adapters)
+- [ ] Signal pipeline propagation (replyContext in SignalSchema, structured signal messages)
+- [ ] Outbound denormalizer dispatch (Slack, Linear, GitHub handlers)
+- [ ] communication:reply tool (respond on originating channel)
+- [ ] communication:ask tool (request input with interactive options)
+- [ ] communication:notify tool (broadcast to channel)
+- [ ] Expose linear:create_comment MCP tool (exists but not registered)
+- [ ] Add github:create_pr_comment MCP tool
+- [ ] Agent definition updates (swap channel-specific tools for communication:*)
+- [ ] Agent prompt updates (domain-language communication guidance)
+- [ ] Router prompt and tools updates (replyContext propagation, Linear comment routing)
+
+**Candidates for future milestones:**
 - [ ] Stale task cleanup: timeout signal mechanism for inactive tasks (TASK-26, deferred from v2.5)
 - [ ] Prompt evaluation tooling (promptfoo, shadow mode)
 - [ ] Dashboard tasks view (list tasks, task detail with grouped conversations and handoffs)
@@ -258,4 +285,4 @@ Lessons learned during development that guide future phases.
 | Soft language for agent guidance | Task lifecycle, handoff quality, and delegation patterns use "prefer"/"tend toward" instead of MUST/ALWAYS/NEVER. Strong directives reserved for safety boundaries (wait_for, merge protection). |
 
 ---
-*Last updated: 2026-02-08 after v2.5 milestone*
+*Last updated: 2026-02-08 after v2.6 milestone started*
