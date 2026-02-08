@@ -90,9 +90,9 @@ describe("registerAllTools", () => {
       expect(() => setupRegistry()).not.toThrow();
     });
 
-    it("should register exactly 34 tools", () => {
+    it("should register exactly 36 tools", () => {
       const { registry } = setupRegistry();
-      expect(registry.listRegistered()).toHaveLength(34);
+      expect(registry.listRegistered()).toHaveLength(36);
     });
 
     it("should register all expected namespaces", () => {
@@ -135,6 +135,7 @@ describe("registerAllTools", () => {
       expect(registry.has("linear:list_teams")).toBe(true);
       expect(registry.has("linear:list_labels")).toBe(true);
       expect(registry.has("linear:search_issues")).toBe(true);
+      expect(registry.has("linear:create_comment")).toBe(true);
     });
 
     it("should register all github tools", () => {
@@ -149,6 +150,7 @@ describe("registerAllTools", () => {
       expect(registry.has("github:merge_pull_request")).toBe(true);
       expect(registry.has("github:get_file_contents")).toBe(true);
       expect(registry.has("github:list_files")).toBe(true);
+      expect(registry.has("github:create_pr_comment")).toBe(true);
     });
 
     it("should register all slack tools", () => {
@@ -298,7 +300,7 @@ describe("registerAllTools", () => {
       const { logger } = setupRegistry();
 
       expect(logger.info).toHaveBeenCalledWith(
-        { toolCount: 34 },
+        { toolCount: 36 },
         "All tool factories registered",
       );
     });

@@ -173,9 +173,9 @@ describe("createLinearTools", () => {
     mockCallMcpTool.mockReset();
   });
 
-  it("returns exactly 6 tools", () => {
+  it("returns exactly 7 tools", () => {
     const tools = createLinearTools(createDeps());
-    expect(tools).toHaveLength(6);
+    expect(tools).toHaveLength(7);
   });
 
   it("returns tools with correct names", () => {
@@ -189,6 +189,7 @@ describe("createLinearTools", () => {
       "linear_list_teams",
       "linear_list_labels",
       "linear_search_issues",
+      "linear_create_comment",
     ]);
   });
 
@@ -236,9 +237,9 @@ describe("createGitHubTools", () => {
     mockCallMcpTool.mockReset();
   });
 
-  it("returns exactly 9 tools", () => {
+  it("returns exactly 10 tools", () => {
     const tools = createGitHubTools(createDeps());
-    expect(tools).toHaveLength(9);
+    expect(tools).toHaveLength(10);
   });
 
   it("returns tools with correct names", () => {
@@ -255,6 +256,7 @@ describe("createGitHubTools", () => {
       "github_merge_pull_request",
       "github_get_file_contents",
       "github_list_files",
+      "github_create_pr_comment",
     ]);
   });
 
