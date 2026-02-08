@@ -283,8 +283,17 @@ export async function routeEvent(
       }
 
       case "slow_path": {
+        // Thread eventReplyContext from the incoming event into slow-path deps
+        // so router tools (signal_conversation, start_conversation) can auto-inject it
+        const slowPathDeps = {
+          ...deps,
+          ...(routeDecision.event.replyContext && {
+            eventReplyContext: routeDecision.event.replyContext,
+          }),
+        };
+
         // Fire-and-forget: return 200 immediately, process in background
-        void routeViaAgentLoopV2(event, deps).catch((error) => {
+        void routeViaAgentLoopV2(event, slowPathDeps).catch((error) => {
           eventLogger.error(
             { err: error },
             "Background slow-path routing failed",
