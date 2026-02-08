@@ -1,7 +1,19 @@
 import type { NormalizedEvent } from "@aesir/types";
 import { describe, expect, it } from "vitest";
 import { adaptSlackEvent } from "./slack.js";
-import { IncomingEventSchema } from "./types.js";
+import {
+  type IncomingEvent,
+  IncomingEventSchema,
+  isAdapterIgnore,
+} from "./types.js";
+
+/** Narrow adapter result to IncomingEvent for test assertions. */
+function asIncoming(
+  result: ReturnType<typeof adaptSlackEvent>,
+): IncomingEvent | null {
+  if (result === null || isAdapterIgnore(result)) return null;
+  return result;
+}
 
 // ---------------------------------------------------------------------------
 // Helper
@@ -46,7 +58,7 @@ describe("adaptSlackEvent", () => {
         payload: { taskIdentifier: "ABC-123" },
       });
 
-      const result = adaptSlackEvent(event);
+      const result = asIncoming(adaptSlackEvent(event));
 
       expect(result).not.toBeNull();
       expect(result?.type).toBe("approval");
@@ -68,7 +80,7 @@ describe("adaptSlackEvent", () => {
         payload: { taskIdentifier: "DEF-456" },
       });
 
-      const result = adaptSlackEvent(event);
+      const result = asIncoming(adaptSlackEvent(event));
 
       expect(result).not.toBeNull();
       expect(result?.type).toBe("approval");
@@ -96,7 +108,7 @@ describe("adaptSlackEvent", () => {
         payload: { taskIdentifier: "GHI-789" },
       });
 
-      const result = adaptSlackEvent(event);
+      const result = asIncoming(adaptSlackEvent(event));
 
       expect(result).not.toBeNull();
       expect(result?.type).toBe("escalation_resolved");
@@ -117,7 +129,7 @@ describe("adaptSlackEvent", () => {
         payload: { taskIdentifier: "JKL-012" },
       });
 
-      const result = adaptSlackEvent(event);
+      const result = asIncoming(adaptSlackEvent(event));
 
       expect(result).not.toBeNull();
       expect(result?.type).toBe("escalation_resolved");
@@ -147,7 +159,7 @@ describe("adaptSlackEvent", () => {
         },
       });
 
-      const result = adaptSlackEvent(event);
+      const result = asIncoming(adaptSlackEvent(event));
 
       expect(result).not.toBeNull();
       expect(result?.type).toBe("slack.app_mention.created");
@@ -177,7 +189,7 @@ describe("adaptSlackEvent", () => {
         },
       });
 
-      const result = adaptSlackEvent(event);
+      const result = asIncoming(adaptSlackEvent(event));
 
       expect(result).not.toBeNull();
       expect(result?.correlationKey).toBe("9999999999.999999");
@@ -200,7 +212,7 @@ describe("adaptSlackEvent", () => {
         },
       });
 
-      const result = adaptSlackEvent(event);
+      const result = asIncoming(adaptSlackEvent(event));
 
       expect(result).not.toBeNull();
       expect(result?.type).toBe("thread_reply");
@@ -218,7 +230,7 @@ describe("adaptSlackEvent", () => {
       expect(IncomingEventSchema.safeParse(result).success).toBe(true);
     });
 
-    it("returns null for channel messages without threadTs (handled by app_mention)", () => {
+    it("returns AdapterIgnore for channel messages without threadTs (handled by app_mention)", () => {
       const event = makeEvent({
         type: "slack.message.created",
         payload: {
@@ -231,7 +243,10 @@ describe("adaptSlackEvent", () => {
 
       const result = adaptSlackEvent(event);
 
-      expect(result).toBeNull();
+      expect(result).toEqual({
+        action: "ignore",
+        reason: expect.stringContaining("app_mention"),
+      });
     });
   });
 });

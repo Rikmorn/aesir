@@ -11,19 +11,24 @@
  * - app_mention.created -> "slack.app_mention.created" (start trigger, preserves original type)
  * - message.created (with threadTs) -> "thread_reply" (domain-language)
  *
- * Returns null for:
+ * Returns AdapterIgnore for:
  * - message.created without threadTs (top-level channel messages; @mentions handled by app_mention)
+ *
+ * Returns null for:
  * - Any unrecognized Slack event type
  */
 
 import type { NormalizedEvent } from "@aesir/types";
-import type { IncomingEvent } from "./types.js";
+import type { AdapterIgnore, IncomingEvent } from "./types.js";
 
 /**
  * Adapt a Slack NormalizedEvent into a domain-language IncomingEvent.
+ * Returns AdapterIgnore for known events that should be dropped.
  * Returns null if the event type is not recognized by this adapter.
  */
-export function adaptSlackEvent(event: NormalizedEvent): IncomingEvent | null {
+export function adaptSlackEvent(
+  event: NormalizedEvent,
+): IncomingEvent | AdapterIgnore | null {
   if (event.source !== "slack") return null;
 
   const payload = event.payload as Record<string, unknown>;
@@ -109,11 +114,17 @@ export function adaptSlackEvent(event: NormalizedEvent): IncomingEvent | null {
     case "slack.message.created": {
       const threadTs = payload.threadTs as string | undefined;
 
-      // Top-level channel messages (no threadTs) are suppressed.
+      // Top-level channel messages (no threadTs) are explicitly ignored.
       // @mentions are already handled by app_mention.created (fast-path),
       // and non-@mention channel messages have no routing target.
       // Only thread replies (with threadTs) need slow-path routing.
-      if (!threadTs) return null;
+      if (!threadTs) {
+        return {
+          action: "ignore" as const,
+          reason:
+            "Top-level message without threadTs; @mentions handled by app_mention",
+        };
+      }
 
       return {
         type: "thread_reply",

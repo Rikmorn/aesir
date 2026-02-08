@@ -40,14 +40,37 @@ export const IncomingEventSchema = z.object({
 /** Validated IncomingEvent type inferred from the Zod schema */
 export type IncomingEvent = z.infer<typeof IncomingEventSchema>;
 
+// ---- Adapter Ignore Sentinel ----------------------------------------------
+
+/**
+ * Returned by adapters when an event is explicitly recognized but should be
+ * dropped (not routed, not sent to slow-path). Distinct from null, which
+ * means "I don't recognize this event, try the next adapter."
+ */
+export interface AdapterIgnore {
+  readonly action: "ignore";
+  readonly reason: string;
+}
+
+/** Type guard for AdapterIgnore */
+export function isAdapterIgnore(
+  result: IncomingEvent | AdapterIgnore | null,
+): result is AdapterIgnore {
+  return result !== null && "action" in result && result.action === "ignore";
+}
+
 // ---- EventAdapter Type ----------------------------------------------------
 
 /**
  * Adapter function type: transforms a NormalizedEvent into a domain-language
- * IncomingEvent. Returns null if the event is not recognized by this adapter
- * (falls through to slow-path or next adapter).
+ * IncomingEvent. Returns:
+ * - IncomingEvent: recognized event, route it
+ * - AdapterIgnore: recognized event, explicitly drop it
+ * - null: unrecognized event, try the next adapter
  */
-export type EventAdapter = (event: NormalizedEvent) => IncomingEvent | null;
+export type EventAdapter = (
+  event: NormalizedEvent,
+) => IncomingEvent | AdapterIgnore | null;
 
 // ---- Signal Type Map (Reference) -----------------------------------------
 

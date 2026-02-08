@@ -45,10 +45,13 @@ vi.mock("../shared/mcp/index.js", () => ({
   callMcpTool: vi.fn().mockResolvedValue(undefined),
 }));
 
-// Import the mock so we can configure it per test
+// Import mocks so we can configure them per test
+import { ALL_ADAPTERS } from "../adapters/index.js";
 import { adaptPassThrough } from "../adapters/pass-through.js";
+import type { AdapterIgnore, EventAdapter } from "../adapters/types.js";
 
 const mockAdaptPassThrough = vi.mocked(adaptPassThrough);
+const mockAllAdapters = ALL_ADAPTERS as EventAdapter[];
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -802,6 +805,33 @@ describe("routeEvent", () => {
       expect(eventRouter.handle).toHaveBeenCalled();
       expect(taskService.get).not.toHaveBeenCalled();
       expect(result.action).toBe("ignored");
+    });
+  });
+
+  // ─── Adapter Ignore Sentinel ────────────────────────────────────────────
+
+  describe("adapter ignore sentinel", () => {
+    it("returns ignored when adapter returns AdapterIgnore (skips slow-path)", async () => {
+      const ignoreAdapter: EventAdapter = () =>
+        ({
+          action: "ignore",
+          reason: "Top-level message; handled by app_mention",
+        }) as AdapterIgnore;
+
+      mockAllAdapters.push(ignoreAdapter);
+
+      const { deps, eventRouter } = createMockDeps();
+
+      const result = await routeEvent(createNormalizedEvent(), deps);
+
+      expect(result).toEqual({ received: true, action: "ignored" });
+      // EventRouter should NOT be consulted
+      expect(eventRouter.handle).not.toHaveBeenCalled();
+      // Pass-through should NOT be called
+      expect(mockAdaptPassThrough).not.toHaveBeenCalled();
+
+      // Cleanup
+      mockAllAdapters.length = 0;
     });
   });
 });

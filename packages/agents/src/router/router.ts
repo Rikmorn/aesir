@@ -16,6 +16,7 @@ import { sql } from "drizzle-orm";
 import { ALL_ADAPTERS } from "../adapters/index.js";
 import { adaptPassThrough } from "../adapters/pass-through.js";
 import type { IncomingEvent } from "../adapters/types.js";
+import { isAdapterIgnore } from "../adapters/types.js";
 import { callMcpTool } from "../shared/mcp/index.js";
 import { enrichInitialMessage } from "./enrichment.js";
 import { routeViaAgentLoopV2 } from "./slow-path.js";
@@ -162,10 +163,17 @@ export async function routeEvent(
   eventLogger.info("Routing event");
 
   // 1. Adapter pipeline: first non-null wins, pass-through as fallback
-  let incomingEvent = null;
+  let incomingEvent: IncomingEvent | null = null;
   for (const adapter of ALL_ADAPTERS) {
-    incomingEvent = adapter(event);
-    if (incomingEvent !== null) break;
+    const result = adapter(event);
+    if (isAdapterIgnore(result)) {
+      eventLogger.debug({ reason: result.reason }, "Event ignored by adapter");
+      return { received: true, action: "ignored" };
+    }
+    if (result !== null) {
+      incomingEvent = result;
+      break;
+    }
   }
   if (incomingEvent === null) {
     incomingEvent = adaptPassThrough(event);
