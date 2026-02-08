@@ -23,9 +23,9 @@ v2.6 replaces channel-specific outbound tools with domain-language communication
   5. MCP permissions seeded: create_comment for dev-agent and product-agent, create_pr_comment for dev-agent only
 **Plans:** 3 plans
 Plans:
-- [ ] 60-01-PLAN.md -- Communication types (ReplyContext, MessageContent) + reply_context DB migration
-- [ ] 60-02-PLAN.md -- Integration-side MCP tools (Linear create_comment SDK server fix + GitHub create_pr_comment full stack)
-- [ ] 60-03-PLAN.md -- Agent-side wiring (tool wrappers, ToolRegistry registration, permission seeding)
+- [x] 60-01-PLAN.md -- Communication types (ReplyContext, MessageContent) + reply_context DB migration
+- [x] 60-02-PLAN.md -- Integration-side MCP tools (Linear create_comment SDK server fix + GitHub create_pr_comment full stack)
+- [x] 60-03-PLAN.md -- Agent-side wiring (tool wrappers, ToolRegistry registration, permission seeding)
 
 ### Phase 61: Inbound Pipeline
 
@@ -114,7 +114,7 @@ Phase 60 (Types + MCP) ──┬──> Phase 61 (Inbound) ──> Phase 62 (Rou
 
 | Phase | Milestone | Reqs | Plans Complete | Status | Completed |
 |-------|-----------|:----:|----------------|--------|-----------|
-| 60. Types & MCP Foundation | v2.6 | 9 | 0/3 | Planned | - |
+| 60. Types & MCP Foundation | v2.6 | 9 | 3/3 | Complete | 2026-02-08 |
 | 61. Inbound Pipeline | v2.6 | 7 | 0/TBD | Not started | - |
 | 62. Router Updates | v2.6 | 4 | 0/TBD | Not started | - |
 | 63. Outbound Denormalizer | v2.6 | 9 | 0/TBD | Not started | - |
