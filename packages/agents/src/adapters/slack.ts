@@ -110,7 +110,15 @@ export function adaptSlackEvent(
         deduplicationId: event.correlationId,
         message: payload.text as string,
         ...(correlatedTaskId && { taskId: correlatedTaskId }),
-        ...(teamId && channelId && { replyContext: { channel: "slack" as const, teamId, channelId, threadTs } }),
+        ...(teamId &&
+          channelId && {
+            replyContext: {
+              channel: "slack" as const,
+              teamId,
+              channelId,
+              threadTs,
+            },
+          }),
       };
     }
 
@@ -144,7 +152,15 @@ export function adaptSlackEvent(
         deduplicationId: event.correlationId,
         message: payload.text as string,
         ...(correlatedTaskId && { taskId: correlatedTaskId }),
-        ...(teamId && channelId && { replyContext: { channel: "slack" as const, teamId, channelId, threadTs } }),
+        ...(teamId &&
+          channelId && {
+            replyContext: {
+              channel: "slack" as const,
+              teamId,
+              channelId,
+              threadTs,
+            },
+          }),
       };
     }
 
