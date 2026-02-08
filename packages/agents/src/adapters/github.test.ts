@@ -66,6 +66,43 @@ describe("adaptGitHubEvent", () => {
       expect(IncomingEventSchema.safeParse(result).success).toBe(true);
     });
 
+    it("includes replyContext with owner, repo, prNumber when payload.repository present", () => {
+      const event = makeEvent({
+        type: "github.pull_request.merged",
+        payload: {
+          branchName: "feature/ABC-123",
+          prNumber: 42,
+          repository: { owner: "my-org", name: "my-repo" },
+        },
+      });
+
+      const result = adaptGitHubEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.replyContext).toEqual({
+        channel: "github",
+        owner: "my-org",
+        repo: "my-repo",
+        prNumber: 42,
+      });
+      expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+
+    it("omits replyContext when payload.repository is missing", () => {
+      const event = makeEvent({
+        type: "github.pull_request.merged",
+        payload: {
+          branchName: "feature/ABC-123",
+          prNumber: 42,
+        },
+      });
+
+      const result = adaptGitHubEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.replyContext).toBeUndefined();
+    });
+
     it("handles case-insensitive branch matching", () => {
       const event = makeEvent({
         type: "github.pull_request.merged",
@@ -134,6 +171,28 @@ describe("adaptGitHubEvent", () => {
       expect(IncomingEventSchema.safeParse(result).success).toBe(true);
     });
 
+    it("includes replyContext with owner, repo, prNumber when payload.repository present", () => {
+      const event = makeEvent({
+        type: "github.pull_request.closed",
+        payload: {
+          branchName: "feature/DEF-456",
+          prNumber: 99,
+          repository: { owner: "acme-corp", name: "backend" },
+        },
+      });
+
+      const result = adaptGitHubEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.replyContext).toEqual({
+        channel: "github",
+        owner: "acme-corp",
+        repo: "backend",
+        prNumber: 99,
+      });
+      expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+
     it("returns null when branch name does not match BRANCH_TASK_REGEX", () => {
       const event = makeEvent({
         type: "github.pull_request.closed",
@@ -180,6 +239,47 @@ describe("adaptGitHubEvent", () => {
       );
 
       expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+
+    it("includes replyContext with owner and repo from payload.repository", () => {
+      const event = makeEvent({
+        type: "github.pull_request.review_submitted",
+        payload: {
+          prNumber: 42,
+          reviewState: "commented",
+          reviewBody: "Needs a few changes",
+          reviewerLogin: "reviewer1",
+          repository: { owner: "my-org", name: "my-repo" },
+        },
+      });
+
+      const result = adaptGitHubEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.replyContext).toEqual({
+        channel: "github",
+        owner: "my-org",
+        repo: "my-repo",
+        prNumber: 42,
+      });
+      expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+
+    it("omits replyContext when payload.repository is missing", () => {
+      const event = makeEvent({
+        type: "github.pull_request.review_submitted",
+        payload: {
+          prNumber: 42,
+          reviewState: "commented",
+          reviewBody: "Needs a few changes",
+          reviewerLogin: "reviewer1",
+        },
+      });
+
+      const result = adaptGitHubEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.replyContext).toBeUndefined();
     });
   });
 

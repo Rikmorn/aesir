@@ -43,6 +43,9 @@ export function adaptGitHubEvent(event: NormalizedEvent): IncomingEvent | null {
       const prNumber = payload.prNumber as number;
       const branchMatch = branchName?.match(BRANCH_TASK_REGEX);
       if (!branchMatch?.[1]) return null; // Can't extract task ID -> fall through
+      const repository = payload.repository as
+        | { owner: string; name: string }
+        | undefined;
       return {
         type: "pr_merged",
         data: { merged: true, prNumber },
@@ -51,6 +54,16 @@ export function adaptGitHubEvent(event: NormalizedEvent): IncomingEvent | null {
         deduplicationId: event.correlationId,
         message: `PR #${prNumber} (${branchName}) was merged into main.`,
         ...(taskId !== undefined && { taskId }),
+        ...(repository?.owner &&
+          repository?.name &&
+          prNumber && {
+            replyContext: {
+              channel: "github" as const,
+              owner: repository.owner,
+              repo: repository.name,
+              prNumber,
+            },
+          }),
       };
     }
 
@@ -59,6 +72,9 @@ export function adaptGitHubEvent(event: NormalizedEvent): IncomingEvent | null {
       const prNumber = payload.prNumber as number;
       const branchMatch = branchName?.match(BRANCH_TASK_REGEX);
       if (!branchMatch?.[1]) return null; // Can't extract task ID -> fall through
+      const repository = payload.repository as
+        | { owner: string; name: string }
+        | undefined;
       return {
         type: "pr_closed",
         data: { merged: false, prNumber },
@@ -67,6 +83,16 @@ export function adaptGitHubEvent(event: NormalizedEvent): IncomingEvent | null {
         deduplicationId: event.correlationId,
         message: `PR #${prNumber} (${branchName}) was closed without merging.`,
         ...(taskId !== undefined && { taskId }),
+        ...(repository?.owner &&
+          repository?.name &&
+          prNumber && {
+            replyContext: {
+              channel: "github" as const,
+              owner: repository.owner,
+              repo: repository.name,
+              prNumber,
+            },
+          }),
       };
     }
 
@@ -76,6 +102,9 @@ export function adaptGitHubEvent(event: NormalizedEvent): IncomingEvent | null {
     case "github.pull_request.review_commented":
     case "github.pull_request.review_dismissed": {
       const prNumber = payload.prNumber as number;
+      const repository = payload.repository as
+        | { owner: string; name: string }
+        | undefined;
       return {
         type: "pr_review",
         data: {
@@ -89,6 +118,16 @@ export function adaptGitHubEvent(event: NormalizedEvent): IncomingEvent | null {
         deduplicationId: event.correlationId,
         message: `PR #${prNumber} review (${payload.reviewState}): ${(payload.reviewBody as string) || "(no comment)"}`,
         ...(taskId !== undefined && { taskId }),
+        ...(repository?.owner &&
+          repository?.name &&
+          prNumber && {
+            replyContext: {
+              channel: "github" as const,
+              owner: repository.owner,
+              repo: repository.name,
+              prNumber,
+            },
+          }),
       };
     }
 
