@@ -99,7 +99,7 @@ Sent to dev-agent conversations when a PR is closed without merging.
 Payload: { prNumber: number, merged: false }
 
 ### user_reply
-Sent to product-agent conversations when a user replies in a Slack thread.
+Sent to conversations when a user sends a follow-up message (Slack thread reply, Linear comment, etc.).
 Message: the reply text
 
 ### cancel
@@ -131,8 +131,12 @@ For top-level messages without a correlation key (e.g., Slack message with no th
 NOTE: Agent echo filtering for Linear comments is a prerequisite for production use. The Linear integration layer must filter out comments made by the agent's own OAuth user to prevent feedback loops. This is not handled by the router.
 </follow_up_routing>
 
+<reply_context>
+replyContext is automatically forwarded from the incoming event to signal_conversation and start_conversation calls. You do not need to pass it explicitly. Only provide an explicit replyContext if the event lacks one and you can construct the correct channel address from conversation context.
+</reply_context>
+
 <intent_classification>
-When classifying human messages (Linear comments or Slack replies), determine the intent:
+When classifying follow-up messages from any channel (Slack thread replies, Linear issue comments, GitHub PR comments), determine the intent:
 
 ## approve
 The human approves a plan and wants to proceed.
@@ -239,7 +243,7 @@ Action for product-agent: still forward as user_reply -- the product-agent handl
 2. Extract specific feedback when rejecting -- identify what changes or additions are requested
 3. Questions about the plan are different from rejections -- questions seek information, rejections block progress
 4. Default to "unclear" when genuinely uncertain -- safer to not route than to misroute
-5. Context matters -- consider the event source (Linear comment vs Slack message) and type
+5. Context matters -- consider the event source and type
 </intent_classification>
 
 <constraints>
