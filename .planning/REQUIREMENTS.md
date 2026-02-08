@@ -10,11 +10,11 @@ Requirements for symmetric outbound normalization. Each maps to roadmap phases.
 ### Types & Foundation
 
 - [ ] **TYPE-01**: ReplyContext Zod discriminated union defined with slack/linear/github channel variants
-- [ ] **TYPE-02**: NotifyTarget Zod schema defined for broadcast channel addressing
-- [ ] **TYPE-03**: MessageContent type defined with text, semantic hint, and options fields
-- [ ] **TYPE-04**: Conversation row extended with reply_context JSONB column storing the last-received replyContext (used as fallback for notify() when no explicit target provided)
-- [ ] **TYPE-05**: Communication tools accept explicit replyContext parameter (primary) and fall back to conversation-level replyContext from ToolContext when not provided
-- [ ] **TYPE-06**: Agent definitions support optional defaultNotifyTarget field for fallback notification routing
+- [x] **TYPE-02**: ~~NotifyTarget Zod schema~~ — Dropped per discuss-phase decision: ReplyContext unifies both reply and notify addressing (Slack threadTs optional = post to channel)
+- [ ] **TYPE-03**: MessageContent type defined with text and options fields (semantic hint dropped per discuss-phase decision)
+- [ ] **TYPE-04**: Conversation row extended with reply_context JSONB column (nullable, no default). Executor wiring to populate it deferred to Phase 61
+- [x] **TYPE-05**: ~~Communication tools accept explicit replyContext parameter~~ — Moved to Phase 64 (COMM-01..COMM-05 cover this)
+- [x] **TYPE-06**: ~~Agent definitions support defaultNotifyTarget~~ — Moved to Phase 65 (MIGR-01..MIGR-06 cover this)
 
 ### MCP Prerequisites
 
@@ -109,11 +109,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | TYPE-01 | Phase 60 | Pending |
-| TYPE-02 | Phase 60 | Pending |
+| TYPE-02 | Phase 60 | Dropped (ReplyContext unifies both) |
 | TYPE-03 | Phase 60 | Pending |
 | TYPE-04 | Phase 60 | Pending |
-| TYPE-05 | Phase 60 | Pending |
-| TYPE-06 | Phase 60 | Pending |
+| TYPE-05 | Phase 64 | Moved (covered by COMM-01..05) |
+| TYPE-06 | Phase 65 | Moved (covered by MIGR-01..06) |
 | MCP-01 | Phase 60 | Pending |
 | MCP-02 | Phase 60 | Pending |
 | MCP-03 | Phase 60 | Pending |
@@ -154,10 +154,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEST-04 | Phase 66 | Pending |
 
 **Coverage:**
-- v2.6 requirements: 44 total
+- v2.6 requirements: 44 total (1 dropped, 2 moved to later phases)
 - Mapped to phases: 44
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-08*
-*Last updated: 2026-02-08 -- traceability updated with phase mappings*
+*Last updated: 2026-02-08 -- synced with Phase 60 discuss-phase decisions (TYPE-02 dropped, TYPE-05/06 moved)*

@@ -14,13 +14,13 @@ v2.6 replaces channel-specific outbound tools with domain-language communication
 
 **Goal**: All type definitions and missing integration MCP tools exist, unblocking both the inbound pipeline and outbound denormalizer
 **Depends on**: Nothing (first phase)
-**Requirements**: TYPE-01, TYPE-02, TYPE-03, TYPE-04, TYPE-05, TYPE-06, MCP-01, MCP-02, MCP-03
+**Requirements**: TYPE-01, TYPE-03, TYPE-04, MCP-01, MCP-02, MCP-03
 **Success Criteria** (what must be TRUE):
   1. A ReplyContext Zod discriminated union validates slack, linear, and github channel variants at runtime, and TypeScript infers the correct variant fields after narrowing on the channel discriminator
-  2. The conversations table has a reply_context JSONB column, and the ConversationExecutor stores the last-received replyContext from signal delivery into this column
+  2. The conversations table has a reply_context JSONB column (nullable, no default). Executor wiring to populate it happens in Phase 61 when signal delivery gets replyContext support
   3. Calling `POST /mcp/tools/create_comment` on the Linear integration (port 3001) with an issueId and body successfully creates a comment on the Linear issue
   4. Calling `POST /mcp/tools/create_pr_comment` on the GitHub integration (port 3002) with owner, repo, prNumber, and body successfully creates a comment on the GitHub PR
-  5. MCP permissions for both new tools are seeded for dev-agent and product-agent
+  5. MCP permissions seeded: create_comment for dev-agent and product-agent, create_pr_comment for dev-agent only
 **Plans:** 3 plans
 Plans:
 - [ ] 60-01-PLAN.md -- Communication types (ReplyContext, MessageContent) + reply_context DB migration
