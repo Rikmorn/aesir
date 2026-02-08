@@ -2,7 +2,7 @@
 
 ## Overview
 
-v2.5 gives agents continuity across interactions. Five delivery boundaries: rewrite orchestrator prompts from procedural state machines to constitutional + few-shot style (Phase 56), enable completed/failed conversations to reopen on follow-up events (Phase 57), introduce the task primitive as a first-class coordination entity with schema, service, and tools (Phase 58.1-58.2), wire integration correlation and task-aware event routing (Phase 58.3-58.4), then evolve all agent prompts to leverage the task lifecycle with hierarchy enforcement (Phase 59). Phases 56 and 57 are independent and can execute in parallel; Phase 58 sub-phases are sequential; Phase 59 depends on both 56 and 58.2.
+v2.5 gives agents continuity across interactions. Five delivery boundaries: rewrite orchestrator prompts from procedural state machines to constitutional + few-shot style (Phase 56), enable completed/failed conversations to reopen on follow-up events (Phase 57), introduce the task primitive as a first-class coordination entity with schema, service, and tools (Phase 58.1-58.2), wire integration correlation and task-aware event routing (Phase.3-58.4), then evolve all agent prompts to leverage the task lifecycle with hierarchy enforcement (Phase 59). Phases 56 and 57 are independent and can execute in parallel; Phase 58 sub-phases are sequential; Phase 59 depends on both 56 and 58.2.
 
 ## Milestones
 
@@ -126,10 +126,13 @@ Plans:
 **Requirements**: EVOL-01, EVOL-02, EVOL-03, EVOL-04, EVOL-05, EVOL-06, EVOL-07, EVOL-08, TASK-18, TASK-19, TASK-20
 **Success Criteria** (what must be TRUE):
   1. Product-agent and dev-agent prompts include guidance to create a task when starting meaningful work and to skip task creation for quick single-turn interactions
-  2. All agent prompts include handoff examples in their few-shot sections showing good vs bad handoff content, and agents are guided to delegate subtasks via create_task and query related work via list_tasks
+  2. All agent prompts include handoff examples in their few-shot sections showing good handoff content, and agents are guided to delegate subtasks via create_task and query related work via list_tasks
   3. Agents call get_task_context when the latest handoff references prior work, and prompts degrade gracefully when no task is available ("operate as before")
   4. create_task enforces hierarchy guardrails: max 5 levels of parent_id depth, max 10 subtasks per parent, and circular delegation is rejected when the same assignee appears in the ancestry chain
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 59-01-PLAN.md -- Prompt evolution: task lifecycle guidance, handoff examples, tool descriptions for both agents
+- [ ] 59-02-PLAN.md -- Hierarchy guardrails: depth limit, subtask cap, circular delegation prevention with tests
 
 ## Progress
 
@@ -152,8 +155,8 @@ Phase 57 (Reopening) ──> Phase 58.1 ──> 58.2 ──> 58.3 ──> 58.4 �
 | 58.2 Agent Task Tools | v2.5 | 10 | 3/3 | Complete | 2026-02-07 |
 | 58.3 Integration Correlation | v2.5 | 11 | 4/4 | Complete | 2026-02-07 |
 | 58.4 Task-Aware Event Routing | v2.5 | 6 | 2/2 | Complete | 2026-02-07 |
-| 59. Prompt Evolution + Hierarchy | v2.5 | 11 | 0/TBD | Not started | - |
+| 59. Prompt Evolution + Hierarchy | v2.5 | 11 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-07 after Phase 58.4 complete (2 plans in 2 waves)*
+*Last updated: 2026-02-08 after Phase 59 planning (2 plans in 1 wave)*
