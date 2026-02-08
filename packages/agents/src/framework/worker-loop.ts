@@ -25,6 +25,8 @@ import type {
   AgentLoopResult,
   LLMResponse,
 } from "../shared/agent-loop/types.js";
+import { appendReplyContextTag } from "../shared/communication/message-utils.js";
+import type { ReplyContext } from "../shared/communication/types.js";
 import type * as agentsSchemaModule from "../shared/db/schema.js";
 import type { Conversation, TaskHandoff } from "../shared/db/schema.js";
 import { conversations } from "../shared/db/schema.js";
@@ -555,8 +557,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
                     firstMsg.content.slice(insertAt).replace(/^\n+/, "");
                 } else {
                   // No workspace_context -- prepend task_context to the message
-                  firstMsg.content =
-                    taskContextBlock + "\n\n" + firstMsg.content;
+                  firstMsg.content = `${taskContextBlock}\n\n${firstMsg.content}`;
                 }
               }
             } else if (isResumed) {
@@ -657,6 +658,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         type: string;
         data?: Record<string, unknown>;
         message?: string;
+        replyContext?: unknown;
       }>;
       const pendingWait = conv.pending_wait as Record<string, unknown> | null;
 
@@ -670,11 +672,15 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
           const signalContent =
             matchedSignal.message ??
             `Signal received: ${matchedSignal.type}. Data: ${JSON.stringify(matchedSignal.data ?? {})}`;
+          const finalContent = appendReplyContextTag(
+            signalContent,
+            matchedSignal.replyContext as ReplyContext | undefined,
+          );
 
           // Append signal as user message
           currentMessages = [
             ...currentMessages,
-            { role: "user" as const, content: signalContent },
+            { role: "user" as const, content: finalContent },
           ];
 
           // Remove consumed signal
@@ -902,6 +908,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
           type: string;
           data?: Record<string, unknown>;
           message?: string;
+          replyContext?: unknown;
         }>;
 
         const matchIdx = freshSignals.findIndex(
@@ -919,10 +926,14 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
           const signalContent =
             matchedQueuedSignal.message ??
             `Signal received: ${matchedQueuedSignal.type}. Data: ${JSON.stringify(matchedQueuedSignal.data ?? {})}`;
+          const finalContent = appendReplyContextTag(
+            signalContent,
+            matchedQueuedSignal.replyContext as ReplyContext | undefined,
+          );
 
           const updatedMessages = [
             ...(finalMessages as unknown[]),
-            { role: "user", content: signalContent },
+            { role: "user", content: finalContent },
           ];
 
           const updatedSignals = [

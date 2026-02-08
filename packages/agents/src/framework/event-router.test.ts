@@ -430,6 +430,51 @@ describe("EventRouter", () => {
       }
     });
 
+    it("signal route includes replyContext from IncomingEvent", async () => {
+      const { router } = await createRouter();
+
+      const result = router.handle(
+        makeEvent({
+          type: "approval",
+          correlationKey: "ISSUE-123",
+          source: "slack:webhook",
+          data: { approved: true },
+          replyContext: {
+            channel: "slack",
+            teamId: "T1",
+            channelId: "C1",
+          },
+        }),
+      );
+
+      expect(result.action).toBe("signal");
+      if (result.action === "signal") {
+        expect(result.signal.replyContext).toEqual({
+          channel: "slack",
+          teamId: "T1",
+          channelId: "C1",
+        });
+      }
+    });
+
+    it("signal route works without replyContext (backward compatible)", async () => {
+      const { router } = await createRouter();
+
+      const result = router.handle(
+        makeEvent({
+          type: "approval",
+          correlationKey: "ISSUE-123",
+          source: "slack:webhook",
+          data: { approved: true },
+        }),
+      );
+
+      expect(result.action).toBe("signal");
+      if (result.action === "signal") {
+        expect(result.signal.replyContext).toBeUndefined();
+      }
+    });
+
     it("includes event reference in signal result", async () => {
       const { router } = await createRouter();
 

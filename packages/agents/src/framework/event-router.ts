@@ -128,6 +128,7 @@ export function createEventRouter(options: EventRouterOptions): EventRouter {
           message: event.message,
           source: event.source,
           deduplicationId: event.deduplicationId,
+          ...(event.replyContext && { replyContext: event.replyContext }),
         };
 
         return {

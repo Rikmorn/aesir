@@ -90,6 +90,7 @@ async function routeViaTask(
         message: event.message,
         source: event.source,
         deduplicationId: event.deduplicationId,
+        ...(event.replyContext && { replyContext: event.replyContext }),
       };
 
       logger.info(
@@ -229,6 +230,9 @@ export async function routeEvent(
           agentDefinitionId: routeDecision.agentDefinitionId,
           correlationKey: routeDecision.correlationKey,
           initialMessage,
+          ...(routeDecision.event.replyContext && {
+            replyContext: routeDecision.event.replyContext,
+          }),
         });
 
         // executor.start() is idempotent (EXEC-10): returns existing ID
