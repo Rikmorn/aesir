@@ -94,8 +94,8 @@ Deferred to post-v2.6. Tracked but not in current roadmap.
 
 | Feature | Reason |
 |---------|--------|
-| Agent-visible channel awareness (A1) | Agents should NOT know which channel they're on — defeats the abstraction |
-| Block Kit construction by LLM (A2) | Complex, fragile, token-expensive — denormalizer constructs from semantic intent |
+| Agent-visible channel awareness (A1) | Agents should NOT know which channel they're on -- defeats the abstraction |
+| Block Kit construction by LLM (A2) | Complex, fragile, token-expensive -- denormalizer constructs from semantic intent |
 | Channel preference selection by agents (A3) | Recreates hardcoded Slack problem at higher abstraction level |
 | Real-time channel-switching (A4) | Omnichannel problem; each signal carries its own replyContext naturally |
 | Universal rich content format (A5) | Consumer chat territory; text + options sufficient for developer workflow |
@@ -108,56 +108,56 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TYPE-01 | — | Pending |
-| TYPE-02 | — | Pending |
-| TYPE-03 | — | Pending |
-| TYPE-04 | — | Pending |
-| TYPE-05 | — | Pending |
-| TYPE-06 | — | Pending |
-| MCP-01 | — | Pending |
-| MCP-02 | — | Pending |
-| MCP-03 | — | Pending |
-| INBD-01 | — | Pending |
-| INBD-02 | — | Pending |
-| INBD-03 | — | Pending |
-| INBD-04 | — | Pending |
-| INBD-05 | — | Pending |
-| INBD-06 | — | Pending |
-| INBD-07 | — | Pending |
-| OUTB-01 | — | Pending |
-| OUTB-02 | — | Pending |
-| OUTB-03 | — | Pending |
-| OUTB-04 | — | Pending |
-| OUTB-05 | — | Pending |
-| OUTB-06 | — | Pending |
-| OUTB-07 | — | Pending |
-| OUTB-08 | — | Pending |
-| OUTB-09 | — | Pending |
-| COMM-01 | — | Pending |
-| COMM-02 | — | Pending |
-| COMM-03 | — | Pending |
-| COMM-04 | — | Pending |
-| COMM-05 | — | Pending |
-| ROUT-01 | — | Pending |
-| ROUT-02 | — | Pending |
-| ROUT-03 | — | Pending |
-| ROUT-04 | — | Pending |
-| MIGR-01 | — | Pending |
-| MIGR-02 | — | Pending |
-| MIGR-03 | — | Pending |
-| MIGR-04 | — | Pending |
-| MIGR-05 | — | Pending |
-| MIGR-06 | — | Pending |
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
-| TEST-03 | — | Pending |
-| TEST-04 | — | Pending |
+| TYPE-01 | Phase 60 | Pending |
+| TYPE-02 | Phase 60 | Pending |
+| TYPE-03 | Phase 60 | Pending |
+| TYPE-04 | Phase 60 | Pending |
+| TYPE-05 | Phase 60 | Pending |
+| TYPE-06 | Phase 60 | Pending |
+| MCP-01 | Phase 60 | Pending |
+| MCP-02 | Phase 60 | Pending |
+| MCP-03 | Phase 60 | Pending |
+| INBD-01 | Phase 61 | Pending |
+| INBD-02 | Phase 61 | Pending |
+| INBD-03 | Phase 61 | Pending |
+| INBD-04 | Phase 61 | Pending |
+| INBD-05 | Phase 61 | Pending |
+| INBD-06 | Phase 61 | Pending |
+| INBD-07 | Phase 61 | Pending |
+| ROUT-01 | Phase 62 | Pending |
+| ROUT-02 | Phase 62 | Pending |
+| ROUT-03 | Phase 62 | Pending |
+| ROUT-04 | Phase 62 | Pending |
+| OUTB-01 | Phase 63 | Pending |
+| OUTB-02 | Phase 63 | Pending |
+| OUTB-03 | Phase 63 | Pending |
+| OUTB-04 | Phase 63 | Pending |
+| OUTB-05 | Phase 63 | Pending |
+| OUTB-06 | Phase 63 | Pending |
+| OUTB-07 | Phase 63 | Pending |
+| OUTB-08 | Phase 63 | Pending |
+| OUTB-09 | Phase 63 | Pending |
+| COMM-01 | Phase 64 | Pending |
+| COMM-02 | Phase 64 | Pending |
+| COMM-03 | Phase 64 | Pending |
+| COMM-04 | Phase 64 | Pending |
+| COMM-05 | Phase 64 | Pending |
+| MIGR-01 | Phase 65 | Pending |
+| MIGR-02 | Phase 65 | Pending |
+| MIGR-03 | Phase 65 | Pending |
+| MIGR-04 | Phase 65 | Pending |
+| MIGR-05 | Phase 65 | Pending |
+| MIGR-06 | Phase 65 | Pending |
+| TEST-01 | Phase 66 | Pending |
+| TEST-02 | Phase 66 | Pending |
+| TEST-03 | Phase 66 | Pending |
+| TEST-04 | Phase 66 | Pending |
 
 **Coverage:**
-- v2.6 requirements: 45 total
-- Mapped to phases: 0
-- Unmapped: 45 (pending roadmap creation)
+- v2.6 requirements: 44 total
+- Mapped to phases: 44
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-08*
-*Last updated: 2026-02-08 after initial definition*
+*Last updated: 2026-02-08 -- traceability updated with phase mappings*
