@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 60 of 66 (Types & MCP Foundation)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: Executing
-Last activity: 2026-02-08 -- Completed 60-01 (communication types + reply_context column)
+Last activity: 2026-02-08 -- Completed 60-02 (MCP tool wiring: Linear create_comment + GitHub create_pr_comment)
 
-Progress: [███░░░░░░░] 33%
+Progress: [██████░░░░] 66%
 
 ## Milestone History
 
@@ -59,9 +59,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 60-01-PLAN.md (communication types + reply_context column)
+Stopped at: Completed 60-02-PLAN.md (MCP tool wiring)
 Resume file: None
-Next action: Execute 60-02-PLAN.md
+Next action: Execute 60-03-PLAN.md
 
 ---
-*Updated: 2026-02-08 -- Completed 60-01*
+*Updated: 2026-02-08 -- Completed 60-02*
