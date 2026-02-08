@@ -40,9 +40,9 @@ Plans:
   5. The agent's resumed message includes a structured `<reply_context>` tag containing the replyContext JSON, enabling the agent to pass it through to communication tools
 **Plans:** 3 plans
 Plans:
-- [ ] 61-01-PLAN.md -- Schema extensions (IncomingEvent, Signal, StartConversationParams) + appendReplyContextTag helper
-- [ ] 61-02-PLAN.md -- Adapter replyContext extraction (Slack, Linear, GitHub)
-- [ ] 61-03-PLAN.md -- Executor, worker loop, EventRouter, and task routing replyContext wiring
+- [x] 61-01-PLAN.md -- Schema extensions (IncomingEvent, Signal, StartConversationParams) + appendReplyContextTag helper
+- [x] 61-02-PLAN.md -- Adapter replyContext extraction (Slack, Linear, GitHub)
+- [x] 61-03-PLAN.md -- Executor, worker loop, EventRouter, and task routing replyContext wiring
 
 ### Phase 62: Router Updates
 
@@ -119,7 +119,7 @@ Phase 60 (Types + MCP) ──┬──> Phase 61 (Inbound) ──> Phase 62 (Rou
 | Phase | Milestone | Reqs | Plans Complete | Status | Completed |
 |-------|-----------|:----:|----------------|--------|-----------|
 | 60. Types & MCP Foundation | v2.6 | 9 | 3/3 | Complete | 2026-02-08 |
-| 61. Inbound Pipeline | v2.6 | 7 | 0/TBD | Not started | - |
+| 61. Inbound Pipeline | v2.6 | 7 | 3/3 | Complete | 2026-02-08 |
 | 62. Router Updates | v2.6 | 4 | 0/TBD | Not started | - |
 | 63. Outbound Denormalizer | v2.6 | 9 | 0/TBD | Not started | - |
 | 64. Communication Tools | v2.6 | 5 | 0/TBD | Not started | - |
