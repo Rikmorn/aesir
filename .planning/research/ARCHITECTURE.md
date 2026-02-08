@@ -1,848 +1,660 @@
-# Architecture Patterns: v2.5 Agentic Conversations
+# Architecture Patterns: Unified Agent Communication (v2.6)
 
-**Domain:** Task primitives, conversation reopening, and integration correlation for an existing agentic development platform
-**Researched:** 2026-02-06
-**Confidence:** HIGH (based on direct codebase analysis of existing components)
+**Domain:** Symmetric outbound normalization for an agentic development platform
+**Researched:** 2026-02-08
+**Confidence:** HIGH -- analysis based entirely on verified codebase inspection (no external sources needed; this is internal architecture extension)
 
-## System Overview
+## Executive Summary
 
-v2.5 introduces three interconnected capabilities into the existing Aesir architecture:
+The v2.6 unified agent communication milestone adds symmetric outbound normalization to Aesir's existing inbound normalization pipeline. Today, inbound events flow through adapters that normalize integration-specific webhooks into domain-language `IncomingEvent` objects. Outbound communication has no equivalent -- agents call channel-specific tools (`slack:send_message`, `slack:send_approval_request`) directly. This creates O(agents x integrations) complexity and means agents cannot "reply where the conversation is happening" because signal messages lose their origin context by the time they reach the agent.
 
-1. **Task primitive** -- A first-class entity (`agents.tasks`) that groups related conversations and provides continuity across interactions
-2. **Conversation reopening** -- Allowing terminal conversations (completed/failed) to receive a `reopen` signal and re-enter the work loop
-3. **Integration correlation** -- Each integration maintains a `task_correlations` table to map external artifacts (PRs, issues, threads) back to tasks
+The proposed architecture introduces three new components: (1) `ReplyContext` type threaded through the adapter-to-signal-to-agent pipeline, (2) unified `communication:reply/ask/notify` tools that accept domain-language intent, and (3) a denormalizer that dispatches to the correct integration MCP tool. These fit cleanly into the existing 3-layer architecture without violating any dependency rules.
 
-These features touch every layer of the existing architecture but are designed to be additive -- no existing interfaces break, no existing behavior changes for conversations without tasks.
+## Current Architecture (Verified)
 
-## Component Responsibilities
-
-### New Components
-
-| Component | Location | Responsibility |
-|-----------|----------|---------------|
-| TaskService | `packages/agents/src/framework/task-service.ts` | CRUD operations on `agents.tasks` and `agents.task_handoffs`, task lifecycle management, concurrency serialization |
-| Task tools (6) | `packages/agents/src/shared/tools/task/` | Agent-facing tool implementations: create_task, complete_task, pause_task, handoff_task, list_tasks, get_task_context |
-| Task correlation store | `packages/integrations/{integration}/src/db/correlation-store.ts` | Per-integration task_correlations CRUD (one per integration package) |
-| Correlation middleware | `packages/integrations/{integration}/src/mcp/correlation-middleware.ts` | MCP response interceptor that records outgoing correlations |
-
-### Modified Components
-
-| Component | File | What Changes |
-|-----------|------|-------------|
-| ConversationExecutor | `packages/agents/src/framework/conversation-executor.ts` | `signal()` handles `reopen` on terminal conversations |
-| EventRouter | `packages/agents/src/framework/event-router.ts` | No change (task routing added in caller) |
-| Adapters | `packages/agents/src/adapters/*.ts` | Pass through `taskId` field from NormalizedEvent |
-| NormalizedEvent schema | `packages/types/src/events/schema.ts` | Add optional `taskId` field |
-| IncomingEvent schema | `packages/agents/src/adapters/types.ts` | Add optional `taskId` field |
-| Router (core) | `packages/agents/src/router/router.ts` | Task-aware routing before trigger match |
-| ToolContext | `packages/agents/src/framework/types.ts` | Add optional `taskId` to ToolContext (and rename existing `taskId` which is used for sandbox container) |
-| Tool factories | `packages/agents/src/framework/tool-factories.ts` | Register 6 new task tools |
-| DB schema | `packages/agents/src/shared/db/schema.ts` | Add tasks, task_handoffs tables; task_id FK on conversations |
-| Worker loop | `packages/agents/src/framework/worker-loop.ts` | Inject task context into system prompt when conversation has task_id |
-| createId | `packages/types/src/utils/ids.ts` | Add `task` and `handoff` ID generators |
-| Service main | `packages/agents/src/service/main.ts` | Bootstrap TaskService, pass to executor and tool factories |
-| API router | `packages/agents/src/service/api/router.ts` | Add reopen endpoint |
-| Integration webhook handlers | `packages/integrations/*/src/api/webhooks.ts` | Look up task correlation before dispatching event |
-| Integration MCP routes | `packages/integrations/*/src/api/mcp.ts` | Extract X-Task-ID header, record correlation on success |
-| Integration DB schemas | `packages/integrations/*/src/db/schema.ts` | Add task_correlations table |
-| MCP client | `packages/agents/src/shared/mcp/client.ts` | Add X-Task-ID header when taskId is set |
-| MCP types | `packages/agents/src/shared/mcp/types.ts` | Add optional taskId to McpCallOptions |
-
-### Unchanged Components
-
-| Component | Why Unchanged |
-|-----------|--------------|
-| EventLog | Append-only events are per-conversation; conversations know their task |
-| SessionProjection | Operates on conversation events, not tasks |
-| HistoryManager | Compaction operates on message arrays; task context injected before history |
-| TimeoutScheduler | Works on conversation-level wait_for timeouts |
-| Agent definitions (YAML) | Only change: add new tool refs to `tools:` list |
-| AgentRegistry | Loads YAML unchanged; new tools are registered, not defined in YAML structure |
-
-## Schema Design
-
-### tasks table
-
-```sql
-CREATE TABLE agents.tasks (
-  id            TEXT PRIMARY KEY,  -- gen via createId.task() -> "task_<nanoid>"
-  parent_id     TEXT REFERENCES agents.tasks(id),
-  creator_type  TEXT NOT NULL CHECK (creator_type IN ('agent', 'human')),
-  creator_id    TEXT NOT NULL,
-  assignee_type TEXT NOT NULL CHECK (assignee_type IN ('agent', 'human')),
-  assignee_id   TEXT NOT NULL,
-  status        TEXT NOT NULL DEFAULT 'created'
-                CHECK (status IN ('created', 'active', 'paused', 'completed', 'cancelled')),
-  title         TEXT NOT NULL,
-  objective     TEXT,
-  metadata      JSONB DEFAULT '{}',
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  completed_at  TIMESTAMPTZ
-);
-```
-
-**Index design:**
-
-```sql
--- Primary query: "what tasks is this agent working on?"
-CREATE INDEX idx_tasks_assignee ON agents.tasks(assignee_type, assignee_id, status);
-
--- Subtask lookup: "what are the children of this task?"
-CREATE INDEX idx_tasks_parent ON agents.tasks(parent_id) WHERE parent_id IS NOT NULL;
-
--- Active task queries (dashboard, routing)
-CREATE INDEX idx_tasks_status ON agents.tasks(status) WHERE status IN ('created', 'active', 'paused');
-```
-
-**Rationale:**
-- Composite `(assignee_type, assignee_id, status)` index covers the most common query: "find active tasks for agent X." The partial index on active statuses keeps the index small since most tasks eventually complete.
-- The `parent_id` partial index excludes root tasks (where parent_id IS NULL) since those are never looked up by parent.
-- No separate index on `creator_type/creator_id` -- creator queries are infrequent (analytics, not runtime routing).
-
-**ID generation -- recommendation against human-readable sequential IDs:**
-
-The spec mentions `gen_task_id()`. The recommendation is to use the existing `createId` pattern (`task_<nanoid>`) rather than a PostgreSQL sequence-based "T-001" style because:
-
-1. **Existing convention**: Every table in Aesir uses `prefix_<nanoid>` IDs. Introducing a different pattern creates cognitive overhead.
-2. **No collision across environments**: Sequential IDs collide when syncing dev/staging/production data.
-3. **External reference is the human-readable ID**: Tasks correlate with Linear issue identifiers (e.g., AES-42) which are already human-readable. The task.metadata can store this mapping.
-4. **Simplicity**: No function definition needed, no sequence management, works with Drizzle's `$defaultFn` pattern.
-
-If human-readable task IDs are genuinely needed for debugging, add a `display_id` column with a DB sequence. But the primary key should remain nanoid-based.
-
-### task_handoffs table
-
-```sql
-CREATE TABLE agents.task_handoffs (
-  id                TEXT PRIMARY KEY,  -- gen via createId.handoff() -> "ho_<nanoid>"
-  task_id           TEXT NOT NULL REFERENCES agents.tasks(id),
-  conversation_id   TEXT NOT NULL REFERENCES agents.conversations(id),
-  handoff_type      TEXT NOT NULL CHECK (handoff_type IN ('completion', 'pause', 'delegation', 'escalation')),
-  context           JSONB NOT NULL,  -- agent-authored context
-  author_type       TEXT NOT NULL CHECK (author_type IN ('agent', 'human')),
-  author_id         TEXT NOT NULL,
-  created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX idx_handoffs_task ON agents.task_handoffs(task_id, created_at);
-```
-
-**Design notes:**
-- `context` is JSONB, not text. This allows structured handoff content (summary, key decisions, artifacts, open questions) rather than free-form text. The agent writes structured JSON via the tool schema.
-- No `updated_at` -- handoffs are append-only records. A new handoff is created, not an update to an existing one.
-- The `(task_id, created_at)` index supports "get most recent handoff for task" efficiently.
-
-### conversations addition
-
-```sql
-ALTER TABLE agents.conversations ADD COLUMN task_id TEXT REFERENCES agents.tasks(id);
-CREATE INDEX idx_conversations_task ON agents.conversations(task_id) WHERE task_id IS NOT NULL;
-```
-
-**Nullable FK rationale:** Backward compatibility. Existing conversations (and future conversations without tasks) don't require a task. The partial index keeps it efficient.
-
-### Integration correlation tables
-
-Each integration gets an identical table in its own schema:
-
-```sql
--- In linear.*, github.*, slack.* schemas respectively
-CREATE TABLE {schema}.task_correlations (
-  external_type   TEXT NOT NULL,       -- e.g., 'pull_request', 'issue', 'thread'
-  external_ref    TEXT NOT NULL,       -- e.g., '42' (PR number), 'AES-123' (issue ID), 'C123:1234.5678' (channel:ts)
-  task_id         TEXT NOT NULL,       -- References agents.tasks(id) -- no FK (cross-schema)
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-  PRIMARY KEY (external_type, external_ref)
-);
-
-CREATE INDEX idx_task_correlations_task ON {schema}.task_correlations(task_id);
-```
-
-**Cross-schema FK decision:** No foreign key from `{integration}.task_correlations.task_id` to `agents.tasks.id`. Reason: integration packages are independently deployable and must not have schema-level dependencies on the agents schema. Task ID validity is enforced at the application layer.
-
-**External type taxonomy:**
-
-| Integration | external_type | external_ref format |
-|-------------|--------------|-------------------|
-| GitHub | `pull_request` | `{owner}/{repo}#{number}` e.g., `acme/api#42` |
-| GitHub | `branch` | `{owner}/{repo}:{branch}` e.g., `acme/api:feature/AES-123` |
-| Linear | `issue` | Linear issue ID e.g., `AES-123` |
-| Slack | `thread` | `{channelId}:{thread_ts}` e.g., `C0123ABC:1706745600.123456` |
-| Slack | `message` | `{channelId}:{message_ts}` |
-
-## Data Flow
-
-### Flow 1: Agent creates artifact with task correlation (outgoing)
+### Inbound Flow (What Exists)
 
 ```
-Agent calls create_pull_request tool
-  -> MCP wrapper adds X-Task-ID header from ToolContext.taskId
-  -> callMcpTool() sends POST /mcp/tools/create_pull_request
-     with X-Task-ID: task_abc123
-  -> GitHub integration receives request
-  -> Executes create_pull_request against GitHub API
-  -> On success: records correlation
-     INSERT INTO github.task_correlations
-       (external_type, external_ref, task_id)
-     VALUES ('pull_request', 'acme/api#42', 'task_abc123')
-  -> Returns result to agent
-```
-
-**Where correlation recording happens:** In the MCP HTTP route handler (`packages/integrations/github/src/api/mcp.ts`), after the tool handler returns success. This is a post-success hook, not middleware, because we only record correlations for successful operations.
-
-**Key design decision:** Correlation recording is fire-and-forget. If it fails (DB error), the tool result still returns success to the agent. A missing correlation means the incoming webhook won't auto-route to the task, but the event will still reach slow-path routing.
-
-### Flow 2: Webhook arrives with task correlation (incoming)
-
-```
-GitHub sends PR review webhook
-  -> GitHub integration verifies signature, deduplicates
-  -> BEFORE normalizing: look up correlation
-     SELECT task_id FROM github.task_correlations
-     WHERE external_type = 'pull_request' AND external_ref = 'acme/api#42'
-  -> Found task_id = 'task_abc123'
-  -> Normalize event with task_id attached:
-     NormalizedEvent { ..., taskId: 'task_abc123' }
-  -> Dispatch to agent service POST /events
-  -> Agent service adapter passes taskId through:
-     IncomingEvent { ..., taskId: 'task_abc123' }
-  -> Router: task reference exists!
-     -> Look up active conversation for task
-     -> If active/waiting: deliver as signal
-     -> If no active conversation: create new conversation with handoff context
-  -> Falls through to existing trigger/signal logic only if no task reference
-```
-
-### Flow 3: Conversation reopening
-
-```
-Dashboard user clicks "Reopen" on a completed conversation
-  -> POST /conversations/:id/reopen { message: "PR review requires changes" }
-  -> ConversationExecutor.signal(id, { type: 'reopen', message, source: 'dashboard' })
-  -> signal() handler: conversation status is 'completed'
-     -> Current behavior: reject (terminal status)
-     -> NEW behavior for type === 'reopen':
-        1. Transition status: completed -> queued
-        2. Append signal as user message to existing messages array
-        3. Reset retry_count to 0
-        4. Clear error_message
-        5. Append event: agent.reopened (new event type)
-        6. Return { action: 'resumed' }
-  -> Worker loop picks up queued conversation on next poll
-  -> Agent receives full prior history + reopen context
-```
-
-**Race condition analysis:**
-
-The race between "conversation completing" and "reopen signal arriving" is handled by the existing `FOR UPDATE` lock in `signal()`:
-
-1. If signal arrives during the executor's post-loop DB write, the signal's `FOR UPDATE` will block until the executor's transaction commits.
-2. Once the executor commits `status: 'completed'`, the signal's transaction sees the terminal status and can apply the reopen logic.
-3. If the executor hasn't committed yet (status still 'running'), the signal queues normally and is consumed when the conversation transitions.
-
-**This is safe because the existing SKIP LOCKED + FOR UPDATE pattern already serializes all mutations on a conversation row.**
-
-### Flow 4: Task-aware event routing
-
-```
-Event arrives at routeEvent()
+Integration Webhook
   |
   v
-Adapter pipeline (existing)
-  -> Produces IncomingEvent with optional taskId
+NormalizedEvent (from @aesir/types)
+  |
+  v (POST /events to agent-service:3004)
   |
   v
-Task-aware routing (NEW -- before EventRouter.handle())
+Adapter Pipeline (adapters/slack.ts, linear.ts, github.ts, pass-through.ts)
   |
-  +-- Has taskId?
-  |     |
-  |     +-- Look up task in DB
-  |     |     |
-  |     |     +-- Task has active/waiting conversation?
-  |     |     |     -> Deliver as signal to that conversation
-  |     |     |
-  |     |     +-- Task has no active conversation?
-  |     |           -> Start new conversation for task's assignee agent
-  |     |           -> Inject most recent handoff as context
-  |     |
-  |     +-- Task not found? (stale correlation)
-  |           -> Fall through to existing routing
+  v
+IncomingEvent { type, data, source, correlationKey, message, taskId }
   |
-  +-- No taskId?
-        -> Existing EventRouter.handle() (unchanged)
-        -> start / signal / ignore / slow_path
+  v
+routeEvent() -> Task Router (if taskId) -> EventRouter.handle()
+  |
+  +-- start: executor.start() -> conversation row, queued
+  +-- signal: executor.signal() -> resume/queue/reject
+  +-- slow_path: routeViaAgentLoopV2() -> LLM classification -> signal/start/ignore
+  +-- ignore: no-op
 ```
 
-**Where the task lookup happens:** In `routeEvent()` in `packages/agents/src/router/router.ts`, as a new code block BEFORE the existing `deps.eventRouter.handle(incomingEvent)` call. NOT in the adapter layer (adapters are pure transforms) and NOT in EventRouter (which is synchronous and should not do DB I/O).
+### Signal Delivery (Current Gap)
 
-## Architectural Patterns
-
-### Pattern 1: TaskService as a Thin Persistence Layer
-
-**What:** A factory function `createTaskService({ db, logger })` that provides CRUD for tasks and handoffs, plus task-level queries. No business logic beyond data validation.
-
-**Why:** Task lifecycle decisions (when to complete, when to pause, what to hand off) belong to the agent via tools. The TaskService is infrastructure, not behavior. This follows the agent-first principle.
-
-**Interface:**
+When a signal is delivered to a waiting conversation, the executor builds a plain text user message:
 
 ```typescript
-interface TaskService {
-  create(params: CreateTaskParams): Promise<string>;       // Returns task ID
-  get(taskId: string): Promise<Task | null>;
-  update(taskId: string, updates: TaskUpdate): Promise<void>;
-  list(filters: TaskListFilters): Promise<Task[]>;
-  addHandoff(params: AddHandoffParams): Promise<string>;   // Returns handoff ID
-  getLatestHandoff(taskId: string): Promise<TaskHandoff | null>;
-  getHandoffs(taskId: string): Promise<TaskHandoff[]>;
-  findActiveConversation(taskId: string): Promise<string | null>; // Returns conversation ID
-}
+// conversation-executor.ts line 388
+const signalContent = signal.message ??
+  `Signal received: ${signal.type}. Data: ${JSON.stringify(signal.data ?? {})}`;
 ```
 
-**Database access pattern for tools:** Tools call TaskService methods, NOT raw DB queries. This provides a single point for validation, logging, and future concerns (notifications, audit trail).
+The agent sees: `"Signal received: approval. Data: {"approved":true}"` -- no structured reply context. It has no way to know WHERE the signal came from (Slack thread, Linear comment, GitHub PR review) and therefore cannot reply back to the originating channel without hardcoded channel IDs.
+
+### Outbound Flow (Current -- Channel-Specific)
 
 ```
-Agent tool (create_task)
-  -> TaskService.create({ ... })
-    -> Validates: parent depth < 5, no cycles, creator/assignee valid
-    -> INSERT INTO agents.tasks
-    -> Returns task ID
+Agent Loop
+  |
+  v
+Tool call: slack:send_message({ channel: "C123", text: "..." })
+  |
+  v
+mcpAdapter extracts McpToolDeps { agentId, correlationId, taskId }
+  |
+  v
+callMcpTool({ integration: "slack", tool: "send_message", params, agentId, correlationId })
+  |
+  v
+HTTP POST http://slack-integration:3003/mcp/tools/send_message
 ```
 
-### Pattern 2: MCP Header Extension for Task Context
+**The problem:** The agent must know the exact channel, thread timestamp, and integration to use. This is hardcoded in agent prompts (dev-agent always escalates to Slack). When a signal comes from Linear, the agent still tries to reply on Slack because it has no mechanism to know otherwise.
 
-**What:** Add `X-Task-ID` as an optional standard header in MCP calls. The MCP client adds it when ToolContext.taskId is set. Integration MCP handlers read it and pass to correlation recording.
+### Current Tool Assignments (Verified from definition.yaml)
 
-**Why headers over parameters:**
-1. **Non-invasive**: Existing tool parameter schemas don't change. No migration of tool definitions.
-2. **Consistent**: Same pattern as X-Agent-ID and X-Correlation-ID.
-3. **Optional**: Integrations that don't support correlation yet simply ignore the header.
-4. **Already precedented**: The MCP protocol already uses X-Agent-ID and X-Correlation-ID headers.
+**dev-agent (20 tools):**
+- Codebase: `read_file`, `search_codebase`, `list_directory`
+- Coordination: `spawn_agent`, `request_human_input`, `wait_for`
+- Task: `create_task`, `complete_task`, `pause_task`, `handoff_task`, `list_tasks`, `get_task_context`
+- Linear: `get_issue`, `update_issue_status`
+- GitHub: `create_branch`, `create_commit`, `create_pull_request`, `get_pull_request`
+- Slack: `send_message`, `send_approval_request` -- **these get replaced**
 
-**Changes to MCP client (`packages/agents/src/shared/mcp/client.ts`):**
+**product-agent (11 tools):**
+- Coordination: `wait_for`
+- Task: `create_task`, `complete_task`, `pause_task`, `handoff_task`, `list_tasks`, `get_task_context`
+- Linear: `create_issue`, `get_issue`, `list_labels`, `search_issues`
+- Slack: `send_message` -- **this gets replaced**
+
+### Integration MCP Gaps (Verified)
+
+1. **Linear `create_comment`**: Handler exists in `packages/integrations/linear/src/mcp/tools/issues.ts` (line 472, `handleCreateComment`), exported from tools barrel, but NOT registered in the MCP server's `ListToolsRequestSchema` handler or `CallToolRequestSchema` switch. The tool is implemented but invisible.
+
+2. **GitHub `create_pr_comment`**: Does NOT exist anywhere. No handler, no schema, no registration. Needs to be built from scratch using Octokit's `issues.createComment` (PR-level comments are issue comments in GitHub's API) or `pulls.createReviewComment` (for inline review replies).
+
+3. **Slack**: Complete. `send_message`, `reply_to_thread`, and `send_approval_request` cover all needed outbound patterns.
+
+## Recommended Architecture
+
+### Component Boundary Map
+
+```
+packages/agents/src/
+  |
+  +-- adapters/                        [MODIFY] Attach replyContext to IncomingEvent
+  |     +-- types.ts                   [MODIFY] Add replyContext to IncomingEventSchema
+  |     +-- slack.ts                   [MODIFY] Populate replyContext on thread_reply, block_actions, app_mention
+  |     +-- linear.ts                  [MODIFY] Populate replyContext on comment_created, agent_session
+  |     +-- github.ts                  [MODIFY] Populate replyContext on pr_review events
+  |
+  +-- shared/tools/
+  |     +-- communication/             [NEW DIRECTORY]
+  |     |     +-- types.ts             [NEW] ReplyContext, NotifyTarget, MessageContent, CommunicationToolDeps
+  |     |     +-- denormalizer.ts      [NEW] dispatch(action, deps) -> callMcpTool
+  |     |     +-- reply.ts            [NEW] communication:reply tool factory
+  |     |     +-- ask.ts              [NEW] communication:ask tool factory
+  |     |     +-- notify.ts           [NEW] communication:notify tool factory
+  |     |     +-- index.ts            [NEW] barrel export
+  |     |
+  |     +-- integration/
+  |           +-- linear-tools.ts      [MODIFY] Add linear:create_comment wrapper
+  |
+  +-- framework/
+  |     +-- types.ts                   [MODIFY] Add replyContext to SignalSchema
+  |     +-- tool-factories.ts          [MODIFY] Register communication:* tools + linear:create_comment
+  |     +-- conversation-executor.ts   [MODIFY] Include replyContext in signal user message
+  |
+  +-- router/
+        +-- tools/
+        |     +-- signal-conversation.ts [MODIFY] Add optional replyContext field to input schema
+        +-- system-prompt.ts           [MODIFY] Add replyContext propagation guidance, Linear comment routing
+
+packages/integrations/
+  +-- linear/src/mcp/
+  |     +-- server.ts                  [MODIFY] Register create_comment in tool list + switch
+  |
+  +-- github/src/mcp/
+        +-- tools/pullrequests.ts      [MODIFY] Add handleCreatePRComment handler
+        +-- server.ts                  [MODIFY] Register create_pr_comment in tool list + switch
+        +-- schemas.ts                 [MODIFY] Add CreatePRCommentInputSchema
+
+packages/agents/definitions/
+  +-- dev-agent/
+  |     +-- definition.yaml            [MODIFY] Swap slack:* for communication:*
+  |     +-- prompt.md                  [MODIFY] Domain-language communication guidance
+  +-- product-agent/
+        +-- definition.yaml            [MODIFY] Swap slack:send_message for communication:*
+        +-- prompt.md                  [MODIFY] Domain-language communication guidance
+```
+
+### New Components Detail
+
+#### 1. ReplyContext Type (`shared/tools/communication/types.ts`)
+
+Discriminated union on `channel` field. Opaque to the agent -- it passes it through from signal to tool call without parsing.
 
 ```typescript
-// In callMcpTool():
-const headers: Record<string, string> = {
-  'Content-Type': 'application/json',
-  'X-Agent-ID': agentId,
-  'X-Correlation-ID': correlationId,
-};
-if (options.taskId) {
-  headers['X-Task-ID'] = options.taskId;
-}
+export type ReplyContext =
+  | { channel: "slack"; teamId: string; channelId: string; threadTs: string }
+  | { channel: "linear"; issueId: string }
+  | { channel: "github"; owner: string; repo: string; prNumber: number; commentId?: number };
+
+export type NotifyTarget =
+  | { channel: "slack"; teamId: string; channelId: string; threadTs?: string }
+  | { channel: "linear"; issueId: string };
 ```
 
-**Changes to McpCallOptions type (`packages/agents/src/shared/mcp/types.ts`):**
+**Design decision:** ReplyContext uses a discriminated union rather than a generic `Record<string, unknown>` because the denormalizer needs typed access to channel-specific fields (`channelId`, `threadTs`, `issueId`, `prNumber`). The discriminant `channel` makes the `switch` in the denormalizer exhaustive and type-safe.
 
-```typescript
-interface McpCallOptions {
-  integration: McpIntegration;
-  tool: string;
-  params: Record<string, unknown>;
-  agentId: string;
-  correlationId: string;
-  taskId?: string;  // NEW
-}
+#### 2. Denormalizer (`shared/tools/communication/denormalizer.ts`)
+
+Pure function that maps (action + replyContext + content) to the correct MCP tool call. Lives in the agents package (not integrations) because it orchestrates MCP HTTP calls -- it does not import integration SDKs.
+
+```
+denormalize({ action: "reply", replyContext: { channel: "slack", ... }, content: { text } })
+  |
+  switch (replyContext.channel)
+    case "slack":
+      if action === "ask" && content.options -> callMcpTool("slack", "send_approval_request", ...)
+      else -> callMcpTool("slack", "reply_to_thread", ...)
+    case "linear":
+      -> callMcpTool("linear", "create_comment", ...)
+    case "github":
+      -> callMcpTool("github", "create_pr_comment", ...)
 ```
 
-**Changes to MCP tool wrappers (`packages/agents/src/shared/tools/integration/`):**
+**Placement rationale:** The denormalizer uses `callMcpTool` from `shared/mcp/client.ts` to call integration HTTP endpoints. This maintains the HTTP boundary between agents and integrations. The denormalizer is the outbound counterpart to adapters -- adapters normalize inbound, denormalizer denormalizes outbound.
 
-The McpToolDeps interface gains an optional `taskId` field. Each integration's tool wrapper reads `ToolContext.taskId` and passes it through in the `callMcpTool()` options.
+#### 3. Communication Tools (`shared/tools/communication/reply.ts`, `ask.ts`, `notify.ts`)
 
-### Pattern 3: Conversation Reopening via Signal Extension
+Follow the exact same pattern as existing tool factories. Each creates a `ToolDefinition` with:
+- `name`: e.g., `"reply"`
+- `description`: describes intent, not channel
+- `inputSchema`: Zod schema (replyContext + message/question/target)
+- `execute`: validates input, calls `denormalize()`, returns result
 
-**What:** Extend the existing `signal()` method to handle a special `reopen` signal type on terminal conversations, rather than adding a separate `reopen()` method.
+**Tool naming:** Display names are `reply`, `ask`, `notify` (no namespace prefix) because tools registered as `communication:reply` already have a namespace. The `mcpAdapter` pattern uses display names with integration prefix (`slack_send_message`, `linear_get_issue`) because multiple integrations share the same tool name space. Communication tools are unique -- no prefix needed.
 
-**Why signal extension over new method:**
-1. **Signal is already the mechanism for external input** to conversations. Reopening is external input.
-2. **Deduplication, validation, and event logging** are already handled by signal(). No duplication.
-3. **The router can use the same dispatch path** -- route to signal, whether the conversation is waiting or completed.
-4. **Dashboard reopen** is just `executor.signal(id, { type: 'reopen', ... })`.
+#### 4. communicationAdapter (`framework/tool-factories.ts`)
 
-**Specific changes to `signal()` in conversation-executor.ts (lines ~451-459):**
-
-The current terminal status block:
-```typescript
-// Terminal status
-logger.warn({ conversationId, status }, "Signal rejected: conversation in terminal state");
-return { action: "rejected" };
-```
-
-Becomes:
-```typescript
-// Terminal status
-if (signal.type === 'reopen') {
-  // Build signal message
-  const signalContent = signal.message ??
-    `Conversation reopened. Data: ${JSON.stringify(signal.data ?? {})}`;
-  const signalMessage = { role: 'user', content: signalContent };
-  const updatedMessages = [...((row.messages ?? []) as unknown[]), signalMessage];
-
-  await tx.update(conversations).set({
-    status: 'queued',
-    messages: updatedMessages,
-    retry_count: 0,
-    error_message: null,
-    pending_wait: null,
-    claimed_by: null,
-    claimed_at: null,
-    last_heartbeat_at: null,
-    delivered_signal_ids: deliveredIds,
-    updated_at: new Date(),
-  }).where(eq(conversations.id, conversationId));
-
-  // Append reopened event
-  await eventLog.initSequence(conversationId);
-  eventLog.append({
-    conversationId,
-    agentDefinitionId: row.agent_definition_id,
-    agentDefinitionVersion: row.agent_definition_version,
-    agentInstanceId: `reopen-${conversationId}`,
-    type: 'agent.reopened',
-    payload: {
-      signalType: signal.type,
-      source: signal.source,
-      previousStatus: status,
-    },
-  });
-  await eventLog.flush();
-
-  logger.info({ conversationId, previousStatus: status }, 'Conversation reopened');
-  return { action: 'resumed' };
-}
-
-// Other signals on terminal conversations remain rejected
-logger.warn({ conversationId, status }, "Signal rejected: conversation in terminal state");
-return { action: "rejected" };
-```
-
-**Full history preservation:** Yes. Reopened conversations keep their entire message history. The reopen signal is appended as a new user message. When the worker loop picks it up, it goes through the normal `isResumed` path (existingMessages.length > 1), gets history compaction via HistoryManager, and resumes with full context.
-
-**Worker loop changes for reopened conversations:** NONE. Reopened conversations are `status: 'queued'` -- the worker loop claims and executes them identically to any other queued conversation. No special claiming logic needed.
-
-**New event type:** Add `agent.reopened` to `agentEventTypeValues` in schema.ts. This is purely observability -- the framework doesn't branch on it.
-
-### Pattern 4: Task Context Injection into Prompts
-
-**What:** When the worker loop starts executing a conversation with a `task_id`, it fetches the most recent handoff and injects it as a `<task_context>` block in the initial message.
-
-**Where:** In `executeConversation()` in `worker-loop.ts`, after loading the agent definition (step 1) and before building the `AgentLoopOptions` (step 8). Specifically, after the queued-signal check (step 6) and before history compaction (step 7). This is the same pattern used in `routeEvent()` for workspace_context and slack_context injection.
-
-**Implementation approach:**
+New adapter function following the existing `mcpAdapter` and `codebaseAdapter` patterns:
 
 ```typescript
-// In executeConversation(), between step 6 and step 7:
-if (conv.task_id && taskService) {
-  const task = await taskService.get(conv.task_id);
-  const latestHandoff = await taskService.getLatestHandoff(conv.task_id);
-
-  if (task) {
-    const taskContextLines: string[] = [
-      '<task_context>',
-      `Task: ${task.title}`,
-      `Task ID: ${task.id}`,
-      `Status: ${task.status}`,
-    ];
-
-    if (task.objective) taskContextLines.push(`Objective: ${task.objective}`);
-
-    if (latestHandoff) {
-      taskContextLines.push('');
-      taskContextLines.push('Most recent handoff:');
-      taskContextLines.push(`Type: ${latestHandoff.handoff_type}`);
-      // Truncate handoff context to prevent token budget blowout
-      const contextStr = JSON.stringify(latestHandoff.context);
-      const truncated = contextStr.length > 4000
-        ? contextStr.slice(0, 4000) + '... [truncated, use get_task_context for full history]'
-        : contextStr;
-      taskContextLines.push(`Context: ${truncated}`);
-    }
-
-    taskContextLines.push('</task_context>');
-
-    // Prepend to first message
-    const taskContextBlock = taskContextLines.join('\n');
-    const firstMsg = currentMessages[0];
-    if (firstMsg && typeof firstMsg.content === 'string') {
-      currentMessages[0] = {
-        ...firstMsg,
-        content: `${taskContextBlock}\n\n${firstMsg.content}`,
-      };
-    }
-  }
-}
-```
-
-**Token budget considerations:** Handoff context is agent-authored (agents control the size). The `get_task_context` tool provides full history for agents that need it; the auto-injected context is just the latest handoff. This keeps the injection bounded. A 4000-character cap on the handoff JSON provides a safety net -- agents needing more context use the tool.
-
-### Pattern 5: Task-Level Event Serialization
-
-**What:** When two events arrive for the same task simultaneously, only one gets a conversation. The second becomes a signal queued on that conversation.
-
-**Why:** The spec says "one problem at a time." Concurrent conversations for the same task would create conflicting work (two agents editing the same branch, two PRs for the same issue).
-
-**Implementation:**
-
-Serialization happens at the router level using `SELECT ... FOR UPDATE` on the task row:
-
-```typescript
-// In routeEvent(), task-aware routing block:
-async function routeToTask(
-  taskId: string,
-  event: IncomingEvent,
-  deps: RouteEventDeps
-): Promise<RouteEventResult | null> {
-  return await deps.db.transaction(async (tx) => {
-    // Lock task row -- serializes concurrent events for same task
-    const [task] = await tx
-      .select()
-      .from(tasks)
-      .where(eq(tasks.id, taskId))
-      .for('update');
-
-    if (!task) return null; // Stale correlation, fall through
-
-    // Find active conversation for this task
-    const [activeConv] = await tx
-      .select({ id: conversations.id, status: conversations.status })
-      .from(conversations)
-      .where(
-        and(
-          eq(conversations.task_id, taskId),
-          inArray(conversations.status, ['running', 'queued', 'waiting'])
-        )
-      )
-      .limit(1);
-
-    if (activeConv) {
-      // Signal will be delivered after transaction commits
-      return { type: 'signal', conversationId: activeConv.id };
-    }
-
-    // No active conversation -- will start new one after transaction commits
-    return { type: 'start', agentDefinitionId: task.assignee_id };
-  });
-  // Then outside the transaction: execute the routing decision
-}
-```
-
-**Row-level lock on task, not conversation:** The lock is on `agents.tasks` row, not `agents.conversations`. This serializes at the task level -- even when no conversation exists yet, the second event waits for the first's conversation creation to commit.
-
-**Lock duration:** Very short. The transaction only does SELECT + SELECT, then returns a routing decision. The actual conversation creation/signal delivery happens OUTSIDE the transaction via executor.start() or executor.signal(). This prevents long-held locks.
-
-**RouteEventDeps change:** The routeEvent deps need access to a database client. Currently RouteEventDeps has executor, eventRouter, logger, and config values. Add `db` (or `taskService` which wraps db) so the task lookup query can execute.
-
-### Pattern 6: Tool Namespace for Tasks
-
-**What:** New `task:` namespace with 6 tools, registered via the existing ToolRegistry pattern.
-
-**Why a new namespace (not coordination):** Tasks are a domain concept, not coordination infrastructure. Coordination tools (spawn_agent, wait_for, request_human_input) manage the execution lifecycle. Task tools manage the work lifecycle. Separating them keeps the namespaces semantically clean and allows agents to have task tools without coordination tools (or vice versa).
-
-**Tool adapter pattern:**
-
-```typescript
-function taskToolAdapter(
-  createFn: (service: TaskService, ctx: ToolContext) => ToolDefinition,
-  taskService: TaskService,
+function communicationAdapter(
+  createFn: (deps: CommunicationToolDeps) => ToolDefinition,
 ): (ctx: ToolContext) => ToolDefinition {
-  return (ctx: ToolContext) => createFn(taskService, ctx);
-}
-
-// In registerAllTools():
-export function registerAllTools(options: RegisterAllToolsOptions): void {
-  const { registry, logger, taskService } = options;  // taskService added to options
-
-  // ... existing 28 tools ...
-
-  // Task tools (6)
-  if (taskService) {
-    registry.register('task:create_task', taskToolAdapter(createCreateTaskTool, taskService));
-    registry.register('task:complete_task', taskToolAdapter(createCompleteTaskTool, taskService));
-    registry.register('task:pause_task', taskToolAdapter(createPauseTaskTool, taskService));
-    registry.register('task:handoff_task', taskToolAdapter(createHandoffTaskTool, taskService));
-    registry.register('task:list_tasks', taskToolAdapter(createListTasksTool, taskService));
-    registry.register('task:get_task_context', taskToolAdapter(createGetTaskContextTool, taskService));
-  }
+  return (ctx: ToolContext) =>
+    createFn({
+      agentId: ctx.agentId,
+      correlationId: ctx.correlationId,
+      taskId: ctx.taskId,
+      logger: ctx.logger,
+    });
 }
 ```
 
-**Handoff tool -- what context the agent provides:**
+Extracts `CommunicationToolDeps` from `ToolContext`, same pattern as `mcpAdapter` extracts `McpToolDeps`. No new fields needed on `ToolContext`.
 
-The `handoff_task` tool schema:
-```json
-{
-  "task_id": "string (required)",
-  "handoff_type": "enum: completion | pause | delegation | escalation (required)",
-  "context": {
-    "summary": "string (required) -- what happened",
-    "key_decisions": "string[] (optional) -- important decisions made",
-    "artifacts": "object (optional) -- references to created artifacts",
-    "open_questions": "string[] (optional) -- unresolved issues",
-    "next_steps": "string (optional) -- recommendation for next agent"
+### Data Flow: Complete Round-Trip
+
+```
+INBOUND:
+  Linear comment "looks good, ship it" on issue uuid-abc
+    |
+    v
+  adaptLinearEvent() -> IncomingEvent {
+    type: "issue_comment",
+    data: { body: "looks good...", issueId: "uuid-abc" },
+    source: "linear:webhook",
+    correlationKey: "uuid-abc",
+    message: "looks good, ship it",
+    replyContext: { channel: "linear", issueId: "uuid-abc" }    <-- NEW
   }
-}
+    |
+    v
+  EventRouter -> slow_path
+    |
+    v
+  Router LLM classifies -> approval
+    |
+    v
+  signal_conversation({
+    conversationId: "dev-agent-uuid-abc",
+    signalType: "approval",
+    payload: { approved: true },
+    message: "looks good, ship it",
+    replyContext: { channel: "linear", issueId: "uuid-abc" }    <-- NEW: propagated
+  })
+    |
+    v
+  ConversationExecutor.signal() builds user message:
+    "Signal received: approval. Approved: yes.
+     <reply_context>{"channel":"linear","issueId":"uuid-abc"}</reply_context>"
+    |
+    v
+  Agent resumes, sees replyContext in message
+
+OUTBOUND:
+  Agent calls communication:reply({
+    replyContext: { channel: "linear", issueId: "uuid-abc" },
+    message: "Starting implementation now."
+  })
+    |
+    v
+  denormalize({ action: "reply", replyContext, content: { text: "Starting..." } })
+    |
+    v
+  switch (replyContext.channel) -> "linear"
+    |
+    v
+  callMcpTool({ integration: "linear", tool: "create_comment",
+    params: { issueId: "uuid-abc", body: "Starting implementation now." },
+    agentId: "dev-agent", correlationId: "dev-agent-uuid-abc" })
+    |
+    v
+  HTTP POST http://linear-integration:3001/mcp/tools/create_comment
+    |
+    v
+  Comment appears on Linear issue -- same channel the human used
 ```
 
-The agent decides what to include. The tool validates the required `summary` field but doesn't enforce the optional fields. This follows the "agents author handoffs" principle.
+### replyContext Propagation Chain
+
+```
+Adapter          IncomingEvent.replyContext
+  |                    |
+  v                    v
+Router           event.replyContext accessible to slow-path LLM
+  |                    |
+  v                    v
+signal_conversation  signal.replyContext (new optional field)
+  |                    |
+  v                    v
+executor.signal()    Injected as <reply_context> XML tag in user message
+  |                    |
+  v                    v
+Agent sees it        Passes it back opaquely to communication:reply
+  |                    |
+  v                    v
+denormalizer         Dispatches to correct integration MCP tool
+```
+
+**Key design decisions:**
+
+1. **replyContext is a top-level field on IncomingEvent and Signal, not nested in data.** This makes it structurally visible at every pipeline stage. If it were buried in `data`, each pipeline stage would need to know to extract and re-attach it.
+
+2. **XML tags in signal messages, not structured message content.** The `<reply_context>` tag approach is simple, LLM-friendly (Claude naturally parses XML tags), and requires no changes to the `Anthropic.MessageParam` shape. The agent doesn't need to understand the JSON -- it just extracts and passes it through.
+
+3. **Denormalizer lives in agents package, calls MCP via HTTP.** This maintains the 3-layer boundary. The denormalizer is NOT part of integrations -- it's the outbound equivalent of adapters, which also live in the agents package.
+
+## Patterns to Follow
+
+### Pattern 1: Adapter Symmetry
+
+**What:** Inbound adapters normalize integration-specific payloads into domain events. Outbound denormalizers do the reverse -- domain actions into integration-specific tool calls.
+
+**When:** Any time the agent needs to communicate with a human through an integration.
+
+**Architecture:**
+```
+Adapter (inbound):  Integration payload -> IncomingEvent { type, data, replyContext }
+Denormalizer (out):  DenormalizeAction { action, replyContext, content } -> callMcpTool(...)
+```
+
+Both live in the agents package. Both use MCP HTTP as the transport. Neither imports integration SDKs.
+
+### Pattern 2: Opaque Context Pass-Through
+
+**What:** The agent receives `replyContext` as a JSON object inside an XML tag. It passes it back to `communication:reply` without parsing or modifying it. The denormalizer is the only component that inspects the `channel` discriminant.
+
+**When:** Signal delivery and reply routing.
+
+**Why:** Agents should reason about WHAT to communicate, not WHERE. The infrastructure handles channel routing. This decouples agent behavior from integration specifics and makes it trivial to add new channels -- only the adapters, denormalizer, and integration MCP tools need changes, not the agents.
+
+### Pattern 3: Additive Tool Registration
+
+**What:** New `communication:*` tools are registered alongside existing `slack:*`, `linear:*` tools. The old tools remain available in the registry for the router and for backward compatibility.
+
+**When:** Any tool namespace addition.
+
+**Why:** The router uses `slack:send_message` directly (in `send-message.ts`) for system alerts. Removing the Slack tools from the registry would break the router. Only agent definitions change -- the registry stays additive.
+
+### Pattern 4: Channel-Specific Capability Adaptation
+
+**What:** The denormalizer adapts to each channel's capabilities. `ask()` with options renders as Block Kit buttons on Slack, but as text instructions on Linear and GitHub (which don't support interactive UI).
+
+**When:** The `ask` tool is called with `options` array.
+
+**Example:**
+```
+Slack: send_approval_request with Block Kit buttons
+Linear: create_comment with "- **Approve**: reply 'approve'\n- **Reject**: reply 'reject'"
+GitHub: create_pr_comment with similar text fallback
+```
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Task State Machine in Framework Code
+### Anti-Pattern 1: Embedding Channel Logic in Agents
 
-**What to avoid:** Don't add framework code that pattern-matches on handoff_type or auto-transitions task status based on external signals.
+**What:** Agents calling `slack:send_message` or `linear:create_comment` directly when they should use `communication:reply`.
 
-**Why:** Per the spec's expansion constraints: "Don't pattern-match on handoff_type in framework code" and "Task completion is agent-decided." The framework stores and delivers; the agent interprets.
+**Why bad:** Creates O(agents x integrations) complexity. Every new channel means updating every agent's tools and prompts. The agent reasons about channels instead of intent.
 
-**Exception:** The `complete_task` and `pause_task` tools DO transition task status -- but these are agent-initiated, not framework-initiated. The agent calls the tool when it decides the task is done.
+**Instead:** Agents use domain-language tools (`communication:reply/ask/notify`) and let the denormalizer handle channel dispatch.
 
-### Anti-Pattern 2: Correlation in Router Instead of Integration
+### Anti-Pattern 2: Stripping replyContext at Pipeline Boundaries
 
-**What to avoid:** Don't do correlation lookup in the agent-service's EventRouter or adapter layer.
+**What:** A pipeline stage receives replyContext but doesn't propagate it to the next stage. Most likely to happen at the router slow-path LLM -> `signal_conversation` boundary, or at the executor signal -> user message boundary.
 
-**Why:** The integration processes both sides of the artifact lifecycle (outgoing creation + incoming webhook). It has the most context for reliable correlation. If the router did correlation, it would need to query integration-owned tables (cross-schema dependency) or maintain a separate correlation store (duplication).
+**Why bad:** Breaks the round-trip. Agent cannot reply to the originating channel.
 
-### Anti-Pattern 3: Auto-Completing Tasks on External Signals
+**Instead:** Every pipeline stage that handles events or signals must propagate replyContext. Test each boundary explicitly.
 
-**What to avoid:** Don't add framework logic like "when PR merged, auto-complete the task."
+### Anti-Pattern 3: Agent Parsing replyContext
 
-**Why:** The agent should decide when a task is complete. A merged PR might not mean the task is done (could need docs, follow-up, verification). The agent receives the PR merged signal, evaluates whether the task is complete, and calls `complete_task` if so.
+**What:** Agent prompts instructing the agent to extract fields from replyContext (e.g., "check the channel field to decide if this is Slack or Linear").
 
-## Critical Integration Detail: ToolContext.taskId Collision
+**Why bad:** Defeats the purpose of channel abstraction. The agent should not reason about channels.
 
-**Existing usage:** `ToolContext.taskId` already exists in `packages/agents/src/framework/types.ts` (line 320):
+**Instead:** Agent treats replyContext as opaque. It receives it from signal messages and passes it back to communication tools unchanged. The denormalizer is the only component that inspects the structure.
+
+### Anti-Pattern 4: Adding Communication Logic to the Executor
+
+**What:** Having the conversation executor automatically reply to signals (e.g., "when signal is received, auto-reply with acknowledgment").
+
+**Why bad:** Violates agent-first principles. The AGENT decides when and what to communicate. The executor manages conversation lifecycle, not communication behavior.
+
+**Instead:** The executor's only new responsibility is injecting replyContext into the signal user message. The agent decides whether to call `reply()`.
+
+## Scalability Considerations
+
+| Concern | Current State | After v2.6 | At Scale |
+|---------|--------------|------------|----------|
+| Adding a new channel | N/A (hardcoded to Slack) | Add adapter replyContext + denormalizer case + MCP tool | Same -- O(1) per new channel |
+| Adding a new agent | Copy/adapt channel tool list + prompt | Add communication:* tools (3 lines in YAML) | Same -- O(1) per new agent |
+| MCP call overhead | 1 callMcpTool per outbound message | Same -- denormalizer calls 1 callMcpTool | Same |
+| replyContext size | N/A | ~100-200 bytes per signal in user message | Negligible vs token budget |
+| Tool count per agent | 20 (dev-agent), 11 (product-agent) | 21 (dev-agent), 13 (product-agent) | Net +1/+2 tools after swap |
+
+## Inventory: Modified vs New Files
+
+### New Files (7)
+
+| File | Layer | Purpose |
+|------|-------|---------|
+| `shared/tools/communication/types.ts` | Agents | ReplyContext, NotifyTarget, MessageContent, CommunicationToolDeps types |
+| `shared/tools/communication/denormalizer.ts` | Agents | Outbound dispatch: action + replyContext -> callMcpTool |
+| `shared/tools/communication/reply.ts` | Agents | communication:reply tool factory |
+| `shared/tools/communication/ask.ts` | Agents | communication:ask tool factory |
+| `shared/tools/communication/notify.ts` | Agents | communication:notify tool factory |
+| `shared/tools/communication/index.ts` | Agents | Barrel export |
+| `integrations/github/src/mcp/tools/comments.ts` | Integration | handleCreatePRComment handler |
+
+### Modified Files (16)
+
+| File | Layer | Change |
+|------|-------|--------|
+| `adapters/types.ts` | Agents | Add `replyContext` to IncomingEventSchema |
+| `adapters/slack.ts` | Agents | Attach replyContext on thread_reply, block_actions, app_mention |
+| `adapters/linear.ts` | Agents | Attach replyContext on comment_created, agent_session |
+| `adapters/github.ts` | Agents | Attach replyContext on pr_review, pr_merged, pr_closed |
+| `framework/types.ts` | Agents | Add `replyContext` to SignalSchema |
+| `framework/tool-factories.ts` | Agents | Register communication:* + linear:create_comment tools, add communicationAdapter |
+| `framework/conversation-executor.ts` | Agents | Include replyContext XML tag in signal user messages |
+| `shared/tools/integration/linear-tools.ts` | Agents | Add linear:create_comment wrapper |
+| `router/tools/signal-conversation.ts` | Agents | Add optional replyContext to input schema |
+| `router/system-prompt.ts` | Agents | replyContext propagation guidance, Linear comment routing |
+| `integrations/linear/src/mcp/server.ts` | Integration | Register create_comment in ListTools + CallTool |
+| `integrations/github/src/mcp/server.ts` | Integration | Register create_pr_comment in ListTools + CallTool |
+| `integrations/github/src/mcp/schemas.ts` | Integration | Add CreatePRCommentInputSchema |
+| `definitions/dev-agent/definition.yaml` | Agent Def | Swap slack:* for communication:* |
+| `definitions/dev-agent/prompt.md` | Agent Def | Domain-language communication guidance |
+| `definitions/product-agent/definition.yaml` | Agent Def | Swap slack:send_message for communication:* |
+| `definitions/product-agent/prompt.md` | Agent Def | Domain-language communication guidance |
+
+## Suggested Build Order
+
+The build order is driven by dependencies: types must exist before they can be used, integration MCP tools must exist before the denormalizer can call them, and the denormalizer must exist before communication tools can call it.
+
+### Phase 1: Types and MCP Prerequisites
+
+**Goal:** Define all types and expose missing integration MCP tools. No agent behavior changes yet.
+
+1. **Communication types** (`shared/tools/communication/types.ts`)
+   - ReplyContext, NotifyTarget, MessageContent, CommunicationToolDeps
+   - ReplyContextSchema (Zod) for validation in tool input schemas
+   - No dependencies on other new code
+
+2. **Linear MCP: Expose create_comment** (`integrations/linear/src/mcp/server.ts`)
+   - Add `create_comment` to ListToolsRequestSchema handler (tool definition JSON)
+   - Add `case "create_comment"` to CallToolRequestSchema handler
+   - Handler already exists and is tested (`handleCreateComment`)
+   - Add `linear:create_comment` wrapper to `shared/tools/integration/linear-tools.ts`
+   - Register in `tool-factories.ts`
+
+3. **GitHub MCP: Add create_pr_comment** (`integrations/github/`)
+   - Add `CreatePRCommentInputSchema` to `schemas.ts`
+   - Create `handleCreatePRComment` in `tools/comments.ts` (new file)
+   - Uses `octokit.rest.issues.createComment` (PR comments are issue comments in GitHub API)
+   - Register in `server.ts` ListTools + CallTool handlers
+   - Add `github:create_pr_comment` wrapper to `shared/tools/integration/github-tools.ts`
+   - Register in `tool-factories.ts`
+
+**Why this order:** Types have no deps. Linear create_comment is mostly wiring (handler exists). GitHub create_pr_comment is a new handler but follows established patterns exactly.
+
+### Phase 2: Inbound Pipeline Extension
+
+**Goal:** Thread replyContext through the entire inbound pipeline from adapters through signals to agent messages.
+
+4. **Extend IncomingEvent** (`adapters/types.ts`)
+   - Add `replyContext: ReplyContextSchema.optional()` to IncomingEventSchema
+   - Import ReplyContextSchema from communication types
+
+5. **Extend adapters** (`adapters/slack.ts`, `linear.ts`, `github.ts`)
+   - Slack: attach replyContext on `thread_reply`, `block_actions.*`, `app_mention`
+   - Linear: attach replyContext on `issue_comment`, `agent_session.created`
+   - GitHub: attach replyContext on `pr_review`, `pr_merged`, `pr_closed`
+
+6. **Extend Signal schema** (`framework/types.ts`)
+   - Add `replyContext: ReplyContextSchema.optional()` to SignalSchema
+
+7. **Extend signal delivery** (`framework/conversation-executor.ts`)
+   - When building signal user message, append `<reply_context>` XML tag if signal has replyContext
+   - Also update the worker-loop.ts signal consumption (line 672) for queued signal auto-resume
+
+8. **Extend router signal tool** (`router/tools/signal-conversation.ts`)
+   - Add optional `replyContext` field to `SignalConversationInputSchema`
+   - Propagate to `signal` object passed to `executor.signal()`
+
+9. **Update router system prompt** (`router/system-prompt.ts`)
+   - Instruct LLM to propagate replyContext from event data to signal_conversation calls
+   - Add Linear comment reopen flow (query status, reopen if completed)
+
+**Why this order:** IncomingEvent schema first (adapters depend on it), then adapters (signal depends on adapter output), then Signal schema (executor depends on it), then executor (agents depend on signal messages), then router (wires adapters to signals).
+
+### Phase 3: Outbound Denormalizer and Tools
+
+**Goal:** Build the denormalizer and communication tools. Agents can now use them.
+
+10. **Denormalizer** (`shared/tools/communication/denormalizer.ts`)
+    - `denormalize(action, deps)` function
+    - Switch on `replyContext.channel`: slack, linear, github handlers
+    - Each handler calls `callMcpTool` with correct integration, tool, and params
+    - Slack: `reply_to_thread` for reply, `send_approval_request` for ask+options, `send_message` for notify
+    - Linear: `create_comment` for all actions
+    - GitHub: `create_pr_comment` for all actions
+
+11. **Communication tools** (`shared/tools/communication/reply.ts`, `ask.ts`, `notify.ts`)
+    - Each creates a `ToolDefinition` with Zod input schema and execute function
+    - Execute validates input, calls `denormalize()`, returns result
+    - Barrel export from `index.ts`
+
+12. **Register communication tools** (`framework/tool-factories.ts`)
+    - Add `communicationAdapter` function
+    - Register `communication:reply`, `communication:ask`, `communication:notify`
+    - Update tool count comment (34 -> 38: +3 communication, +1 linear:create_comment)
+
+**Why this order:** Denormalizer is pure (no framework deps). Tools depend on denormalizer. Registration wires them in.
+
+### Phase 4: Agent Migration
+
+**Goal:** Switch agents from channel-specific to domain-language communication.
+
+13. **Update agent definitions** (`definitions/*/definition.yaml`)
+    - dev-agent: remove `slack:send_message`, `slack:send_approval_request`; add `communication:reply`, `communication:ask`, `communication:notify`
+    - product-agent: remove `slack:send_message`; add `communication:reply`, `communication:ask`, `communication:notify`
+
+14. **Update agent prompts** (`definitions/*/prompt.md`)
+    - Replace channel-specific communication guidance with domain-language patterns
+    - Explain replyContext pass-through: "use the replyContext from the signal message"
+    - Explain notify for escalation: "when no replyContext is available, use notify with a target channel"
+
+**Why this order:** YAML changes are safe to make last -- if anything in Phase 1-3 is wrong, the agents still work with old tools. Prompt changes should happen alongside YAML changes since they reference the same tools.
+
+### Phase 5: Testing and Validation
+
+15. **Unit tests**
+    - Denormalizer dispatch: each channel routes to correct MCP tool
+    - Format adaptation: ask+options renders differently per channel
+    - replyContext propagation: adapter -> IncomingEvent -> Signal -> user message
+    - Each communication tool validates input correctly
+
+16. **Integration tests**
+    - Full round-trip: Slack event -> signal with replyContext -> agent reply -> correct MCP call
+    - Cross-channel: Linear comment signal -> agent reply -> linear:create_comment called
+    - Missing replyContext: agent uses notify() gracefully
+
+### Dependency Graph
+
+```
+Phase 1: Types + MCP Prerequisites          (no deps)
+    |
+    v
+Phase 2: Inbound Pipeline Extension         (depends on Phase 1 types)
+    |
+    v
+Phase 3: Outbound Denormalizer + Tools       (depends on Phase 1 MCP tools)
+    |
+    v
+Phase 4: Agent Migration                     (depends on Phase 2 + 3)
+    |
+    v
+Phase 5: Testing                             (depends on all)
+```
+
+**Parallelism opportunity:** Phase 2 (inbound) and Phase 3 (outbound) can be built in parallel after Phase 1 types are defined. They don't depend on each other -- Phase 2 threads replyContext through the pipeline, Phase 3 consumes it. They converge in Phase 4 when agents are updated to use both.
+
+## Critical Integration Points
+
+### 1. Adapter -> IncomingEvent (replyContext attachment)
+
+Each adapter constructs replyContext from event payload fields that already exist:
+
+- **Slack**: `channelId` and `threadTs` are already in the payload (verified in `adaptSlackEvent`, lines 130-141)
+- **Linear**: `issueId` is already in the payload (verified in `adaptLinearEvent`, lines 66-77)
+- **GitHub**: `prNumber` is already in the payload, but `owner` and `repo` are NOT currently in the payload. The GitHub adapter needs the router or enrichment step to inject owner/repo, or these must be added to the GitHub webhook NormalizedEvent payload.
+
+**Flag:** GitHub adapter lacks `owner` and `repo` in the payload. These are available in the GitHub webhook payload (`repository.owner.login`, `repository.name`) but may not be propagated through the NormalizedEvent. This needs verification in `packages/integrations/github/src/webhooks/` to confirm what fields are available. Alternatively, the GitHub integration knows its configured owner from env config -- the agent-service could read it from env, or the GitHub webhook normalizer could include it.
+
+### 2. Signal Schema -> Executor (replyContext in user message)
+
+The signal delivery in `conversation-executor.ts` (line 388) needs to change from:
 
 ```typescript
-export interface ToolContext {
-  agentId: string;
-  correlationId: string;
-  containerManager?: DevContainerManager | undefined;
-  taskId?: string | undefined;  // <-- Currently used as sandbox container identifier
-  logger: PinoLogger;
-  spawnDeps?: SpawnAgentDeps | undefined;
+const signalContent = signal.message ??
+  `Signal received: ${signal.type}. Data: ${JSON.stringify(signal.data ?? {})}`;
+```
+
+To something like:
+
+```typescript
+let signalContent = signal.message ??
+  `Signal received: ${signal.type}. Data: ${JSON.stringify(signal.data ?? {})}`;
+if (signal.replyContext) {
+  signalContent += `\n\n<reply_context>${JSON.stringify(signal.replyContext)}</reply_context>`;
 }
 ```
 
-This `taskId` is set to the conversation ID (`conv.id`) in the worker loop (line 465) and passed to DevContainerManager for sandbox identification:
+**Same change needed in worker-loop.ts** at line 672 (queued signal consumption) and line 919 (queued signal consumption at pause point). These are three separate locations where signal content is built -- all three must include replyContext.
+
+### 3. Router Slow-Path -> signal_conversation (replyContext forwarding)
+
+The router LLM receives the IncomingEvent as context. The slow-path (`routeViaAgentLoopV2`) passes the full event to the LLM. The LLM then calls `signal_conversation` -- but currently the `signal_conversation` tool has no `replyContext` field in its input schema.
+
+Two approaches:
+- **Option A:** Add replyContext to signal_conversation input schema. The LLM extracts it from the event and passes it through. Risk: LLM might not consistently do this.
+- **Option B:** The `routeViaAgentLoopV2` function extracts replyContext from the IncomingEvent and auto-attaches it to any signal_conversation call. Risk: requires intercepting tool outputs.
+
+**Recommendation:** Option A is simpler and consistent with the agent-first principle. Add the field, update the router system prompt to explain it, and validate in testing. If the LLM inconsistently passes it, add deterministic extraction as a fallback in a subsequent iteration.
+
+### 4. Task Router Path (replyContext bypass)
+
+The task-aware routing path in `router.ts` (line 87-101) builds signals directly without going through the slow-path LLM:
 
 ```typescript
-const toolContext: ToolContext = {
-  agentId: conv.agent_definition_id,
-  correlationId: conv.id,
-  logger: childLogger,
-  ...(needsSandbox && sandboxManager && {
-    containerManager: sandboxManager,
-    taskId: conv.id,  // <-- conversation ID used as container ID
-  }),
-  // ...
+const signal = {
+  type: event.type,
+  data: event.data,
+  message: event.message,
+  source: event.source,
+  deduplicationId: event.deduplicationId,
 };
 ```
 
-**Resolution:** Rename the existing field to `sandboxId` (or `containerId`). This is an internal interface change affecting:
-1. `packages/agents/src/framework/types.ts` -- ToolContext interface
-2. `packages/agents/src/framework/worker-loop.ts` -- where it's set
-3. `packages/agents/src/shared/tools/codebase/*.ts` -- where it's read (5 tool factories)
-4. `packages/agents/src/shared/tools/types.ts` -- CodebaseToolDeps type if it references taskId
-
-Then `taskId` can be used for the v2.5 task primitive (the `agents.tasks.id`), set from `conv.task_id`.
-
-**This should be done in the same phase as the task primitive schema** to avoid a confusing intermediate state where `taskId` means "container ID."
-
-## Dashboard API Endpoints
-
-### POST /conversations/:id/reopen
-
+This must be updated to include:
 ```typescript
-// In main.ts, alongside existing conversation endpoints:
-app.post('/conversations/:id/reopen', async (req, res) => {
-  try {
-    const { message } = req.body as { message?: string };
-    const result = await executor.signal(req.params.id, {
-      type: 'reopen',
-      message: message || 'Conversation reopened via dashboard',
-      source: 'dashboard',
-      data: {},
-    });
-
-    if (result.action === 'rejected') {
-      // Conversation might not exist or might not be in terminal state
-      res.status(409).json({ error: 'Cannot reopen this conversation' });
-      return;
-    }
-    res.json({ reopened: true, action: result.action });
-  } catch (error) {
-    logger.error({ err: error, conversationId: req.params.id },
-      'POST /conversations/:id/reopen failed');
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+...(event.replyContext && { replyContext: event.replyContext }),
 ```
 
-**No separate retry endpoint needed.** Reopening IS the retry mechanism. The reopened conversation goes through the normal execution path with full history context.
+**This is a one-line change but critical** -- without it, task-routed events lose their replyContext even though the adapter attached it.
 
-## Suggested Build Order (Dependency-Driven)
+### 5. Fast-Path Signal Delivery (EventRouter)
 
-### Phase 1: Prompt Rewrites (independent, no code changes)
-- Rewrite product-agent/prompt.md and dev-agent/prompt.md
-- No framework changes, no schema changes
-- Can be done in parallel with Phase 2
+The deterministic `EventRouter.handle()` produces routing decisions that include a `signal` field for signal routes. The EventRouter builds signals from IncomingEvent data. Currently, the `EventRouterRouteResult` for signal action includes the full Signal object -- this must include replyContext from the IncomingEvent.
 
-### Phase 2: Conversation Reopening
-**Dependencies:** None (extends existing executor)
-**Files changed:**
-1. `packages/agents/src/shared/db/schema.ts` -- add `agent.reopened` to event type enum
-2. `packages/agents/src/shared/db/schema.drizzle.ts` -- mirror the enum change
-3. Migration file for the enum change
-4. `packages/agents/src/framework/conversation-executor.ts` -- reopen handling in signal()
-5. `packages/agents/src/service/main.ts` -- add POST /conversations/:id/reopen endpoint
-6. Dashboard: add reopen button (minimal -- single HTTP POST)
-
-**Why first (after prompts):** Simplest infrastructure change. No new tables, no new tools. Establishes the "signal on terminal conversation" pattern that task routing depends on.
-
-### Phase 3: Task Primitive (schema + service + tools)
-**Dependencies:** Phase 2 (reopening used by task-aware routing)
-
-**3a: Schema + Service + ToolContext Rename**
-1. Rename ToolContext.taskId to sandboxId (codebase tools, worker-loop, types)
-2. Add tasks, task_handoffs tables to schema.ts + schema.drizzle.ts
-3. Add task_id column to conversations
-4. Migration
-5. Add `task` and `handoff` to createId in ids.ts
-6. Implement TaskService factory (`framework/task-service.ts`)
-7. Bootstrap TaskService in main.ts
-
-**3b: Agent Tools**
-1. Create 6 tool implementations in `shared/tools/task/`
-2. Register in tool-factories.ts (new `task:` namespace)
-3. Add tools to agent definition YAML files
-4. Wire TaskService into registerAllTools via options
-5. Add taskId to ToolContext, set from conv.task_id in worker-loop
-
-**3c: Task-Aware Routing**
-1. Add taskId to NormalizedEvent schema, IncomingEvent schema
-2. Pass through in adapters
-3. Add task routing pre-check in routeEvent()
-4. Implement task-level serialization (FOR UPDATE on task row)
-5. Add db/taskService to RouteEventDeps
-6. Task context injection in worker-loop executeConversation()
-
-### Phase 4: Integration Correlation
-**Dependencies:** Phase 3a (tasks table must exist)
-
-**4a: Integration Schema + Store (per integration)**
-1. Add task_correlations table to each integration's schema.ts + schema.drizzle.ts
-2. Implement correlation store per integration
-3. Migration per integration
-
-**4b: Outgoing Correlation (MCP changes)**
-1. Add taskId to McpCallOptions in mcp/types.ts
-2. Add X-Task-ID header in mcp/client.ts callMcpTool()
-3. Update MCP tool wrapper (McpToolDeps) to pass taskId from ToolContext
-4. Add correlation recording in each integration's MCP route handler (post-success hook)
-
-**4c: Incoming Correlation (Webhook changes)**
-1. Add correlation lookup in each integration's webhook handler
-2. Attach taskId to NormalizedEvent before dispatch
-3. End-to-end test: create artifact via MCP -> receive webhook -> auto-route to task
-
-### Phase 5: Prompt Evolution
-**Dependencies:** Phase 3b (task tools exist), Phase 4 (correlation works)
-- Update all agent prompts to leverage task lifecycle
-- Add handoff examples to few-shot sections
-- Guide agents on when to create/complete/hand off tasks
-
-## Concurrency Deep Dive
-
-### Race: Two events for the same task arrive simultaneously
-
-**Scenario:** PR review and CI failure both arrive for task T123 within milliseconds.
-
-**Mechanism:** Both events hit `routeEvent()`. Both attempt the task-aware routing block.
-
-**Serialization:** The `SELECT ... FOR UPDATE` on the task row in the routing transaction means:
-1. Event A acquires lock on task T123
-2. Event A sees no active conversation, creates one via `executor.start()`
-3. Event A's transaction commits, releasing the lock
-4. Event B acquires lock on task T123
-5. Event B sees the newly created active conversation
-6. Event B delivers as signal to that conversation
-
-**Lock contention is minimal** because the routing transaction is short (two SELECTs + a routing decision return). The actual conversation creation happens outside the transaction.
-
-### Race: Signal arrives during conversation completion write
-
-**Already handled** by the existing `FOR UPDATE` in `signal()`. The signal's FOR UPDATE blocks until the executor's write transaction commits, then sees the final status and acts accordingly.
-
-### Race: Two agents create artifacts referencing the same external entity
-
-**Scenario:** Two conversations both create a PR for the same repo.
-
-**Handled by:** The `PRIMARY KEY (external_type, external_ref)` on task_correlations. The second INSERT fails with a unique violation. The correlation recording is fire-and-forget, so this silently fails. The first correlation wins.
-
-**This is correct behavior:** The first task to create the artifact "owns" it for routing purposes.
-
-### Race: Conversation reopened while task is being completed by another conversation
-
-**Scenario:** Dashboard user clicks "reopen" on conversation A while conversation B (for the same task) calls `complete_task`.
-
-**Not a data integrity issue:** Reopening conversation A doesn't affect the task status. The reopened conversation will see the task's current status when it resumes. If the task is completed, the agent can check via `get_task_context` and decide whether to do more work or gracefully exit.
+Check `event-router.ts` to verify how signals are constructed in the fast-path. If the EventRouter copies fields from IncomingEvent to Signal, replyContext propagation is automatic once both schemas have the field. If not, explicit forwarding is needed.
 
 ## Sources
 
-All findings are based on direct analysis of the existing Aesir codebase:
+All findings are from direct codebase inspection. File paths and line numbers are verified against the current codebase as of 2026-02-08.
 
-**Framework core:**
-- `packages/agents/src/framework/conversation-executor.ts` -- signal handling, terminal status logic (lines 296-460)
-- `packages/agents/src/framework/event-router.ts` -- routing decision structure, SIGNAL_AGENT_MAP
-- `packages/agents/src/framework/worker-loop.ts` -- conversation execution, context injection, sandbox setup
-- `packages/agents/src/framework/types.ts` -- ToolContext (line 312-325), interfaces, schemas
-- `packages/agents/src/framework/tool-factories.ts` -- tool registration patterns (28 tools, 4 namespaces)
-- `packages/agents/src/framework/tool-registry.ts` -- namespace:tool_name resolution
-
-**Router and adapters:**
-- `packages/agents/src/router/router.ts` -- routeEvent() flow, enrichment patterns
-- `packages/agents/src/router/types.ts` -- RouteEventDeps, RouteEventResult
-- `packages/agents/src/adapters/types.ts` -- IncomingEvent, SIGNAL_TYPE_MAP
-- `packages/agents/src/adapters/github.ts` -- adapter transform pattern, BRANCH_TASK_REGEX
-
-**Database schemas:**
-- `packages/agents/src/shared/db/schema.ts` -- conversations, agent_events, agent_sessions definitions
-- `packages/agents/src/shared/db/schema.drizzle.ts` -- drizzle-kit version (retains legacy tables)
-- `packages/integrations/github/src/db/schema.ts` -- credentials, webhook_deliveries, mcp_tool_permissions
-- `packages/integrations/linear/src/db/schema.ts` -- same pattern as github
-- `packages/integrations/slack/src/db/schema.ts` -- installations, event_deliveries, mcp_tool_permissions
-
-**MCP protocol:**
-- `packages/agents/src/shared/mcp/client.ts` -- callMcpTool(), header pattern
-- `packages/agents/src/shared/mcp/types.ts` -- McpCallOptions interface
-- `packages/types/src/mcp/types.ts` -- MCPToolContext, MCPToolResult (server-side)
-- `packages/integrations/github/src/api/mcp.ts` -- MCP HTTP route handler pattern
-
-**Integration event flow:**
-- `packages/integrations/github/src/api/webhooks.ts` -- webhook handler, dispatch flow
-- `packages/integrations/github/src/dispatcher/client.ts` -- fire-and-forget HTTP dispatch
-- `packages/integrations/github/src/dispatcher/normalize.ts` -- event normalization
-- `packages/types/src/events/schema.ts` -- NormalizedEvent schema
-
-**Service and bootstrapping:**
-- `packages/agents/src/service/main.ts` -- bootstrap sequence, route deps
-- `packages/agents/src/service/api/router.ts` -- API endpoint pattern
-- `packages/types/src/utils/ids.ts` -- createId pattern
-
-**Spec documents:**
-- `.planning/specs/2.5-agentic-conversations.md` -- implementation spec
-- `.planning/specs/2.5-design-vision.md` -- architectural rationale and expansion constraints
-
-## Confidence Assessment
-
-| Area | Confidence | Reason |
-|------|------------|--------|
-| Schema design | HIGH | Based on existing Drizzle patterns, Postgres conventions, and direct codebase analysis |
-| Conversation reopening | HIGH | Clean extension of existing signal() with well-understood FOR UPDATE serialization |
-| MCP header extension | HIGH | Follows established X-Agent-ID / X-Correlation-ID pattern exactly |
-| Task-aware routing | HIGH | routeEvent() is the correct injection point; FOR UPDATE provides serialization |
-| Tool registration | HIGH | Follows exact pattern of existing 28 tools across 4 namespaces |
-| Integration correlation | MEDIUM | Design is sound but implementation touches 3 independent packages; needs per-integration testing |
-| ToolContext.taskId rename | HIGH | Confirmed collision via direct code reading; rename is straightforward but touches ~10 files |
-| Token budget for task context | MEDIUM | 4000-char cap is a reasonable heuristic; needs tuning based on real handoff sizes |
-| Build order | HIGH | Dependency chain is clear from code analysis; each phase builds on verified prior work |
+| File | What Was Verified |
+|------|-------------------|
+| `packages/agents/src/framework/tool-factories.ts` | All 34 tool registrations, adapter patterns |
+| `packages/agents/src/framework/types.ts` | ToolContext, SignalSchema, ToolRegistry interfaces |
+| `packages/agents/src/framework/conversation-executor.ts` | Signal delivery logic (line 388), message construction |
+| `packages/agents/src/framework/worker-loop.ts` | Signal consumption at 3 locations (lines 672, 919) |
+| `packages/agents/src/adapters/types.ts` | IncomingEventSchema fields, no replyContext |
+| `packages/agents/src/adapters/slack.ts` | All event handlers, payload fields available |
+| `packages/agents/src/adapters/linear.ts` | All event handlers, issueId availability |
+| `packages/agents/src/adapters/github.ts` | PR events, payload fields (prNumber present, owner/repo absent) |
+| `packages/agents/src/shared/tools/integration/mcp-wrapper.ts` | McpToolDeps pattern, createMcpToolWrapper |
+| `packages/agents/src/shared/mcp/client.ts` | callMcpTool HTTP protocol, retry logic |
+| `packages/agents/src/router/tools/signal-conversation.ts` | Signal schema (no replyContext) |
+| `packages/agents/src/router/system-prompt.ts` | Full router prompt, no replyContext guidance |
+| `packages/agents/src/router/router.ts` | Task routing signal construction (line 87-101) |
+| `packages/integrations/linear/src/mcp/server.ts` | 6 tools registered, create_comment MISSING |
+| `packages/integrations/linear/src/mcp/tools/issues.ts` | handleCreateComment EXISTS (line 472) |
+| `packages/integrations/github/src/mcp/server.ts` | 9 tools registered, no comment tool |
+| `packages/integrations/github/src/mcp/tools/pullrequests.ts` | PR handlers, no comment handler |
+| `packages/agents/definitions/dev-agent/definition.yaml` | 20 tools, slack:send_message + send_approval_request |
+| `packages/agents/definitions/product-agent/definition.yaml` | 11 tools, slack:send_message |
