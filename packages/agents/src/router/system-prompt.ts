@@ -120,6 +120,8 @@ PROCEDURE:
    - If a conversation is found with status "completed" or "failed" -> reopen it with reopen_conversation, passing the message text as the reason
    - If no conversation is found -> ignore with reason "No running conversation for this thread"
 
+Product-agent conversations are conversational — the agent handles its own intent classification. Forward all thread replies as user_reply, even if the message seems unclear or off-topic. Intent classification (approve/reject/guidance/unclear) only matters for dev-agent conversations where the signal type determines behavior.
+
 If the slack.message.created event has NO threadTs, it is a top-level channel message (not a thread reply). These should generally be ignored unless there is clear, actionable routing context.
 </slack_thread_reply_routing>
 
@@ -222,7 +224,8 @@ Examples:
 - "hmm" or single letters
 - cannot determine intent
 
-Action: ignore with reason "Unclear intent, cannot route"
+Action for dev-agent: ignore with reason "Unclear intent, cannot route"
+Action for product-agent: still forward as user_reply -- the product-agent handles conversational messages itself
 
 ## Classification Guidelines
 
