@@ -1,7 +1,7 @@
 /**
  * Linear Integration Tools
  *
- * ToolDefinition factories for the 6 Linear MCP tools.
+ * ToolDefinition factories for the 7 Linear MCP tools.
  * All Zod schemas are defined locally -- no imports from @aesir/integration-linear.
  *
  * Tools are prefixed with "linear_" to avoid name collisions with other
@@ -64,6 +64,11 @@ const searchIssuesSchema = z.object({
     .describe("Maximum results to return (default: 10)"),
 });
 
+const createCommentSchema = z.object({
+  issueId: z.string().describe("Linear issue identifier (e.g., 'ABC-123')"),
+  body: z.string().describe("Comment body in markdown format"),
+});
+
 // ---------------------------------------------------------------------------
 // Factory
 // ---------------------------------------------------------------------------
@@ -71,11 +76,12 @@ const searchIssuesSchema = z.object({
 /**
  * Create all Linear MCP tool definitions.
  *
- * Returns 6 tools for interacting with Linear via the MCP layer:
- * get_issue, create_issue, update_issue_status, list_teams, list_labels, search_issues.
+ * Returns 7 tools for interacting with Linear via the MCP layer:
+ * get_issue, create_issue, update_issue_status, list_teams, list_labels, search_issues,
+ * create_comment.
  *
  * @param deps - Agent ID and correlation ID for MCP calls
- * @returns Array of 6 ToolDefinition objects
+ * @returns Array of 7 ToolDefinition objects
  */
 export function createLinearTools(deps: McpToolDeps): ToolDefinition[] {
   return [
@@ -147,6 +153,18 @@ export function createLinearTools(deps: McpToolDeps): ToolDefinition[] {
         description:
           "Search Linear issues by text query. Returns matching issues with titles, identifiers, and status. Use this BEFORE creating a new issue to check for duplicates. If similar issues exist, suggest updating them instead of creating duplicates.",
         inputSchema: searchIssuesSchema,
+      },
+      deps,
+    ),
+
+    createMcpToolWrapper(
+      {
+        integration: "linear",
+        toolName: "create_comment",
+        displayName: "linear_create_comment",
+        description:
+          "Create a comment on a Linear issue. Use this to post updates, questions, or status reports directly on an issue. The comment body supports markdown formatting.",
+        inputSchema: createCommentSchema,
       },
       deps,
     ),

@@ -1,7 +1,7 @@
 /**
  * GitHub Integration Tools
  *
- * ToolDefinition factories for the 9 GitHub MCP tools.
+ * ToolDefinition factories for the 10 GitHub MCP tools.
  * All Zod schemas are defined locally -- no imports from @aesir/integration-github.
  *
  * Tools are prefixed with "github_" to namespace them for the LLM
@@ -111,6 +111,13 @@ const listFilesSchema = z.object({
     .describe("Git ref (branch, tag, or SHA) to list from"),
 });
 
+const createPRCommentSchema = z.object({
+  owner: z.string().describe("Repository owner (user or organization)"),
+  repo: z.string().describe("Repository name"),
+  pullNumber: z.number().describe("Pull request number"),
+  body: z.string().describe("Comment body in markdown format"),
+});
+
 // ---------------------------------------------------------------------------
 // Factory
 // ---------------------------------------------------------------------------
@@ -118,13 +125,13 @@ const listFilesSchema = z.object({
 /**
  * Create all GitHub MCP tool definitions.
  *
- * Returns 9 tools for interacting with GitHub via the MCP layer:
+ * Returns 10 tools for interacting with GitHub via the MCP layer:
  * get_repository, create_branch, create_commit, create_pull_request,
  * get_pull_request, list_pull_requests, merge_pull_request,
- * get_file_contents, list_files.
+ * get_file_contents, list_files, create_pr_comment.
  *
  * @param deps - Agent ID and correlation ID for MCP calls
- * @returns Array of 9 ToolDefinition objects
+ * @returns Array of 10 ToolDefinition objects
  */
 export function createGitHubTools(deps: McpToolDeps): ToolDefinition[] {
   return [
@@ -232,6 +239,18 @@ export function createGitHubTools(deps: McpToolDeps): ToolDefinition[] {
         description:
           "List files and directories at a given path in a GitHub repository. Returns names and types (file or directory) for each entry. Use this to explore repository structure and discover files before reading them.",
         inputSchema: listFilesSchema,
+      },
+      deps,
+    ),
+
+    createMcpToolWrapper(
+      {
+        integration: "github",
+        toolName: "create_pr_comment",
+        displayName: "github_create_pr_comment",
+        description:
+          "Add a comment to a pull request conversation thread. Use this to post updates, ask questions, or provide status information on a PR. Creates a conversation-level comment (not a line-specific review comment). The comment body supports markdown formatting.",
+        inputSchema: createPRCommentSchema,
       },
       deps,
     ),
