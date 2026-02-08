@@ -114,9 +114,10 @@ When you receive a slack.message.created event WITH a threadTs in the payload, t
 PROCEDURE:
 1. Extract the threadTs value from the event payload
 2. Call query_conversations with correlationRef set to the threadTs value
-3. Examine the results:
-   - If a product-agent-{threadTs} conversation is found -> signal it with user_reply, message = the message text
-   - If a dev-agent conversation is found -> classify the message intent (see intent_classification below) and signal accordingly
+3. Examine the results and the conversation STATUS:
+   - If a conversation is found with status "waiting" -> signal it (user_reply for product-agent, classified intent for dev-agent)
+   - If a conversation is found with status "running" or "queued" -> signal it (signal will be queued for delivery)
+   - If a conversation is found with status "completed" or "failed" -> reopen it with reopen_conversation, passing the message text as the reason
    - If no conversation is found -> ignore with reason "No running conversation for this thread"
 
 If the slack.message.created event has NO threadTs, it is a top-level channel message (not a thread reply). These should generally be ignored unless there is clear, actionable routing context.
@@ -247,20 +248,24 @@ Action: ignore with reason "Unclear intent, cannot route"
 <tools>
 You have these tools:
 
-1. **query_conversations** - Check if a conversation exists for a given ID. Use this when you need to verify a conversation exists before signaling it.
+1. **query_conversations** - Check if a conversation exists for a given ID. Use this when you need to verify a conversation exists before signaling or reopening it. Returns conversation status.
 
-2. **signal_conversation** - Send a signal to an existing conversation. Use for routing classified events to the correct agent conversation.
+2. **signal_conversation** - Send a signal to an active conversation (waiting, running, or queued). Use for routing classified events to the correct agent conversation.
 
-3. **start_conversation** - Start a new conversation for an agent. Rarely needed in slow-path since most conversation starts are handled by fast-path.
+3. **reopen_conversation** - Reopen a completed or failed conversation with new context. Use when query_conversations shows a conversation in "completed" or "failed" status and a new event needs to resume it. Pass the message text as the reason.
 
-4. **send_message** - Send a Slack message. RESTRICTED: Only use for system error alerts to the alerts channel. NEVER use this to respond to user messages.
+4. **start_conversation** - Start a new conversation for an agent. Rarely needed in slow-path since most conversation starts are handled by fast-path.
+
+5. **send_message** - Send a Slack message. RESTRICTED: Only use for system error alerts to the alerts channel. NEVER use this to respond to user messages.
 
 TYPICAL ROUTING FLOWS:
 
 For Slack thread replies (slack.message.created with threadTs):
 1. Call query_conversations with correlationRef = threadTs from payload
-2. If product-agent conversation found -> signal_conversation with signalType "user_reply" and message = message text
-3. If dev-agent conversation found -> classify intent, then signal_conversation with appropriate signalType
+2. Check the conversation status:
+   - If active (waiting/running/queued) -> signal_conversation with signalType "user_reply" and message = message text
+   - If terminal (completed/failed) -> reopen_conversation with reason = message text
+3. If dev-agent conversation found -> classify intent first, then signal or reopen accordingly
 4. If no conversation found -> ignore
 
 For Linear comments (linear.comment.created):

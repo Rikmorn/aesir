@@ -17,6 +17,7 @@ import type { NormalizedEvent } from "@aesir/types";
 import { runAgentLoop } from "../shared/agent-loop/index.js";
 import { ROUTER_SYSTEM_PROMPT } from "./system-prompt.js";
 import { createQueryConversationsTool } from "./tools/query-conversations.js";
+import { createReopenConversationTool } from "./tools/reopen-conversation.js";
 import { createSendMessageTool } from "./tools/send-message.js";
 import { createSignalConversationTool } from "./tools/signal-conversation.js";
 import { createStartConversationTool } from "./tools/start-conversation.js";
@@ -81,6 +82,7 @@ export async function routeViaAgentLoopV2(
     createQueryConversationsTool(deps),
     createStartConversationTool(deps),
     createSignalConversationTool(deps),
+    createReopenConversationTool(deps),
     createSendMessageTool(deps),
   ];
 
