@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 61 of 66 (Inbound Pipeline)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: Executing
-Last activity: 2026-02-08 -- Plan 61-01 complete (schema extensions)
+Last activity: 2026-02-08 -- Plan 61-02 complete (adapter replyContext extraction)
 
 Progress: [█░░░░░░░░░] 14%
 
@@ -46,6 +46,7 @@ Progress: [█░░░░░░░░░] 14%
 
 See PROJECT.md Key Decisions table for full history.
 - [Phase 61]: replyContext placed after taskId in schemas; appendReplyContextTag uses XML tag format
+- [Phase 61]: Slack block_actions omit replyContext (no teamId); GitHub extracts from payload.repository
 
 ### Pending Todos
 
@@ -60,9 +61,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 61-01-PLAN.md
+Stopped at: Completed 61-02-PLAN.md
 Resume file: None
-Next action: Execute 61-02-PLAN.md
+Next action: Execute 61-03-PLAN.md (if not already completed by parallel agent)
 
 ---
-*Updated: 2026-02-08 -- Plan 61-01 complete (schema extensions with replyContext)*
+*Updated: 2026-02-08 -- Plan 61-02 complete (adapter replyContext extraction)*
