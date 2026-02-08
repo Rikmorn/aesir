@@ -183,6 +183,12 @@ export async function startServer(): Promise<void> {
         // Normalize to event format for router
         const { createId } = await import("@aesir/types");
         const eventId = createId.event();
+        const teamId = (boltBody.user as Record<string, unknown>)?.team_id as
+          | string
+          | undefined;
+        const threadTs = (boltBody.message as Record<string, unknown>)
+          ?.thread_ts as string | undefined;
+
         const normalizedEvent = {
           id: eventId,
           type: isApproval
@@ -199,6 +205,8 @@ export async function startServer(): Promise<void> {
             isApproval,
             messageTs,
             channel,
+            teamId,
+            threadTs,
           },
         };
 
@@ -251,6 +259,10 @@ export async function startServer(): Promise<void> {
       // Normalize to event format for escalation resolution
       const { createId } = await import("@aesir/types");
       const eventId = createId.event();
+      // biome-ignore lint/suspicious/noExplicitAny: Bolt body type
+      const teamId = (body as any).user?.team_id;
+      // biome-ignore lint/suspicious/noExplicitAny: Bolt body type
+      const threadTs = (body as any).message?.thread_ts;
       const normalizedEvent = {
         id: eventId,
         type: `slack.block_actions.escalation_${escalationAction}`,
@@ -265,6 +277,8 @@ export async function startServer(): Promise<void> {
           escalationAction,
           messageTs,
           channel,
+          teamId,
+          threadTs,
         },
       };
 

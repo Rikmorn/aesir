@@ -195,6 +195,8 @@ export function createInteractionsRouter(deps: InteractionsRouterDeps): Router {
           isApproval,
           messageTs,
           channel: channelId,
+          teamId: payload.user.team_id,
+          threadTs: payload.message.thread_ts,
           responseUrl: payload.response_url,
           ...(correlatedTaskId && { taskId: correlatedTaskId }),
         },

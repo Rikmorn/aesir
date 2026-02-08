@@ -72,7 +72,7 @@ describe("adaptSlackEvent", () => {
       expect(IncomingEventSchema.safeParse(result).success).toBe(true);
     });
 
-    it("does NOT include replyContext (teamId unavailable for block_actions)", () => {
+    it("omits replyContext when teamId/channel missing from payload", () => {
       const event = makeEvent({
         type: "slack.block_actions.approved",
         payload: { taskIdentifier: "ABC-123" },
@@ -82,6 +82,49 @@ describe("adaptSlackEvent", () => {
 
       expect(result).not.toBeNull();
       expect(result?.replyContext).toBeUndefined();
+    });
+
+    it("includes replyContext when teamId and channel are present", () => {
+      const event = makeEvent({
+        type: "slack.block_actions.approved",
+        payload: {
+          taskIdentifier: "ABC-123",
+          teamId: "T789",
+          channel: "C123",
+          threadTs: "1234567890.000000",
+        },
+      });
+
+      const result = asIncoming(adaptSlackEvent(event));
+
+      expect(result).not.toBeNull();
+      expect(result?.replyContext).toEqual({
+        channel: "slack",
+        teamId: "T789",
+        channelId: "C123",
+        threadTs: "1234567890.000000",
+      });
+      expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+
+    it("includes replyContext without threadTs when not in a thread", () => {
+      const event = makeEvent({
+        type: "slack.block_actions.approved",
+        payload: {
+          taskIdentifier: "ABC-123",
+          teamId: "T789",
+          channel: "C123",
+        },
+      });
+
+      const result = asIncoming(adaptSlackEvent(event));
+
+      expect(result).not.toBeNull();
+      expect(result?.replyContext).toEqual({
+        channel: "slack",
+        teamId: "T789",
+        channelId: "C123",
+      });
     });
   });
 

@@ -37,6 +37,9 @@ export function adaptSlackEvent(
   switch (event.type) {
     case "slack.block_actions.approved": {
       const taskId = payload.taskIdentifier as string;
+      const teamId = payload.teamId as string | undefined;
+      const channelId = payload.channel as string | undefined;
+      const threadTs = payload.threadTs as string | undefined;
       return {
         type: "approval",
         data: { approved: true, source: "slack" },
@@ -45,11 +48,23 @@ export function adaptSlackEvent(
         deduplicationId: event.correlationId,
         message: "Plan approved via Slack button.",
         ...(correlatedTaskId && { taskId: correlatedTaskId }),
+        ...(teamId &&
+          channelId && {
+            replyContext: {
+              channel: "slack" as const,
+              teamId,
+              channelId,
+              ...(threadTs && { threadTs }),
+            },
+          }),
       };
     }
 
     case "slack.block_actions.rejected": {
       const taskId = payload.taskIdentifier as string;
+      const teamId = payload.teamId as string | undefined;
+      const channelId = payload.channel as string | undefined;
+      const threadTs = payload.threadTs as string | undefined;
       return {
         type: "approval",
         data: {
@@ -63,11 +78,23 @@ export function adaptSlackEvent(
         message:
           "Plan rejected via Slack button. Feedback: Rejected via Slack button",
         ...(correlatedTaskId && { taskId: correlatedTaskId }),
+        ...(teamId &&
+          channelId && {
+            replyContext: {
+              channel: "slack" as const,
+              teamId,
+              channelId,
+              ...(threadTs && { threadTs }),
+            },
+          }),
       };
     }
 
     case "slack.block_actions.escalation_retry": {
       const taskId = payload.taskIdentifier as string;
+      const teamId = payload.teamId as string | undefined;
+      const channelId = payload.channel as string | undefined;
+      const threadTs = payload.threadTs as string | undefined;
       return {
         type: "escalation_resolved",
         data: { action: "retry" },
@@ -76,11 +103,23 @@ export function adaptSlackEvent(
         deduplicationId: event.correlationId,
         message: "Escalation resolved: retry.",
         ...(correlatedTaskId && { taskId: correlatedTaskId }),
+        ...(teamId &&
+          channelId && {
+            replyContext: {
+              channel: "slack" as const,
+              teamId,
+              channelId,
+              ...(threadTs && { threadTs }),
+            },
+          }),
       };
     }
 
     case "slack.block_actions.escalation_abort": {
       const taskId = payload.taskIdentifier as string;
+      const teamId = payload.teamId as string | undefined;
+      const channelId = payload.channel as string | undefined;
+      const threadTs = payload.threadTs as string | undefined;
       return {
         type: "escalation_resolved",
         data: { action: "abort" },
@@ -89,6 +128,15 @@ export function adaptSlackEvent(
         deduplicationId: event.correlationId,
         message: "Escalation resolved: abort.",
         ...(correlatedTaskId && { taskId: correlatedTaskId }),
+        ...(teamId &&
+          channelId && {
+            replyContext: {
+              channel: "slack" as const,
+              teamId,
+              channelId,
+              ...(threadTs && { threadTs }),
+            },
+          }),
       };
     }
 
