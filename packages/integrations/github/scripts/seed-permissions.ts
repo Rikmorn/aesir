@@ -25,6 +25,7 @@ const PERMISSIONS = [
   { agentId: "dev-agent", toolName: "merge_pull_request", allowed: true },
   { agentId: "dev-agent", toolName: "get_file_contents", allowed: true },
   { agentId: "dev-agent", toolName: "list_files", allowed: true },
+  { agentId: "dev-agent", toolName: "create_pr_comment", allowed: true },
 
   // product-agent: Read-only access (reviews code, no writes)
   { agentId: "product-agent", toolName: "get_repository", allowed: true },

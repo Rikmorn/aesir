@@ -1,14 +1,14 @@
 /**
  * Tool Factory Registration
  *
- * Registers all 34 tool factories in the ToolRegistry, bridging the v2.3
+ * Registers all 36 tool factories in the ToolRegistry, bridging the v2.3
  * ToolContext interface to the existing v2.2 tool factory signatures.
  *
  * Tool categories:
  * - Codebase (5): read_file, write_file, search_codebase, list_directory, run_command
- * - Linear (6): get_issue, create_issue, update_issue_status, list_teams, list_labels, search_issues
- * - GitHub (9): get_repository, create_branch, create_commit, create_pull_request,
- *               get_pull_request, list_pull_requests, merge_pull_request, get_file_contents, list_files
+ * - Linear (7): get_issue, create_issue, update_issue_status, list_teams, list_labels, search_issues, create_comment
+ * - GitHub (10): get_repository, create_branch, create_commit, create_pull_request,
+ *                get_pull_request, list_pull_requests, merge_pull_request, get_file_contents, list_files, create_pr_comment
  * - Slack (5): send_message, send_approval_request, get_message, reply_to_thread, list_channels
  * - Coordination (3): spawn_agent, request_human_input, wait_for
  * - Task (6): create_task, complete_task, pause_task, handoff_task, list_tasks, get_task_context
@@ -121,7 +121,7 @@ function mcpAdapter(
 // ─── Registration ────────────────────────────────────────────────────────────
 
 /**
- * Register all 34 tool factories in the ToolRegistry.
+ * Register all 36 tool factories in the ToolRegistry.
  *
  * This bridges the v2.3 registry-based tool resolution to the existing v2.2
  * tool factory functions. After calling this, `registry.resolve(refs, context)`
@@ -152,7 +152,7 @@ export function registerAllTools(options: RegisterAllToolsOptions): void {
     codebaseAdapter(createRunCommandTool),
   );
 
-  // ── Linear tools (6) ───────────────────────────────────────────────────
+  // ── Linear tools (7) ───────────────────────────────────────────────────
 
   registry.register(
     "linear:get_issue",
@@ -178,8 +178,12 @@ export function registerAllTools(options: RegisterAllToolsOptions): void {
     "linear:search_issues",
     mcpAdapter(createLinearTools, "linear_search_issues"),
   );
+  registry.register(
+    "linear:create_comment",
+    mcpAdapter(createLinearTools, "linear_create_comment"),
+  );
 
-  // ── GitHub tools (9) ───────────────────────────────────────────────────
+  // ── GitHub tools (10) ──────────────────────────────────────────────────
 
   registry.register(
     "github:get_repository",
@@ -216,6 +220,10 @@ export function registerAllTools(options: RegisterAllToolsOptions): void {
   registry.register(
     "github:list_files",
     mcpAdapter(createGitHubTools, "github_list_files"),
+  );
+  registry.register(
+    "github:create_pr_comment",
+    mcpAdapter(createGitHubTools, "github_create_pr_comment"),
   );
 
   // ── Slack tools (5) ────────────────────────────────────────────────────
