@@ -38,7 +38,11 @@ Plans:
   3. A GitHub PR review event produces an IncomingEvent with replyContext containing owner, repo, and prNumber
   4. When a signal with replyContext is delivered to a conversation, the conversation row's reply_context column is updated with the new replyContext value
   5. The agent's resumed message includes a structured `<reply_context>` tag containing the replyContext JSON, enabling the agent to pass it through to communication tools
-**Plans:** TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 61-01-PLAN.md -- Schema extensions (IncomingEvent, Signal, StartConversationParams) + appendReplyContextTag helper
+- [ ] 61-02-PLAN.md -- Adapter replyContext extraction (Slack, Linear, GitHub)
+- [ ] 61-03-PLAN.md -- Executor, worker loop, EventRouter, and task routing replyContext wiring
 
 ### Phase 62: Router Updates
 
