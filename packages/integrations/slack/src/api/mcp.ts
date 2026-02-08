@@ -17,6 +17,7 @@ import { Router as createRouter } from "express";
 import rateLimit from "express-rate-limit";
 import { createSlackClientFromDatabase } from "../client/factory.js";
 import type { SlackCredentialStore } from "../db/credential-store.js";
+import { recordTaskCorrelation } from "../db/task-correlations.js";
 import {
   GetMessageInputSchema,
   ListChannelsInputSchema,
@@ -34,7 +35,6 @@ import {
   sendMessage,
 } from "../messages/sender.js";
 import type { ApprovalNotification } from "../messages/types.js";
-import { recordTaskCorrelation } from "../db/task-correlations.js";
 
 export interface CreateMCPRouterOptions {
   db: NodePgDatabase;

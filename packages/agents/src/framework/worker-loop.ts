@@ -265,7 +265,9 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
     lines.push("");
     lines.push("--- Latest Handoff ---");
     lines.push(`Type: ${latestHandoff.handoff_type}`);
-    lines.push(`Author: ${latestHandoff.author_type}:${latestHandoff.author_id}`);
+    lines.push(
+      `Author: ${latestHandoff.author_type}:${latestHandoff.author_id}`,
+    );
     lines.push(`Date: ${latestHandoff.created_at.toISOString()}`);
 
     // Format handoff context fields
