@@ -26,6 +26,7 @@ import {
   handleCreateBranch,
   handleCreateCommit,
   handleCreatePR,
+  handleCreatePRComment,
   handleGetPR,
   handleListPRs,
   handleMergePR,
@@ -250,6 +251,29 @@ const TOOL_DEFINITIONS = [
       required: ["owner", "repo"],
     },
   },
+  {
+    name: "create_pr_comment",
+    description: "Add a comment to a pull request conversation",
+    inputSchema: {
+      type: "object",
+      properties: {
+        owner: {
+          type: "string",
+          description: "Repository owner (user or organization)",
+        },
+        repo: { type: "string", description: "Repository name" },
+        pullNumber: {
+          type: "number",
+          description: "Pull request number",
+        },
+        body: {
+          type: "string",
+          description: "Comment body in markdown",
+        },
+      },
+      required: ["owner", "repo", "pullNumber", "body"],
+    },
+  },
 ];
 
 /**
@@ -468,6 +492,10 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
 
           case "list_files":
             result = await handleListFiles(context, args, fileDeps);
+            break;
+
+          case "create_pr_comment":
+            result = await handleCreatePRComment(context, args, prDeps);
             break;
 
           default:

@@ -16,6 +16,7 @@ import {
   createCommit as createCommitOp,
 } from "../../operations/index.js";
 import {
+  addPRComment,
   createPullRequest as createPRInternal,
   getPullRequest as getPRInternal,
   mergePullRequest as mergePRInternal,
@@ -25,12 +26,14 @@ import {
   type CommitOutput,
   CreateBranchInputSchema,
   CreateCommitInputSchema,
+  CreatePRCommentInputSchema,
   CreatePRInputSchema,
   GetPRInputSchema,
   ListPRsInputSchema,
   type ListPRsOutput,
   MergePRInputSchema,
   type MergePROutput,
+  type PRCommentOutput,
   type PROutput,
 } from "../schemas.js";
 
@@ -596,6 +599,93 @@ export async function handleMergePR(
     return createErrorResult(
       context,
       `Failed to merge pull request: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+/**
+ * Handle create_pr_comment tool call
+ */
+export async function handleCreatePRComment(
+  context: MCPToolContext,
+  args: unknown,
+  deps: PRToolDeps,
+): Promise<MCPToolResult<PRCommentOutput>> {
+  const { db, credentialStore, owner } = deps;
+
+  // Check permission
+  const hasPermission = await checkGitHubToolPermission(
+    { db, logger: context.logger },
+    { agentId: context.agentId, toolName: "create_pr_comment" },
+  );
+
+  if (!hasPermission) {
+    context.logger.warn(
+      { agentId: context.agentId, tool: "create_pr_comment" },
+      "Permission denied",
+    );
+    return createErrorResult(
+      context,
+      "Permission denied: create_pr_comment not allowed for this agent",
+    );
+  }
+
+  // Validate input
+  const parseResult = CreatePRCommentInputSchema.safeParse(args);
+  if (!parseResult.success) {
+    context.logger.warn(
+      { errors: parseResult.error.errors },
+      "Invalid input for create_pr_comment",
+    );
+    return createErrorResult(
+      context,
+      `Invalid input: ${parseResult.error.errors.map((e) => e.message).join(", ")}`,
+    );
+  }
+
+  const input = parseResult.data;
+
+  try {
+    const octokit: Octokit = await createGitHubClientFromDatabase(
+      credentialStore,
+      owner,
+    );
+
+    const comment = await addPRComment(
+      octokit,
+      input.owner,
+      input.repo,
+      input.pullNumber,
+      input.body,
+    );
+
+    const output: PRCommentOutput = {
+      id: comment.id,
+      body: comment.body,
+      user: comment.user,
+      createdAt: comment.createdAt,
+    };
+
+    context.logger.info(
+      {
+        owner: input.owner,
+        repo: input.repo,
+        pullNumber: input.pullNumber,
+        commentId: comment.id,
+      },
+      "PR comment created successfully",
+    );
+
+    return createToolResult(
+      context,
+      `Comment added to PR #${input.pullNumber}`,
+      output,
+    );
+  } catch (error) {
+    context.logger.error({ err: error, input }, "Failed to create PR comment");
+    return createErrorResult(
+      context,
+      `Failed to create PR comment: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 }

@@ -152,6 +152,28 @@ export const MergePROutputSchema = z.object({
 export type MergePROutput = z.infer<typeof MergePROutputSchema>;
 
 // ============================================================================
+// PR Comment Schemas
+// ============================================================================
+
+export const CreatePRCommentInputSchema = z.object({
+  owner: z.string().min(1, "Owner is required"),
+  repo: z.string().min(1, "Repository name is required"),
+  pullNumber: z.number().int().positive("Pull number must be positive"),
+  body: z.string().min(1, "Comment body is required"),
+});
+
+export type CreatePRCommentInput = z.infer<typeof CreatePRCommentInputSchema>;
+
+export const PRCommentOutputSchema = z.object({
+  id: z.number(),
+  body: z.string(),
+  user: z.string(),
+  createdAt: z.string(),
+});
+
+export type PRCommentOutput = z.infer<typeof PRCommentOutputSchema>;
+
+// ============================================================================
 // File Schemas
 // ============================================================================
 
