@@ -71,6 +71,18 @@ describe("adaptSlackEvent", () => {
       // Validate against Zod schema
       expect(IncomingEventSchema.safeParse(result).success).toBe(true);
     });
+
+    it("does NOT include replyContext (teamId unavailable for block_actions)", () => {
+      const event = makeEvent({
+        type: "slack.block_actions.approved",
+        payload: { taskIdentifier: "ABC-123" },
+      });
+
+      const result = asIncoming(adaptSlackEvent(event));
+
+      expect(result).not.toBeNull();
+      expect(result?.replyContext).toBeUndefined();
+    });
   });
 
   describe("block_actions.rejected", () => {
@@ -195,6 +207,48 @@ describe("adaptSlackEvent", () => {
       expect(result?.correlationKey).toBe("9999999999.999999");
       expect(result?.data.threadTs).toBe("9999999999.999999");
     });
+
+    it("includes replyContext with teamId, channelId, and threadTs when all present", () => {
+      const event = makeEvent({
+        type: "slack.app_mention.created",
+        payload: {
+          channel: "C123",
+          user: "U456",
+          text: "Hey @aesir do the thing",
+          ts: "1234567890.123456",
+          threadTs: "1234567890.000000",
+          teamId: "T789",
+        },
+      });
+
+      const result = asIncoming(adaptSlackEvent(event));
+
+      expect(result).not.toBeNull();
+      expect(result?.replyContext).toEqual({
+        channel: "slack",
+        teamId: "T789",
+        channelId: "C123",
+        threadTs: "1234567890.000000",
+      });
+      expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+
+    it("omits replyContext when teamId is missing from payload", () => {
+      const event = makeEvent({
+        type: "slack.app_mention.created",
+        payload: {
+          channel: "C123",
+          user: "U456",
+          text: "Hello",
+          ts: "9999999999.999999",
+        },
+      });
+
+      const result = asIncoming(adaptSlackEvent(event));
+
+      expect(result).not.toBeNull();
+      expect(result?.replyContext).toBeUndefined();
+    });
   });
 
   // --- Message Created ---
@@ -228,6 +282,49 @@ describe("adaptSlackEvent", () => {
       expect(result?.message).toBe("Looks good, ship it!");
 
       expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+
+    it("includes replyContext with teamId, channelId, and threadTs for thread replies", () => {
+      const event = makeEvent({
+        type: "slack.message.created",
+        payload: {
+          text: "Looks good, ship it!",
+          user: "U456",
+          channel: "C123",
+          ts: "1234567890.123456",
+          threadTs: "1234567890.000000",
+          teamId: "T789",
+        },
+      });
+
+      const result = asIncoming(adaptSlackEvent(event));
+
+      expect(result).not.toBeNull();
+      expect(result?.replyContext).toEqual({
+        channel: "slack",
+        teamId: "T789",
+        channelId: "C123",
+        threadTs: "1234567890.000000",
+      });
+      expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+
+    it("omits replyContext for thread replies when teamId is missing", () => {
+      const event = makeEvent({
+        type: "slack.message.created",
+        payload: {
+          text: "Looks good!",
+          user: "U456",
+          channel: "C123",
+          ts: "1234567890.123456",
+          threadTs: "1234567890.000000",
+        },
+      });
+
+      const result = asIncoming(adaptSlackEvent(event));
+
+      expect(result).not.toBeNull();
+      expect(result?.replyContext).toBeUndefined();
     });
 
     it("returns AdapterIgnore for channel messages without threadTs (handled by app_mention)", () => {

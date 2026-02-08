@@ -38,6 +38,7 @@ export function adaptLinearEvent(event: NormalizedEvent): IncomingEvent | null {
         deduplicationId: event.correlationId,
         message: `New agent session created for issue ${issueId}`,
         ...(taskId !== undefined && { taskId }),
+        replyContext: { channel: "linear" as const, issueId },
       };
     }
 
@@ -73,6 +74,7 @@ export function adaptLinearEvent(event: NormalizedEvent): IncomingEvent | null {
         deduplicationId: event.correlationId,
         message: payload.body as string,
         ...(taskId !== undefined && { taskId }),
+        replyContext: { channel: "linear" as const, issueId },
       };
     }
 
@@ -89,6 +91,7 @@ export function adaptLinearEvent(event: NormalizedEvent): IncomingEvent | null {
         deduplicationId: event.correlationId,
         message: (payload.prompt ?? payload.body) as string,
         ...(taskId !== undefined && { taskId }),
+        replyContext: { channel: "linear" as const, issueId },
       };
     }
 

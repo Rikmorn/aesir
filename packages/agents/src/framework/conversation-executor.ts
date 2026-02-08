@@ -11,6 +11,7 @@
 
 import { and, desc, eq, like, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { appendReplyContextTag } from "../shared/communication/message-utils.js";
 import type * as agentsSchemaModule from "../shared/db/schema.js";
 import type { ConversationStatus } from "../shared/db/schema.js";
 import { conversations } from "../shared/db/schema.js";
@@ -242,15 +243,20 @@ export function createConversationExecutor(
             const fullMessage = params.context
               ? `${params.context}\n\n${initialMessage}`
               : initialMessage;
+            const messageWithContext = appendReplyContextTag(
+              fullMessage,
+              params.replyContext,
+            );
 
             await tx.insert(conversations).values({
               id: newId,
               agent_definition_id: params.agentDefinitionId,
               agent_definition_version: agentDef.version,
               status: "queued",
-              messages: [{ role: "user", content: fullMessage }],
+              messages: [{ role: "user", content: messageWithContext }],
               parent_conversation_id: params.parentConversationId ?? null,
               task_id: params.taskId ?? null,
+              reply_context: params.replyContext ?? null,
               queued_signals: [],
               delivered_signal_ids: [],
             });
@@ -272,15 +278,20 @@ export function createConversationExecutor(
         const fullMessage = params.context
           ? `${params.context}\n\n${params.initialMessage}`
           : params.initialMessage;
+        const messageWithContext = appendReplyContextTag(
+          fullMessage,
+          params.replyContext,
+        );
 
         await tx.insert(conversations).values({
           id: baseId,
           agent_definition_id: params.agentDefinitionId,
           agent_definition_version: agentDef.version,
           status: "queued",
-          messages: [{ role: "user", content: fullMessage }],
+          messages: [{ role: "user", content: messageWithContext }],
           parent_conversation_id: params.parentConversationId ?? null,
           task_id: params.taskId ?? null,
+          reply_context: params.replyContext ?? null,
           queued_signals: [],
           delivered_signal_ids: [],
         });
@@ -388,9 +399,13 @@ export function createConversationExecutor(
           const signalContent =
             signal.message ??
             `Signal received: ${signal.type}. Data: ${JSON.stringify(signal.data ?? {})}`;
+          const finalContent = appendReplyContextTag(
+            signalContent,
+            signal.replyContext,
+          );
           const signalMessage = {
             role: "user",
-            content: signalContent,
+            content: finalContent,
           };
 
           // Append signal message to messages and resume
@@ -406,6 +421,9 @@ export function createConversationExecutor(
               messages: updatedMessages,
               pending_wait: null,
               delivered_signal_ids: deliveredIds,
+              ...(signal.replyContext && {
+                reply_context: signal.replyContext,
+              }),
               updated_at: new Date(),
             })
             .where(eq(conversations.id, conversationId));

@@ -1264,6 +1264,182 @@ describe("start() -- taskId parameter", () => {
   });
 });
 
+// ─── signal() with replyContext ────────────────────────────────────────────────
+
+describe("signal() -- replyContext propagation", () => {
+  let executor: ConversationExecutor;
+  let mockDb: ReturnType<typeof createMockDb>;
+
+  beforeEach(() => {
+    const ctx = createTestOptions();
+    executor = createConversationExecutor(ctx.options);
+    mockDb = ctx.mockDb;
+  });
+
+  it("signal() with replyContext updates reply_context column and appends XML tag to message", async () => {
+    mockDb.setForUpdateResult([
+      createMockConversationRow({
+        status: "waiting",
+        pending_wait: { type: "approval" },
+        messages: [{ role: "user", content: "Original message" }],
+      }),
+    ]);
+
+    const replyContext = {
+      channel: "slack" as const,
+      teamId: "T1",
+      channelId: "C1",
+      threadTs: "123.456",
+    };
+
+    await executor.signal("dev-agent-AES-42", {
+      type: "approval",
+      message: "Approved!",
+      replyContext,
+    });
+
+    // Verify reply_context is included in the set() call
+    expect(mockDb.mocks.updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reply_context: replyContext,
+      }),
+    );
+
+    // Verify the message content contains <reply_context> tag
+    const setCall = mockDb.mocks.updateSet.mock.calls[0]?.[0] as {
+      messages: Array<{ role: string; content: string }>;
+    };
+    const lastMessage = setCall.messages[setCall.messages.length - 1];
+    expect(lastMessage?.content).toContain("<reply_context>");
+    expect(lastMessage?.content).toContain('"channelId":"C1"');
+  });
+
+  it("signal() without replyContext does NOT update reply_context column", async () => {
+    mockDb.setForUpdateResult([
+      createMockConversationRow({
+        status: "waiting",
+        pending_wait: { type: "approval" },
+        messages: [{ role: "user", content: "Original message" }],
+      }),
+    ]);
+
+    await executor.signal("dev-agent-AES-42", {
+      type: "approval",
+      message: "Approved!",
+    });
+
+    // Verify reply_context is NOT in the set() call
+    const setCall = mockDb.mocks.updateSet.mock.calls[0]?.[0] as Record<
+      string,
+      unknown
+    >;
+    expect(setCall).not.toHaveProperty("reply_context");
+
+    // Verify the message does NOT contain <reply_context> tag
+    const messages = setCall.messages as Array<{
+      role: string;
+      content: string;
+    }>;
+    const lastMessage = messages[messages.length - 1];
+    expect(lastMessage?.content).not.toContain("<reply_context>");
+  });
+});
+
+// ─── start() with replyContext ─────────────────────────────────────────────────
+
+describe("start() -- replyContext propagation", () => {
+  let executor: ConversationExecutor;
+  let mockDb: ReturnType<typeof createMockDb>;
+
+  beforeEach(() => {
+    const ctx = createTestOptions();
+    executor = createConversationExecutor(ctx.options);
+    mockDb = ctx.mockDb;
+    // No existing conversation
+    mockDb.setForUpdateResult([]);
+  });
+
+  it("start() with replyContext stores it on conversation row and appends tag to message", async () => {
+    const replyContext = {
+      channel: "slack" as const,
+      teamId: "T1",
+      channelId: "C1",
+      threadTs: "123.456",
+    };
+
+    await executor.start({
+      agentDefinitionId: "dev-agent",
+      correlationKey: "AES-42",
+      initialMessage: "Implement auth",
+      replyContext,
+    });
+
+    // Verify insert includes reply_context
+    expect(mockDb.mocks.insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reply_context: replyContext,
+      }),
+    );
+
+    // Verify message contains <reply_context> tag
+    const insertCall = mockDb.mocks.insertValues.mock.calls[0]?.[0] as {
+      messages: Array<{ role: string; content: string }>;
+    };
+    expect(insertCall.messages[0]?.content).toContain("<reply_context>");
+    expect(insertCall.messages[0]?.content).toContain('"channelId":"C1"');
+  });
+
+  it("start() without replyContext sets reply_context to null and does not append tag", async () => {
+    await executor.start({
+      agentDefinitionId: "dev-agent",
+      correlationKey: "AES-42",
+      initialMessage: "Implement auth",
+    });
+
+    expect(mockDb.mocks.insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reply_context: null,
+      }),
+    );
+
+    const insertCall = mockDb.mocks.insertValues.mock.calls[0]?.[0] as {
+      messages: Array<{ role: string; content: string }>;
+    };
+    expect(insertCall.messages[0]?.content).not.toContain("<reply_context>");
+  });
+
+  it("start() re-trigger path stores replyContext and appends tag", async () => {
+    mockDb.setForUpdateResult([
+      createMockConversationRow({ status: "completed" }),
+    ]);
+    mockDb.mocks.limit.mockResolvedValue([]);
+
+    const replyContext = {
+      channel: "linear" as const,
+      issueId: "ISSUE-42",
+    };
+
+    await executor.start({
+      agentDefinitionId: "dev-agent",
+      correlationKey: "AES-42",
+      initialMessage: "Retry with fixes",
+      replyContext,
+    });
+
+    expect(mockDb.mocks.insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reply_context: replyContext,
+      }),
+    );
+
+    const insertCall = mockDb.mocks.insertValues.mock.calls[0]?.[0] as {
+      messages: Array<{ role: string; content: string }>;
+    };
+    expect(insertCall.messages[0]?.content).toContain("<reply_context>");
+    expect(insertCall.messages[0]?.content).toContain('"issueId":"ISSUE-42"');
+  });
+});
+
 // ─── findActiveForTask() ──────────────────────────────────────────────────────
 
 describe("findActiveForTask()", () => {

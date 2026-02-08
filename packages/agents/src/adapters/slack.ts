@@ -94,6 +94,8 @@ export function adaptSlackEvent(
 
     case "slack.app_mention.created": {
       const threadTs = (payload.threadTs as string) || (payload.ts as string);
+      const teamId = payload.teamId as string | undefined;
+      const channelId = payload.channel as string | undefined;
       return {
         type: "slack.app_mention.created",
         data: {
@@ -108,6 +110,7 @@ export function adaptSlackEvent(
         deduplicationId: event.correlationId,
         message: payload.text as string,
         ...(correlatedTaskId && { taskId: correlatedTaskId }),
+        ...(teamId && channelId && { replyContext: { channel: "slack" as const, teamId, channelId, threadTs } }),
       };
     }
 
@@ -126,6 +129,8 @@ export function adaptSlackEvent(
         };
       }
 
+      const teamId = payload.teamId as string | undefined;
+      const channelId = payload.channel as string | undefined;
       return {
         type: "thread_reply",
         data: {
@@ -139,6 +144,7 @@ export function adaptSlackEvent(
         deduplicationId: event.correlationId,
         message: payload.text as string,
         ...(correlatedTaskId && { taskId: correlatedTaskId }),
+        ...(teamId && channelId && { replyContext: { channel: "slack" as const, teamId, channelId, threadTs } }),
       };
     }
 

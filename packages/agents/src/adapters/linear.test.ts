@@ -60,6 +60,22 @@ describe("adaptLinearEvent", () => {
 
       expect(IncomingEventSchema.safeParse(result).success).toBe(true);
     });
+
+    it("includes replyContext with channel linear and issueId", () => {
+      const event = makeEvent({
+        type: "linear.agent_session.created",
+        payload: { issueId: "PROJ-42" },
+      });
+
+      const result = adaptLinearEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.replyContext).toEqual({
+        channel: "linear",
+        issueId: "PROJ-42",
+      });
+      expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
   });
 
   // --- Issue Created (Ignore Event) ---
@@ -81,6 +97,17 @@ describe("adaptLinearEvent", () => {
       expect(result?.deduplicationId).toBe("corr_test789");
 
       expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+
+    it("does NOT include replyContext (ignore event)", () => {
+      const event = makeEvent({
+        type: "linear.issue.created",
+        payload: { id: "issue_abc", title: "New issue" },
+      });
+
+      const result = adaptLinearEvent(event);
+      expect(result).not.toBeNull();
+      expect(result?.replyContext).toBeUndefined();
     });
   });
 
@@ -106,6 +133,17 @@ describe("adaptLinearEvent", () => {
       expect(result?.deduplicationId).toBe("corr_test789");
 
       expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+
+    it("does NOT include replyContext (ignore event)", () => {
+      const event = makeEvent({
+        type: "linear.issue.updated",
+        payload: { id: "issue_def", status: "In Progress" },
+      });
+
+      const result = adaptLinearEvent(event);
+      expect(result).not.toBeNull();
+      expect(result?.replyContext).toBeUndefined();
     });
   });
 
@@ -137,6 +175,25 @@ describe("adaptLinearEvent", () => {
       expect(result?.message).toBe("Looks good!");
 
       expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+
+    it("includes replyContext with channel linear and issueId", () => {
+      const event = makeEvent({
+        type: "linear.comment.created",
+        payload: {
+          body: "Looks good!",
+          userId: "user_abc",
+          issueId: "PROJ-99",
+        },
+      });
+
+      const result = adaptLinearEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.replyContext).toEqual({
+        channel: "linear",
+        issueId: "PROJ-99",
+      });
     });
   });
 
