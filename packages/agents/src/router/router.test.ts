@@ -409,6 +409,56 @@ describe("routeEvent", () => {
       expect(startCall?.initialMessage).toContain("GitHub Owner: my-org");
       expect(startCall?.initialMessage).toContain("Review this PR");
     });
+
+    it("propagates replyContext from incoming event to executor.start()", async () => {
+      const task = createMockTask();
+      const taskService = createMockTaskService({
+        get: vi.fn().mockResolvedValue(task),
+      });
+      const executor = createMockExecutor({
+        findActiveForTask: vi.fn().mockResolvedValue(null),
+        start: vi.fn().mockResolvedValue("conv-new-789"),
+      });
+      const { deps } = createMockDeps({ executor, taskService });
+
+      const slackReplyContext = {
+        channel: "slack" as const,
+        teamId: "T789",
+        channelId: "C123",
+        threadTs: "1234567890.000000",
+      };
+      mockAdaptPassThrough.mockReturnValue(
+        createIncomingEvent({
+          taskId: task.id,
+          replyContext: slackReplyContext,
+        }),
+      );
+
+      await routeEvent(createNormalizedEvent(), deps);
+
+      const startCall = vi.mocked(executor.start).mock.calls[0]?.[0];
+      expect(startCall?.replyContext).toEqual(slackReplyContext);
+    });
+
+    it("omits replyContext from executor.start() when incoming event has none", async () => {
+      const task = createMockTask();
+      const taskService = createMockTaskService({
+        get: vi.fn().mockResolvedValue(task),
+      });
+      const executor = createMockExecutor({
+        findActiveForTask: vi.fn().mockResolvedValue(null),
+      });
+      const { deps } = createMockDeps({ executor, taskService });
+
+      mockAdaptPassThrough.mockReturnValue(
+        createIncomingEvent({ taskId: task.id }),
+      );
+
+      await routeEvent(createNormalizedEvent(), deps);
+
+      const startCall = vi.mocked(executor.start).mock.calls[0]?.[0];
+      expect(startCall?.replyContext).toBeUndefined();
+    });
   });
 
   // ─── Task Routing: CorrelationKey Fallback ──────────────────────────────

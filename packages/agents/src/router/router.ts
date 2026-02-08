@@ -125,6 +125,7 @@ async function routeViaTask(
       correlationKey,
       initialMessage,
       taskId,
+      ...(event.replyContext && { replyContext: event.replyContext }),
     });
 
     return { received: true, action: "started", conversationId };
