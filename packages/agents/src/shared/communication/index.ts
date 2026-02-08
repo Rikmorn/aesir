@@ -1,11 +1,12 @@
+export { appendReplyContextTag } from "./message-utils.js";
 export {
-  ReplyContextSchema,
-  type ReplyContext,
-  SlackReplyContextSchema,
-  LinearReplyContextSchema,
+  type CommunicationToolDeps,
   GitHubReplyContextSchema,
+  LinearReplyContextSchema,
+  type MessageContent,
   MessageContentSchema,
   MessageOptionSchema,
-  type MessageContent,
-  type CommunicationToolDeps,
+  type ReplyContext,
+  ReplyContextSchema,
+  SlackReplyContextSchema,
 } from "./types.js";

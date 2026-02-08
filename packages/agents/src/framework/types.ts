@@ -12,6 +12,10 @@ import { z } from "zod";
 import type { IncomingEvent } from "../adapters/types.js";
 import type { TokenBudget } from "../shared/agent-loop/token-budget.js";
 import type { ToolDefinition } from "../shared/agent-loop/types.js";
+import {
+  type ReplyContext,
+  ReplyContextSchema,
+} from "../shared/communication/types.js";
 import type * as agentsSchemaModule from "../shared/db/schema.js";
 import type {
   AgentEvent,
@@ -435,6 +439,8 @@ export const SignalSchema = z.object({
   source: z.string().optional(),
   /** Idempotency key to prevent duplicate signal delivery */
   deduplicationId: z.string().optional(),
+  /** Reply context for routing agent responses back to the originating channel */
+  replyContext: ReplyContextSchema.optional(),
 });
 
 /** Validated signal payload type */
@@ -482,6 +488,8 @@ export interface StartConversationParams {
   parentConversationId?: string;
   /** Task ID to associate with this conversation on INSERT (v2.5 task routing) */
   taskId?: string;
+  /** Reply context for routing agent responses back to the originating channel */
+  replyContext?: ReplyContext;
 }
 
 /**

@@ -13,6 +13,7 @@
 
 import type { NormalizedEvent } from "@aesir/types";
 import { z } from "zod";
+import { ReplyContextSchema } from "../shared/communication/types.js";
 
 // ---- IncomingEvent Schema -------------------------------------------------
 
@@ -35,6 +36,8 @@ export const IncomingEventSchema = z.object({
   message: z.string().optional(),
   /** Task ID from correlation lookup (v2.5 task primitive) */
   taskId: z.string().optional(),
+  /** Reply context for routing agent responses back to the originating channel */
+  replyContext: ReplyContextSchema.optional(),
 });
 
 /** Validated IncomingEvent type inferred from the Zod schema */
