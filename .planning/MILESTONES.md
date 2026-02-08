@@ -1,5 +1,31 @@
 # Project Milestones: Aesir
 
+## v2.5 Agentic Conversations (Shipped: 2026-02-08)
+
+**Delivered:** Multi-conversation continuity through a task primitive that groups conversations with structured handoffs, conversation reopening for follow-up events, and goal-oriented prompt rewrites replacing procedural state machines
+
+**Phases completed:** 56-59 (7 phases including 58.1-58.4, 17 plans total)
+
+**Key accomplishments:**
+- Goal-oriented agent prompts: rewrote product-agent and dev-agent from procedural state machines (79+ imperative statements) to constitutional constraints with few-shot reasoning examples
+- Task primitive foundation: Postgres schema (tasks/task_handoffs), TaskService, 6 task tools (create/complete/pause/handoff/list/get_task_context), automatic context injection, hierarchy guardrails (depth 5, subtask 10, circular delegation prevention)
+- Bidirectional task correlation across all 3 integrations: X-Task-ID header propagation through MCP, task_correlations tables, fire-and-forget outbound recording, non-fatal inbound webhook lookup
+- Task-aware event routing with pg_advisory_xact_lock serialization, automatic conversation bootstrapping with task context enrichment, full backward compatibility
+- Conversation reopening: reopen signal on completed/failed conversations with world-state injection, dashboard UI with contextual Reopen/Retry labels
+- Agent prompt evolution: task lifecycle domain knowledge, role-specific handoff guidance, consumption examples, graceful degradation
+
+**Stats:**
+- 209 files created/modified (+25,594 / -3,892 lines)
+- 88,011 lines of TypeScript total
+- 7 phases, 17 plans, 68 requirements (68/68 satisfied, 1 deferred)
+- 105 commits over 3 days (2026-02-05 → 2026-02-08)
+
+**Git range:** `32d644d` → `5a42f70`
+
+**What's next:** Stale task cleanup, evaluation tooling, dashboard tasks view, CI/CD pipeline, monitoring/alerting
+
+---
+
 ## v2.4 Operations Dashboard (Shipped: 2026-02-05)
 
 **Delivered:** Real-time visibility into agent execution through a developer-focused web dashboard -- conversations, tool usage, agent configurations, permission auditing, and system health, all with live SSE updates

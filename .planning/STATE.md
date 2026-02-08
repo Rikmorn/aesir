@@ -2,19 +2,19 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-06)
+See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.5 Agentic Conversations -- Phase 59 complete
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 59 of 59 (Prompt Evolution and Hierarchy Enforcement)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-08 -- Completed 59-02-PLAN.md
+Phase: Post v2.5 — no active milestone
+Plan: Not started
+Status: Ready to plan next milestone
+Last activity: 2026-02-08 — v2.5 Agentic Conversations milestone complete
 
-Progress: [████████████████] 100% (v2.5: All phases 56-59 complete)
+Progress: Milestone complete. Start next with /gsd:new-milestone
 
 ## Milestone History
 
@@ -26,56 +26,25 @@ Progress: [████████████████] 100% (v2.5: All pha
 | v2.2 Agentic Architecture | 2026-01-31 | 9 | 30 |
 | v2.3 Unified Agent Framework | 2026-02-04 | 12 | 32 |
 | v2.4 Operations Dashboard | 2026-02-05 | 8 | 22 |
+| v2.5 Agentic Conversations | 2026-02-08 | 7 | 17 |
 
 ## Performance Metrics
 
-**Velocity:**
+**v2.5 Velocity:**
 - Total plans completed: 17
 - Average duration: 4m 36s
 - Total execution time: 81m 45s
+
+**Cumulative:**
+- Total milestones shipped: 7
+- Total phases completed: 64
+- Total plans completed: 285
 
 ## Accumulated Context
 
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
-
-| ID | Decision | Phase |
-|----|----------|-------|
-| PROMPT-STRUCT-EXTEND | Extended prompt structure with domain_knowledge section between constraints and examples | 56-01 |
-| PHASE-TAG-SIMPLIFY | Phase tags simplified to observability convention (framework doesn't parse them) | 56-01 |
-| CONSTRAINT-COUNT | 6-7 constitutional constraints per orchestrator, zero directive stacking | 56-01, 56-02 |
-| DROP-MODEL-NATIVE | 27 rules dropped as model-native per PROMPT_GUIDE.md Rule 7 (product-agent) | 56-01 |
-| DROP-MODEL-NATIVE-DEV | 7 rules dropped as model-native (dev-agent) | 56-02 |
-| WAIT-FOR-CONSTRAINT | wait_for added as explicit constraint (framework-critical, conversation dies without it) | 56-02 |
-| ERROR-RECOVERY-DECOMP | Error recovery decomposed into 3 constraints + Example #3 (no diagnostic categories) | 56-02 |
-| WORLD-STATE-XML-TAGS | World-state injection uses <world_state> XML tags in user message for reopen context | 57-01 |
-| FIFO-EVICTION-TS | FIFO eviction on delivered_signal_ids done in TypeScript (not SQL) for pattern consistency | 57-01 |
-| REOPEN-DIALOG-PLACEMENT | ReopenDialog placed in shared flex row with connection status indicator | 57-02 |
-| QUEUED-SSE-ACTIVE | Added queued to SSE isActive check for early connection after reopen | 57-02 |
-| SANDBOX-RENAME | ToolContext.taskId renamed to sandboxId to free taskId for v2.5 task primitive | 58.1-01 |
-| CORRELATION-REF | Router query_conversations parameter renamed from taskId to correlationRef | 58.1-01 |
-| SELF-REF-FK | Self-referential FK (tasks.parent_id) handled in SQL migration only, not Drizzle references() | 58.1-02 |
-| SERVICE-SHAPE-ONLY | TaskService validates data shape (Zod) only; business logic in tool layer (Phase 58.2) | 58.1-02 |
-| INPUT-TYPES | Exported task param types use z.input<> for caller ergonomics with Zod defaults | 58.1-02 |
-| TOOL-FACTORY-SIG | Task tool factories take (taskService, ctx) signature matching adapter pattern | 58.2-01 |
-| TASKSERVICE-REQUIRED | taskService required (not optional) on RegisterAllToolsOptions -- always available | 58.2-02 |
-| INLINE-CLOSURE-REG | Task tools use inline closure pattern with captured ts variable for registration | 58.2-02 |
-| INJECT-NONFATAL | Task context injection is non-fatal: failure logs error, conversation continues | 58.2-03 |
-| EXACT-OPTIONAL-TYPES | taskId uses `string | undefined` for exactOptionalPropertyTypes compat | 58.3-01 |
-| PAYLOAD-TASKID-INJECT | taskId injected into NormalizedEvent.payload (not new schema field) to keep change contained | 58.3-02 |
-| DB-THREAD-WEBHOOK | db threaded through routes.ts to webhook router for correlation lookups | 58.3-03 |
-| SLACK-CHANNEL-TS-KEY | Slack correlations use channelId:ts composite format matching Slack's message identifier | 58.3-04 |
-| ENRICHMENT-SUBSET-IFACE | EnrichmentDeps uses subset interface pattern to decouple enrichment from full RouteEventDeps | 58.4-01 |
-| OPTIONAL-DEPS-GUARD | RouteEventDeps taskService/db optional with explicit triple guard for backward compat | 58.4-02 |
-| ADVISORY-LOCK-HASHTEXT | Advisory lock uses pg_advisory_xact_lock(hashtext(taskId)) for string-to-int conversion | 58.4-02 |
-| FALLTHROUGH-STRIP-TASKID | Failed task routing strips taskId from event before EventRouter to prevent orphaned references | 58.4-02 |
-| TASK-IN-DOMAIN-KNOWLEDGE | Task lifecycle content in domain_knowledge (not constraints) -- task creation is judgment/goal, not safety | 59-01 |
-| CONSUMPTION-EXAMPLES | Handoff consumption examples teach quality implicitly (consuming good handoffs teaches what to write) | 59-01 |
-| SOFT-LANGUAGE-TASK | No MUST/ALWAYS/NEVER in task lifecycle content -- soft behavioral guidance per PROMPT_GUIDE.md | 59-01 |
-| GUARDRAIL-MODULE-LEVEL | Hierarchy guardrail functions as module-level helpers (not factory closure) for clarity | 59-02 |
-| SEPARATE-CHAIN-WALKS | Separate depth and circular delegation walks chosen for clarity over micro-optimization | 59-02 |
-| FAIL-SAFE-BROKEN-CHAIN | Broken parent chains reject task creation (fail safe, don't allow unvalidated tasks) | 59-02 |
 
 ### Pending Todos
 
@@ -89,10 +58,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-08T00:19Z
-Stopped at: Completed 59-02-PLAN.md (Phase 59 complete)
+Last session: 2026-02-08
+Stopped at: v2.5 milestone complete
 Resume file: None
-Next action: Phase 59 complete. v2.5 milestone complete.
+Next action: `/gsd:new-milestone` to start next milestone
 
 ---
-*Updated: 2026-02-08 -- Phase 59 complete (hierarchy guardrails with depth limit, subtask cap, and circular delegation prevention)*
+*Updated: 2026-02-08 — v2.5 Agentic Conversations milestone archived*
