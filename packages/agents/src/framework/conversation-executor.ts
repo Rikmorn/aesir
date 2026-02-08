@@ -342,12 +342,15 @@ export function createConversationExecutor(
           }
         }
 
-        // Build updated delivered_signal_ids
+        // Build updated delivered_signal_ids with FIFO eviction (cap at 100)
         const deliveredIds = [
           ...((row.delivered_signal_ids ?? []) as string[]),
         ];
         if (signal.deduplicationId && signal.source) {
           deliveredIds.push(`${signal.source}:${signal.deduplicationId}`);
+        }
+        while (deliveredIds.length > 100) {
+          deliveredIds.shift();
         }
 
         // Handle based on conversation status
