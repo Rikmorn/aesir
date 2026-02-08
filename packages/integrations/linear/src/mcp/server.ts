@@ -12,6 +12,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
+  handleCreateComment,
   handleCreateIssue,
   handleGetIssue,
   handleListLabels,
@@ -171,6 +172,25 @@ export function createLinearMCPServer(options: LinearMCPServerOptions): Server {
             required: ["query"],
           },
         },
+        {
+          name: "create_comment",
+          description:
+            "Create a comment on a Linear issue. Use this to add notes, updates, or discussions to an issue.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              issueId: {
+                type: "string",
+                description: "Issue ID or identifier (e.g., 'ABC-123')",
+              },
+              body: {
+                type: "string",
+                description: "Comment body in markdown format",
+              },
+            },
+            required: ["issueId", "body"],
+          },
+        },
       ],
     };
   });
@@ -216,6 +236,10 @@ export function createLinearMCPServer(options: LinearMCPServerOptions): Server {
         result = await handleSearchIssues(context, args, issueToolDeps);
         break;
 
+      case "create_comment":
+        result = await handleCreateComment(context, args, issueToolDeps);
+        break;
+
       default:
         logger.warn({ toolName }, "Unknown tool requested");
         result = {
@@ -239,7 +263,7 @@ export function createLinearMCPServer(options: LinearMCPServerOptions): Server {
     };
   });
 
-  logger.info("Linear MCP server created with 6 tools");
+  logger.info("Linear MCP server created with 7 tools");
 
   return server;
 }
