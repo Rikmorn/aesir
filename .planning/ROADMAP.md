@@ -56,9 +56,9 @@ Plans:
   4. Fast-path routes (start and signal) propagate replyContext from the incoming event to the executor without requiring LLM involvement
 **Plans:** 3 plans
 Plans:
-- [ ] 62-01-PLAN.md -- Tool schema changes + deps wiring (replyContext on signal_conversation/start_conversation, eventReplyContext threading)
-- [ ] 62-02-PLAN.md -- Router prompt rewrite (channel-agnostic follow_up_routing, generalized intent classification)
-- [ ] 62-03-PLAN.md -- Tests (tool replyContext auto-injection/override, slow-path deps threading)
+- [x] 62-01-PLAN.md -- Tool schema changes + deps wiring (replyContext on signal_conversation/start_conversation, eventReplyContext threading)
+- [x] 62-02-PLAN.md -- Router prompt rewrite (channel-agnostic follow_up_routing, generalized intent classification)
+- [x] 62-03-PLAN.md -- Tests (tool replyContext auto-injection/override, slow-path deps threading)
 
 ### Phase 63: Outbound Denormalizer
 
@@ -125,7 +125,7 @@ Phase 60 (Types + MCP) ──┬──> Phase 61 (Inbound) ──> Phase 62 (Rou
 |-------|-----------|:----:|----------------|--------|-----------|
 | 60. Types & MCP Foundation | v2.6 | 9 | 3/3 | Complete | 2026-02-08 |
 | 61. Inbound Pipeline | v2.6 | 7 | 3/3 | Complete | 2026-02-08 |
-| 62. Router Updates | v2.6 | 4 | 0/3 | Not started | - |
+| 62. Router Updates | v2.6 | 4 | 3/3 | Complete | 2026-02-08 |
 | 63. Outbound Denormalizer | v2.6 | 9 | 0/TBD | Not started | - |
 | 64. Communication Tools | v2.6 | 5 | 0/TBD | Not started | - |
 | 65. Agent Migration | v2.6 | 6 | 0/TBD | Not started | - |
