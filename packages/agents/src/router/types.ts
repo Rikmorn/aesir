@@ -9,6 +9,7 @@
 import type { PinoLogger } from "@aesir/platform";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { ConversationExecutor, EventRouter } from "../framework/types.js";
+import type { ReplyContext } from "../shared/communication/types.js";
 import type * as agentsSchemaModule from "../shared/db/schema.js";
 import type { TaskService } from "../shared/services/task-service.js";
 
@@ -50,6 +51,8 @@ export interface EventRouterDeps {
   alertsChannel?: string | undefined;
   /** Linear team ID for product-agent starts (optional) */
   linearTeamId?: string | undefined;
+  /** Reply context from the current incoming event, auto-injected into signal and start tool calls */
+  eventReplyContext?: ReplyContext | undefined;
 }
 
 // ---------------------------------------------------------------------------

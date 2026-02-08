@@ -15,6 +15,7 @@ import type {
   ToolDefinition,
   ToolResult,
 } from "../../shared/agent-loop/types.js";
+import { ReplyContextSchema } from "../../shared/communication/types.js";
 import type { EventRouterDeps } from "../types.js";
 
 // ---------------------------------------------------------------------------
@@ -35,6 +36,9 @@ const StartConversationInputSchema = z.object({
     .describe(
       "Initial message context object (serialized as the conversation's initial message)",
     ),
+  replyContext: ReplyContextSchema.optional().describe(
+    "Reply context for routing responses back to the originating channel. Usually auto-injected from the incoming event.",
+  ),
 });
 
 // ---------------------------------------------------------------------------
@@ -75,13 +79,18 @@ export function createStartConversationTool(
         agentDefinitionId,
         correlationKey,
         input: conversationInput,
+        replyContext: inputReplyContext,
       } = parsed.data;
+
+      // Auto-inject replyContext from the incoming event if the LLM didn't provide one
+      const replyContext = inputReplyContext ?? deps.eventReplyContext;
 
       try {
         const conversationId = await deps.executor.start({
           agentDefinitionId,
           correlationKey,
           initialMessage: JSON.stringify(conversationInput),
+          ...(replyContext && { replyContext }),
         });
 
         deps.logger.info(

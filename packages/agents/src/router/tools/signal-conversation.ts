@@ -12,6 +12,7 @@ import type {
   ToolDefinition,
   ToolResult,
 } from "../../shared/agent-loop/types.js";
+import { ReplyContextSchema } from "../../shared/communication/types.js";
 import type { EventRouterDeps } from "../types.js";
 
 // ---------------------------------------------------------------------------
@@ -45,6 +46,9 @@ const SignalConversationInputSchema = z.object({
     .describe(
       "Human-readable message included when resuming the agent (e.g., feedback text, reply content)",
     ),
+  replyContext: ReplyContextSchema.optional().describe(
+    "Reply context for routing responses back to the originating channel. Usually auto-injected from the incoming event -- only provide explicitly if overriding.",
+  ),
 });
 
 // ---------------------------------------------------------------------------
@@ -86,7 +90,16 @@ export function createSignalConversationTool(
         };
       }
 
-      const { conversationId, signalType, payload, message } = parsed.data;
+      const {
+        conversationId,
+        signalType,
+        payload,
+        message,
+        replyContext: inputReplyContext,
+      } = parsed.data;
+
+      // Auto-inject replyContext from the incoming event if the LLM didn't provide one
+      const replyContext = inputReplyContext ?? deps.eventReplyContext;
 
       // Build a Signal object for the executor
       const signal: Signal = {
@@ -94,6 +107,7 @@ export function createSignalConversationTool(
         data: payload,
         message,
         source: "router",
+        ...(replyContext && { replyContext }),
       };
 
       try {
