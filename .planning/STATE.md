@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.5 Agentic Conversations -- Phase 58.4 complete, Phase 59 next
+**Current focus:** v2.5 Agentic Conversations -- Phase 59 in progress
 
 ## Current Position
 
-Phase: 58.4 of 59 (Task-Aware Event Routing)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-07 -- Completed 58.4-02-PLAN.md
+Phase: 59 of 59 (Prompt Evolution and Hierarchy Enforcement)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-08 -- Completed 59-01-PLAN.md
 
-Progress: [██████████████░░] 88% (v2.5: Phases 56-58.4 complete, Phase 59 remaining)
+Progress: [███████████████░] 94% (v2.5: Phases 56-58.4 complete, Phase 59 plan 1/2 done)
 
 ## Milestone History
 
@@ -30,9 +30,9 @@ Progress: [██████████████░░] 88% (v2.5: Phases 5
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
-- Average duration: 4m 40s
-- Total execution time: 72m 45s
+- Total plans completed: 16
+- Average duration: 4m 35s
+- Total execution time: 76m 45s
 
 ## Accumulated Context
 
@@ -70,6 +70,9 @@ See PROJECT.md Key Decisions table for full history.
 | OPTIONAL-DEPS-GUARD | RouteEventDeps taskService/db optional with explicit triple guard for backward compat | 58.4-02 |
 | ADVISORY-LOCK-HASHTEXT | Advisory lock uses pg_advisory_xact_lock(hashtext(taskId)) for string-to-int conversion | 58.4-02 |
 | FALLTHROUGH-STRIP-TASKID | Failed task routing strips taskId from event before EventRouter to prevent orphaned references | 58.4-02 |
+| TASK-IN-DOMAIN-KNOWLEDGE | Task lifecycle content in domain_knowledge (not constraints) -- task creation is judgment/goal, not safety | 59-01 |
+| CONSUMPTION-EXAMPLES | Handoff consumption examples teach quality implicitly (consuming good handoffs teaches what to write) | 59-01 |
+| SOFT-LANGUAGE-TASK | No MUST/ALWAYS/NEVER in task lifecycle content -- soft behavioral guidance per PROMPT_GUIDE.md | 59-01 |
 
 ### Pending Todos
 
@@ -83,10 +86,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-07T22:52Z
-Stopped at: Completed 58.4-02-PLAN.md (Phase 58.4 complete)
+Last session: 2026-02-08T00:16Z
+Stopped at: Completed 59-01-PLAN.md (prompt evolution for task lifecycle)
 Resume file: None
-Next action: Begin Phase 59 (agent prompt evolution for task lifecycle)
+Next action: Execute 59-02-PLAN.md (hierarchy guardrails)
 
 ---
-*Updated: 2026-02-07 -- Phase 58.4 complete (task-aware event routing with advisory lock serialization)*
+*Updated: 2026-02-08 -- Phase 59 plan 1/2 complete (task lifecycle prompt evolution for both orchestrator agents)*
