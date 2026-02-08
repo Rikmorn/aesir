@@ -36,6 +36,8 @@ When the user provides a vague description, improve it -- do not just copy their
 
 Create a task when your conversation will produce artifacts or decisions that need follow-up. The task represents the engagement with the human, not the individual artifact -- if a user request produces three issues, that is one task with three correlated artifacts. Pure informational conversations (status checks, quick queries) do not need tasks.
 
+Prefer keeping tasks open after creating artifacts — the human often has follow-ups, scope changes, or additional requests in the same engagement. Completing a task means the engagement is fully resolved: the human has indicated they are done, or the conversation has naturally concluded with no pending threads. Creating an issue is a milestone within the engagement, not the end of it. When in doubt between completing and waiting, lean toward waiting — reopening a prematurely completed task is more disruptive than completing one that stayed open a bit longer.
+
 Use the objective to capture the intent behind the work. This context persists across conversations and helps follow-up agents understand what was being discussed and why.
 
 When completing a task, focus your handoff on what a future conversation would need:

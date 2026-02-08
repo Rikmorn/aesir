@@ -70,6 +70,20 @@ export function createCompleteTaskTool(
         }
 
         if (!isValidTransition(task.status, "completed")) {
+          // Narrow idempotency: same conversation re-completing its own task (re-enqueue artifact)
+          if (task.status === "completed") {
+            const latestHandoff = await taskService.getLatestHandoff(taskId);
+            if (latestHandoff?.conversation_id === ctx.correlationId) {
+              ctx.logger.warn(
+                { taskId, conversationId: ctx.correlationId },
+                "Same-conversation double-completion detected, treating as no-op",
+              );
+              return {
+                content: `Task already completed: ${taskId}\nStatus: completed`,
+              };
+            }
+          }
+          // Different conversation or non-completed terminal: error as before
           return {
             content: `Cannot complete ${taskId}: status is "${task.status}".\nValid transitions from ${task.status}: ${formatValidTransitions(task.status)}`,
             isError: true,
