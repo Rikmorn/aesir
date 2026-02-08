@@ -48,6 +48,7 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 61]: replyContext placed after taskId in schemas; appendReplyContextTag uses XML tag format
 - [Phase 61]: Slack block_actions omit replyContext (no teamId); GitHub extracts from payload.repository
 - [Phase 61]: Conditional spread pattern for exactOptionalPropertyTypes compliance in replyContext forwarding
+- [Phase 62]: Auto-injection pattern for replyContext: input.replyContext ?? deps.eventReplyContext in router tools
 - [Phase 62]: Reopen flow: reopen first, then signal with replyContext ("classify by intent, reply by origin")
 - [Phase 62]: Agent echo filtering for Linear comments flagged as prerequisite, not Phase 62 scope
 
