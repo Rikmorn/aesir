@@ -140,6 +140,8 @@ export const conversations = agentsSchema.table(
     delivered_signal_ids: jsonb("delivered_signal_ids").notNull().default([]),
     parent_conversation_id: text("parent_conversation_id"),
     task_id: text("task_id"),
+    // Communication context: last-received channel address for reply routing (v2.6)
+    reply_context: jsonb("reply_context"),
     created_at: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

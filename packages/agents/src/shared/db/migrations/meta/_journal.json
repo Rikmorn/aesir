@@ -36,6 +36,13 @@
       "when": 1738800000000,
       "tag": "0005_add_task_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1739001600000,
+      "tag": "0006_add_reply_context",
+      "breakpoints": true
     }
   ]
 }

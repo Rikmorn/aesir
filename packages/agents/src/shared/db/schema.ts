@@ -80,6 +80,11 @@ export const conversations = agentsSchema.table(
     parent_conversation_id: text("parent_conversation_id"),
     // Task association (Phase 58.1 -- v2.5 task primitive)
     task_id: text("task_id").references(() => tasks.id),
+    // Communication context: last-received channel address for reply routing (v2.6)
+    reply_context: jsonb("reply_context").$type<Record<
+      string,
+      unknown
+    > | null>(),
     created_at: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
