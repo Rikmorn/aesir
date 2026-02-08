@@ -21,7 +21,7 @@ type AgentsDb = NodePgDatabase<typeof agentsSchemaModule>;
  * Skips storage if content is empty or contains only tool_use blocks
  * (which are already captured in tool.called events).
  */
-function hasTextContent(content: Anthropic.ContentBlock[]): boolean {
+export function hasTextContent(content: Anthropic.ContentBlock[]): boolean {
   return content.some(
     (block) => block.type === "text" && block.text.length > 0,
   );

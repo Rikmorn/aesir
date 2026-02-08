@@ -15,7 +15,6 @@
  */
 
 import { createDevContainerGit, type PinoLogger } from "@aesir/platform";
-import { createId } from "@aesir/types";
 import type Anthropic from "@anthropic-ai/sdk";
 import { eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
@@ -30,7 +29,7 @@ import type * as agentsSchemaModule from "../shared/db/schema.js";
 import type { Conversation, TaskHandoff } from "../shared/db/schema.js";
 import { conversations } from "../shared/db/schema.js";
 import type { TaskService } from "../shared/services/task-service.js";
-import { storeEventContent } from "./event-content.js";
+import { hasTextContent } from "./event-content.js";
 import { createHistoryManager } from "./history-manager.js";
 import type { TimeoutScheduler } from "./timeout-scheduler.js";
 import type {
@@ -828,20 +827,19 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
           "LLM response received",
         );
 
-        // Pre-generate event ID so we can reference it for content storage
-        const eventId = createId.agentEvent();
+        const textContent = hasTextContent(response.content)
+          ? (response.content as unknown[])
+          : undefined;
 
         eventLog.append({
           ...eventBase,
-          id: eventId,
           type: "llm.response",
           payload: { stop_reason: response.stop_reason },
           tokenCountInput: response.usage.input_tokens,
           tokenCountOutput: response.usage.output_tokens,
+          // Content is buffered alongside the event and flushed atomically
+          ...(textContent && { content: textContent }),
         });
-
-        // Fire-and-forget content storage (non-blocking)
-        void storeEventContent(db, eventId, response.content, childLogger);
       };
 
       // 11. Run agent loop
@@ -913,6 +911,10 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
           matchIdx >= 0 ? freshSignals[matchIdx] : undefined;
 
         if (matchedQueuedSignal) {
+          // Flush buffered events before re-enqueue so the next instance's
+          // initSequence() reads the correct max sequence from the DB.
+          await eventLog.flush();
+
           // Consume the queued signal and re-enqueue instead of pausing
           const signalContent =
             matchedQueuedSignal.message ??

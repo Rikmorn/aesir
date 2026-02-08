@@ -60,6 +60,8 @@ export interface AppendEventInput {
   tokenCountInput?: number | null;
   tokenCountOutput?: number | null;
   durationMs?: number | null;
+  /** Optional full LLM response content (Anthropic ContentBlock[]). Stored in agent_event_content alongside the event in the same flush transaction. */
+  content?: unknown[];
 }
 
 // ─── Event Query ─────────────────────────────────────────────────────────────

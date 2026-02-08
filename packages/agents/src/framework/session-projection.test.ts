@@ -206,6 +206,7 @@ describe("createSessionProjection", () => {
       "agent.completed",
       "agent.paused",
       "agent.resumed",
+      "agent.reopened",
       "tool.succeeded",
     ]);
   });

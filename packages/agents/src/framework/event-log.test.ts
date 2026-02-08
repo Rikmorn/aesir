@@ -787,6 +787,103 @@ describe("gapless sequences", () => {
   });
 });
 
+describe("content buffering", () => {
+  let mockDb: ReturnType<typeof createMockDb>;
+  let mockLogger: ReturnType<typeof createMockLogger>;
+  let eventLog: ReturnType<typeof createEventLog>;
+
+  beforeEach(() => {
+    mockDb = createMockDb();
+    mockLogger = createMockLogger();
+    mockDb.setInitSequenceResult([{ maxSeq: 0 }]);
+    eventLog = createEventLog(
+      createDefaultOptions({ db: mockDb, logger: mockLogger }),
+    );
+  });
+
+  it("flushes content alongside events when content is provided", async () => {
+    await eventLog.initSequence("conv_test123");
+
+    eventLog.append(
+      createDefaultEvent({
+        type: "llm.response",
+        content: [{ type: "text", text: "Hello world" }],
+      }),
+    );
+
+    await eventLog.flush();
+
+    // db.insert called twice: once for events, once for content
+    expect(mockDb.insert).toHaveBeenCalledTimes(2);
+  });
+
+  it("does NOT insert content when no content is provided", async () => {
+    await eventLog.initSequence("conv_test123");
+
+    eventLog.append(createDefaultEvent({ type: "tool.called" }));
+
+    await eventLog.flush();
+
+    // db.insert called once: only for events
+    expect(mockDb.insert).toHaveBeenCalledOnce();
+  });
+
+  it("does NOT insert content when content array is empty", async () => {
+    await eventLog.initSequence("conv_test123");
+
+    eventLog.append(createDefaultEvent({ type: "llm.response", content: [] }));
+
+    await eventLog.flush();
+
+    // db.insert called once: only for events
+    expect(mockDb.insert).toHaveBeenCalledOnce();
+  });
+
+  it("content buffer is cleared after flush", async () => {
+    await eventLog.initSequence("conv_test123");
+
+    eventLog.append(
+      createDefaultEvent({
+        type: "llm.response",
+        content: [{ type: "text", text: "First" }],
+      }),
+    );
+
+    await eventLog.flush();
+    expect(mockDb.insert).toHaveBeenCalledTimes(2);
+
+    mockDb.insert.mockClear();
+    mockDb.mockValuesFn.mockClear();
+
+    // Second flush should be a no-op
+    await eventLog.flush();
+    expect(mockDb.insert).not.toHaveBeenCalled();
+  });
+
+  it("associates content with the correct event ID", async () => {
+    await eventLog.initSequence("conv_test123");
+
+    eventLog.append(
+      createDefaultEvent({
+        id: "aevt_custom123",
+        type: "llm.response",
+        content: [{ type: "text", text: "Hello" }],
+      }),
+    );
+
+    await eventLog.flush();
+
+    // Second insert call is for content
+    const contentCall = mockDb.mockValuesFn.mock.calls[1]?.[0];
+    expect(contentCall).toEqual([
+      {
+        event_id: "aevt_custom123",
+        content: [{ type: "text", text: "Hello" }],
+      },
+    ]);
+  });
+});
+
 describe("timer-based flush", () => {
   let mockDb: ReturnType<typeof createMockDb>;
   let mockLogger: ReturnType<typeof createMockLogger>;

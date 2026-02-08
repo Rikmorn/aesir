@@ -18,8 +18,10 @@ import { createId } from "@aesir/types";
 import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
 import {
   type AgentEvent,
+  agentEventContent,
   agentEvents,
   type NewAgentEvent,
+  type NewAgentEventContent,
 } from "../shared/db/schema.js";
 import type {
   AppendEventInput,
@@ -119,6 +121,7 @@ export function createEventLog(options: EventLogOptions): EventLog {
 
   // Internal state
   const buffer: NewAgentEvent[] = [];
+  const contentBuffer: NewAgentEventContent[] = [];
   const sequenceCounters = new Map<string, number>();
   const subscribers = new Map<
     string,
@@ -150,14 +153,23 @@ export function createEventLog(options: EventLogOptions): EventLog {
       flushTimer = null;
     }
 
-    // Copy and clear buffer
+    // Copy and clear buffers
     const count = buffer.length;
     const toInsert = [...buffer];
+    const contentToInsert = [...contentBuffer];
     buffer.length = 0;
+    contentBuffer.length = 0;
 
     try {
+      // Insert events and content atomically -- content FK references events
       await db.insert(agentEvents).values(toInsert);
-      logger.debug({ count }, "Flushed events");
+      if (contentToInsert.length > 0) {
+        await db.insert(agentEventContent).values(contentToInsert);
+      }
+      logger.debug(
+        { count, contentCount: contentToInsert.length },
+        "Flushed events",
+      );
     } catch (error) {
       // Best-effort: log but do NOT re-throw
       logger.error({ err: error, count }, "Failed to flush events to database");
@@ -208,8 +220,9 @@ export function createEventLog(options: EventLogOptions): EventLog {
       sequenceCounters.set(event.conversationId, nextSeq);
 
       // Build the record
+      const eventId = event.id ?? createId.agentEvent();
       const record: NewAgentEvent = {
-        id: event.id ?? createId.agentEvent(),
+        id: eventId,
         conversation_id: event.conversationId,
         agent_definition_id: event.agentDefinitionId,
         agent_definition_version: event.agentDefinitionVersion,
@@ -228,6 +241,14 @@ export function createEventLog(options: EventLogOptions): EventLog {
       };
 
       buffer.push(record);
+
+      // Buffer content if provided (will be flushed atomically with the event)
+      if (event.content && event.content.length > 0) {
+        contentBuffer.push({
+          event_id: eventId,
+          content: event.content,
+        });
+      }
 
       // Notify subscribers immediately (in-memory, before persistence)
       notifySubscribers(record as AgentEvent);
