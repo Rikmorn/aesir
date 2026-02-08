@@ -49,9 +49,11 @@ vi.mock("../shared/mcp/index.js", () => ({
 import { ALL_ADAPTERS } from "../adapters/index.js";
 import { adaptPassThrough } from "../adapters/pass-through.js";
 import type { AdapterIgnore, EventAdapter } from "../adapters/types.js";
+import { routeViaAgentLoopV2 } from "./slow-path.js";
 
 const mockAdaptPassThrough = vi.mocked(adaptPassThrough);
 const mockAllAdapters = ALL_ADAPTERS as EventAdapter[];
+const mockRouteViaAgentLoop = vi.mocked(routeViaAgentLoopV2);
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -832,6 +834,82 @@ describe("routeEvent", () => {
 
       // Cleanup
       mockAllAdapters.length = 0;
+    });
+  });
+
+  // ─── Slow-path replyContext Threading ──────────────────────────────────
+
+  describe("slow-path replyContext threading", () => {
+    it("passes eventReplyContext to slow-path deps when incoming event has Slack replyContext", async () => {
+      const slackReplyContext = {
+        channel: "slack" as const,
+        teamId: "T1",
+        channelId: "C1",
+        threadTs: "123.456",
+      };
+      const incomingEvent = createIncomingEvent({
+        taskId: undefined,
+        replyContext: slackReplyContext,
+      });
+      const eventRouter = createMockEventRouter({
+        action: "slow_path",
+        event: incomingEvent,
+      });
+      const { deps } = createMockDeps({ eventRouter });
+
+      mockAdaptPassThrough.mockReturnValue(incomingEvent);
+
+      await routeEvent(createNormalizedEvent(), deps);
+
+      expect(mockRouteViaAgentLoop).toHaveBeenCalled();
+      const slowPathDeps = mockRouteViaAgentLoop.mock.calls[0]?.[1];
+      expect(slowPathDeps).toBeDefined();
+      expect(slowPathDeps?.eventReplyContext).toEqual(slackReplyContext);
+    });
+
+    it("does not set eventReplyContext when incoming event has no replyContext", async () => {
+      const incomingEvent = createIncomingEvent({
+        taskId: undefined,
+        // No replyContext
+      });
+      const eventRouter = createMockEventRouter({
+        action: "slow_path",
+        event: incomingEvent,
+      });
+      const { deps } = createMockDeps({ eventRouter });
+
+      mockAdaptPassThrough.mockReturnValue(incomingEvent);
+
+      await routeEvent(createNormalizedEvent(), deps);
+
+      expect(mockRouteViaAgentLoop).toHaveBeenCalled();
+      const slowPathDeps = mockRouteViaAgentLoop.mock.calls[0]?.[1];
+      expect(slowPathDeps).toBeDefined();
+      expect(slowPathDeps?.eventReplyContext).toBeUndefined();
+    });
+
+    it("passes Linear replyContext through slow-path deps", async () => {
+      const linearReplyContext = {
+        channel: "linear" as const,
+        issueId: "uuid-abc",
+      };
+      const incomingEvent = createIncomingEvent({
+        taskId: undefined,
+        replyContext: linearReplyContext,
+      });
+      const eventRouter = createMockEventRouter({
+        action: "slow_path",
+        event: incomingEvent,
+      });
+      const { deps } = createMockDeps({ eventRouter });
+
+      mockAdaptPassThrough.mockReturnValue(incomingEvent);
+
+      await routeEvent(createNormalizedEvent(), deps);
+
+      expect(mockRouteViaAgentLoop).toHaveBeenCalled();
+      const slowPathDeps = mockRouteViaAgentLoop.mock.calls[0]?.[1];
+      expect(slowPathDeps?.eventReplyContext).toEqual(linearReplyContext);
     });
   });
 });
