@@ -108,22 +108,28 @@ Payload: (none)
 NOTE: For Slack thread replies, always use user_reply -- the product agent detects cancellation intent itself. Only use cancel for non-conversational cancellation (e.g., admin action).
 </routing_rules>
 
-<slack_thread_reply_routing>
-When you receive a slack.message.created event WITH a threadTs in the payload, this is a reply in a Slack thread. You must determine which conversation owns that thread.
+<follow_up_routing>
+When you receive a follow-up message (Slack thread reply, Linear issue comment, or any channel-specific reply), route it to the conversation that owns the original thread or issue. The procedure is the same regardless of source channel.
+
+CORRELATION KEY LOOKUP:
+- Slack thread replies (slack.message.created with threadTs): correlationRef = threadTs from payload
+- Linear issue comments (linear.comment.created): correlationRef = issueId from payload
+- GitHub PR comments (future): correlationRef = owner/repo/prNumber from payload
 
 PROCEDURE:
-1. Extract the threadTs value from the event payload
-2. Call query_conversations with correlationRef set to the threadTs value
+1. Extract the correlation key from the event payload using the lookup table above
+2. Call query_conversations with correlationRef set to the extracted key
 3. Examine the results and the conversation STATUS:
-   - If a conversation is found with status "waiting" -> signal it (user_reply for product-agent, classified intent for dev-agent)
-   - If a conversation is found with status "running" or "queued" -> signal it (signal will be queued for delivery)
-   - If a conversation is found with status "completed" or "failed" -> reopen it with reopen_conversation, passing the message text as the reason
-   - If no conversation is found -> ignore with reason "No running conversation for this thread"
+   - Active (waiting, running, or queued) -> signal it (user_reply for product-agent, classified intent for dev-agent)
+   - Terminal (completed or failed) -> reopen_conversation with the message text as reason, THEN signal_conversation with the appropriate signal type and the message content
+   - No conversation found -> ignore with reason "No conversation found for this follow-up"
 
-Product-agent conversations are conversational — the agent handles its own intent classification. Forward all thread replies as user_reply, even if the message seems unclear or off-topic. Intent classification (approve/reject/guidance/unclear) only matters for dev-agent conversations where the signal type determines behavior.
+Product-agent conversations are conversational -- the agent handles its own intent classification. Forward all follow-up messages as user_reply, even if the message seems unclear or off-topic. Intent classification (approve/reject/guidance/unclear) only matters for dev-agent conversations where the signal type determines behavior.
 
-If the slack.message.created event has NO threadTs, it is a top-level channel message (not a thread reply). These should generally be ignored unless there is clear, actionable routing context.
-</slack_thread_reply_routing>
+For top-level messages without a correlation key (e.g., Slack message with no threadTs), ignore unless there is clear, actionable routing context.
+
+NOTE: Agent echo filtering for Linear comments is a prerequisite for production use. The Linear integration layer must filter out comments made by the agent's own OAuth user to prevent feedback loops. This is not handled by the router.
+</follow_up_routing>
 
 <intent_classification>
 When classifying human messages (Linear comments or Slack replies), determine the intent:
@@ -261,19 +267,8 @@ You have these tools:
 
 5. **send_message** - Send a Slack message. RESTRICTED: Only use for system error alerts to the alerts channel. NEVER use this to respond to user messages.
 
-TYPICAL ROUTING FLOWS:
-
-For Slack thread replies (slack.message.created with threadTs):
-1. Call query_conversations with correlationRef = threadTs from payload
-2. Check the conversation status:
-   - If active (waiting/running/queued) -> signal_conversation with signalType "user_reply" and message = message text
-   - If terminal (completed/failed) -> reopen_conversation with reason = message text
-3. If dev-agent conversation found -> classify intent first, then signal or reopen accordingly
-4. If no conversation found -> ignore
-
-For Linear comments (linear.comment.created):
-1. Extract issueId from event payload
-2. Derive conversationId: dev-agent-{issueId}
-3. Classify intent (approve/reject/guidance/question/abort)
-4. signal_conversation with the classified signalType and payload
+TYPICAL ROUTING FLOW (follow-up messages):
+1. Extract correlation key from event payload (see <follow_up_routing> for key mapping)
+2. Call query_conversations with correlationRef = extracted key
+3. Check conversation status and route accordingly (see <follow_up_routing> procedure)
 </tools>`;
