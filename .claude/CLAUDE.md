@@ -205,7 +205,7 @@ Events flow through adapters and the EventRouter:
    - `ignore` -- known events to skip (e.g., agent's own issue updates)
    - `slow_path` -- ambiguous events routed to LLM for classification
 
-Signal types use domain language: `approval`, `pr_review`, `pr_merged`, `pr_closed`.
+Signal types use domain language: `approval`, `pr_review`, `pr_merged`, `pr_closed`, `user_reply`, `cancel`.
 
 ## Directory Structure
 
@@ -228,7 +228,7 @@ packages/
 |       |   |-- history-manager.ts      # Message compaction + summarization
 |       |   |-- session-projection.ts   # Reactive agent_sessions updates
 |       |   |-- timeout-scheduler.ts    # pg-boss delayed signal delivery
-|       |   |-- tool-factories.ts       # Registers all 28 tool factories
+|       |   |-- tool-factories.ts       # Registers all 34 tool factories
 |       |   |-- tool-registry.ts        # namespace:tool_name resolution
 |       |   |-- wait-for-tool.ts        # Pause/resume via wait_for
 |       |   |-- worker-loop.ts          # Poll + execute queued conversations
@@ -239,6 +239,7 @@ packages/
 |       |   |-- system-prompt.ts       # Router agent prompt
 |       |   +-- tools/                 # Router-specific tools
 |       |       |-- query-conversations.ts
+|       |       |-- reopen-conversation.ts
 |       |       |-- send-message.ts
 |       |       |-- signal-conversation.ts
 |       |       +-- start-conversation.ts
@@ -253,7 +254,8 @@ packages/
 |           +-- tools/       # Reusable tool factories
 |               |-- codebase/      # read_file, search_codebase, list_directory, write_file, run_command
 |               |-- coordination/  # request_human_input, (spawn_agent, wait_for via framework)
-|               +-- integration/   # linear, github, slack MCP wrappers
+|               |-- integration/   # linear, github, slack MCP wrappers
+|               +-- task/          # create_task, complete_task, pause_task, handoff_task, list_tasks, get_task_context
 |-- integrations/
 |   |-- linear/              # @aesir/integration-linear (independent, port 3001)
 |   |   +-- src/
@@ -284,6 +286,12 @@ packages/
 |           |-- messages/    # Block Kit builders, message posting
 |           |-- oauth/       # Token management
 |           +-- types/       # Config, errors
+|-- dashboard/               # Next.js 15 operations dashboard (port 3005, basePath=/dashboard)
+|   +-- src/
+|       |-- app/             # App router pages (conversations, events, sessions, tools)
+|       |-- components/      # React components (tables, filters, detail views)
+|       |-- lib/             # Schema, API client, utilities
+|       +-- services/        # Data access layer (typed functions over Postgres + agent-service API)
 |-- platform/                # @aesir/platform - Core services
 |   +-- src/
 |       |-- config/          # Configuration and environment
@@ -386,6 +394,7 @@ docker compose up agent-service   # Start the unified agent service only
 - GitHub Integration: http://localhost:3002
 - Slack Integration: http://localhost:3003
 - Agent Service: http://localhost:3004
+- Dashboard: http://localhost:3005/dashboard
 
 ### Development (Local)
 
@@ -428,7 +437,7 @@ pnpm --filter @aesir/agents db:migrate
 | Schema | Package | Description |
 |--------|---------|-------------|
 | `platform` | @aesir/platform | Workspaces, configurations |
-| `agents` | @aesir/agents | Conversations, agent_events, agent_sessions |
+| `agents` | @aesir/agents | Conversations, agent_events, agent_sessions, tasks, task_handoffs |
 | `observability` | @aesir/observability | Execution tracking |
 | `linear` | @aesir/integration-linear | Linear credentials, webhooks, MCP permissions |
 | `github` | @aesir/integration-github | GitHub credentials, webhooks, MCP permissions |
@@ -856,8 +865,8 @@ describe("ComponentName", () => {
 
 ### Tool Separation
 
-- **Router tools** (`router/tools/`): Used by the event routing LLM -- `query_conversations`, `send_message`, `signal_conversation`, `start_conversation`
-- **Agent tools** (`shared/tools/`): Used by agents -- `codebase:*`, `coordination:*`, `integration:*`
+- **Router tools** (`router/tools/`): Used by the event routing LLM -- `query_conversations`, `reopen_conversation`, `send_message`, `signal_conversation`, `start_conversation`
+- **Agent tools** (`shared/tools/`): Used by agents -- `codebase:*`, `coordination:*`, `integration:*`, `task:*`
 - These are separate sets registered in different contexts
 
 ### Docker Networking
@@ -911,4 +920,8 @@ describe("ComponentName", () => {
 
 ## Historical Context
 
-Historical project context (milestones, architectural decisions, evolution from v1 through v2.0/v2.1/v2.2 to v2.3) is maintained in the `.planning/` directory. This includes phase plans, research documents, summaries, and the full decision log.
+**Design vision:** `.planning/specs/design-vision.md` -- master document capturing foundational principles, architectural philosophy, anti-patterns, and expansion paths across all milestones.
+
+**Milestone specs:** `.planning/specs/` -- individual milestone specs (v2.2 through v2.6) with implementation details.
+
+Historical project context (phase plans, research documents, summaries, decision log) is maintained in the `.planning/` directory.
