@@ -48,9 +48,9 @@
 - [x] **TASK-15**: 6 task tools registered in ToolRegistry under `task:` namespace
 - [x] **TASK-16**: Task tools added to agent definition YAML files
 - [x] **TASK-17**: Parent-child task hierarchy supported (parent_id FK)
-- [ ] **TASK-18**: Circular delegation prevented: `create_task` checks ancestry for same-assignee cycles
-- [ ] **TASK-19**: Max depth of 5 levels for parent_id chains enforced
-- [ ] **TASK-20**: Max 10 subtasks per parent task enforced
+- [x] **TASK-18**: Circular delegation prevented: `create_task` checks ancestry for same-assignee cycles
+- [x] **TASK-19**: Max depth of 5 levels for parent_id chains enforced
+- [x] **TASK-20**: Max 10 subtasks per parent task enforced
 - [x] **TASK-21**: `ToolContext.taskId` renamed to `sandboxId` (existing sandbox container ID usage)
 - [x] **TASK-22**: New `ToolContext.taskId` set from `conv.task_id` in worker loop
 - [x] **TASK-23**: Task context auto-injected as `<task_context>` block in worker loop (most recent handoff, truncated at 4000 chars with pointer to `get_task_context`)
@@ -85,14 +85,14 @@
 
 ### Prompt Evolution
 
-- [ ] **EVOL-01**: Product-agent prompt updated to leverage task lifecycle (create tasks for meaningful work)
-- [ ] **EVOL-02**: Dev-agent prompt updated to leverage task lifecycle (create tasks, write handoffs)
-- [ ] **EVOL-03**: All agent prompts include handoff examples in few-shot sections (good vs bad handoff content)
-- [ ] **EVOL-04**: Agents guided to delegate subtasks to other agents via `create_task`
-- [ ] **EVOL-05**: Agents guided to query related tasks via `list_tasks` and incorporate context
-- [ ] **EVOL-06**: Prompt guidance: create a task when starting meaningful work, skip for quick single-turn interactions
-- [ ] **EVOL-07**: Prompt guidance: call `get_task_context` when latest handoff references prior work
-- [ ] **EVOL-08**: Prompts degrade gracefully when no task is available ("operate as before")
+- [x] **EVOL-01**: Product-agent prompt updated to leverage task lifecycle (create tasks for meaningful work)
+- [x] **EVOL-02**: Dev-agent prompt updated to leverage task lifecycle (create tasks, write handoffs)
+- [x] **EVOL-03**: All agent prompts include handoff examples in few-shot sections (good vs bad handoff content)
+- [x] **EVOL-04**: Agents guided to delegate subtasks to other agents via `create_task`
+- [x] **EVOL-05**: Agents guided to query related tasks via `list_tasks` and incorporate context
+- [x] **EVOL-06**: Prompt guidance: create a task when starting meaningful work, skip for quick single-turn interactions
+- [x] **EVOL-07**: Prompt guidance: call `get_task_context` when latest handoff references prior work
+- [x] **EVOL-08**: Prompts degrade gracefully when no task is available ("operate as before")
 
 ## Future Requirements
 
@@ -173,9 +173,9 @@ Deferred to post-v2.5 milestones. Tracked but not in current roadmap.
 | TASK-15 | Phase 58.2 | Complete |
 | TASK-16 | Phase 58.2 | Complete |
 | TASK-17 | Phase 58.2 | Complete |
-| TASK-18 | Phase 59 | Pending |
-| TASK-19 | Phase 59 | Pending |
-| TASK-20 | Phase 59 | Pending |
+| TASK-18 | Phase 59 | Complete |
+| TASK-19 | Phase 59 | Complete |
+| TASK-20 | Phase 59 | Complete |
 | TASK-21 | Phase 58.1 | Complete |
 | TASK-22 | Phase 58.1 | Complete |
 | TASK-23 | Phase 58.2 | Complete |
@@ -199,14 +199,14 @@ Deferred to post-v2.5 milestones. Tracked but not in current roadmap.
 | ROUTE-04 | Phase 58.4 | Complete |
 | ROUTE-05 | Phase 58.4 | Complete |
 | ROUTE-06 | Phase 58.4 | Complete |
-| EVOL-01 | Phase 59 | Pending |
-| EVOL-02 | Phase 59 | Pending |
-| EVOL-03 | Phase 59 | Pending |
-| EVOL-04 | Phase 59 | Pending |
-| EVOL-05 | Phase 59 | Pending |
-| EVOL-06 | Phase 59 | Pending |
-| EVOL-07 | Phase 59 | Pending |
-| EVOL-08 | Phase 59 | Pending |
+| EVOL-01 | Phase 59 | Complete |
+| EVOL-02 | Phase 59 | Complete |
+| EVOL-03 | Phase 59 | Complete |
+| EVOL-04 | Phase 59 | Complete |
+| EVOL-05 | Phase 59 | Complete |
+| EVOL-06 | Phase 59 | Complete |
+| EVOL-07 | Phase 59 | Complete |
+| EVOL-08 | Phase 59 | Complete |
 
 **Coverage:**
 - v2.5 active requirements: 68 total
@@ -216,4 +216,4 @@ Deferred to post-v2.5 milestones. Tracked but not in current roadmap.
 
 ---
 *Requirements defined: 2026-02-06*
-*Last updated: 2026-02-07 after Phase 58.3 completion*
+*Last updated: 2026-02-08 after Phase 59 completion (all v2.5 requirements complete)*

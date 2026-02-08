@@ -12,7 +12,7 @@ v2.5 gives agents continuity across interactions. Five delivery boundaries: rewr
 - v2.2 Agentic Architecture -- Phases 28-36 (shipped 2026-01-31)
 - v2.3 Unified Agent Framework -- Phases 37-47.1 (shipped 2026-02-04)
 - v2.4 Operations Dashboard -- Phases 48-55 (shipped 2026-02-05)
-- v2.5 Agentic Conversations -- Phases 56-59 (in progress)
+- v2.5 Agentic Conversations -- Phases 56-59 (shipped 2026-02-08)
 
 ## Phases
 
@@ -28,7 +28,7 @@ Decimal phases execute between their surrounding integers in numeric order.
 - [x] **Phase 58.2: Agent Task Tools** - Six task tools, registration, YAML wiring, context injection
 - [x] **Phase 58.3: Integration Correlation** - Correlation tables per integration, MCP header, outgoing recording, incoming lookup
 - [x] **Phase 58.4: Task-Aware Event Routing** - Task-based routing priority, advisory lock serialization, backward compatibility
-- [ ] **Phase 59: Prompt Evolution and Hierarchy Enforcement** - Update all agent prompts to leverage task lifecycle, add hierarchy guardrails (depth, subtask limits, circular delegation prevention)
+- [x] **Phase 59: Prompt Evolution and Hierarchy Enforcement** - Update all agent prompts to leverage task lifecycle, add hierarchy guardrails (depth, subtask limits, circular delegation prevention)
 
 ## Phase Details
 
@@ -131,8 +131,8 @@ Plans:
   4. create_task enforces hierarchy guardrails: max 5 levels of parent_id depth, max 10 subtasks per parent, and circular delegation is rejected when the same assignee appears in the ancestry chain
 **Plans:** 2 plans
 Plans:
-- [ ] 59-01-PLAN.md -- Prompt evolution: task lifecycle guidance, handoff examples, tool descriptions for both agents
-- [ ] 59-02-PLAN.md -- Hierarchy guardrails: depth limit, subtask cap, circular delegation prevention with tests
+- [x] 59-01-PLAN.md -- Prompt evolution: task lifecycle guidance, handoff examples, tool descriptions for both agents
+- [x] 59-02-PLAN.md -- Hierarchy guardrails: depth limit, subtask cap, circular delegation prevention with tests
 
 ## Progress
 
@@ -155,8 +155,8 @@ Phase 57 (Reopening) ──> Phase 58.1 ──> 58.2 ──> 58.3 ──> 58.4 �
 | 58.2 Agent Task Tools | v2.5 | 10 | 3/3 | Complete | 2026-02-07 |
 | 58.3 Integration Correlation | v2.5 | 11 | 4/4 | Complete | 2026-02-07 |
 | 58.4 Task-Aware Event Routing | v2.5 | 6 | 2/2 | Complete | 2026-02-07 |
-| 59. Prompt Evolution + Hierarchy | v2.5 | 11 | 0/2 | Not started | - |
+| 59. Prompt Evolution + Hierarchy | v2.5 | 11 | 2/2 | Complete | 2026-02-08 |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-08 after Phase 59 planning (2 plans in 1 wave)*
+*Last updated: 2026-02-08 after Phase 59 execution complete (v2.5 milestone shipped)*
