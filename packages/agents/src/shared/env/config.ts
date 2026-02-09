@@ -35,6 +35,9 @@ const agentEnvSchema = z.object({
   LINEAR_TEAM_ID: z.string().min(1, "LINEAR_TEAM_ID is required"),
   GITHUB_REPO: z.string().min(1, "GITHUB_REPO is required"),
   SLACK_CHANNEL_ID: z.string().min(1, "SLACK_CHANNEL_ID is required"),
+  SLACK_TEAM_ID: z.string().optional(),
+  DEV_AGENT_NOTIFY_CHANNEL: z.string().optional(),
+  PRODUCT_AGENT_NOTIFY_CHANNEL: z.string().optional(),
 
   // MCP service URLs (Docker network defaults)
   LINEAR_MCP_URL: z.string().url().optional(),
@@ -122,6 +125,11 @@ export const config = {
   },
   slack: {
     channelId: env.SLACK_CHANNEL_ID,
+    teamId: env.SLACK_TEAM_ID,
+  },
+  notify: {
+    devAgent: env.DEV_AGENT_NOTIFY_CHANNEL || env.SLACK_CHANNEL_ID,
+    productAgent: env.PRODUCT_AGENT_NOTIFY_CHANNEL || env.SLACK_CHANNEL_ID,
   },
 
   // MCP service URLs (Docker network defaults)
