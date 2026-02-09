@@ -20,7 +20,9 @@ tools:
   - linear:get_issue
   - linear:list_labels
   - linear:search_issues
-  - slack:send_message
+  - communication:reply
+  - communication:ask
+  - communication:notify
 
 maxIterations: 10
 tokenBudget: 50000
