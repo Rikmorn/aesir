@@ -98,10 +98,10 @@ Plans:
   5. Agent-authored Linear comments do not trigger echo loops — the router or adapter filters out comments created by agents before they re-enter the inbound pipeline
 **Plans:** 4 plans
 Plans:
-- [ ] 65-01-PLAN.md -- Echo loop prevention (Linear comment webhook echo filter + Slack/GitHub verification)
-- [ ] 65-02-PLAN.md -- Env config + enrichment (SLACK_TEAM_ID, defaultNotifyTarget injection, slack_context removal)
-- [ ] 65-03-PLAN.md -- Dev-agent migration (definition.yaml tool swap + prompt.md domain-language rewrite)
-- [ ] 65-04-PLAN.md -- Product-agent migration (definition.yaml tool swap + prompt.md domain-language rewrite)
+- [x] 65-01-PLAN.md -- Echo loop prevention (Linear comment webhook echo filter + Slack/GitHub verification)
+- [x] 65-02-PLAN.md -- Env config + enrichment (SLACK_TEAM_ID, defaultNotifyTarget injection, slack_context removal)
+- [x] 65-03-PLAN.md -- Dev-agent migration (definition.yaml tool swap + prompt.md domain-language rewrite)
+- [x] 65-04-PLAN.md -- Product-agent migration (definition.yaml tool swap + prompt.md domain-language rewrite)
 
 ### Phase 66: Testing & Validation
 
@@ -134,7 +134,7 @@ Phase 60 (Types + MCP) ──┬──> Phase 61 (Inbound) ──> Phase 62 (Rou
 | 62. Router Updates | v2.6 | 4 | 3/3 | Complete | 2026-02-08 |
 | 63. Outbound Denormalizer | v2.6 | 9 | 2/2 | Complete | 2026-02-09 |
 | 64. Communication Tools | v2.6 | 5 | N/A | Absorbed into 63 | 2026-02-09 |
-| 65. Agent Migration | v2.6 | 6 | 0/TBD | Not started | - |
+| 65. Agent Migration | v2.6 | 6 | 4/4 | Complete | 2026-02-09 |
 | 66. Testing & Validation | v2.6 | 4 | 0/TBD | Not started | - |
 
 ---
