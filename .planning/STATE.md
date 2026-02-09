@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 65 of 66 (Agent Migration)
-Plan: 1 of 4 in current phase (COMPLETE)
+Plan: 2 of 4 in current phase (COMPLETE)
 Status: Executing Phase 65
-Last activity: 2026-02-09 -- Plan 65-01 complete (echo filter for Linear comments)
+Last activity: 2026-02-09 -- Plan 65-02 complete (default notify target enrichment)
 
 Progress: [██████░░░░] 58%
 
@@ -59,6 +59,9 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 63]: Ask tool renders options as markdown text instructions rather than passing structured data to denormalizer
 - [Phase 65]: Echo filter uses LINEAR_BOT_USER_ID env var comparison (not API call) to avoid per-webhook cost
 - [Phase 65]: Filter logs at debug level when unconfigured to avoid noisy logs
+- [Phase 65]: notifyChannels as Record<string, string> map in EnrichmentDeps for N-agent scalability
+- [Phase 65]: agentDefinitionId as 4th param to enrichInitialMessage for per-agent channel resolution
+- [Phase 65]: default_notify_target injects Slack ReplyContext JSON directly usable by notify() tool
 
 ### Pending Todos
 
@@ -73,9 +76,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 65-01-PLAN.md
+Stopped at: Completed 65-02-PLAN.md
 Resume file: None
-Next action: Execute Plan 65-02 (Agent Migration)
+Next action: Execute Plan 65-03 (Agent Migration)
 
 ---
-*Updated: 2026-02-09 -- Plan 65-01 complete (Linear comment echo filter). Phase 65 in progress.*
+*Updated: 2026-02-09 -- Plan 65-02 complete (default notify target enrichment). Phase 65 in progress.*
