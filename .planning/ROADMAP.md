@@ -96,7 +96,12 @@ Plans:
   3. Prompt changes follow PROMPT_GUIDE.md: constitutional constraints for communication boundaries, few-shot examples showing reply/ask/notify usage with reasoning, no procedural tool sequences
   4. Prompts explain replyContext as opaque context to pass through (not something the agent should inspect or modify), with guidance that the infrastructure determines the delivery channel
   5. Agent-authored Linear comments do not trigger echo loops — the router or adapter filters out comments created by agents before they re-enter the inbound pipeline
-**Plans:** TBD
+**Plans:** 4 plans
+Plans:
+- [ ] 65-01-PLAN.md -- Echo loop prevention (Linear comment webhook echo filter + Slack/GitHub verification)
+- [ ] 65-02-PLAN.md -- Env config + enrichment (SLACK_TEAM_ID, defaultNotifyTarget injection, slack_context removal)
+- [ ] 65-03-PLAN.md -- Dev-agent migration (definition.yaml tool swap + prompt.md domain-language rewrite)
+- [ ] 65-04-PLAN.md -- Product-agent migration (definition.yaml tool swap + prompt.md domain-language rewrite)
 
 ### Phase 66: Testing & Validation
 
