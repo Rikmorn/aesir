@@ -85,6 +85,12 @@ EventLog, ConversationExecutor, ToolRegistry are all interfaces that abstract th
 
 Some requirements have near-certain future probability (auth, multi-tenancy, API access). Making architecture "ready" for these costs near-zero upfront but is expensive to retrofit. v2.4's auth-ready middleware pipeline and service-layer abstractions are examples: structured for auth before auth was required, so adding it later is additive, not surgical. *Established in [`2.4-spec-raw.md`](2.4-spec-raw.md).*
 
+### Symmetric Normalization
+
+Inbound adapters normalize integration-specific webhooks into domain-language signals. Outbound denormalizers translate domain-language actions into integration-specific API calls. Agents operate entirely in the domain layer — they reason about intent (reply, ask, notify) while infrastructure handles channel translation in both directions.
+
+ReplyContext propagates through the pipeline as an opaque address: adapters attach it, signals carry it, the executor stores it, agents pass it through to communication tools, and the denormalizer dispatches based on it. Adding a new integration channel requires adapter + denormalizer changes — zero agent changes. *Established in [`2.6-unified-agent-communication.md`](2.6-unified-agent-communication.md).*
+
 ## Anti-Patterns
 
 The flip side of the foundational principles. If you're doing any of these, reconsider:
@@ -319,6 +325,16 @@ The dashboard's service layer (`packages/dashboard/`) and agent-service API endp
 
 *See [`2.4-spec-raw.md`](2.4-spec-raw.md) service layer design.*
 
+### Domain-Language Action Primitives
+
+v2.6 abstracts outbound *communication* — agents use reply/ask/notify instead of channel-specific messaging tools. The same pattern could extend to *action* tools: agents reason about domain operations (create work item, submit code change) while infrastructure routes to the correct integration.
+
+Today, agents use integration-specific action tools directly: `linear:create_issue`, `github:create_branch`, `github:create_pull_request`. This is intentional — action tools have richer, integration-specific interfaces that don't map cleanly to a single abstraction. But as the platform gains more integrations (Jira, GitLab, Bitbucket), the O(agents x integrations) scaling problem that motivated v2.6's communication abstraction will surface for actions too.
+
+The denormalizer pattern (dispatch by context) could generalize: `work:create_item` dispatches to Linear or Jira based on workspace configuration, `code:create_pr` dispatches to GitHub or GitLab based on repository context. The question is which action interfaces are genuinely isomorphic across integrations versus which have semantic differences that make abstraction lossy. Communication worked because the interface is simple (text + address). Action tools may have richer interfaces where forced unification loses important capabilities.
+
+Requires: analysis of integration-specific action tool interfaces, workspace-level integration configuration, and a dispatch mechanism analogous to the communication denormalizer.
+
 ## Design Decisions Log
 
 | Decision | Rationale | Date |
@@ -343,3 +359,6 @@ The dashboard's service layer (`packages/dashboard/`) and agent-service API endp
 | Symmetric normalization (inbound + outbound) | Inbound adapters already abstract channels into domain signals. Outbound denormalizers complete the symmetry — agents never touch channel-specific details. | 2026-02-08 |
 | Classify by intent, reply by origin | Signal semantics (approval, feedback) are channel-independent. Reply routing follows the originating channel via replyContext. Agent reasons about what to say, not where to say it. | 2026-02-08 |
 | Intent-based communication tools (reply/ask/notify) | Three tools replace O(agents x integrations) channel-specific tools. Adding a new integration requires zero agent changes. See `2.6-unified-agent-communication.md`. | 2026-02-08 |
+| Echo filtering at integration layer only | Integrations know their own OAuth identity — filter agent-generated webhooks before they reach adapters or router. No adapter safety net (unreliable signal), no router involvement (wasteful LLM calls). | 2026-02-09 |
+| Communication tools render, denormalizer dispatches | ask() renders options as text before calling the denormalizer. The denormalizer receives plain text and dispatches — it never formats. Clean separation: tools own content, denormalizer owns routing. | 2026-02-09 |
+| defaultNotifyTarget from env config, not YAML | Agent definitions reference deployment-specific channel IDs. Env vars are the current reality; YAML-based config deferred to multi-account/multi-workspace milestone. | 2026-02-09 |
