@@ -69,8 +69,9 @@ describe("enrichInitialMessage", () => {
       /<default_notify_target>\n(.*)\n<\/default_notify_target>/,
     );
     expect(match).not.toBeNull();
-    expect(match![1]).toBeDefined();
-    const target = JSON.parse(match![1] as string);
+    const captured = match?.[1];
+    expect(captured).toBeDefined();
+    const target = JSON.parse(captured as string);
     expect(target).toEqual({
       channel: "slack",
       teamId: "T01234567",
