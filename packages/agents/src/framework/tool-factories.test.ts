@@ -90,9 +90,9 @@ describe("registerAllTools", () => {
       expect(() => setupRegistry()).not.toThrow();
     });
 
-    it("should register exactly 36 tools", () => {
+    it("should register exactly 39 tools", () => {
       const { registry } = setupRegistry();
-      expect(registry.listRegistered()).toHaveLength(36);
+      expect(registry.listRegistered()).toHaveLength(39);
     });
 
     it("should register all expected namespaces", () => {
@@ -108,6 +108,7 @@ describe("registerAllTools", () => {
           "slack",
           "coordination",
           "task",
+          "communication",
         ]),
       );
     });
@@ -181,6 +182,14 @@ describe("registerAllTools", () => {
       expect(registry.has("task:list_tasks")).toBe(true);
       expect(registry.has("task:get_task_context")).toBe(true);
     });
+
+    it("should register all communication tools", () => {
+      const { registry } = setupRegistry();
+
+      expect(registry.has("communication:reply")).toBe(true);
+      expect(registry.has("communication:ask")).toBe(true);
+      expect(registry.has("communication:notify")).toBe(true);
+    });
   });
 
   // ── Resolution ───────────────────────────────────────────────────────────
@@ -215,6 +224,15 @@ describe("registerAllTools", () => {
 
       expect(tools).toHaveLength(1);
       expect(tools[0]?.name).toBe("request_human_input");
+    });
+
+    it("should resolve communication tools to ToolDefinitions with underscore names", () => {
+      const { registry } = setupRegistry();
+      const ctx = createMockContext();
+
+      const tools = registry.resolve(["communication:reply"], ctx);
+      expect(tools).toHaveLength(1);
+      expect(tools[0]?.name).toBe("communication_reply");
     });
   });
 
@@ -300,7 +318,7 @@ describe("registerAllTools", () => {
       const { logger } = setupRegistry();
 
       expect(logger.info).toHaveBeenCalledWith(
-        { toolCount: 36 },
+        { toolCount: 39 },
         "All tool factories registered",
       );
     });

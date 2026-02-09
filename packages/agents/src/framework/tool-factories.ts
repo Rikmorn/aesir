@@ -1,7 +1,7 @@
 /**
  * Tool Factory Registration
  *
- * Registers all 36 tool factories in the ToolRegistry, bridging the v2.3
+ * Registers all 39 tool factories in the ToolRegistry, bridging the v2.3
  * ToolContext interface to the existing v2.2 tool factory signatures.
  *
  * Tool categories:
@@ -12,6 +12,7 @@
  * - Slack (5): send_message, send_approval_request, get_message, reply_to_thread, list_channels
  * - Coordination (3): spawn_agent, request_human_input, wait_for
  * - Task (6): create_task, complete_task, pause_task, handoff_task, list_tasks, get_task_context
+ * - Communication (3): reply, ask, notify
  *
  * Adapters bridge ToolContext to the existing factory signatures:
  * - Codebase adapter: extracts containerManager, sandboxId, logger from ToolContext
@@ -22,6 +23,7 @@
 
 import type { DevContainerManager, PinoLogger } from "@aesir/platform";
 import type { ToolDefinition } from "../shared/agent-loop/types.js";
+import type { CommunicationToolDeps } from "../shared/communication/types.js";
 import type { TaskService } from "../shared/services/task-service.js";
 import {
   createListDirectoryTool,
@@ -30,6 +32,11 @@ import {
   createSearchCodebaseTool,
   createWriteFileTool,
 } from "../shared/tools/codebase/index.js";
+import {
+  createAskTool,
+  createNotifyTool,
+  createReplyTool,
+} from "../shared/tools/communication/index.js";
 import { createRequestHumanInputTool } from "../shared/tools/coordination/index.js";
 import { createSpawnAgentTool } from "../shared/tools/coordination/spawn-agent.js";
 import { createGitHubTools } from "../shared/tools/integration/github-tools.js";
@@ -118,10 +125,28 @@ function mcpAdapter(
   };
 }
 
+/**
+ * Adapter that bridges ToolContext to CommunicationToolDeps.
+ *
+ * Extracts agentId, correlationId, optional taskId, and logger from the
+ * ToolContext and passes them to a communication tool factory function.
+ */
+function communicationAdapter(
+  createFn: (deps: CommunicationToolDeps) => ToolDefinition,
+): (ctx: ToolContext) => ToolDefinition {
+  return (ctx: ToolContext) =>
+    createFn({
+      agentId: ctx.agentId,
+      correlationId: ctx.correlationId,
+      ...(ctx.taskId && { taskId: ctx.taskId }),
+      logger: ctx.logger,
+    });
+}
+
 // ─── Registration ────────────────────────────────────────────────────────────
 
 /**
- * Register all 36 tool factories in the ToolRegistry.
+ * Register all 39 tool factories in the ToolRegistry.
  *
  * This bridges the v2.3 registry-based tool resolution to the existing v2.2
  * tool factory functions. After calling this, `registry.resolve(refs, context)`
@@ -288,6 +313,18 @@ export function registerAllTools(options: RegisterAllToolsOptions): void {
   registry.register("task:list_tasks", (ctx) => createListTasksTool(ts, ctx));
   registry.register("task:get_task_context", (ctx) =>
     createGetTaskContextTool(ts, ctx),
+  );
+
+  // ── Communication tools (3) ──────────────────────────────────────────
+
+  registry.register(
+    "communication:reply",
+    communicationAdapter(createReplyTool),
+  );
+  registry.register("communication:ask", communicationAdapter(createAskTool));
+  registry.register(
+    "communication:notify",
+    communicationAdapter(createNotifyTool),
   );
 
   // ── Summary ────────────────────────────────────────────────────────────
