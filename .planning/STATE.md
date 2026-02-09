@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** Phase 63 complete -- next: Phase 65 (Agent Migration)
+**Current focus:** Phase 65 (Agent Migration) in progress
 
 ## Current Position
 
-Phase: 63 of 66 (Outbound Denormalizer) -- COMPLETE
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: Phase Verified & Complete
-Last activity: 2026-02-09 -- Phase 63 verified (7/7 truths, all 18 tests passing)
+Phase: 65 of 66 (Agent Migration)
+Plan: 1 of 4 in current phase (COMPLETE)
+Status: Executing Phase 65
+Last activity: 2026-02-09 -- Plan 65-01 complete (echo filter for Linear comments)
 
-Progress: [██████░░░░] 57%
+Progress: [██████░░░░] 58%
 
 ## Milestone History
 
@@ -57,6 +57,8 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 63]: resolveToolName helper extracted for pre-dispatch logging (single info-level log with channel, tool, agentId)
 - [Phase 63]: communicationAdapter uses conditional spread for taskId (exactOptionalPropertyTypes compliance)
 - [Phase 63]: Ask tool renders options as markdown text instructions rather than passing structured data to denormalizer
+- [Phase 65]: Echo filter uses LINEAR_BOT_USER_ID env var comparison (not API call) to avoid per-webhook cost
+- [Phase 65]: Filter logs at debug level when unconfigured to avoid noisy logs
 
 ### Pending Todos
 
@@ -71,9 +73,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Phase 63 verified and complete
+Stopped at: Completed 65-01-PLAN.md
 Resume file: None
-Next action: Begin Phase 65 (Agent Migration) -- Phase 64 was absorbed into Phase 63
+Next action: Execute Plan 65-02 (Agent Migration)
 
 ---
-*Updated: 2026-02-09 -- Phase 63 complete + verified (outbound denormalizer + communication tools). Phase 64 absorbed.*
+*Updated: 2026-02-09 -- Plan 65-01 complete (Linear comment echo filter). Phase 65 in progress.*
