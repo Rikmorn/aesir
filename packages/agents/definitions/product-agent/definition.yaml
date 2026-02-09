@@ -2,7 +2,7 @@ id: product-agent
 name: Product Agent
 description: >
   Conversational product agent that helps teams capture feature requests
-  and bug reports from Slack conversations and turns them into
+  and bug reports from conversations and turns them into
   well-structured Linear issues.
 version: "1"
 
