@@ -71,10 +71,10 @@ Requirements for symmetric outbound normalization. Each maps to roadmap phases.
 
 ### Testing & Validation
 
-- [ ] **TEST-01**: Denormalizer unit tests verify correct MCP tool called per channel and action type
-- [ ] **TEST-02**: ReplyContext propagation test verifies signal carries replyContext from adapter through executor
-- [ ] **TEST-03**: Communication tool tests verify input validation and denormalizer delegation
-- [ ] **TEST-04**: ask() capability asymmetry test verifies buttons on Slack, text on Linear/GitHub
+- [x] **TEST-01**: Denormalizer unit tests verify correct MCP tool called per channel and action type
+- [x] **TEST-02**: ReplyContext propagation test verifies signal carries replyContext from adapter through executor
+- [x] **TEST-03**: Communication tool tests verify input validation and denormalizer delegation
+- [x] **TEST-04**: ask() option rendering test verifies text-formatted options consistently across all channels (no interactive buttons)
 
 ## Future Requirements
 
@@ -150,10 +150,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MIGR-05 | Phase 65 | Pending |
 | MIGR-06 | Phase 65 | Pending |
 | MIGR-07 | Phase 65 | Pending |
-| TEST-01 | Phase 66 | Pending |
-| TEST-02 | Phase 66 | Pending |
-| TEST-03 | Phase 66 | Pending |
-| TEST-04 | Phase 66 | Pending |
+| TEST-01 | Phase 66 | Complete |
+| TEST-02 | Phase 66 | Complete |
+| TEST-03 | Phase 66 | Complete |
+| TEST-04 | Phase 66 | Complete |
 
 **Coverage:**
 - v2.6 requirements: 45 total (1 dropped, 2 moved to later phases)
