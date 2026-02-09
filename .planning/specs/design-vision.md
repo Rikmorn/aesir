@@ -11,6 +11,7 @@ Master document capturing Aesir's architectural thinking, design philosophy, and
 | v2.4 | [`2.4-spec-raw.md`](2.4-spec-raw.md) | Operations dashboard, SSE real-time, service layer, auth-ready architecture |
 | v2.5 | [`2.5-agentic-conversations.md`](2.5-agentic-conversations.md) | Task primitives, conversation continuity, handoffs, prompt rewrites |
 | v2.6 | [`2.6-unified-agent-communication.md`](2.6-unified-agent-communication.md) | Symmetric normalization, outbound denormalizers, intent-based tools (reply/ask/notify) |
+| v2.7 | [`2.7-agent-collaboration.md`](2.7-agent-collaboration.md) | Multi-agent collaboration — shared memory, entity directory, task delegation, completion signaling, Linear Agent SDK |
 
 ## Foundational Principles
 
@@ -84,6 +85,34 @@ EventLog, ConversationExecutor, ToolRegistry are all interfaces that abstract th
 ### Anticipate Known-Future Requirements
 
 Some requirements have near-certain future probability (auth, multi-tenancy, API access). Making architecture "ready" for these costs near-zero upfront but is expensive to retrofit. v2.4's auth-ready middleware pipeline and service-layer abstractions are examples: structured for auth before auth was required, so adding it later is additive, not surgical. *Established in [`2.4-spec-raw.md`](2.4-spec-raw.md).*
+
+### Orchestrators Collaborate, Sub-Agents Execute
+
+There are two tiers of agents with fundamentally different collaboration models:
+
+**Orchestrator agents** (dev-agent, product-agent, future monitoring/QA agents) are autonomous peers. They have their own conversations, token budgets, and lifecycles. They appear in the entity directory, can delegate tasks to each other and to humans, and participate in negotiation handshakes. They reason about *what* needs to happen and *who* should do it.
+
+**Sub-agents** (coder, researcher, tester) are focused workers spawned within an orchestrator's conversation. They share the parent's token budget, run in the parent's context boundary, and return results directly. They don't appear in the directory, don't receive delegated tasks, and don't participate in handshakes. They're tools the orchestrator uses, not peers it collaborates with.
+
+Cross-conversation delegation (orchestrator → orchestrator, orchestrator → human) is materially different from sub-agent spawning: separate budgets, separate lifecycles, callback signaling for completion. The collaboration system (directory, delegation, completion signaling) operates exclusively at the orchestrator tier. *Established in [`2.7-agent-collaboration.md`](2.7-agent-collaboration.md).*
+
+### Task Materialization
+
+When a task is delegated, it materializes differently based on the recipient and team policy:
+
+- **Agent recipient, internal materialization**: Task starts a conversation directly via internal signal. No external artifact. Fast, cheap, visible only in the dashboard.
+- **Agent recipient, transparent materialization**: Task creates a Linear ticket (or other external artifact) assigned to the agent. Webhook triggers the conversation. Humans see the work in their existing tools.
+- **Human recipient**: Task materializes as a Slack message, Linear ticket, email, or other channel based on the human's reachability in the directory.
+
+The delegating agent doesn't choose the delivery mechanism directly — it creates a task with a target, and the materialization layer determines delivery. Whether a team wants full ticket transparency or invisible internal handoffs is a **prompt-level policy**, not an architectural choice. This extends the denormalizer pattern from communication (reply/ask/notify → channel-specific delivery) to delegation (delegate → recipient-appropriate delivery). *Established in [`2.7-agent-collaboration.md`](2.7-agent-collaboration.md).*
+
+### Knowledge as Shared Infrastructure
+
+Agent conversations are isolated by design (context boundaries). But the knowledge agents accumulate — codebase understanding, architecture decisions, discovered constraints — should persist and be accessible across conversations. Without shared memory, agents in a delegation chain repeatedly re-discover the same things.
+
+Knowledge is classified by type (discovery, architecture decision, constraint, thought), scoped by visibility (private notepad vs shared), and governed by lifecycle policies (confidence, expiry, supersession). The classification determines storage, access, and curation — agents interact through a unified tool interface (`knowledge:store`, `knowledge:query`) regardless of backend.
+
+Private memory (agent notepad) is working memory that persists across an agent's conversation turns but isn't shared. Shared knowledge is curated entries accessible by all agents. The distinction is important: agents need scratchpad space for unstructured thinking without polluting the shared pool. Scope and permissions are user-configurable — teams choose their preferred transparency level with documented tradeoffs. *Established in [`2.7-agent-collaboration.md`](2.7-agent-collaboration.md), extending the Agent-Managed Memory expansion path.*
 
 ### Symmetric Normalization
 
@@ -252,7 +281,28 @@ Current position: keep it as a stateless LLM call for ambiguous events. Revisit 
 
 All three directions use the same primitive: create a task with a creator and an assignee. The framework handles lifecycle regardless of who's on each end.
 
-Agent → Human tasks are delivered through integration channels (Slack message, Linear issue assigned to human). The agent doesn't need to know the delivery mechanism — it creates a task for a human, and the framework handles notification via the appropriate integration.
+Task delivery adapts to the recipient through the materialization layer (see foundational principle: Task Materialization). The delegating agent doesn't need to know the delivery mechanism — it creates a task for an entity, and the infrastructure determines how to reach them.
+
+### Entity Directory
+
+For agents to delegate, they need to know who can help. The entity directory is service discovery for the agent swarm — a queryable registry of orchestrator agents and humans with declared capabilities and reachability information.
+
+- **Agents**: Seeded from definition.yaml. Capabilities declared as natural language descriptions of what the agent can do at an intent level (not tool lists). Re-seeded on deploy.
+- **Humans**: Configured via seed script or admin UI. Includes role, capabilities, and reachVia (channel type + target, e.g., Slack channel).
+
+Agents query the directory by capability ("who can implement code changes?") and receive matching entities ranked by relevance. The directory returns both agents and humans — the delegating agent chooses based on capability match, not entity type.
+
+### Negotiation Handshake
+
+Delegation is not fire-and-forget. It's a handshake that gives the delegator agency:
+
+1. Delegator creates a task with expectations (priority, estimated effort, context)
+2. Target responds: accept with estimate, reject with reason, or counter-propose
+3. Delegator decides: proceed, cancel, or try someone else
+
+This mirrors how humans collaborate — setting expectations, estimating honestly, and making informed decisions about whether to wait or pivot. The handshake protocol is a strategy that can be swapped: v1 is simple accept/reject with estimate. The interface supports richer strategies later (counter-propose, redirect, partial accept) as patterns emerge from real usage.
+
+The handshake is critical for managing token budgets and context staleness. If Agent B estimates 2 hours, Agent A knows it needs to plan accordingly — pause and wait, delegate to someone faster, or accept the timeline and move on. No magic timeouts needed.
 
 ### What This Enables
 
@@ -261,25 +311,25 @@ Agent → Human tasks are delivered through integration channels (Slack message,
 - QA agent finds a systemic quality issue and tasks product to prioritize tech debt
 - Monitoring agent detects an anomaly and tasks dev-agent to investigate, then tasks a human to verify the fix in production
 
-### Not In v2.5
+### Implementation Timeline
 
-Bidirectional assignment is a design principle, not a v2.5 deliverable. The schema supports it (polymorphic creator/assignee). The prompt guidance encourages thinking about it. But the actual agent → human flow (task notification, human completion tracking) is future work.
+Bidirectional assignment was a design principle in v2.5 — the schema supports it (polymorphic creator/assignee), and prompt guidance encourages thinking about it. v2.7 delivers the implementation: entity directory for discovery, task delegation for assignment, negotiation handshake for agency, completion signaling for feedback, and materialization for channel-adaptive delivery. See [`2.7-agent-collaboration.md`](2.7-agent-collaboration.md) Phases 72–75.
 
 ## Expansion Paths
 
 These are not planned — they're possibilities the architecture should support.
 
-### Cross-Agent Collaboration
+### Cross-Agent Collaboration → v2.7 Planned
 
-Agents aware of each other's active tasks. Product-agent can check if dev-agent is already working on something before creating a new task. Dev-agent can ask product-agent for clarification mid-task without creating a separate conversation.
+**Promoted from expansion path to active work.** Agents discover each other via the entity directory, delegate tasks with a negotiation handshake, and receive completion signals when work finishes. Collaboration happens through shared state that agents access via tools (directory, delegation, knowledge), not through a central orchestrator.
 
-The mechanism is tools that query active work (task discovery, in v2.5), not framework-level orchestration. Collaboration happens through shared state that agents access via tools, not through an orchestrator that coordinates them. *See [`2.2-spec-raw.md`](2.2-spec-raw.md) cross-agent awareness discussion.*
+The mechanism preserves agent-first principles: the agent decides when to delegate, who to delegate to, and whether to wait or pivot. Infrastructure provides the directory, materialization, and signaling. *See [`2.7-agent-collaboration.md`](2.7-agent-collaboration.md) Phases 72–75.*
 
-### Agent-Managed Memory
+### Shared Memory → v2.7 Planned
 
-Agents that learn from past task outcomes. "Last time I approached a similar issue, my first attempt failed because X — try Y instead." Requires a memory mechanism (separate from task handoffs) that persists across tasks.
+**Promoted from expansion path to active work.** Agents store classified knowledge (`knowledge:store`) and query it (`knowledge:query`). Knowledge is typed (discovery, architecture decision, constraint), scoped (private notepad vs shared), and governed by lifecycle policies (confidence, expiry). Private memory gives agents scratchpad space; shared knowledge enables context accumulation across the swarm.
 
-The natural implementation is `memory:save` and `memory:search` tools — the agent decides what to remember and when to recall, consistent with "framework provides mechanism, agent provides intelligence." Aligns with MemGPT/Letta research on agent-managed context. *See [`2.3-spec-raw.md`](2.3-spec-raw.md) Phase 3 history management discussion.*
+Extends the original "Agent-Managed Memory" concept with classification, scope permissions, and multi-backend storage abstraction. *See [`2.7-agent-collaboration.md`](2.7-agent-collaboration.md) Phase 71.*
 
 ### Cross-Session Learning
 
@@ -312,7 +362,7 @@ Requires: definition packaging format, tool dependency declaration, permission m
 
 When an agent creates a task that could be handled by multiple assignees, a matching mechanism selects the best fit based on current workload, expertise, and task characteristics.
 
-Requires: agent capability profiles, workload tracking, matching logic (could be LLM-driven).
+The entity directory (v2.7) provides the foundation: capability profiles and queryable entities. The marketplace layer adds workload awareness, preference learning, and sophisticated matching. Requires: capacity tracking, match scoring (could be LLM-driven), feedback loop from task outcomes to improve future matching.
 
 ### Dashboard to Management API
 
@@ -362,3 +412,9 @@ Requires: analysis of integration-specific action tool interfaces, workspace-lev
 | Echo filtering at integration layer only | Integrations know their own OAuth identity — filter agent-generated webhooks before they reach adapters or router. No adapter safety net (unreliable signal), no router involvement (wasteful LLM calls). | 2026-02-09 |
 | Communication tools render, denormalizer dispatches | ask() renders options as text before calling the denormalizer. The denormalizer receives plain text and dispatches — it never formats. Clean separation: tools own content, denormalizer owns routing. | 2026-02-09 |
 | defaultNotifyTarget from env config, not YAML | Agent definitions reference deployment-specific channel IDs. Env vars are the current reality; YAML-based config deferred to multi-account/multi-workspace milestone. | 2026-02-09 |
+| Orchestrators collaborate, sub-agents execute | Two tiers with different collaboration models. Orchestrators are peers (directory, delegation, handshakes). Sub-agents are internal workers (shared budget, no directory presence). Collaboration system operates at orchestrator tier only. | 2026-02-09 |
+| Task materialization as policy, not architecture | Same delegation mechanism regardless of delivery medium. Whether tasks create Linear tickets or internal signals is a prompt-level decision. Extends the denormalizer pattern from communication to delegation. | 2026-02-09 |
+| Negotiation handshake for delegation | Delegation is a handshake (accept/reject/estimate), not fire-and-forget. Gives delegators agency over wait/pivot/escalate decisions. Mirrors human collaboration patterns. Strategy is swappable. | 2026-02-09 |
+| Entity directory seeded from YAML, queryable in DB | Agent definitions remain YAML (source of truth). Directory table in DB enables capability-based queries at runtime. Humans configured alongside agents. Same seed pattern as MCP permissions. | 2026-02-09 |
+| Knowledge classified by type, scoped by visibility | Private notepad for unstructured agent thinking. Shared knowledge for team-wide facts. Classification determines storage, access, and lifecycle. User-configurable scope policies. | 2026-02-09 |
+| `knowledge:` namespace, not `memory:` | Distinguishes shared knowledge (persists across agents, classified, curated) from private working memory (agent notepad). Avoids confusion with conversation history or history compaction. | 2026-02-09 |
