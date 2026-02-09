@@ -42,7 +42,7 @@ Requirements for symmetric outbound normalization. Each maps to roadmap phases.
 - [ ] **OUTB-06**: Linear denormalizer renders ask() options as text instructions in comment body
 - [ ] **OUTB-07**: GitHub denormalizer renders ask() options as text instructions in PR comment body
 - [ ] **OUTB-08**: Denormalizer returns clear error with guidance when replyContext is invalid or malformed
-- [ ] **OUTB-09**: When communication:reply or communication:ask is called without replyContext, denormalizer falls back to conversation-level replyContext or agent's defaultNotifyTarget
+- [ ] **OUTB-09**: communication:reply and communication:ask require replyContext in their Zod schemas (validation error if missing). No fallback chain — agents without replyContext use communication:notify with an explicit target instead.
 
 ### Communication Tools
 
@@ -67,6 +67,7 @@ Requirements for symmetric outbound normalization. Each maps to roadmap phases.
 - [ ] **MIGR-04**: product-agent prompt.md rewritten for domain-language communication following PROMPT_GUIDE.md
 - [ ] **MIGR-05**: Prompt changes use constitutional constraints and few-shot examples (no procedural tool sequences)
 - [ ] **MIGR-06**: Prompt changes explain replyContext pass-through as opaque context, not channel-specific instructions
+- [ ] **MIGR-07**: Agent echo filtering prevents agent-authored Linear comments from re-entering the inbound pipeline as new events (prerequisite for agents using communication:reply on Linear)
 
 ### Testing & Validation
 
@@ -148,14 +149,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MIGR-04 | Phase 65 | Pending |
 | MIGR-05 | Phase 65 | Pending |
 | MIGR-06 | Phase 65 | Pending |
+| MIGR-07 | Phase 65 | Pending |
 | TEST-01 | Phase 66 | Pending |
 | TEST-02 | Phase 66 | Pending |
 | TEST-03 | Phase 66 | Pending |
 | TEST-04 | Phase 66 | Pending |
 
 **Coverage:**
-- v2.6 requirements: 44 total (1 dropped, 2 moved to later phases)
-- Mapped to phases: 44
+- v2.6 requirements: 45 total (1 dropped, 2 moved to later phases)
+- Mapped to phases: 45
 - Unmapped: 0
 
 ---

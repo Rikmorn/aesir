@@ -74,31 +74,28 @@ Plans:
   5. When replyContext is malformed, the denormalizer returns a clear error with guidance. reply() and ask() require replyContext in their Zod schemas — missing replyContext is a validation error, not a fallback scenario. Agents without replyContext should use notify() with an explicit target.
 **Plans:** 2 plans (absorbs Phase 64 scope per CONTEXT.md decisions)
 Plans:
-- [ ] 63-01-PLAN.md -- Denormalizer function + types (CommunicationToolDeps update, denormalize() dispatch, TDD tests)
-- [ ] 63-02-PLAN.md -- Communication tools + registration (reply/ask/notify factories, communicationAdapter, tool-factories.ts 36->39, tests)
+- [x] 63-01-PLAN.md -- Denormalizer function + types (CommunicationToolDeps update, denormalize() dispatch, TDD tests)
+- [x] 63-02-PLAN.md -- Communication tools + registration (reply/ask/notify factories, communicationAdapter, tool-factories.ts 36->39, tests)
 
-### Phase 64: Communication Tools
+### Phase 64: Communication Tools (Absorbed into Phase 63)
 
 **Goal**: Three communication tool factories (reply, ask, notify) are registered and available to agents, providing domain-language abstractions over the outbound denormalizer
 **Depends on**: Phase 63 (denormalizer must exist)
 **Requirements**: COMM-01, COMM-02, COMM-03, COMM-04, COMM-05
-**Success Criteria** (what must be TRUE):
-  1. An agent can call communication:reply with a message and replyContext, and the response is delivered to the originating channel without the agent knowing which channel it is
-  2. An agent can call communication:ask with a question and structured options, and the rendering adapts to the channel (buttons on Slack, text instructions on Linear/GitHub)
-  3. An agent can call communication:notify with a message and explicit target, and the message is broadcast to the specified channel
-  4. All three tools are registered under the communication namespace in tool-factories.ts and resolve correctly through the ToolRegistry
-**Plans:** TBD
+**Note**: Scope absorbed into Phase 63 plan 63-02 per CONTEXT.md decisions. All success criteria met by Phase 63 execution.
+**Plans:** Absorbed into 63-02
 
 ### Phase 65: Agent Migration
 
 **Goal**: Agents communicate using domain-language primitives instead of channel-specific tools, reasoning about intent while infrastructure handles channel translation
-**Depends on**: Phase 64 (communication tools must exist), Phase 61 (replyContext must flow through signals)
-**Requirements**: MIGR-01, MIGR-02, MIGR-03, MIGR-04, MIGR-05, MIGR-06
+**Depends on**: Phase 63 (communication tools must exist), Phase 61 (replyContext must flow through signals)
+**Requirements**: MIGR-01, MIGR-02, MIGR-03, MIGR-04, MIGR-05, MIGR-06, MIGR-07
 **Success Criteria** (what must be TRUE):
   1. Dev-agent and product-agent definition.yaml files list communication:reply, communication:ask, and communication:notify instead of slack:send_message and slack:send_approval_request
   2. Agent prompts describe communication in domain terms (reply to the user, ask for input, notify a channel) without referencing Slack, Linear, or GitHub channel specifics
   3. Prompt changes follow PROMPT_GUIDE.md: constitutional constraints for communication boundaries, few-shot examples showing reply/ask/notify usage with reasoning, no procedural tool sequences
   4. Prompts explain replyContext as opaque context to pass through (not something the agent should inspect or modify), with guidance that the infrastructure determines the delivery channel
+  5. Agent-authored Linear comments do not trigger echo loops — the router or adapter filters out comments created by agents before they re-enter the inbound pipeline
 **Plans:** TBD
 
 ### Phase 66: Testing & Validation
@@ -130,8 +127,8 @@ Phase 60 (Types + MCP) ──┬──> Phase 61 (Inbound) ──> Phase 62 (Rou
 | 60. Types & MCP Foundation | v2.6 | 9 | 3/3 | Complete | 2026-02-08 |
 | 61. Inbound Pipeline | v2.6 | 7 | 3/3 | Complete | 2026-02-08 |
 | 62. Router Updates | v2.6 | 4 | 3/3 | Complete | 2026-02-08 |
-| 63. Outbound Denormalizer | v2.6 | 9 | 0/2 | Not started | - |
-| 64. Communication Tools | v2.6 | 5 | 0/TBD | Not started | - |
+| 63. Outbound Denormalizer | v2.6 | 9 | 2/2 | Complete | 2026-02-09 |
+| 64. Communication Tools | v2.6 | 5 | N/A | Absorbed into 63 | 2026-02-09 |
 | 65. Agent Migration | v2.6 | 6 | 0/TBD | Not started | - |
 | 66. Testing & Validation | v2.6 | 4 | 0/TBD | Not started | - |
 
