@@ -64,30 +64,6 @@ export const ReplyContextSchema = z.discriminatedUnion("channel", [
 
 export type ReplyContext = z.infer<typeof ReplyContextSchema>;
 
-// ─── MessageContent ──────────────────────────────────────────────────────────
-
-/**
- * Interactive option for ask-style messages (approval buttons, choices).
- */
-export const MessageOptionSchema = z.object({
-  label: z.string(),
-  value: z.string(),
-  style: z.enum(["primary", "danger"]).optional(),
-});
-
-/**
- * MessageContent -- the payload an agent sends through the communication layer.
- *
- * text: markdown body of the message
- * options: optional interactive options for ask-style messages (approval buttons, etc.)
- */
-export const MessageContentSchema = z.object({
-  text: z.string(),
-  options: z.array(MessageOptionSchema).optional(),
-});
-
-export type MessageContent = z.infer<typeof MessageContentSchema>;
-
 // ─── CommunicationToolDeps ───────────────────────────────────────────────────
 
 /**
