@@ -28,8 +28,9 @@ tools:
   - github:create_commit
   - github:create_pull_request
   - github:get_pull_request
-  - slack:send_message
-  - slack:send_approval_request
+  - communication:reply
+  - communication:ask
+  - communication:notify
 
 subAgents:
   researcher: researcher
