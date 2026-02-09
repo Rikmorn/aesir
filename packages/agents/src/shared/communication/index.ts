@@ -1,3 +1,4 @@
+export { type DenormalizeParams, denormalize } from "./denormalizer.js";
 export { appendReplyContextTag } from "./message-utils.js";
 export {
   type CommunicationToolDeps,

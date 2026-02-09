@@ -6,6 +6,7 @@
  * denormalizer, and communication tools across phases 61-64.
  */
 
+import type { PinoLogger } from "@aesir/platform";
 import { z } from "zod";
 
 // ─── ReplyContext ────────────────────────────────────────────────────────────
@@ -97,6 +98,5 @@ export interface CommunicationToolDeps {
   agentId: string;
   correlationId: string;
   taskId?: string;
-  /** Conversation ID for reply_context column fallback lookup */
-  conversationId?: string;
+  logger: PinoLogger;
 }
