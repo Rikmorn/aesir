@@ -112,8 +112,10 @@ Plans:
   1. Denormalizer unit tests verify the correct MCP tool is called for each combination of channel (slack, linear, github) and action type (reply, ask, notify), with at least 9 test cases covering the matrix
   2. A propagation test verifies that replyContext flows from adapter through signal delivery to conversation row, with the agent receiving the context in its resumed message
   3. Communication tool tests verify Zod input validation rejects malformed input, and valid input delegates correctly to the denormalizer
-  4. An ask-with-options test verifies capability asymmetry: Slack receives interactive buttons (send_approval_request), while Linear and GitHub receive text-rendered options in comment bodies
-**Plans:** TBD
+  4. An ask-with-options test verifies that ask() with options renders text-formatted options consistently across all three channels -- the denormalizer receives the same pre-rendered text regardless of channel
+**Plans:** 1 plan
+Plans:
+- [ ] 66-01-PLAN.md -- Audit coverage, correct TEST-04 criterion, gap-fill worker-loop replyContext test
 
 ## Progress
 
