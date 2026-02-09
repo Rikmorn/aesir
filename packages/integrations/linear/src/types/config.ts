@@ -37,6 +37,11 @@ export const linearEnvSchema = z.object({
   LINEAR_WEBHOOK_SECRET: z.string().min(1, "LINEAR_WEBHOOK_SECRET is required"),
   LINEAR_OAUTH_CALLBACK_URL: z.string().url().optional(),
 
+  // Echo filter: Linear user ID of the OAuth bot account
+  // Used to drop self-authored comment webhooks (prevents echo loops)
+  // Find at: Linear → Settings → Account → Copy your user ID
+  LINEAR_BOT_USER_ID: z.string().optional(),
+
   // Database
   DB_HOST: z.string().default("localhost"),
   DB_PORT: z.coerce.number().default(5432),
@@ -99,6 +104,7 @@ function buildConfig(e: LinearEnv) {
       clientSecret: e.LINEAR_CLIENT_SECRET,
       webhookSecret: e.LINEAR_WEBHOOK_SECRET,
       oauthCallbackUrl: e.LINEAR_OAUTH_CALLBACK_URL,
+      botUserId: e.LINEAR_BOT_USER_ID,
     },
     database: {
       host: e.DB_HOST,

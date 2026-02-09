@@ -136,6 +136,26 @@ export function createWebhookRouter(deps: WebhookRouterDeps): Router {
           return;
         }
 
+        // Echo filter: drop self-authored comments to prevent infinite loops
+        const botUserId = config.linear.botUserId;
+        if (botUserId) {
+          if (commentPayload.data.userId === botUserId) {
+            childLogger.info(
+              {
+                commentId: commentPayload.data.id,
+                userId: commentPayload.data.userId,
+              },
+              "Ignoring self-authored comment (echo filter)",
+            );
+            res.status(200).json({ received: true });
+            return;
+          }
+        } else {
+          childLogger.debug(
+            "LINEAR_BOT_USER_ID not configured, echo filter disabled",
+          );
+        }
+
         // Normalize and dispatch comment event
         const normalizedEvent = normalizeCommentCreatedEvent(
           commentPayload,
