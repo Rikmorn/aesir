@@ -65,13 +65,17 @@ Plans:
 **Goal**: A denormalizer function translates domain-language communication actions into the correct integration MCP tool calls based on replyContext channel type
 **Depends on**: Phase 60 (types + MCP tools must exist)
 **Requirements**: OUTB-01, OUTB-02, OUTB-03, OUTB-04, OUTB-05, OUTB-06, OUTB-07, OUTB-08, OUTB-09
+
 **Success Criteria** (what must be TRUE):
   1. Calling the denormalizer with a Slack replyContext and a reply action invokes slack:reply_to_thread via MCP, and an ask action with options invokes slack:send_approval_request with interactive buttons
   2. Calling the denormalizer with a Linear replyContext invokes linear:create_comment via MCP for all action types (reply, ask, notify)
   3. Calling the denormalizer with a GitHub replyContext invokes github:create_pr_comment via MCP for all action types
   4. When ask() includes options, Slack renders interactive buttons while Linear and GitHub render options as text instructions in the comment body
-  5. When replyContext is missing or malformed, the denormalizer returns a clear error with guidance, and falls back to conversation-level replyContext or defaultNotifyTarget when available
-**Plans:** TBD
+  5. When replyContext is malformed, the denormalizer returns a clear error with guidance. reply() and ask() require replyContext in their Zod schemas — missing replyContext is a validation error, not a fallback scenario. Agents without replyContext should use notify() with an explicit target.
+**Plans:** 2 plans (absorbs Phase 64 scope per CONTEXT.md decisions)
+Plans:
+- [ ] 63-01-PLAN.md -- Denormalizer function + types (CommunicationToolDeps update, denormalize() dispatch, TDD tests)
+- [ ] 63-02-PLAN.md -- Communication tools + registration (reply/ask/notify factories, communicationAdapter, tool-factories.ts 36->39, tests)
 
 ### Phase 64: Communication Tools
 
@@ -126,7 +130,7 @@ Phase 60 (Types + MCP) ──┬──> Phase 61 (Inbound) ──> Phase 62 (Rou
 | 60. Types & MCP Foundation | v2.6 | 9 | 3/3 | Complete | 2026-02-08 |
 | 61. Inbound Pipeline | v2.6 | 7 | 3/3 | Complete | 2026-02-08 |
 | 62. Router Updates | v2.6 | 4 | 3/3 | Complete | 2026-02-08 |
-| 63. Outbound Denormalizer | v2.6 | 9 | 0/TBD | Not started | - |
+| 63. Outbound Denormalizer | v2.6 | 9 | 0/2 | Not started | - |
 | 64. Communication Tools | v2.6 | 5 | 0/TBD | Not started | - |
 | 65. Agent Migration | v2.6 | 6 | 0/TBD | Not started | - |
 | 66. Testing & Validation | v2.6 | 4 | 0/TBD | Not started | - |
