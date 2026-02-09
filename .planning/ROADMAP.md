@@ -1,144 +1,89 @@
-# Milestone v2.6: Unified Agent Communication
+# Roadmap: Aesir
 
-**Status:** In progress
-**Phases:** 60-66
-**Total Plans:** TBD
+## Milestones
 
-## Overview
+- v1 MVP — Phases 1-9 (shipped 2026-01-19)
+- v2.0 Foundation — Phases 10-22 (shipped 2026-01-25)
+- v2.1 Agents That Ship — Phases 23-27 (shipped 2026-01-28)
+- v2.2 Agentic Architecture — Phases 28-36 (shipped 2026-01-31)
+- v2.3 Unified Agent Framework — Phases 37-47 (shipped 2026-02-04)
+- v2.4 Operations Dashboard — Phases 48-55 (shipped 2026-02-05)
+- v2.5 Agentic Conversations — Phases 56-59 (shipped 2026-02-08)
+- v2.6 Unified Agent Communication — Phases 60-66 (shipped 2026-02-09)
 
-v2.6 replaces channel-specific outbound tools with domain-language communication primitives, enabling agents to reason about intent while infrastructure handles channel translation. Seven delivery boundaries: define all types and expose missing MCP tools (Phase 60), thread replyContext through the inbound pipeline from adapters to agent messages (Phase 61), update the router to propagate replyContext and handle Linear comment routing (Phase 62), build the outbound denormalizer that dispatches to integration MCP endpoints based on channel (Phase 63), register three communication tool factories (Phase 64), migrate agent definitions and prompts to domain-language communication (Phase 65), then validate end-to-end round-trips across all channels (Phase 66). Phases 61-62 (inbound) and 63-64 (outbound) are parallelizable once Phase 60 completes; Phase 65 depends on both tracks; Phase 66 depends on everything.
+## Completed Phases
 
-## Phases
+<details>
+<summary>v1 MVP (Phases 1-9) — SHIPPED 2026-01-19</summary>
 
-### Phase 60: Types & MCP Foundation
+See `.planning/milestones/v1-ROADMAP.md` for full details.
 
-**Goal**: All type definitions and missing integration MCP tools exist, unblocking both the inbound pipeline and outbound denormalizer
-**Depends on**: Nothing (first phase)
-**Requirements**: TYPE-01, TYPE-03, TYPE-04, MCP-01, MCP-02, MCP-03
-**Success Criteria** (what must be TRUE):
-  1. A ReplyContext Zod discriminated union validates slack, linear, and github channel variants at runtime, and TypeScript infers the correct variant fields after narrowing on the channel discriminator
-  2. The conversations table has a reply_context JSONB column (nullable, no default). Executor wiring to populate it happens in Phase 61 when signal delivery gets replyContext support
-  3. Calling `POST /mcp/tools/create_comment` on the Linear integration (port 3001) with an issueId and body successfully creates a comment on the Linear issue
-  4. Calling `POST /mcp/tools/create_pr_comment` on the GitHub integration (port 3002) with owner, repo, prNumber, and body successfully creates a comment on the GitHub PR
-  5. MCP permissions seeded: create_comment for dev-agent and product-agent, create_pr_comment for dev-agent only
-**Plans:** 3 plans
-Plans:
-- [x] 60-01-PLAN.md -- Communication types (ReplyContext, MessageContent) + reply_context DB migration
-- [x] 60-02-PLAN.md -- Integration-side MCP tools (Linear create_comment SDK server fix + GitHub create_pr_comment full stack)
-- [x] 60-03-PLAN.md -- Agent-side wiring (tool wrappers, ToolRegistry registration, permission seeding)
+</details>
 
-### Phase 61: Inbound Pipeline
+<details>
+<summary>v2.0 Foundation (Phases 10-22) — SHIPPED 2026-01-25</summary>
 
-**Goal**: Every inbound event carries replyContext from its originating channel, and signal delivery includes replyContext in both the conversation row and the agent's message context
-**Depends on**: Phase 60 (ReplyContext type must exist)
-**Requirements**: INBD-01, INBD-02, INBD-03, INBD-04, INBD-05, INBD-06, INBD-07
-**Success Criteria** (what must be TRUE):
-  1. A Slack thread reply event produces an IncomingEvent with replyContext containing teamId, channelId, and threadTs extracted from the webhook payload
-  2. A Linear issue comment event produces an IncomingEvent with replyContext containing the issueId
-  3. A GitHub PR review event produces an IncomingEvent with replyContext containing owner, repo, and prNumber
-  4. When a signal with replyContext is delivered to a conversation, the conversation row's reply_context column is updated with the new replyContext value
-  5. The agent's resumed message includes a structured `<reply_context>` tag containing the replyContext JSON, enabling the agent to pass it through to communication tools
-**Plans:** 3 plans
-Plans:
-- [x] 61-01-PLAN.md -- Schema extensions (IncomingEvent, Signal, StartConversationParams) + appendReplyContextTag helper
-- [x] 61-02-PLAN.md -- Adapter replyContext extraction (Slack, Linear, GitHub)
-- [x] 61-03-PLAN.md -- Executor, worker loop, EventRouter, and task routing replyContext wiring
+See `.planning/milestones/v2.0-ROADMAP.md` for full details.
 
-### Phase 62: Router Updates
+</details>
 
-**Goal**: The router propagates replyContext from incoming events through signal delivery, and handles Linear comments as a routing path equivalent to Slack thread replies
-**Depends on**: Phase 61 (IncomingEventSchema and SignalSchema must have replyContext fields)
-**Requirements**: ROUT-01, ROUT-02, ROUT-03, ROUT-04
-**Success Criteria** (what must be TRUE):
-  1. The router's signal_conversation tool accepts an optional replyContext field, and when called with replyContext, the delivered signal includes it
-  2. When the router receives an event with replyContext, it forwards that replyContext in every signal_conversation call it makes for that event
-  3. The router correctly handles Linear issue comments by querying conversation status and reopening completed conversations when follow-up comments arrive
-  4. Fast-path routes (start and signal) propagate replyContext from the incoming event to the executor without requiring LLM involvement
-**Plans:** 3 plans
-Plans:
-- [x] 62-01-PLAN.md -- Tool schema changes + deps wiring (replyContext on signal_conversation/start_conversation, eventReplyContext threading)
-- [x] 62-02-PLAN.md -- Router prompt rewrite (channel-agnostic follow_up_routing, generalized intent classification)
-- [x] 62-03-PLAN.md -- Tests (tool replyContext auto-injection/override, slow-path deps threading)
+<details>
+<summary>v2.1 Agents That Ship (Phases 23-27) — SHIPPED 2026-01-28</summary>
 
-### Phase 63: Outbound Denormalizer
+See `.planning/milestones/v2.1-ROADMAP.md` for full details.
 
-**Goal**: A denormalizer function translates domain-language communication actions into the correct integration MCP tool calls based on replyContext channel type
-**Depends on**: Phase 60 (types + MCP tools must exist)
-**Requirements**: OUTB-01, OUTB-02, OUTB-03, OUTB-04, OUTB-05, OUTB-06, OUTB-07, OUTB-08, OUTB-09
+</details>
 
-**Success Criteria** (what must be TRUE):
-  1. Calling the denormalizer with a Slack replyContext and a reply action invokes slack:reply_to_thread via MCP, and an ask action with options invokes slack:send_approval_request with interactive buttons
-  2. Calling the denormalizer with a Linear replyContext invokes linear:create_comment via MCP for all action types (reply, ask, notify)
-  3. Calling the denormalizer with a GitHub replyContext invokes github:create_pr_comment via MCP for all action types
-  4. When ask() includes options, Slack renders interactive buttons while Linear and GitHub render options as text instructions in the comment body
-  5. When replyContext is malformed, the denormalizer returns a clear error with guidance. reply() and ask() require replyContext in their Zod schemas — missing replyContext is a validation error, not a fallback scenario. Agents without replyContext should use notify() with an explicit target.
-**Plans:** 2 plans (absorbs Phase 64 scope per CONTEXT.md decisions)
-Plans:
-- [x] 63-01-PLAN.md -- Denormalizer function + types (CommunicationToolDeps update, denormalize() dispatch, TDD tests)
-- [x] 63-02-PLAN.md -- Communication tools + registration (reply/ask/notify factories, communicationAdapter, tool-factories.ts 36->39, tests)
+<details>
+<summary>v2.2 Agentic Architecture (Phases 28-36) — SHIPPED 2026-01-31</summary>
 
-### Phase 64: Communication Tools (Absorbed into Phase 63)
+See `.planning/milestones/v2.2-ROADMAP.md` for full details.
 
-**Goal**: Three communication tool factories (reply, ask, notify) are registered and available to agents, providing domain-language abstractions over the outbound denormalizer
-**Depends on**: Phase 63 (denormalizer must exist)
-**Requirements**: COMM-01, COMM-02, COMM-03, COMM-04, COMM-05
-**Note**: Scope absorbed into Phase 63 plan 63-02 per CONTEXT.md decisions. All success criteria met by Phase 63 execution.
-**Plans:** Absorbed into 63-02
+</details>
 
-### Phase 65: Agent Migration
+<details>
+<summary>v2.3 Unified Agent Framework (Phases 37-47) — SHIPPED 2026-02-04</summary>
 
-**Goal**: Agents communicate using domain-language primitives instead of channel-specific tools, reasoning about intent while infrastructure handles channel translation
-**Depends on**: Phase 63 (communication tools must exist), Phase 61 (replyContext must flow through signals)
-**Requirements**: MIGR-01, MIGR-02, MIGR-03, MIGR-04, MIGR-05, MIGR-06, MIGR-07
-**Success Criteria** (what must be TRUE):
-  1. Dev-agent and product-agent definition.yaml files list communication:reply, communication:ask, and communication:notify instead of slack:send_message and slack:send_approval_request
-  2. Agent prompts describe communication in domain terms (reply to the user, ask for input, notify a channel) without referencing Slack, Linear, or GitHub channel specifics
-  3. Prompt changes follow PROMPT_GUIDE.md: constitutional constraints for communication boundaries, few-shot examples showing reply/ask/notify usage with reasoning, no procedural tool sequences
-  4. Prompts explain replyContext as opaque context to pass through (not something the agent should inspect or modify), with guidance that the infrastructure determines the delivery channel
-  5. Agent-authored Linear comments do not trigger echo loops — the router or adapter filters out comments created by agents before they re-enter the inbound pipeline
-**Plans:** 4 plans
-Plans:
-- [x] 65-01-PLAN.md -- Echo loop prevention (Linear comment webhook echo filter + Slack/GitHub verification)
-- [x] 65-02-PLAN.md -- Env config + enrichment (SLACK_TEAM_ID, defaultNotifyTarget injection, slack_context removal)
-- [x] 65-03-PLAN.md -- Dev-agent migration (definition.yaml tool swap + prompt.md domain-language rewrite)
-- [x] 65-04-PLAN.md -- Product-agent migration (definition.yaml tool swap + prompt.md domain-language rewrite)
+See `.planning/milestones/v2.3-ROADMAP.md` for full details.
 
-### Phase 66: Testing & Validation
+</details>
 
-**Goal**: End-to-end round-trip communication works correctly across all channels, with observable test coverage for the full pipeline from inbound event to outbound delivery
-**Depends on**: All previous phases (60-65)
-**Requirements**: TEST-01, TEST-02, TEST-03, TEST-04
-**Success Criteria** (what must be TRUE):
-  1. Denormalizer unit tests verify the correct MCP tool is called for each combination of channel (slack, linear, github) and action type (reply, ask, notify), with at least 9 test cases covering the matrix
-  2. A propagation test verifies that replyContext flows from adapter through signal delivery to conversation row, with the agent receiving the context in its resumed message
-  3. Communication tool tests verify Zod input validation rejects malformed input, and valid input delegates correctly to the denormalizer
-  4. An ask-with-options test verifies that ask() with options renders text-formatted options consistently across all three channels -- the denormalizer receives the same pre-rendered text regardless of channel
-**Plans:** 1 plan
-Plans:
-- [x] 66-01-PLAN.md -- Audit coverage, correct TEST-04 criterion, gap-fill worker-loop replyContext test
+<details>
+<summary>v2.4 Operations Dashboard (Phases 48-55) — SHIPPED 2026-02-05</summary>
+
+See `.planning/milestones/v2.4-ROADMAP.md` for full details.
+
+</details>
+
+<details>
+<summary>v2.5 Agentic Conversations (Phases 56-59) — SHIPPED 2026-02-08</summary>
+
+See `.planning/milestones/v2.5-ROADMAP.md` for full details.
+
+</details>
+
+<details>
+<summary>v2.6 Unified Agent Communication (Phases 60-66) — SHIPPED 2026-02-09</summary>
+
+See `.planning/milestones/v2.6-ROADMAP.md` for full details.
+
+</details>
 
 ## Progress
 
-**Execution Order:**
-Phase 60 first. Then two parallel tracks: inbound (61 -> 62) and outbound (63 -> 64). Phase 65 after both tracks complete. Phase 66 last.
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1-9 | v1 | 34 | Complete | 2026-01-19 |
+| 10-22 | v2.0 | 104 | Complete | 2026-01-25 |
+| 23-27 | v2.1 | 46 | Complete | 2026-01-28 |
+| 28-36 | v2.2 | 30 | Complete | 2026-01-31 |
+| 37-47 | v2.3 | 32 | Complete | 2026-02-04 |
+| 48-55 | v2.4 | 22 | Complete | 2026-02-05 |
+| 56-59 | v2.5 | 17 | Complete | 2026-02-08 |
+| 60-66 | v2.6 | 16 | Complete | 2026-02-09 |
 
-**Dependency Graph:**
-```
-Phase 60 (Types + MCP) ──┬──> Phase 61 (Inbound) ──> Phase 62 (Router) ──┐
-                          │                                                 ├──> Phase 65 (Migration) ──> Phase 66 (Testing)
-                          └──> Phase 63 (Denormalizer) ──> Phase 64 (Tools) ┘
-```
-
-| Phase | Milestone | Reqs | Plans Complete | Status | Completed |
-|-------|-----------|:----:|----------------|--------|-----------|
-| 60. Types & MCP Foundation | v2.6 | 9 | 3/3 | Complete | 2026-02-08 |
-| 61. Inbound Pipeline | v2.6 | 7 | 3/3 | Complete | 2026-02-08 |
-| 62. Router Updates | v2.6 | 4 | 3/3 | Complete | 2026-02-08 |
-| 63. Outbound Denormalizer | v2.6 | 9 | 2/2 | Complete | 2026-02-09 |
-| 64. Communication Tools | v2.6 | 5 | N/A | Absorbed into 63 | 2026-02-09 |
-| 65. Agent Migration | v2.6 | 6 | 4/4 | Complete | 2026-02-09 |
-| 66. Testing & Validation | v2.6 | 4 | 1/1 | Complete | 2026-02-09 |
+**Total: 8 milestones, 69 phases, 301 plans**
 
 ---
 
-_Created: 2026-02-08_
+_Last updated: 2026-02-09_

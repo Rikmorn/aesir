@@ -1,5 +1,33 @@
 # Project Milestones: Aesir
 
+## v2.6 Unified Agent Communication (Shipped: 2026-02-09)
+
+**Delivered:** Domain-language communication primitives (reply/ask/notify) replacing channel-specific outbound tools, with full inbound replyContext propagation and outbound denormalization so agents reason about intent while infrastructure handles channel translation
+
+**Phases completed:** 60-66 (7 phases, 16 plans total; Phase 64 absorbed into 63)
+
+**Key accomplishments:**
+- ReplyContext discriminated union with Slack/Linear/GitHub variants threaded through the entire inbound pipeline: adapters extract channel context, signals carry it, executor persists it, agents receive it via XML tags
+- Outbound denormalizer dispatches domain actions to the correct integration MCP tool based on replyContext channel type (Slack reply_to_thread, Linear create_comment, GitHub create_pr_comment)
+- Three communication tool factories (communication:reply, communication:ask, communication:notify) registered in ToolRegistry, providing channel-agnostic abstractions over MCP
+- New MCP tools: linear:create_comment exposed in SDK server, github:create_pr_comment full-stack implementation
+- Router prompt rewritten for channel-agnostic follow-up routing with generalized intent classification and replyContext auto-injection
+- Agent migration: dev-agent and product-agent definitions and prompts rewritten for domain-language communication with constitutional constraints, few-shot examples, and replyContext pass-through
+- Echo loop prevention: Linear comment webhook filter drops agent-authored comments, verified Slack/GitHub already safe
+- 69 communication pipeline tests across denormalizer (9), communication tools (9), and worker-loop (51)
+
+**Stats:**
+- 111 files created/modified (+11,173 / -222 lines)
+- ~74,000 lines of TypeScript total
+- 7 phases, 16 plans, 45 requirements (42 satisfied, 1 dropped, 2 moved)
+- 75 commits over 2 days (2026-02-08 → 2026-02-09)
+
+**Git range:** `356fe97` → `be160ed`
+
+**What's next:** Format translation (markdown-to-mrkdwn), stale task cleanup, prompt evaluation tooling, dashboard tasks view, CI/CD pipeline
+
+---
+
 ## v2.5 Agentic Conversations (Shipped: 2026-02-08)
 
 **Delivered:** Multi-conversation continuity through a task primitive that groups conversations with structured handoffs, conversation reopening for follow-up events, and goal-oriented prompt rewrites replacing procedural state machines
@@ -188,3 +216,13 @@
 **What's next:** Production deployment, multi-LLM support, agent-to-agent review loops
 
 ---
+
+## v2.6 Unified Agent Communication (Shipped: 2026-02-09)
+
+**Phases completed:** 78 phases, 300 plans, 52 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
+

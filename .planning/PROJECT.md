@@ -8,26 +8,15 @@ An agentic development platform that automates software development workflows --
 
 End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-## Current Milestone: v2.6 Unified Agent Communication
-
-**Goal:** Replace channel-specific outbound tools with domain-language communication primitives, propagate replyContext from inbound normalizers through the signal pipeline, and build an outbound denormalizer so agents reason about intent while infrastructure handles channel translation.
-
-**Target features:**
-- ReplyContext types and inbound normalizer extension (attach replyContext to all adapters)
-- Signal pipeline propagation (replyContext in signals → structured user messages with `<reply_context>` tags)
-- Outbound denormalizer with Slack, Linear, GitHub dispatchers
-- Unified communication tools: `communication:reply`, `communication:ask`, `communication:notify`
-- Missing MCP tools: expose `linear:create_comment`, add `github:create_pr_comment`
-- Agent definition and prompt updates (domain-language communication, remove channel-specific outbound tools)
-- Router prompt updates (Linear comment routing, replyContext in signals)
+## Current Milestone: Planning next milestone
 
 ## Current State
 
-**Version:** v2.5 Agentic Conversations shipped (2026-02-08)
+**Version:** v2.6 Unified Agent Communication shipped (2026-02-09)
 
 **Tech Stack:**
 - TypeScript/Node.js monorepo (pnpm workspaces)
-- ~88,000 lines across 8 packages
+- ~74,000 lines across 8 packages
 - @anthropic-ai/sdk for agentic tool-use loops
 - Postgres-backed ConversationExecutor with SKIP LOCKED claiming (no Temporal)
 - Declarative agent definitions (YAML + prompt.md) with AgentRegistry + ToolRegistry
@@ -59,7 +48,7 @@ Agent definitions (YAML + prompt.md, constitutional + few-shot style)
 - Agentic tool-use loops: agents reason about what to do via @anthropic-ai/sdk native tool-use
 - Dev agent orchestrator with sub-agents (researcher, coder, tester) via spawn_agent tool
 - Product agent adapts conversation strategy based on input clarity
-- 34 tool factories in namespace:tool_name registry with ToolContext injection (including 6 task tools)
+- 39 tool factories in namespace:tool_name registry with ToolContext injection (including 6 task tools, 3 communication tools)
 - Task primitive: multi-conversation continuity with structured handoffs, hierarchy guardrails (depth 5, subtask 10, circular delegation prevention)
 - Bidirectional task correlation across all integrations (X-Task-ID header, task_correlations tables)
 - Task-aware event routing with advisory lock serialization and automatic context enrichment
@@ -74,6 +63,9 @@ Agent definitions (YAML + prompt.md, constitutional + few-shot style)
 - Graceful shutdown with conversation draining
 - Real-time operations dashboard: conversations, agents, tools, system overview with SSE live updates
 - Dashboard features: dark mode, sidebar navigation, permission matrix, inline LLM content, URL-persisted state, reopen/retry actions
+- Domain-language communication: agents use reply/ask/notify instead of channel-specific tools, infrastructure denormalizes to Slack/Linear/GitHub
+- ReplyContext propagation: inbound adapters extract channel context, signals carry it, agents receive opaque context to pass through
+- Echo loop prevention: agent-authored comments filtered at adapter level before re-entering inbound pipeline
 
 ## Requirements
 
@@ -152,21 +144,18 @@ Agent definitions (YAML + prompt.md, constitutional + few-shot style)
 - ✓ Task-aware event routing: task-based routing priority with advisory lock serialization, backward compatible — v2.5
 - ✓ Prompt evolution: all agent prompts leverage task lifecycle, handoff examples, graceful degradation — v2.5
 
-### Active
+**v2.6 Unified Agent Communication (shipped 2026-02-09):**
+- ✓ ReplyContext discriminated union (Slack/Linear/GitHub variants) with inbound adapter extraction — v2.6
+- ✓ Signal pipeline propagation: replyContext in schemas, XML tags in agent messages — v2.6
+- ✓ Outbound denormalizer: channel-based dispatch to Slack/Linear/GitHub MCP tools — v2.6
+- ✓ Communication tools: reply, ask, notify with Zod validation and denormalizer delegation — v2.6
+- ✓ MCP tools: linear:create_comment exposed, github:create_pr_comment implemented — v2.6
+- ✓ Agent migration: dev-agent and product-agent on domain-language communication — v2.6
+- ✓ Router updates: channel-agnostic follow-up routing, replyContext auto-injection — v2.6
+- ✓ Echo loop prevention: Linear comment webhook filter — v2.6
+- ✓ Test coverage: 69 communication pipeline tests (42/45 requirements satisfied, 1 dropped, 2 moved) — v2.6
 
-**v2.6 Unified Agent Communication:**
-- [ ] ReplyContext / NotifyTarget / MessageContent type definitions
-- [ ] Inbound normalizer extension (attach replyContext to Slack, Linear, GitHub adapters)
-- [ ] Signal pipeline propagation (replyContext in SignalSchema, structured signal messages)
-- [ ] Outbound denormalizer dispatch (Slack, Linear, GitHub handlers)
-- [ ] communication:reply tool (respond on originating channel)
-- [ ] communication:ask tool (request input with interactive options)
-- [ ] communication:notify tool (broadcast to channel)
-- [ ] Expose linear:create_comment MCP tool (exists but not registered)
-- [ ] Add github:create_pr_comment MCP tool
-- [ ] Agent definition updates (swap channel-specific tools for communication:*)
-- [ ] Agent prompt updates (domain-language communication guidance)
-- [ ] Router prompt and tools updates (replyContext propagation, Linear comment routing)
+### Active
 
 **Candidates for future milestones:**
 - [ ] Stale task cleanup: timeout signal mechanism for inactive tasks (TASK-26, deferred from v2.5)
@@ -210,7 +199,7 @@ Agent definitions (YAML + prompt.md, constitutional + few-shot style)
 - Prefer well-maintained external libraries over hand-rolling
 - Agent-first problem solving: fix agent behavior via prompts and tools, not deterministic overrides
 
-**Known Tech Debt (updated after v2.5):**
+**Known Tech Debt (updated after v2.6):**
 - Dispatcher route fallback defaults reference router:3006 instead of agent-service:3004 (22 occurrences; runtime correct via docker-compose)
 - Two signal types (user_reply, cancel) defined in SIGNAL_AGENT_MAP but no adapter produces them (reserved for future)
 - schema.drizzle.ts retains legacy table definitions (intentional, prevents destructive drizzle-kit migrations)
@@ -218,6 +207,8 @@ Agent definitions (YAML + prompt.md, constitutional + few-shot style)
 - Run dev-agent container as non-root (infrastructure improvement)
 - Self-referential FK (tasks.parent_id) handled by SQL migration only, not Drizzle references() — avoids TypeScript circular reference issue
 - Prompts mention get_task_context but don't explicitly reference 4000-char truncation in injected task_context block
+- OUTB-04 in Phase 63 success criteria still mentions "interactive buttons" for Slack ask() (implementation renders text on all channels — criteria preserved as-is since it describes denormalizer dispatch capability)
+- Markdown-to-Slack-mrkdwn format translation not yet implemented (FMT-01, deferred to post-v2.6)
 
 ## Constraints
 
@@ -257,6 +248,11 @@ Agent definitions (YAML + prompt.md, constitutional + few-shot style)
 | Conversation reopening via reopen signal | Only reopen triggers terminal→queued transition, other signals still ignored | ✓ Good — safe and explicit, with world-state context injection (v2.5) |
 | Task lifecycle in domain_knowledge (not constraints) | Task creation is judgment/goal, not safety boundary | ✓ Good — soft guidance per PROMPT_GUIDE.md (v2.5) |
 | Hierarchy guardrails (depth 5, subtask 10, no circular delegation) | Prevents runaway task chains while allowing meaningful delegation | ✓ Good — fail-safe on broken chains (v2.5) |
+| ReplyContext as opaque pass-through | Agents don't inspect replyContext — infrastructure determines channel | ✓ Good — agents truly channel-agnostic (v2.6) |
+| Outbound denormalizer pattern | Single dispatch point translates domain actions to MCP calls | ✓ Good — exhaustive TypeScript switch on discriminated union (v2.6) |
+| Communication tools over direct MCP | reply/ask/notify abstractions with Zod validation | ✓ Good — 39 tools, agents use intent not channel (v2.6) |
+| Echo filter at adapter level | LINEAR_BOT_USER_ID env comparison, no API call | ✓ Good — zero per-webhook cost (v2.6) |
+| Text-rendered options on all channels | ask() pre-renders options as text, no interactive buttons | ✓ Good — consistent behavior, simpler denormalizer (v2.6) |
 | Webhooks over polling | Cost/load savings; agents wake on events | ✓ Good |
 | Full containerization | Reproducible environments | ✓ Good |
 | PostgreSQL for persistence | Shared across all services | ✓ Good |
@@ -283,6 +279,7 @@ Lessons learned during development that guide future phases.
 | Serialize at RSC boundaries | Date objects must be serialized as ISO strings before passing from server to client components. Enforce typed serialized interfaces at the boundary. |
 | Static verification is necessary but insufficient | v2.5 code path tracing caught structural wiring issues, but 6 runtime bugs (migration journals, race conditions, deduplication, routing logic) only surfaced during live testing. Always validate E2E flows against running services. |
 | Soft language for agent guidance | Task lifecycle, handoff quality, and delegation patterns use "prefer"/"tend toward" instead of MUST/ALWAYS/NEVER. Strong directives reserved for safety boundaries (wait_for, merge protection). |
+| Domain abstraction over channel specifics | Agents should reason about intent (reply, ask, notify), not channels (Slack, Linear, GitHub). Infrastructure handles translation. Adding a new channel should not require agent prompt changes. |
 
 ---
-*Last updated: 2026-02-08 after v2.6 milestone started*
+*Last updated: 2026-02-09 after v2.6 milestone*
