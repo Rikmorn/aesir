@@ -1046,6 +1046,55 @@ describe("createWorkerLoop", () => {
       expect(signalMsg.content).toBe("Approved!");
     });
 
+    it("should append replyContext tag to signal message when replyContext is present", async () => {
+      const { options, mockDb } = createTestOptions();
+      const slackReplyContext = {
+        channel: "slack",
+        teamId: "T789",
+        channelId: "C123",
+        threadTs: "1234567890.000000",
+      };
+      const conv = createMockConversationRow({
+        messages: [{ role: "user", content: "Initial task" }],
+        pending_wait: { type: "approval" },
+        queued_signals: [
+          {
+            type: "approval",
+            data: { approved: true },
+            message: "Approved!",
+            replyContext: slackReplyContext,
+          },
+        ],
+      });
+      mockDb.setExecuteResult([conv]);
+      mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+
+      const loop = createWorkerLoop(options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      const setCalls = mockDb.mocks.updateSet.mock.calls;
+      const signalConsumeCall = setCalls.find(
+        (call: unknown[]) =>
+          call[0] &&
+          (call[0] as Record<string, unknown>).pending_wait === null &&
+          Array.isArray((call[0] as Record<string, unknown>).queued_signals) &&
+          ((call[0] as Record<string, unknown>).queued_signals as unknown[])
+            .length === 0,
+      );
+      expect(signalConsumeCall).toBeDefined();
+
+      // Verify the signal message includes the reply_context XML tag
+      const msgs = (signalConsumeCall?.[0] as Record<string, unknown>)
+        ?.messages as unknown[];
+      expect(msgs).toHaveLength(2);
+      const signalMsg = msgs[1] as Record<string, unknown>;
+      expect(signalMsg.role).toBe("user");
+      expect(signalMsg.content).toContain("<reply_context>");
+      expect(signalMsg.content).toContain(JSON.stringify(slackReplyContext));
+    });
+
     it("should leave non-matching queued signals untouched", async () => {
       const { options, mockDb } = createTestOptions();
       const conv = createMockConversationRow({
