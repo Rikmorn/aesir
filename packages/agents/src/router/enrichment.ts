@@ -18,24 +18,31 @@ export interface EnrichmentDeps {
   githubRepo?: string | undefined;
   githubBaseBranch?: string | undefined;
   linearTeamId?: string | undefined;
+  slackTeamId?: string | undefined;
+  notifyChannels?: Record<string, string> | undefined;
 }
 
 /**
- * Enrich an initial message with workspace context and event-specific context blocks.
+ * Enrich an initial message with workspace context and default notify target.
  *
  * Prepends:
  * 1. <workspace_context> block with GitHub owner/repo/branch, Linear team ID
- * 2. <slack_context> block with channel/thread for Slack-originated events
+ * 2. <default_notify_target> block with Slack ReplyContext JSON for proactive notifications
  *
- * @param event - The incoming event (used for Slack context detection)
- * @param deps - Workspace configuration
+ * The <slack_context> block was removed in Phase 65 -- replaced by <reply_context>
+ * (injected via signals in Phase 61) and <default_notify_target> for proactive use.
+ *
+ * @param event - The incoming event
+ * @param deps - Workspace configuration including notify channel map
  * @param message - Base message to enrich (defaults to event.message or JSON.stringify(event.data))
+ * @param agentDefinitionId - Agent being started (used to resolve per-agent notify channel)
  * @returns Enriched message string
  */
 export function enrichInitialMessage(
   event: IncomingEvent,
   deps: EnrichmentDeps,
   message?: string,
+  agentDefinitionId?: string,
 ): string {
   let initialMessage = message ?? event.message ?? JSON.stringify(event.data);
 
@@ -59,17 +66,22 @@ export function enrichInitialMessage(
     initialMessage = `${workspaceBlock}\n\n${initialMessage}`;
   }
 
-  // Slack-specific context for Slack-originated events.
-  // Product agent prompt expects <slack_context> with channel, thread, team.
-  const eventData = event.data as Record<string, unknown>;
-  if (event.source === "slack:webhook" && eventData?.channelId) {
-    const contextBlock = [
-      "<slack_context>",
-      `Channel: ${eventData.channelId}`,
-      `Thread: ${eventData.threadTs ?? ""}`,
-      "</slack_context>",
+  // Default notify target: Slack channel address for proactive notifications (notify() tool).
+  // Requires both slackTeamId and a matching notify channel for the agent.
+  const notifyChannelId =
+    agentDefinitionId && deps.notifyChannels?.[agentDefinitionId];
+  if (deps.slackTeamId && notifyChannelId) {
+    const target = JSON.stringify({
+      channel: "slack",
+      teamId: deps.slackTeamId,
+      channelId: notifyChannelId,
+    });
+    const notifyBlock = [
+      "<default_notify_target>",
+      target,
+      "</default_notify_target>",
     ].join("\n");
-    initialMessage = `${contextBlock}\n\n${initialMessage}`;
+    initialMessage = `${notifyBlock}\n\n${initialMessage}`;
   }
 
   return initialMessage;

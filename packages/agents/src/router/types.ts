@@ -84,6 +84,10 @@ export interface RouteEventDeps {
   githubRepo?: string | undefined;
   /** GitHub base branch for workspace context (optional, defaults to "main") */
   githubBaseBranch?: string | undefined;
+  /** Slack workspace team ID for constructing notify targets (optional) */
+  slackTeamId?: string | undefined;
+  /** Per-agent notify channel map: agentId -> Slack channel ID (optional) */
+  notifyChannels?: Record<string, string> | undefined;
   /** TaskService for task lookup in task-aware routing (Phase 58.4) */
   taskService?: TaskService | undefined;
   /** Database client for advisory lock transactions (Phase 58.4) */

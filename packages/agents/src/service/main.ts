@@ -189,6 +189,11 @@ async function bootstrap(): Promise<void> {
     githubOwner: config.github.owner,
     githubRepo: config.github.repo,
     githubBaseBranch: config.github.baseBranch,
+    slackTeamId: config.slack.teamId,
+    notifyChannels: {
+      "dev-agent": config.notify.devAgent,
+      "product-agent": config.notify.productAgent,
+    },
     taskService, // Phase 58.4: task-aware routing
     db, // Phase 58.4: advisory lock transactions
   };

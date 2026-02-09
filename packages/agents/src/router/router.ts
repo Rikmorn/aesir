@@ -112,7 +112,12 @@ async function routeViaTask(
     // Per CONTEXT.md: correlationKey = ${taskId}:${event.deduplicationId || event.type}
     const correlationKey = `${taskId}:${event.deduplicationId || event.type}`;
     // Per CONTEXT.md: context enrichment via shared helper (same as existing start path)
-    const initialMessage = enrichInitialMessage(event, deps);
+    const initialMessage = enrichInitialMessage(
+      event,
+      deps,
+      undefined,
+      agentDefinitionId,
+    );
 
     logger.info(
       { taskId, agentDefinitionId, correlationKey },
@@ -225,6 +230,7 @@ export async function routeEvent(
           routeDecision.event,
           deps,
           routeDecision.message,
+          routeDecision.agentDefinitionId,
         );
 
         const conversationId = await deps.executor.start({
