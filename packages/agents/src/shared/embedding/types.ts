@@ -15,7 +15,7 @@ export interface EmbeddingConfig {
     model: string;
   };
   voyage: {
-    apiKey?: string;
+    apiKey: string | undefined;
     model: string;
   };
 }

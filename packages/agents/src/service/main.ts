@@ -44,7 +44,9 @@ import type { ArtifactExtractionConfig } from "../framework/types.js";
 import { routeEvent } from "../router/router.js";
 import type { RouteEventDeps } from "../router/types.js";
 import * as schema from "../shared/db/schema.js";
+import { createEmbeddingService } from "../shared/embedding/index.js";
 import { config } from "../shared/env/config.js";
+import { createKnowledgeService } from "../shared/services/knowledge-service.js";
 import { createTaskService } from "../shared/services/task-service.js";
 import { createApiRouter } from "./api/router.js";
 
@@ -95,10 +97,24 @@ async function bootstrap(): Promise<void> {
   // 4b. TaskService -- task lifecycle operations (Phase 58.2)
   const taskService = createTaskService({ db, logger });
 
+  // 4c. EmbeddingService -- provider-agnostic vector embedding
+  const embeddingService = createEmbeddingService({
+    config: config.embedding,
+    logger,
+  });
+
+  // 4d. KnowledgeService -- knowledge persistence with semantic search
+  const knowledgeService = createKnowledgeService({
+    db,
+    embeddingService,
+    logger,
+  });
+
   registerAllTools({
     registry: toolRegistry,
     agentRegistry,
     taskService,
+    knowledgeService,
     logger,
   });
 

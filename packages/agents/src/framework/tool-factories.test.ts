@@ -8,6 +8,7 @@
 
 import type { DevContainerManager, PinoLogger } from "@aesir/platform";
 import { describe, expect, it, vi } from "vitest";
+import type { KnowledgeService } from "../shared/services/knowledge-service.js";
 import type { TaskService } from "../shared/services/task-service.js";
 import { registerAllTools } from "./tool-factories.js";
 import { createToolRegistry } from "./tool-registry.js";
@@ -54,6 +55,18 @@ function createMockTaskService(): TaskService {
   } as unknown as TaskService;
 }
 
+function createMockKnowledgeService(): KnowledgeService {
+  return {
+    store: vi.fn(),
+    query: vi.fn(),
+    supersede: vi.fn(),
+    invalidate: vi.fn(),
+    cleanupExpired: vi.fn(),
+    health: vi.fn().mockResolvedValue({ healthy: true, latencyMs: 1 }),
+    close: vi.fn(),
+  } as unknown as KnowledgeService;
+}
+
 function createMockContext(): ToolContext {
   return {
     agentId: "test-agent",
@@ -74,8 +87,15 @@ function setupRegistry() {
   const registry = createToolRegistry({ logger });
   const agentRegistry = createMockAgentRegistry();
   const taskService = createMockTaskService();
-  registerAllTools({ registry, agentRegistry, taskService, logger });
-  return { registry, logger, agentRegistry, taskService };
+  const knowledgeService = createMockKnowledgeService();
+  registerAllTools({
+    registry,
+    agentRegistry,
+    taskService,
+    knowledgeService,
+    logger,
+  });
+  return { registry, logger, agentRegistry, taskService, knowledgeService };
 }
 
 // ---------------------------------------------------------------------------
@@ -90,9 +110,9 @@ describe("registerAllTools", () => {
       expect(() => setupRegistry()).not.toThrow();
     });
 
-    it("should register exactly 39 tools", () => {
+    it("should register exactly 41 tools", () => {
       const { registry } = setupRegistry();
-      expect(registry.listRegistered()).toHaveLength(39);
+      expect(registry.listRegistered()).toHaveLength(41);
     });
 
     it("should register all expected namespaces", () => {
@@ -108,6 +128,7 @@ describe("registerAllTools", () => {
           "slack",
           "coordination",
           "task",
+          "knowledge",
           "communication",
         ]),
       );
@@ -181,6 +202,13 @@ describe("registerAllTools", () => {
       expect(registry.has("task:handoff_task")).toBe(true);
       expect(registry.has("task:list_tasks")).toBe(true);
       expect(registry.has("task:get_task_context")).toBe(true);
+    });
+
+    it("should register all knowledge tools", () => {
+      const { registry } = setupRegistry();
+
+      expect(registry.has("knowledge:store")).toBe(true);
+      expect(registry.has("knowledge:query")).toBe(true);
     });
 
     it("should register all communication tools", () => {
@@ -318,7 +346,7 @@ describe("registerAllTools", () => {
       const { logger } = setupRegistry();
 
       expect(logger.info).toHaveBeenCalledWith(
-        { toolCount: 39 },
+        { toolCount: 41 },
         "All tool factories registered",
       );
     });

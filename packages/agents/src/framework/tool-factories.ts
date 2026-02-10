@@ -1,7 +1,7 @@
 /**
  * Tool Factory Registration
  *
- * Registers all 39 tool factories in the ToolRegistry, bridging the v2.3
+ * Registers all 41 tool factories in the ToolRegistry, bridging the v2.3
  * ToolContext interface to the existing v2.2 tool factory signatures.
  *
  * Tool categories:
@@ -12,6 +12,7 @@
  * - Slack (5): send_message, send_approval_request, get_message, reply_to_thread, list_channels
  * - Coordination (3): spawn_agent, request_human_input, wait_for
  * - Task (6): create_task, complete_task, pause_task, handoff_task, list_tasks, get_task_context
+ * - Knowledge (2): knowledge_store, knowledge_query
  * - Communication (3): reply, ask, notify
  *
  * Adapters bridge ToolContext to the existing factory signatures:
@@ -24,6 +25,7 @@
 import type { DevContainerManager, PinoLogger } from "@aesir/platform";
 import type { ToolDefinition } from "../shared/agent-loop/types.js";
 import type { CommunicationToolDeps } from "../shared/communication/types.js";
+import type { KnowledgeService } from "../shared/services/knowledge-service.js";
 import type { TaskService } from "../shared/services/task-service.js";
 import {
   createListDirectoryTool,
@@ -43,6 +45,10 @@ import { createGitHubTools } from "../shared/tools/integration/github-tools.js";
 import { createLinearTools } from "../shared/tools/integration/linear-tools.js";
 import type { McpToolDeps } from "../shared/tools/integration/mcp-wrapper.js";
 import { createSlackTools } from "../shared/tools/integration/slack-tools.js";
+import {
+  createKnowledgeQueryTool,
+  createKnowledgeStoreTool,
+} from "../shared/tools/knowledge/index.js";
 import {
   createCompleteTaskTool,
   createCreateTaskTool,
@@ -70,6 +76,8 @@ export interface RegisterAllToolsOptions {
   agentRegistry: AgentRegistry;
   /** TaskService for task lifecycle operations (Phase 58.2) */
   taskService: TaskService;
+  /** KnowledgeService for shared knowledge storage and semantic search (Phase 68) */
+  knowledgeService: KnowledgeService;
   /** Logger for registration diagnostics */
   logger: PinoLogger;
 }
@@ -146,7 +154,7 @@ function communicationAdapter(
 // ─── Registration ────────────────────────────────────────────────────────────
 
 /**
- * Register all 39 tool factories in the ToolRegistry.
+ * Register all 41 tool factories in the ToolRegistry.
  *
  * This bridges the v2.3 registry-based tool resolution to the existing v2.2
  * tool factory functions. After calling this, `registry.resolve(refs, context)`
@@ -313,6 +321,16 @@ export function registerAllTools(options: RegisterAllToolsOptions): void {
   registry.register("task:list_tasks", (ctx) => createListTasksTool(ts, ctx));
   registry.register("task:get_task_context", (ctx) =>
     createGetTaskContextTool(ts, ctx),
+  );
+
+  // ── Knowledge tools (2) ─────────────────────────────────────────────
+
+  const ks = options.knowledgeService;
+  registry.register("knowledge:store", (ctx) =>
+    createKnowledgeStoreTool(ks, ctx),
+  );
+  registry.register("knowledge:query", (ctx) =>
+    createKnowledgeQueryTool(ks, ctx),
   );
 
   // ── Communication tools (3) ──────────────────────────────────────────
