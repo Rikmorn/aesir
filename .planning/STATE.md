@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.7 Agent Collaboration -- Phase 70 (Task Delegation) complete, ready for Phase 71
+**Current focus:** v2.7 Agent Collaboration -- Phase 71 (Completion Signaling) in progress
 
 ## Current Position
 
-Phase: 70 of 73 (Task Delegation -- complete)
-Plan: 3 of 3 in phase (all complete)
-Status: Phase 70 verified and complete, ready for Phase 71 (Completion Signaling)
-Last activity: 2026-02-10 -- Phase 70 verified (7/7 truths, all DEL requirements met)
+Phase: 71 of 73 (Completion Signaling)
+Plan: 1 of 3 in phase (plan 01 complete)
+Status: Phase 71 plan 01 complete, continuing with plan 02
+Last activity: 2026-02-10 -- Plan 71-01 complete (multi-type wait_for, signal matching, wait_for_task)
 
-Progress: [██████░░░░] ~71%
+Progress: [███████░░░] ~75%
 
 ## Milestone History
 
@@ -34,7 +34,7 @@ Progress: [██████░░░░] ~71%
 **Cumulative:**
 - Total milestones shipped: 8
 - Total phases completed: 70
-- Total plans completed: 314
+- Total plans completed: 315
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -53,6 +53,7 @@ Progress: [██████░░░░] ~71%
 | 70 | 01 | 5min | 2 | 12 |
 | 70 | 02 | 3min | 2 | 4 |
 | 70 | 03 | 2min | 2 | 4 |
+| 71 | 01 | 9min | 2 | 14 |
 
 *Updated after each plan completion*
 
@@ -102,6 +103,10 @@ See PROJECT.md Key Decisions table for full history.
 - **70-03:** Spawn vs delegate heuristic: subAgents list = spawn (internal specialist), directory lookup = delegate (cross-domain)
 - [Phase 70]: Worker loop populates delegationDeps for both task:delegate AND task:respond (target agent needs executor.signal())
 - [Phase 70]: Orphan case still transitions task to active if accepted (completion signaling delivers results)
+- **71-01:** WaitForState.waitType -> waitTypes (always array) for uniform multi-type handling
+- **71-01:** Backward compat: signalMatchesPendingWait normalizes old { type } and new { types } formats
+- **71-01:** wait_for_task is a separate tool (not a mode of wait_for) for safety-by-design
+- **71-01:** Synthetic pendingWait for worker-loop post-execution queued signal matching
 
 ### Pending Todos
 
@@ -118,9 +123,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Phase 70 verified and complete
+Stopped at: Completed 71-01-PLAN.md
 Resume file: None
-Next action: Begin Phase 71 (Completion Signaling)
+Next action: Execute 71-02-PLAN.md (callback routing and completion result delivery)
 
 ---
-*Updated: 2026-02-10 -- Phase 70 complete: task delegation with negotiation handshake (3 plans, verified 7/7)*
+*Updated: 2026-02-10 -- Phase 71 plan 01 complete: multi-type wait_for, signal matching, wait_for_task tool*
