@@ -1,7 +1,7 @@
 /**
  * Tool Factory Registration
  *
- * Registers all 46 tool factories in the ToolRegistry, bridging the v2.3
+ * Registers all 47 tool factories in the ToolRegistry, bridging the v2.3
  * ToolContext interface to the existing v2.2 tool factory signatures.
  *
  * Tool categories:
@@ -10,7 +10,7 @@
  * - GitHub (10): get_repository, create_branch, create_commit, create_pull_request,
  *                get_pull_request, list_pull_requests, merge_pull_request, get_file_contents, list_files, create_pr_comment
  * - Slack (5): send_message, send_approval_request, get_message, reply_to_thread, list_channels
- * - Coordination (3): spawn_agent, request_human_input, wait_for
+ * - Coordination (4): spawn_agent, request_human_input, wait_for, wait_for_task
  * - Task (8): create_task, complete_task, pause_task, handoff_task, list_tasks, get_task_context, delegate_task, respond_task
  * - Knowledge (3): knowledge_store, knowledge_query, knowledge_update
  * - Directory (2): directory_find, directory_get
@@ -68,6 +68,7 @@ import {
 } from "../shared/tools/task/index.js";
 import type { CodebaseToolDeps } from "../shared/tools/types.js";
 import type { AgentRegistry, ToolContext, ToolRegistry } from "./types.js";
+import { createWaitForTaskTool } from "./wait-for-task-tool.js";
 import {
   createDefaultWaitForState,
   createWaitForTool,
@@ -165,7 +166,7 @@ function communicationAdapter(
 // ─── Registration ────────────────────────────────────────────────────────────
 
 /**
- * Register all 46 tool factories in the ToolRegistry.
+ * Register all 47 tool factories in the ToolRegistry.
  *
  * This bridges the v2.3 registry-based tool resolution to the existing v2.2
  * tool factory functions. After calling this, `registry.resolve(refs, context)`
@@ -316,6 +317,14 @@ export function registerAllTools(options: RegisterAllToolsOptions): void {
   registry.register("coordination:wait_for", (_ctx: ToolContext) => {
     const defaultState = createDefaultWaitForState();
     return createWaitForTool(defaultState);
+  });
+
+  // wait_for_task -- delegates to task lifecycle signals (Phase 71)
+  // Same pattern as wait_for: creates a default WaitForState; the executor
+  // replaces it with a per-conversation state at runtime.
+  registry.register("coordination:wait_for_task", (_ctx: ToolContext) => {
+    const defaultState = createDefaultWaitForState();
+    return createWaitForTaskTool(defaultState);
   });
 
   // ── Task tools (8) ──────────────────────────────────────────────────

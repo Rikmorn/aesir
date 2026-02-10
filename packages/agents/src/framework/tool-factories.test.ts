@@ -131,9 +131,9 @@ describe("registerAllTools", () => {
       expect(() => setupRegistry()).not.toThrow();
     });
 
-    it("should register exactly 44 tools", () => {
+    it("should register exactly 47 tools", () => {
       const { registry } = setupRegistry();
-      expect(registry.listRegistered()).toHaveLength(44);
+      expect(registry.listRegistered()).toHaveLength(47);
     });
 
     it("should register all expected namespaces", () => {
@@ -213,6 +213,7 @@ describe("registerAllTools", () => {
       expect(registry.has("coordination:spawn_agent")).toBe(true);
       expect(registry.has("coordination:request_human_input")).toBe(true);
       expect(registry.has("coordination:wait_for")).toBe(true);
+      expect(registry.has("coordination:wait_for_task")).toBe(true);
     });
 
     it("should register all task tools", () => {
@@ -376,7 +377,7 @@ describe("registerAllTools", () => {
       const { logger } = setupRegistry();
 
       expect(logger.info).toHaveBeenCalledWith(
-        { toolCount: 44 },
+        { toolCount: 47 },
         "All tool factories registered",
       );
     });

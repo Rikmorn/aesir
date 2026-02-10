@@ -48,13 +48,25 @@ describe("createWaitForTool", () => {
     expect(state.triggered).toBe(true);
   });
 
-  it("populates waitType from input.type", async () => {
+  it("populates waitTypes as array from string input.type", async () => {
     const state = createDefaultWaitForState();
     const tool = createWaitForTool(state);
 
     await tool.execute({ type: "pr_review", reason: "PR ready for feedback" });
 
-    expect(state.waitType).toBe("pr_review");
+    expect(state.waitTypes).toEqual(["pr_review"]);
+  });
+
+  it("populates waitTypes as array from array input.type", async () => {
+    const state = createDefaultWaitForState();
+    const tool = createWaitForTool(state);
+
+    await tool.execute({
+      type: ["pr_review", "pr_merged"],
+      reason: "PR ready for feedback",
+    });
+
+    expect(state.waitTypes).toEqual(["pr_review", "pr_merged"]);
   });
 
   it("populates reason from input.reason", async () => {
@@ -151,7 +163,7 @@ describe("createDefaultWaitForState", () => {
 
     expect(state).toEqual({
       triggered: false,
-      waitType: null,
+      waitTypes: null,
       reason: null,
       timeout: null,
       metadata: null,

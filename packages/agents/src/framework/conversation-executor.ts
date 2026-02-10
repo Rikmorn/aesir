@@ -15,6 +15,7 @@ import { appendReplyContextTag } from "../shared/communication/message-utils.js"
 import type * as agentsSchemaModule from "../shared/db/schema.js";
 import type { ConversationStatus } from "../shared/db/schema.js";
 import { conversations } from "../shared/db/schema.js";
+import { signalMatchesPendingWait } from "./signal-matching.js";
 import type {
   ConversationExecutor,
   ConversationExecutorOptions,
@@ -372,16 +373,22 @@ export function createConversationExecutor(
         const status = row.status;
 
         if (status === "waiting") {
-          // Check type match against pending_wait
+          // Check type match against pending_wait using shared signal matching helper
           const pendingWait = row.pending_wait as Record<
             string,
             unknown
           > | null;
-          if (pendingWait?.type && pendingWait.type !== signal.type) {
+          if (pendingWait && !signalMatchesPendingWait(signal, pendingWait)) {
+            // Normalize types for logging (backward compat: old `type` or new `types`)
+            const expectedTypes = pendingWait.types
+              ? (pendingWait.types as string[])
+              : pendingWait.type
+                ? [pendingWait.type as string]
+                : [];
             logger.warn(
               {
                 conversationId,
-                expectedType: pendingWait.type,
+                expectedTypes,
                 receivedType: signal.type,
               },
               "Signal rejected: type mismatch with pending wait",

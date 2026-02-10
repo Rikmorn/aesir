@@ -34,6 +34,7 @@ import type { DirectoryService } from "../shared/services/directory-service.js";
 import type { TaskService } from "../shared/services/task-service.js";
 import { hasTextContent } from "./event-content.js";
 import { createHistoryManager } from "./history-manager.js";
+import { signalMatchesPendingWait } from "./signal-matching.js";
 import type { TimeoutScheduler } from "./timeout-scheduler.js";
 import type {
   AgentRegistry,
@@ -44,6 +45,7 @@ import type {
   ToolContext,
   ToolRegistry,
 } from "./types.js";
+import { createWaitForTaskTool } from "./wait-for-task-tool.js";
 import {
   createDefaultWaitForState,
   createWaitForTool,
@@ -796,7 +798,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
       };
       const resolvedTools = toolRegistry.resolve(definition.tools, toolContext);
 
-      // 5. Wire wait_for interception
+      // 5. Wire wait_for and wait_for_task interception
       const waitForState = createDefaultWaitForState();
       const waitForToolIndex = resolvedTools.findIndex(
         (t) => t.name === "wait_for",
@@ -811,6 +813,19 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
           };
         }
       }
+      const waitForTaskToolIndex = resolvedTools.findIndex(
+        (t) => t.name === "wait_for_task",
+      );
+      if (waitForTaskToolIndex >= 0) {
+        const realWaitForTaskTool = createWaitForTaskTool(waitForState);
+        const existingTaskTool = resolvedTools[waitForTaskToolIndex];
+        if (existingTaskTool) {
+          resolvedTools[waitForTaskToolIndex] = {
+            ...existingTaskTool,
+            execute: realWaitForTaskTool.execute,
+          };
+        }
+      }
 
       // 6. Check queued signals before running
       let currentMessages = [...existingMessages];
@@ -822,9 +837,9 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
       }>;
       const pendingWait = conv.pending_wait as Record<string, unknown> | null;
 
-      if (queuedSignals.length > 0 && pendingWait?.type) {
-        const matchIndex = queuedSignals.findIndex(
-          (sig) => sig.type === pendingWait.type,
+      if (queuedSignals.length > 0 && pendingWait) {
+        const matchIndex = queuedSignals.findIndex((sig) =>
+          signalMatchesPendingWait(sig, pendingWait),
         );
         const matchedSignal =
           matchIndex >= 0 ? queuedSignals[matchIndex] : undefined;
@@ -1071,8 +1086,13 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
           replyContext?: unknown;
         }>;
 
-        const matchIdx = freshSignals.findIndex(
-          (sig) => sig.type === waitForState.waitType,
+        // Build a synthetic pendingWait from the current waitForState for matching
+        const syntheticPendingWait: Record<string, unknown> = {
+          types: waitForState.waitTypes,
+          metadata: waitForState.metadata,
+        };
+        const matchIdx = freshSignals.findIndex((sig) =>
+          signalMatchesPendingWait(sig, syntheticPendingWait),
         );
         const matchedQueuedSignal =
           matchIdx >= 0 ? freshSignals[matchIdx] : undefined;
@@ -1128,7 +1148,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
               timeoutJobId = await timeoutScheduler.schedule(
                 conv.id,
                 waitForState.timeout,
-                waitForState.waitType ?? "unknown",
+                waitForState.waitTypes?.join(",") ?? "unknown",
                 waitForState.reason ?? "Agent paused",
               );
             } catch (scheduleError) {
@@ -1141,7 +1161,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
 
           // Build pending_wait with optional timeoutJobId
           const pendingWaitValue: Record<string, unknown> = {
-            type: waitForState.waitType,
+            types: waitForState.waitTypes,
             reason: waitForState.reason,
             timeout: waitForState.timeout,
             metadata: waitForState.metadata,
@@ -1171,14 +1191,14 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
             agentInstanceId: instanceId,
             type: "agent.paused",
             payload: {
-              waitType: waitForState.waitType,
+              waitTypes: waitForState.waitTypes,
               reason: waitForState.reason,
             },
           });
           await eventLog.flush();
 
           childLogger.info(
-            { waitType: waitForState.waitType },
+            { waitTypes: waitForState.waitTypes },
             "Conversation paused, waiting for signal",
           );
         }

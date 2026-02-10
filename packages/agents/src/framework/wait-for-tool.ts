@@ -26,11 +26,11 @@ import type { WaitForState } from "./types.js";
 
 const WaitForInputSchema = z.object({
   type: z
-    .string()
-    .min(1)
+    .union([z.string().min(1), z.array(z.string().min(1)).min(1)])
     .describe(
-      "What to wait for. Must match the signal type that will wake this conversation. " +
-        "Common types: 'approval', 'user_reply', 'pr_review', 'pr_merged', 'escalation_resolved'.",
+      "What to wait for. A string or array of strings matching signal types that will wake this conversation. " +
+        "Common types: 'approval', 'user_reply', 'pr_review', 'pr_merged', 'escalation_resolved'. " +
+        "When an array is provided, the conversation resumes when ANY of the signal types arrives.",
     ),
   reason: z
     .string()
@@ -77,15 +77,18 @@ export function createWaitForTool(waitForState: WaitForState): ToolDefinition {
     ): Promise<{ content: string; isError?: boolean }> {
       const parsed = WaitForInputSchema.parse(input);
 
+      // Normalize type to array
+      const types = Array.isArray(parsed.type) ? parsed.type : [parsed.type];
+
       // Set mutable state for executor interception
       waitForState.triggered = true;
-      waitForState.waitType = parsed.type;
+      waitForState.waitTypes = types;
       waitForState.reason = parsed.reason;
       waitForState.timeout = parsed.timeout ?? null;
       waitForState.metadata = parsed.metadata ?? null;
 
       // Build confirmation message for the LLM
-      let message = `Conversation paused. Waiting for: ${parsed.type}. Reason: ${parsed.reason}.`;
+      let message = `Conversation paused. Waiting for: ${types.join(", ")}. Reason: ${parsed.reason}.`;
       if (parsed.timeout) {
         message += ` Timeout: ${parsed.timeout}.`;
       }
@@ -105,7 +108,7 @@ export function createWaitForTool(waitForState: WaitForState): ToolDefinition {
 export function createDefaultWaitForState(): WaitForState {
   return {
     triggered: false,
-    waitType: null,
+    waitTypes: null,
     reason: null,
     timeout: null,
     metadata: null,

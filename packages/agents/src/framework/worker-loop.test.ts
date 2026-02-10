@@ -765,7 +765,7 @@ describe("createWorkerLoop", () => {
       expect(waitingCall).toBeDefined();
       const pw = (waitingCall?.[0] as Record<string, unknown>)
         ?.pending_wait as Record<string, unknown>;
-      expect(pw.type).toBe("pr_review");
+      expect(pw.types).toEqual(["pr_review"]);
       expect(pw.reason).toBe("Waiting for review");
       expect(pw.timeout).toBe("72h");
     });
