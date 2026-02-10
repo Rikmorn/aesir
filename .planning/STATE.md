@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 
 ## Current Position
 
-Phase: 67+68 of 73 (Linear Agent SDK + Shared Memory -- parallel)
-Plan: 8 of ~24 total (~5+~4 in current phases)
-Status: Phase 67 fully complete, Phase 68 plans 01+02+03 complete
-Last activity: 2026-02-10 -- Completed 68-03 (Knowledge Service & Tools)
+Phase: 68 of 73 (Shared Memory -- complete)
+Plan: 9 of ~24 total (Phase 67 complete, Phase 68 complete)
+Status: Phase 67 + Phase 68 fully complete, ready for Phase 69
+Last activity: 2026-02-10 -- Completed 68-04 (Knowledge Update & Cleanup)
 
-Progress: [████░░░░░░] ~28%
+Progress: [████░░░░░░] ~32%
 
 ## Milestone History
 
@@ -34,7 +34,7 @@ Progress: [████░░░░░░] ~28%
 **Cumulative:**
 - Total milestones shipped: 8
 - Total phases completed: 69
-- Total plans completed: 307
+- Total plans completed: 308
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -46,6 +46,7 @@ Progress: [████░░░░░░] ~28%
 | 68 | 01 | 4min | 2 | 7 |
 | 68 | 02 | 3min | 1 | 7 |
 | 68 | 03 | 6min | 2 | 9 |
+| 68 | 04 | 3min | 2 | 5 |
 
 *Updated after each plan completion*
 
@@ -79,6 +80,8 @@ See PROJECT.md Key Decisions table for full history.
 - **68-03:** cosineDistance from drizzle-orm for pgvector similarity queries (1 - cosineDistance = similarity score)
 - **68-03:** Scope visibility as SQL condition (not application-level filtering) for row-level security
 - **68-03:** EmbeddingConfig.voyage.apiKey changed from optional property to explicit string|undefined for exactOptionalPropertyTypes compatibility
+- **68-04:** setInterval over pg-boss cron for cleanup (TimeoutScheduler doesn't expose boss instance, single-process deployment)
+- **68-04:** Cleanup as first shutdown step (stop generating new work before draining existing)
 
 ### Pending Todos
 
@@ -95,9 +98,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed 68-03-PLAN.md (Knowledge Service & Tools)
+Stopped at: Completed 68-04-PLAN.md (Knowledge Update & Cleanup)
 Resume file: None
-Next action: Continue with Phase 68 plan 04
+Next action: Continue with Phase 69 (Entity Directory)
 
 ---
-*Updated: 2026-02-10 -- 68-03 complete, KnowledgeService and knowledge:store/query tools shipped*
+*Updated: 2026-02-10 -- 68-04 complete, Phase 68 (Shared Memory) fully shipped: knowledge lifecycle complete with store/query/update tools and background cleanup*
