@@ -38,6 +38,7 @@
     "pg": "^8.17.2",
     "pg-boss": "^12.8.0",
     "postgres": "^3.4.7",
+    "voyageai": "^0.1.0",
     "yaml": "^2.8.2",
     "zod": "3.25.67",
     "zod-to-json-schema": "^3.24.5"
