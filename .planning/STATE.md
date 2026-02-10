@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 67+68 of 73 (Linear Agent SDK + Shared Memory -- parallel)
-Plan: 1 of ~24 total (~4+~4 in current phases)
+Plan: 2 of ~24 total (~4+~4 in current phases)
 Status: Executing Phase 67
-Last activity: 2026-02-10 -- Completed 67-01 (Token Refresh Middleware)
+Last activity: 2026-02-10 -- Completed 67-02 (Actor=App Migration + Activity MCP Tools)
 
-Progress: [█░░░░░░░░░] ~4%
+Progress: [██░░░░░░░░] ~8%
 
 ## Milestone History
 
@@ -34,11 +34,12 @@ Progress: [█░░░░░░░░░] ~4%
 **Cumulative:**
 - Total milestones shipped: 8
 - Total phases completed: 69
-- Total plans completed: 302
+- Total plans completed: 303
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 67 | 01 | 5min | 2 | 5 |
+| 67 | 02 | 6min | 2 | 6 |
 
 *Updated after each plan completion*
 
@@ -51,6 +52,9 @@ See PROJECT.md Key Decisions table for full history.
 - **67-01:** Retry at two levels -- factory handles HTTP retry, middleware handles credential coordination
 - **67-01:** setTimeout chain over setInterval for proactive refresh (prevents overlapping checks)
 - **67-01:** Best-effort Slack alerting -- alert failures never block token refresh
+- **67-02:** update_session_state emits activities (not direct status mutation) because Linear SDK AgentSessionUpdateInput has no status field
+- **67-02:** ActivityToolDeps uses PinoLogger (not MCPLogger) because withTokenRefresh requires richer interface
+- **67-02:** STATUS_TO_ACTIVITY mapping provides default body messages for infrastructure-driven state transitions
 
 ### Pending Todos
 
@@ -67,9 +71,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed 67-01-PLAN.md (Token Refresh Middleware)
+Stopped at: Completed 67-02-PLAN.md (Actor=App Migration + Activity MCP Tools)
 Resume file: None
-Next action: Execute 67-02 (Actor=App Migration) or continue with Phase 68 in parallel
+Next action: Execute 67-03 (Denormalizer Routing) or continue with Phase 68 in parallel
 
 ---
-*Updated: 2026-02-10 -- 67-01 complete*
+*Updated: 2026-02-10 -- 67-02 complete*
