@@ -169,6 +169,22 @@ async function bootstrap(): Promise<void> {
     taskService,
   });
 
+  // 8b. Knowledge cleanup -- hourly hard-delete of entries expired 24h+ ago
+  // Uses setInterval (single-process deployment). The 24h grace period after expiry
+  // allows debugging before permanent deletion. cleanupExpired() is idempotent.
+  const KNOWLEDGE_CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+  const knowledgeCleanupTimer = setInterval(async () => {
+    try {
+      const deleted = await knowledgeService.cleanupExpired();
+      if (deleted > 0) {
+        logger.info({ deletedCount: deleted }, "Knowledge cleanup completed");
+      }
+    } catch (err) {
+      logger.error({ err }, "Knowledge cleanup failed");
+    }
+  }, KNOWLEDGE_CLEANUP_INTERVAL_MS);
+  knowledgeCleanupTimer.unref(); // Don't prevent process exit
+
   // 9. EventRouter -- deterministic event-to-agent routing
   const eventRouter = createEventRouter({ agentRegistry, logger });
   await eventRouter.loadStartRules();
@@ -320,25 +336,28 @@ async function bootstrap(): Promise<void> {
     isShuttingDown = true;
     logger.info({ signal }, "Graceful shutdown initiated");
 
-    // 1. Close all SSE connections (clients get disconnected cleanly)
+    // 1. Stop knowledge cleanup timer
+    clearInterval(knowledgeCleanupTimer);
+
+    // 2. Close all SSE connections (clients get disconnected cleanly)
     sseManager.closeAll();
 
-    // 2. Stop accepting HTTP connections
+    // 3. Stop accepting HTTP connections
     server.close();
 
-    // 3. Stop worker + drain conversations + flush event log + stop pg-boss
+    // 4. Stop worker + drain conversations + flush event log + stop pg-boss
     await executor.stopWorker();
 
-    // 4. Final event log flush (belt + suspenders)
+    // 5. Final event log flush (belt + suspenders)
     await eventLog.close();
 
-    // 5. Close session projection subscriptions
+    // 6. Close session projection subscriptions
     sessionProjection.close();
 
-    // 6. Close sandbox manager
+    // 7. Close sandbox manager
     await sandboxManager.close();
 
-    // 7. Close database pool
+    // 8. Close database pool
     await pool.end();
 
     logger.info("Graceful shutdown complete");
