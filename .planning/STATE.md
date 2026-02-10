@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.7 Agent Collaboration -- Phase 69 (Entity Directory)
+**Current focus:** v2.7 Agent Collaboration -- Phase 70 (Task Delegation)
 
 ## Current Position
 
-Phase: 69 of 73 (Entity Directory -- complete)
-Plan: 3 of 3 in phase (69-03 complete)
-Status: Phase 69 complete, ready for Phase 70 (Task Delegation)
-Last activity: 2026-02-10 -- Completed 69-03 (Entity Directory Seed Script)
+Phase: 70 of 73 (Task Delegation)
+Plan: 1 of 3 in phase (70-01 complete)
+Status: Executing Phase 70 -- Plan 01 complete
+Last activity: 2026-02-10 -- Completed 70-01 (Task Delegation Core)
 
-Progress: [██████░░░░] ~67%
+Progress: [██████░░░░] ~69%
 
 ## Milestone History
 
@@ -34,7 +34,7 @@ Progress: [██████░░░░] ~67%
 **Cumulative:**
 - Total milestones shipped: 8
 - Total phases completed: 69
-- Total plans completed: 311
+- Total plans completed: 312
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -50,6 +50,7 @@ Progress: [██████░░░░] ~67%
 | 69 | 01 | 2min | 2 | 6 |
 | 69 | 02 | 6min | 2 | 7 |
 | 69 | 03 | 6min | 2 | 4 |
+| 70 | 01 | 5min | 2 | 12 |
 
 *Updated after each plan completion*
 
@@ -92,6 +93,9 @@ See PROJECT.md Key Decisions table for full history.
 - **69-02:** directory_get does not take ToolContext (no ctx.agentId needed, unlike find)
 - **69-03:** Knowledge tools added alongside directory tools to orchestrators for Phase 70+ delegation workflows
 - **69-03:** Sorted array JSON comparison for order-independent capability change detection in seed script
+- **70-01:** Late-bound executor reference for worker loop DelegationDeps (avoids circular construction)
+- **70-01:** Depth stored in both DB column (indexed queries) and JSONB metadata (delegation context)
+- **70-01:** task:delegate returns wait_for guidance with task_handshake type and 30s timeout
 
 ### Pending Todos
 
@@ -108,9 +112,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed 69-03-PLAN.md (Entity Directory Seed Script)
+Stopped at: Completed 70-01-PLAN.md (Task Delegation Core)
 Resume file: None
-Next action: Begin Phase 70 (Task Delegation)
+Next action: Execute 70-02-PLAN.md (Accept/Reject Handshake)
 
 ---
-*Updated: 2026-02-10 -- Phase 69 complete: entity directory schema, service, and seed script shipped*
+*Updated: 2026-02-10 -- Phase 70-01 complete: task:delegate tool, DelegationDeps, depth schema, seconds timeout*
