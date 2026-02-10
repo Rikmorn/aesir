@@ -83,6 +83,14 @@ const agentEnvSchema = z.object({
 
   // Product agent config
   PRODUCT_AGENT_ALLOWED_CHANNELS: z.string().optional(),
+
+  // Embedding provider (optional -- only required when knowledge tools are used)
+  EMBEDDING_PROVIDER: z.enum(["ollama", "voyage"]).default("ollama"),
+  EMBEDDING_DIMENSIONS: z.coerce.number().int().positive().default(768),
+  OLLAMA_URL: z.string().url().optional(),
+  OLLAMA_MODEL: z.string().default("nomic-embed-text"),
+  VOYAGE_API_KEY: z.string().optional(),
+  VOYAGE_MODEL: z.string().default("voyage-3.5"),
 });
 
 // Validate immediately (fail-fast)
@@ -164,6 +172,19 @@ export const config = {
 
   router: {
     alertsChannel: env.ROUTER_ALERTS_CHANNEL,
+  },
+
+  embedding: {
+    provider: env.EMBEDDING_PROVIDER,
+    dimensions: env.EMBEDDING_DIMENSIONS,
+    ollama: {
+      url: env.OLLAMA_URL || "http://ollama:11434",
+      model: env.OLLAMA_MODEL,
+    },
+    voyage: {
+      apiKey: env.VOYAGE_API_KEY,
+      model: env.VOYAGE_MODEL,
+    },
   },
 
   observability: {

@@ -50,7 +50,7 @@
 
 services:
   postgresql:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     container_name: aesir-postgresql
     environment:
       POSTGRES_USER: aesir
@@ -380,6 +380,25 @@ services:
         - action: rebuild
           path: ./packages/dashboard/package.json
 
+  # Ollama - local embedding model for shared memory (Phase 68)
+  # Only starts with embedding profile: docker compose --profile embedding up
+  ollama:
+    image: ollama/ollama:latest
+    container_name: aesir-ollama
+    volumes:
+      - aesir-ollama:/root/.ollama
+    ports:
+      - "11434:11434"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - aesir-network
+    profiles:
+      - embedding
+
   # Cloudflare Tunnel - exposes services to external webhooks (Linear, GitHub, Slack)
   # Configure tunnel to point to nginx:80 for unified routing
   # Requires CLOUDFLARE_TUNNEL_TOKEN from Zero Trust dashboard
@@ -421,6 +440,8 @@ services:
 volumes:
   aesir-postgresql:
     name: aesir-postgresql
+  aesir-ollama:
+    name: aesir-ollama
 
 networks:
   aesir-network:
