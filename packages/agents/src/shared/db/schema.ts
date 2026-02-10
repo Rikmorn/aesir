@@ -13,6 +13,8 @@
 
 import { createId } from "@aesir/types";
 import {
+  boolean,
+  customType,
   index,
   integer,
   jsonb,
@@ -21,6 +23,31 @@ import {
   timestamp,
   unique,
 } from "drizzle-orm/pg-core";
+
+/**
+ * Custom unconstrained vector type for pgvector.
+ *
+ * Drizzle's built-in `vector()` requires a fixed dimensions parameter,
+ * but we need unconstrained vector columns to support different embedding
+ * providers (768 for Ollama/dev, 1024 for Voyage/prod) without schema changes.
+ *
+ * Maps number[] <-> PostgreSQL vector string format: "[1.0,2.0,3.0]"
+ */
+const vectorColumn = customType<{ data: number[]; driverData: string }>({
+  dataType() {
+    return "vector";
+  },
+  toDriver(value: number[]): string {
+    return `[${value.join(",")}]`;
+  },
+  fromDriver(value: string): number[] {
+    // PostgreSQL returns vectors as "[1.0,2.0,3.0]"
+    return value
+      .slice(1, -1)
+      .split(",")
+      .map((v) => Number.parseFloat(v));
+  },
+});
 
 export const agentsSchema = pgSchema("agents");
 
@@ -327,6 +354,65 @@ export const taskHandoffs = agentsSchema.table(
   (table) => [index("idx_handoffs_task").on(table.task_id, table.created_at)],
 );
 
+// ─── Knowledge Entries ──────────────────────────────────────────────────────
+
+/**
+ * Knowledge entry type values (6 fixed types for v2.7 knowledge taxonomy)
+ */
+export const knowledgeEntryTypeValues = [
+  "discovery",
+  "constraint",
+  "architecture_decision",
+  "thought",
+  "preference",
+  "test_result",
+] as const;
+export type KnowledgeEntryType = (typeof knowledgeEntryTypeValues)[number];
+
+/**
+ * Knowledge entry scope values
+ */
+export const knowledgeEntryScopeValues = ["shared", "private"] as const;
+export type KnowledgeEntryScope = (typeof knowledgeEntryScopeValues)[number];
+
+/**
+ * Knowledge Entries table
+ *
+ * Shared agent knowledge store for v2.7 Agent Collaboration.
+ * Agents store discoveries, constraints, decisions, thoughts, preferences,
+ * and test results that other agents can query via semantic search.
+ *
+ * Uses pgvector for embedding-based similarity search.
+ * Supports deduplication via type + normalized topic matching.
+ * Entries expire (mandatory expires_at) and can be superseded or invalidated.
+ */
+export const knowledgeEntries = agentsSchema.table(
+  "knowledge_entries",
+  {
+    id: text("id").primaryKey(),
+    type: text("type", { enum: knowledgeEntryTypeValues }).notNull(),
+    topic: text("topic").notNull(),
+    content: text("content").notNull(),
+    author: text("author").notNull(),
+    scope: text("scope", { enum: knowledgeEntryScopeValues }).notNull(),
+    tags: jsonb("tags").$type<string[]>().notNull().default([]),
+    embedding: vectorColumn("embedding"),
+    superseded_by: text("superseded_by"),
+    invalidated: boolean("invalidated").notNull().default(false),
+    invalidation_reason: text("invalidation_reason"),
+    expires_at: timestamp("expires_at", { withTimezone: true }).notNull(),
+    created_at: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("idx_knowledge_type_topic").on(table.type, table.topic),
+    index("idx_knowledge_scope_author").on(table.scope, table.author),
+    index("idx_knowledge_expires").on(table.expires_at),
+    index("idx_knowledge_not_superseded").on(table.id),
+  ],
+);
+
 // ─── Type Exports ────────────────────────────────────────────────────────────
 
 export type Conversation = typeof conversations.$inferSelect;
@@ -341,3 +427,5 @@ export type Task = typeof tasks.$inferSelect;
 export type NewTask = typeof tasks.$inferInsert;
 export type TaskHandoff = typeof taskHandoffs.$inferSelect;
 export type NewTaskHandoff = typeof taskHandoffs.$inferInsert;
+export type KnowledgeEntry = typeof knowledgeEntries.$inferSelect;
+export type NewKnowledgeEntry = typeof knowledgeEntries.$inferInsert;

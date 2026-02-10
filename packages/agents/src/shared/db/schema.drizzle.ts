@@ -9,6 +9,7 @@
  */
 
 import {
+  boolean,
   index,
   integer,
   jsonb,
@@ -243,3 +244,54 @@ export const agentEventContent = agentsSchema.table("agent_event_content", {
     .defaultNow()
     .notNull(),
 });
+
+// ─── Knowledge Entries ──────────────────────────────────────────────────────
+
+const knowledgeEntryTypeValues = [
+  "discovery",
+  "constraint",
+  "architecture_decision",
+  "thought",
+  "preference",
+  "test_result",
+] as const;
+
+const knowledgeEntryScopeValues = ["shared", "private"] as const;
+
+/**
+ * Knowledge Entries table (drizzle-kit mirror)
+ *
+ * Note: The `embedding` column is defined as `text` here because drizzle-kit's
+ * CJS bundler cannot resolve the customType vector definition from schema.ts.
+ * The actual column type is `vector` (pgvector) -- defined in the hand-written
+ * migration 0007_add_knowledge_entries.sql. This placeholder prevents drizzle-kit
+ * from generating destructive migration diffs.
+ */
+export const knowledgeEntries = agentsSchema.table(
+  "knowledge_entries",
+  {
+    id: text("id").primaryKey(),
+    type: text("type", { enum: knowledgeEntryTypeValues }).notNull(),
+    topic: text("topic").notNull(),
+    content: text("content").notNull(),
+    author: text("author").notNull(),
+    scope: text("scope", { enum: knowledgeEntryScopeValues }).notNull(),
+    tags: jsonb("tags").notNull().default([]),
+    // Placeholder: actual type is `vector` (pgvector), defined in migration SQL.
+    // Using text here because drizzle-kit CJS cannot resolve customType vector.
+    embedding: text("embedding"),
+    superseded_by: text("superseded_by"),
+    invalidated: boolean("invalidated").notNull().default(false),
+    invalidation_reason: text("invalidation_reason"),
+    expires_at: timestamp("expires_at", { withTimezone: true }).notNull(),
+    created_at: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("idx_knowledge_type_topic").on(table.type, table.topic),
+    index("idx_knowledge_scope_author").on(table.scope, table.author),
+    index("idx_knowledge_expires").on(table.expires_at),
+    index("idx_knowledge_not_superseded").on(table.id),
+  ],
+);

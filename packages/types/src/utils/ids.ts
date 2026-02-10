@@ -52,6 +52,9 @@ export const createId = {
   /** Handoff ID (agents.task_handoffs) */
   handoff: () => `ho_${nanoid()}`,
 
+  /** Knowledge entry ID (agents.knowledge_entries) */
+  knowledgeEntry: () => `ke_${nanoid()}`,
+
   /** Sync cursor ID (integrations.sync_cursors) */
   syncCursor: () => `sync_${nanoid()}`,
 
