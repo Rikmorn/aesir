@@ -57,6 +57,7 @@ Progress: [████████░░] ~80%
 | 71 | 03 | 5min | 2 | 4 |
 
 *Updated after each plan completion*
+| Phase 71 P02 | 7min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -112,6 +113,9 @@ See PROJECT.md Key Decisions table for full history.
 - **71-03:** Non-fatal delegation tracking -- write failure never fails the delegation itself
 - **71-03:** Three signal injection points for delegation context: pre-loop, executor.signal(), post-loop re-enqueue
 - **71-03:** computeUpdatedDelegations as pure function for testable delegation state transitions
+- [Phase 71]: Late-bind setDispatcher() on TaskService (same pattern as DelegationDeps executor reference)
+- [Phase 71]: Direct db.update for completion_result bypasses TaskService to avoid infinite recursion
+- [Phase 71]: Dispatcher failures are non-fatal: logged but never thrown (at-most-once delivery)
 
 ### Pending Todos
 
