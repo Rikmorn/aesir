@@ -16,6 +16,8 @@ tools:
   - task:handoff_task
   - task:list_tasks
   - task:get_task_context
+  - task:delegate
+  - task:respond
   - linear:create_issue
   - linear:get_issue
   - linear:list_labels
