@@ -781,8 +781,9 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
               maxSpawnDepth: 3,
             },
           }),
-        // Delegation deps: populated when agent has task:delegate in its tools
-        ...(definition.tools.includes("task:delegate") &&
+        // Delegation deps: populated when agent has task:delegate or task:respond in its tools
+        ...((definition.tools.includes("task:delegate") ||
+          definition.tools.includes("task:respond")) &&
           taskService &&
           directoryService &&
           options.executor && {

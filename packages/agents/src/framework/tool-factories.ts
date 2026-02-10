@@ -1,7 +1,7 @@
 /**
  * Tool Factory Registration
  *
- * Registers all 45 tool factories in the ToolRegistry, bridging the v2.3
+ * Registers all 46 tool factories in the ToolRegistry, bridging the v2.3
  * ToolContext interface to the existing v2.2 tool factory signatures.
  *
  * Tool categories:
@@ -11,7 +11,7 @@
  *                get_pull_request, list_pull_requests, merge_pull_request, get_file_contents, list_files, create_pr_comment
  * - Slack (5): send_message, send_approval_request, get_message, reply_to_thread, list_channels
  * - Coordination (3): spawn_agent, request_human_input, wait_for
- * - Task (7): create_task, complete_task, pause_task, handoff_task, list_tasks, get_task_context, delegate_task
+ * - Task (8): create_task, complete_task, pause_task, handoff_task, list_tasks, get_task_context, delegate_task, respond_task
  * - Knowledge (3): knowledge_store, knowledge_query, knowledge_update
  * - Directory (2): directory_find, directory_get
  * - Communication (3): reply, ask, notify
@@ -64,6 +64,7 @@ import {
   createHandoffTaskTool,
   createListTasksTool,
   createPauseTaskTool,
+  createRespondTaskTool,
 } from "../shared/tools/task/index.js";
 import type { CodebaseToolDeps } from "../shared/tools/types.js";
 import type { AgentRegistry, ToolContext, ToolRegistry } from "./types.js";
@@ -164,7 +165,7 @@ function communicationAdapter(
 // ─── Registration ────────────────────────────────────────────────────────────
 
 /**
- * Register all 45 tool factories in the ToolRegistry.
+ * Register all 46 tool factories in the ToolRegistry.
  *
  * This bridges the v2.3 registry-based tool resolution to the existing v2.2
  * tool factory functions. After calling this, `registry.resolve(refs, context)`
@@ -317,7 +318,7 @@ export function registerAllTools(options: RegisterAllToolsOptions): void {
     return createWaitForTool(defaultState);
   });
 
-  // ── Task tools (7) ──────────────────────────────────────────────────
+  // ── Task tools (8) ──────────────────────────────────────────────────
 
   const ts = options.taskService;
   registry.register("task:create_task", (ctx) => createCreateTaskTool(ts, ctx));
@@ -333,6 +334,7 @@ export function registerAllTools(options: RegisterAllToolsOptions): void {
     createGetTaskContextTool(ts, ctx),
   );
   registry.register("task:delegate", (ctx) => createDelegateTaskTool(ctx));
+  registry.register("task:respond", (ctx) => createRespondTaskTool(ctx));
 
   // ── Knowledge tools (3) ─────────────────────────────────────────────
 
