@@ -74,8 +74,8 @@ export function createOAuthRouter(deps: OAuthRouterDeps): Router {
           `http://localhost:${config.server.port}/oauth/callback`,
         response_type: "code",
         state,
-        scope: "read,write",
-        actor: "application",
+        scope: "read,write,app:assignable,app:mentionable",
+        actor: "app",
       });
 
       const authorizeUrl = `https://linear.app/oauth/authorize?${params.toString()}`;

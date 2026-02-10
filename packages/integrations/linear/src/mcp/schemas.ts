@@ -265,3 +265,62 @@ export const CreateCommentOutputSchema = z.object({
 });
 
 export type CreateCommentOutput = z.infer<typeof CreateCommentOutputSchema>;
+
+// ===============================================
+// CREATE AGENT ACTIVITY
+// ===============================================
+
+export const CreateAgentActivityInputSchema = z.object({
+  /** Agent session ID from the webhook payload */
+  agentSessionId: z.string().min(1, "Agent session ID is required"),
+  /** Activity type */
+  type: z.enum(["thought", "action", "response", "error", "elicitation"]),
+  /** Body text for thought, response, error, elicitation types */
+  body: z.string().optional(),
+  /** Action verb for action type (e.g., "Creating", "Reading") */
+  action: z.string().optional(),
+  /** Action parameter for action type (e.g., "branch feature/auth") */
+  parameter: z.string().optional(),
+  /** Action result for action type (optional completion message) */
+  result: z.string().optional(),
+  /** Ephemeral flag -- only valid for thought and action types */
+  ephemeral: z.boolean().optional(),
+});
+
+export type CreateAgentActivityInput = z.infer<
+  typeof CreateAgentActivityInputSchema
+>;
+
+export const CreateAgentActivityOutputSchema = z.object({
+  success: z.boolean(),
+  type: z.string(),
+});
+
+export type CreateAgentActivityOutput = z.infer<
+  typeof CreateAgentActivityOutputSchema
+>;
+
+// ===============================================
+// UPDATE SESSION STATE
+// ===============================================
+
+export const UpdateSessionStateInputSchema = z.object({
+  /** Agent session ID */
+  sessionId: z.string().min(1, "Session ID is required"),
+  /** Target session status */
+  status: z.enum(["pending", "active", "awaitingInput", "complete", "error"]),
+});
+
+export type UpdateSessionStateInput = z.infer<
+  typeof UpdateSessionStateInputSchema
+>;
+
+export const UpdateSessionStateOutputSchema = z.object({
+  success: z.boolean(),
+  sessionId: z.string(),
+  status: z.string(),
+});
+
+export type UpdateSessionStateOutput = z.infer<
+  typeof UpdateSessionStateOutputSchema
+>;
