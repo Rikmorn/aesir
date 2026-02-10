@@ -31,6 +31,11 @@ tools:
   - communication:reply
   - communication:ask
   - communication:notify
+  - knowledge:store
+  - knowledge:query
+  - knowledge:update
+  - directory:find
+  - directory:get
 
 subAgents:
   researcher: researcher
@@ -45,6 +50,13 @@ history:
   protectedMessages: 20
   summaryThreshold: 120000
   summaryModel: claude-haiku-4-5-20251001
+
+capabilities:
+  - "implement features by writing code, creating branches, and opening pull requests"
+  - "debug failures, investigate issues, and deliver fixes"
+  - "research codebases to understand architecture, patterns, and dependencies"
+  - "run test suites and validate code changes meet requirements"
+  - "address pull request review feedback and iterate until approved"
 
 triggers:
   - event: linear.agent_session.created

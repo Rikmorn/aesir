@@ -23,6 +23,11 @@ tools:
   - communication:reply
   - communication:ask
   - communication:notify
+  - knowledge:store
+  - knowledge:query
+  - knowledge:update
+  - directory:find
+  - directory:get
 
 maxIterations: 10
 tokenBudget: 50000
@@ -32,6 +37,11 @@ history:
   protectedMessages: 10
   summaryThreshold: 50000
   summaryModel: claude-haiku-4-5-20251001
+
+capabilities:
+  - "turn feature requests and user feedback into well-structured Linear issues"
+  - "clarify requirements and gather context through user conversation"
+  - "prioritize and organize issues with labels, estimates, and descriptions"
 
 triggers:
   - event: slack.app_mention.created
