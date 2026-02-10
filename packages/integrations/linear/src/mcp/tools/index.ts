@@ -3,6 +3,11 @@
  */
 
 export {
+  type ActivityToolDeps,
+  handleCreateAgentActivity,
+  handleUpdateSessionState,
+} from "./activities.js";
+export {
   handleCreateComment,
   handleCreateIssue,
   handleGetIssue,

@@ -12,6 +12,8 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
+  type ActivityToolDeps,
+  handleCreateAgentActivity,
   handleCreateComment,
   handleCreateIssue,
   handleGetIssue,
@@ -19,6 +21,7 @@ import {
   handleListTeams,
   handleSearchIssues,
   handleUpdateIssueStatus,
+  handleUpdateSessionState,
   type IssueToolDeps,
   type TeamToolDeps,
 } from "./tools/index.js";
@@ -54,6 +57,7 @@ export function createLinearMCPServer(options: LinearMCPServerOptions): Server {
   // Prepare shared dependencies
   const issueToolDeps: IssueToolDeps = { db, logger, workspaceId };
   const teamToolDeps: TeamToolDeps = { db, logger, workspaceId };
+  const activityToolDeps: ActivityToolDeps = { db, logger, workspaceId };
 
   // Register list_tools handler
   server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -191,6 +195,77 @@ export function createLinearMCPServer(options: LinearMCPServerOptions): Server {
             required: ["issueId", "body"],
           },
         },
+        {
+          name: "create_agent_activity",
+          description:
+            "Create a typed activity on a Linear agent session. Use this to emit thoughts, actions, responses, errors, or elicitations during an agent session.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              agentSessionId: {
+                type: "string",
+                description: "Agent session ID from the webhook payload",
+              },
+              type: {
+                type: "string",
+                enum: ["thought", "action", "response", "error", "elicitation"],
+                description: "Activity type",
+              },
+              body: {
+                type: "string",
+                description:
+                  "Body text for thought, response, error, elicitation types",
+              },
+              action: {
+                type: "string",
+                description:
+                  'Action verb for action type (e.g., "Creating", "Reading")',
+              },
+              parameter: {
+                type: "string",
+                description:
+                  'Action parameter for action type (e.g., "branch feature/auth")',
+              },
+              result: {
+                type: "string",
+                description:
+                  "Action result for action type (optional completion message)",
+              },
+              ephemeral: {
+                type: "boolean",
+                description:
+                  "Ephemeral flag -- only valid for thought and action types",
+              },
+            },
+            required: ["agentSessionId", "type"],
+          },
+        },
+        {
+          name: "update_session_state",
+          description:
+            "Update the status of a Linear agent session. Use this for explicit session lifecycle transitions (e.g., marking complete or error state).",
+          inputSchema: {
+            type: "object",
+            properties: {
+              sessionId: {
+                type: "string",
+                description: "Agent session ID",
+              },
+              status: {
+                type: "string",
+                enum: [
+                  "pending",
+                  "active",
+                  "awaitingInput",
+                  "complete",
+                  "error",
+                ],
+                description: "Target session status",
+              },
+            },
+            required: ["sessionId", "status"],
+          },
+        },
       ],
     };
   });
@@ -240,6 +315,22 @@ export function createLinearMCPServer(options: LinearMCPServerOptions): Server {
         result = await handleCreateComment(context, args, issueToolDeps);
         break;
 
+      case "create_agent_activity":
+        result = await handleCreateAgentActivity(
+          context,
+          args,
+          activityToolDeps,
+        );
+        break;
+
+      case "update_session_state":
+        result = await handleUpdateSessionState(
+          context,
+          args,
+          activityToolDeps,
+        );
+        break;
+
       default:
         logger.warn({ toolName }, "Unknown tool requested");
         result = {
@@ -263,7 +354,7 @@ export function createLinearMCPServer(options: LinearMCPServerOptions): Server {
     };
   });
 
-  logger.info("Linear MCP server created with 7 tools");
+  logger.info("Linear MCP server created with 9 tools");
 
   return server;
 }

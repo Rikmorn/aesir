@@ -23,6 +23,8 @@ const PERMISSIONS = [
   { agentId: "dev-agent", toolName: "list_labels", allowed: true },
   { agentId: "dev-agent", toolName: "create_comment", allowed: true },
   { agentId: "dev-agent", toolName: "search_issues", allowed: true },
+  { agentId: "dev-agent", toolName: "create_agent_activity", allowed: true },
+  { agentId: "dev-agent", toolName: "update_session_state", allowed: true },
 
   // router: Read-only access for event enrichment
   { agentId: "router", toolName: "get_issue", allowed: true },
