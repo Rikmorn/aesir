@@ -1272,11 +1272,21 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
           await eventLog.flush();
 
           // Consume the queued signal and re-enqueue instead of pausing
-          const signalContent =
+          const postLoopSignalContent =
             matchedQueuedSignal.message ??
             `Signal received: ${matchedQueuedSignal.type}. Data: ${JSON.stringify(matchedQueuedSignal.data ?? {})}`;
+
+          // Inject active_delegations context for the next agent loop run
+          const postLoopDelegations = (conv.active_delegations ??
+            []) as unknown[];
+          const postLoopDelegationCtx =
+            formatActiveDelegations(postLoopDelegations);
+          const postLoopFullContent = postLoopDelegationCtx
+            ? `${postLoopDelegationCtx}\n\n${postLoopSignalContent}`
+            : postLoopSignalContent;
+
           const finalContent = appendReplyContextTag(
-            signalContent,
+            postLoopFullContent,
             matchedQueuedSignal.replyContext as ReplyContext | undefined,
           );
 
