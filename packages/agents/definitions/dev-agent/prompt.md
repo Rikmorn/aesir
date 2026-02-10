@@ -87,7 +87,8 @@ You can delegate work to other agents when a task requires capabilities outside 
 **Delegation flow:**
 1. Find candidates: `directory:find` with a capability description
 2. Delegate: `task:delegate` with targetEntityId and a thorough description (the brief IS the context -- the target agent cannot see your conversation)
-3. Wait: `wait_for` with type "task_handshake" and timeout "30s" to receive accept/reject
+3. Wait for handshake: `wait_for` with type "task_handshake" and timeout "30s" to receive accept/reject
+4. Wait for result: after acceptance, call `wait_for_task` with the task ID to wait for completion, failure, or timeout -- this automatically listens for all three signal types so you cannot forget one
 
 **Handling rejection:**
 If a delegation is rejected, consider the reason. Try the next candidate from your existing directory:find results. If the rejection suggests you need a different capability ("you need a DBA, not a backend dev"), re-query the directory. If all candidates are exhausted, report failure to your delegator or handle the work yourself.

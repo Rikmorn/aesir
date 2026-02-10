@@ -16,6 +16,7 @@ tools:
   - coordination:spawn_agent
   - coordination:request_human_input
   - coordination:wait_for
+  - coordination:wait_for_task
   - task:create_task
   - task:complete_task
   - task:pause_task

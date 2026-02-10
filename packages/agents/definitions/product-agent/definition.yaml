@@ -10,6 +10,7 @@ model: claude-sonnet-4-20250514
 
 tools:
   - coordination:wait_for
+  - coordination:wait_for_task
   - task:create_task
   - task:complete_task
   - task:pause_task
