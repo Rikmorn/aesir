@@ -114,13 +114,13 @@ Plans:
   2. Private notepad entries (scope=private) are invisible to other agents; shared entries are visible to all
   3. Knowledge entries expire automatically by category (discoveries 24h, architecture_decisions 7d, constraints 30d) and deduplication prevents redundant entries on the same topic
   4. `knowledge:query` returns empty results on connection failure and never crashes the agent loop
-**Plans**: ~4 plans
+**Plans**: 4 plans
 
 Plans:
-- [ ] 68-01: Schema (knowledge_entries table, pgvector extension, HNSW indexes) and embedding pipeline (Voyage AI)
-- [ ] 68-02: knowledge:store and knowledge:query tool factories with KnowledgeService
-- [ ] 68-03: Private notepad (scope filtering), knowledge:update tool, and YAML-based scope configuration
-- [ ] 68-04: Knowledge lifecycle (expiry enforcement, deduplication on store, graceful degradation)
+- [ ] 68-01-PLAN.md -- Schema (knowledge_entries table, pgvector extension, HNSW indexes), env config, Docker image swap
+- [ ] 68-02-PLAN.md -- Embedding pipeline (EmbeddingService interface, Ollama + Voyage AI providers, factory)
+- [ ] 68-03-PLAN.md -- KnowledgeService factory + knowledge:store and knowledge:query tools + framework registration
+- [ ] 68-04-PLAN.md -- knowledge:update tool (supersede/invalidate) + background expiry cleanup via pg-boss
 
 #### Phase 69: Entity Directory
 **Goal**: Agents discover each other by capability, enabling dynamic delegation decisions instead of hardcoded routing
