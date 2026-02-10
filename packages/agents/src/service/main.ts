@@ -46,6 +46,7 @@ import type { RouteEventDeps } from "../router/types.js";
 import * as schema from "../shared/db/schema.js";
 import { createEmbeddingService } from "../shared/embedding/index.js";
 import { config } from "../shared/env/config.js";
+import { createDirectoryService } from "../shared/services/directory-service.js";
 import { createKnowledgeService } from "../shared/services/knowledge-service.js";
 import { createTaskService } from "../shared/services/task-service.js";
 import { createApiRouter } from "./api/router.js";
@@ -110,11 +111,19 @@ async function bootstrap(): Promise<void> {
     logger,
   });
 
+  // 4e. DirectoryService -- entity discovery with semantic capability matching
+  const directoryService = createDirectoryService({
+    db,
+    embeddingService,
+    logger,
+  });
+
   registerAllTools({
     registry: toolRegistry,
     agentRegistry,
     taskService,
     knowledgeService,
+    directoryService,
     logger,
   });
 

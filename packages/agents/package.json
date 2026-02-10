@@ -20,7 +20,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "seed:directory": "tsx scripts/seed-directory.ts"
   },
   "dependencies": {
     "@aesir/observability": "workspace:*",

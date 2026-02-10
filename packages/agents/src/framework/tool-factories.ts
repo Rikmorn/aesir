@@ -1,7 +1,7 @@
 /**
  * Tool Factory Registration
  *
- * Registers all 42 tool factories in the ToolRegistry, bridging the v2.3
+ * Registers all 44 tool factories in the ToolRegistry, bridging the v2.3
  * ToolContext interface to the existing v2.2 tool factory signatures.
  *
  * Tool categories:
@@ -13,6 +13,7 @@
  * - Coordination (3): spawn_agent, request_human_input, wait_for
  * - Task (6): create_task, complete_task, pause_task, handoff_task, list_tasks, get_task_context
  * - Knowledge (3): knowledge_store, knowledge_query, knowledge_update
+ * - Directory (2): directory_find, directory_get
  * - Communication (3): reply, ask, notify
  *
  * Adapters bridge ToolContext to the existing factory signatures:
@@ -25,6 +26,7 @@
 import type { DevContainerManager, PinoLogger } from "@aesir/platform";
 import type { ToolDefinition } from "../shared/agent-loop/types.js";
 import type { CommunicationToolDeps } from "../shared/communication/types.js";
+import type { DirectoryService } from "../shared/services/directory-service.js";
 import type { KnowledgeService } from "../shared/services/knowledge-service.js";
 import type { TaskService } from "../shared/services/task-service.js";
 import {
@@ -41,6 +43,10 @@ import {
 } from "../shared/tools/communication/index.js";
 import { createRequestHumanInputTool } from "../shared/tools/coordination/index.js";
 import { createSpawnAgentTool } from "../shared/tools/coordination/spawn-agent.js";
+import {
+  createDirectoryFindTool,
+  createDirectoryGetTool,
+} from "../shared/tools/directory/index.js";
 import { createGitHubTools } from "../shared/tools/integration/github-tools.js";
 import { createLinearTools } from "../shared/tools/integration/linear-tools.js";
 import type { McpToolDeps } from "../shared/tools/integration/mcp-wrapper.js";
@@ -79,6 +85,8 @@ export interface RegisterAllToolsOptions {
   taskService: TaskService;
   /** KnowledgeService for shared knowledge storage and semantic search (Phase 68) */
   knowledgeService: KnowledgeService;
+  /** DirectoryService for entity discovery with semantic capability matching (Phase 69) */
+  directoryService: DirectoryService;
   /** Logger for registration diagnostics */
   logger: PinoLogger;
 }
@@ -155,7 +163,7 @@ function communicationAdapter(
 // ─── Registration ────────────────────────────────────────────────────────────
 
 /**
- * Register all 42 tool factories in the ToolRegistry.
+ * Register all 44 tool factories in the ToolRegistry.
  *
  * This bridges the v2.3 registry-based tool resolution to the existing v2.2
  * tool factory functions. After calling this, `registry.resolve(refs, context)`
@@ -336,6 +344,14 @@ export function registerAllTools(options: RegisterAllToolsOptions): void {
   registry.register("knowledge:update", (ctx) =>
     createKnowledgeUpdateTool(ks, ctx),
   );
+
+  // ── Directory tools (2) ──────────────────────────────────────────────
+
+  const ds = options.directoryService;
+  registry.register("directory:find", (ctx) =>
+    createDirectoryFindTool(ds, ctx),
+  );
+  registry.register("directory:get", () => createDirectoryGetTool(ds));
 
   // ── Communication tools (3) ──────────────────────────────────────────
 
