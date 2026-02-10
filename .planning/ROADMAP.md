@@ -148,12 +148,13 @@ Plans:
   3. The target agent responds with accept (with optional estimate) or reject (with reason) via `task:respond`, and the delegator is notified of the outcome
   4. Delegation depth is enforced at MAX_DEPTH=3; attempts to delegate deeper are rejected with a clear error
   5. Agent prompts distinguish sub-agent spawn (within conversation, shared budget) from cross-conversation delegation (different agent capabilities)
-**Plans**: 3 plans
+**Plans**: 4 plans
 
 Plans:
 - [x] 70-01-PLAN.md -- Schema migration (depth column), DelegationDeps type, task:delegate tool, seconds timeout support, worker-loop injection
 - [x] 70-02-PLAN.md -- task:respond tool (handshake accept/reject signal), main.ts DelegationDeps wiring
 - [x] 70-03-PLAN.md -- Delegation tools added to orchestrator definitions, delegation judgment guidance in prompts
+- [x] 70-04-PLAN.md -- Gap fixes: timeout signal type mismatch bug, wait_for_task in agent definitions, unit tests for signal-matching/wait-for-task-tool/task-signal-dispatcher
 
 #### Phase 71: Completion Signaling
 **Goal**: Delegating agents receive reliable notification when delegated work completes or fails, with orphan handling and context preservation
@@ -222,12 +223,12 @@ Phases 67+68 execute in parallel, then 69 -> 70 -> 71 -> 72 -> 73 sequentially.
 | 67. Linear Agent SDK | v2.7 | 5/5 | Complete | 2026-02-10 |
 | 68. Shared Memory | v2.7 | 4/4 | Complete | 2026-02-10 |
 | 69. Entity Directory | v2.7 | 3/3 | Complete | 2026-02-10 |
-| 70. Task Delegation | v2.7 | 3/3 | Complete | 2026-02-10 |
+| 70. Task Delegation | v2.7 | 4/4 | Complete | 2026-02-10 |
 | 71. Completion Signaling | v2.7 | 3/3 | Complete | 2026-02-10 |
 | 72. Delegation Graph Observability | v2.7 | 0/~3 | Not started | - |
 | 73. QA Agent + Validation | v2.7 | 0/~3 | Not started | - |
 
-**Total: 8 milestones shipped (69 phases, 301 plans) + v2.7 in progress (5/7 phases complete, 18/~24 plans)**
+**Total: 8 milestones shipped (69 phases, 301 plans) + v2.7 in progress (5/7 phases complete, 19/~25 plans)**
 
 ---
 
