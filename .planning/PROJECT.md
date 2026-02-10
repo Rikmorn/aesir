@@ -8,7 +8,18 @@ An agentic development platform that automates software development workflows --
 
 End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-## Current Milestone: Planning next milestone
+## Current Milestone: v2.7 Agent Collaboration
+
+**Goal:** Multi-agent collaboration — agents delegate work to each other and to humans through tasks, backed by shared memory, an entity directory, and first-class Linear agent identity.
+
+**Target features:**
+- Linear Agent SDK migration (actor=app, agent activities, echo elimination by design)
+- Shared memory (knowledge:store/query, classification, private notepad vs shared)
+- Entity directory (agents + humans queryable by capability, seeded from YAML)
+- Task delegation (task:delegate, materialization layer, negotiation handshake)
+- Completion signaling (callback routing, failure/timeout/clarification signals)
+- Delegation graph observability (task tree view, cross-conversation tracing)
+- QA agent validation workflow (triangular product→dev→QA loop)
 
 ## Current State
 
