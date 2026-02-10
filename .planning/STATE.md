@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 69 of 73 (Entity Directory -- in progress)
-Plan: 1 of 3 in phase (69-01 complete)
-Status: Phase 69 in progress, 69-01 schema foundation complete
-Last activity: 2026-02-10 -- Completed 69-01 (Entity Directory Schema)
+Plan: 2 of 3 in phase (69-02 complete)
+Status: Phase 69 in progress, 69-02 directory service complete
+Last activity: 2026-02-10 -- Completed 69-02 (Entity Directory Service)
 
-Progress: [████░░░░░░] ~34%
+Progress: [██████░░░░] ~67%
 
 ## Milestone History
 
@@ -34,7 +34,7 @@ Progress: [████░░░░░░] ~34%
 **Cumulative:**
 - Total milestones shipped: 8
 - Total phases completed: 69
-- Total plans completed: 309
+- Total plans completed: 310
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -48,6 +48,7 @@ Progress: [████░░░░░░] ~34%
 | 68 | 03 | 6min | 2 | 9 |
 | 68 | 04 | 3min | 2 | 5 |
 | 69 | 01 | 2min | 2 | 6 |
+| 69 | 02 | 6min | 2 | 7 |
 
 *Updated after each plan completion*
 
@@ -86,6 +87,8 @@ See PROJECT.md Key Decisions table for full history.
 - **69-01:** Agent entries use definition ID as PK; directoryEntry ID generator for future human entries only
 - **69-01:** Unconstrained vector for capabilities_embedding (matches knowledge_entries pattern, supports 768/1024)
 - **69-01:** HNSW index m=16, ef_construction=64 matches knowledge_entries for consistent pgvector configuration
+- **69-02:** ne() for self-exclusion in directory:find (consistent drizzle-orm operator usage)
+- **69-02:** directory_get does not take ToolContext (no ctx.agentId needed, unlike find)
 
 ### Pending Todos
 
@@ -102,9 +105,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed 69-01-PLAN.md (Entity Directory Schema)
+Stopped at: Completed 69-02-PLAN.md (Entity Directory Service)
 Resume file: None
-Next action: Continue with 69-02-PLAN.md (Entity Directory Service)
+Next action: Continue with 69-03-PLAN.md (Entity Directory Seed)
 
 ---
-*Updated: 2026-02-10 -- 69-01 complete: entity directory schema foundation with table, migration, HNSW index, and YAML capabilities field*
+*Updated: 2026-02-10 -- 69-02 complete: DirectoryService factory, directory:find and directory:get tools, 44 total tools registered*
