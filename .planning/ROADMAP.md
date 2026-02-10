@@ -131,12 +131,12 @@ Plans:
   2. An agent can call `directory:find` with a capability description and receive matching agents ranked by relevance
   3. Seed script is idempotent -- re-running updates existing entries without duplicating them
   4. `directory:find` returns empty results on failure; agents fall back to self-execution without crashing
-**Plans**: ~3 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] 69-01: Entity directory schema (entity_directory table, capability embeddings) and seed script
-- [ ] 69-02: directory:find and directory:get tool factories with DirectoryService
-- [ ] 69-03: Semantic capability matching (reusing Phase 68 embedding pipeline) and definition.yaml capabilities field
+- [ ] 69-01-PLAN.md -- Schema foundation (entity_directory table, migration, YAML capabilities field, AgentRegistry loading)
+- [ ] 69-02-PLAN.md -- DirectoryService factory, directory:find and directory:get tools, tool registration, main.ts wiring
+- [ ] 69-03-PLAN.md -- Agent definition capabilities, seed script (idempotent upsert with change detection), package.json entry
 
 #### Phase 70: Task Delegation
 **Goal**: Agents delegate work to other agents through tasks with a negotiation handshake, creating cross-conversation collaboration
@@ -222,7 +222,7 @@ Phases 67+68 execute in parallel, then 69 -> 70 -> 71 -> 72 -> 73 sequentially.
 | 60-66 | v2.6 | 16 | Complete | 2026-02-09 |
 | 67. Linear Agent SDK | v2.7 | 5/5 | Complete | 2026-02-10 |
 | 68. Shared Memory | v2.7 | 4/4 | Complete | 2026-02-10 |
-| 69. Entity Directory | v2.7 | 0/~3 | Not started | - |
+| 69. Entity Directory | v2.7 | 0/3 | Not started | - |
 | 70. Task Delegation | v2.7 | 0/~3 | Not started | - |
 | 71. Completion Signaling | v2.7 | 0/~4 | Not started | - |
 | 72. Delegation Graph Observability | v2.7 | 0/~3 | Not started | - |
