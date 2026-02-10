@@ -8,7 +8,7 @@
 
 Agents store and retrieve classified knowledge with semantic search, enabling collaboration efficiency through shared context across conversations. Knowledge persists beyond individual conversations so agents in delegation chains don't redundantly re-discover the same things.
 
-Tools: `knowledge:store`, `knowledge:query`, `knowledge:update`. Schema: `agents.knowledge_entries` with pgvector. Embedding: Voyage AI (1024 dimensions).
+Tools: `knowledge:store`, `knowledge:query`, `knowledge:update`. Schema: `agents.knowledge_entries` with pgvector. Embedding: provider-agnostic interface — Ollama for development, Voyage AI for production.
 
 </domain>
 
@@ -88,20 +88,44 @@ Deduplication on store (MEM-07/MEM-08):
 
 ### Embedding Pipeline
 
-Embed source: `"{topic}: {content}"` — concatenate both. Topic gives the model a strong domain anchor, content provides nuance. Don't embed `type` — it's a structured filter, not a similarity signal.
+Provider-agnostic embedding interface — Ollama for development, Voyage AI for production.
 
-Voyage AI integration:
-- Direct HTTP (fetch + retry). Single endpoint: POST text array, get back vectors. SDK optional — planner decides based on ecosystem.
-- `VOYAGE_API_KEY` as env var, validated by Zod at startup. Same pattern as `ANTHROPIC_API_KEY` (static key, not OAuth).
+**Provider switching:**
+- `EMBEDDING_PROVIDER=ollama|voyage` env var, validated by Zod at startup
+- `ollama` → validate `OLLAMA_URL` exists (defaults to Docker service name `ollama:11434`)
+- `voyage` → validate `VOYAGE_API_KEY` exists, fail fast if missing
+- Invalid/missing `EMBEDDING_PROVIDER` → startup error with clear message
+- No auto-detection or key-sniffing — explicit provider selection prevents silent fallback
+
+**Configurable vector dimensions:**
+- `EMBEDDING_DIMENSIONS` env var — `768` for Ollama dev models, `1024` for Voyage AI production
+- pgvector column and HNSW index are dimension-specific, so this must be consistent per environment
+- Schema migration uses the configured dimension
+
+**Ollama (development):**
+- Single container in docker-compose, REST API (`POST /api/embeddings`)
+- Lightweight embedding model (e.g., nomic-embed-text, 768 dimensions)
+- No API key needed — local service
+
+**Voyage AI (production):**
+- Direct HTTP (fetch + retry) or SDK — planner decides based on ecosystem
+- `VOYAGE_API_KEY` as env var, same pattern as `ANTHROPIC_API_KEY` (static key, not OAuth)
 - Model: voyage-3 (or latest appropriate model), 1024 dimensions
 
-Synchronous embedding with graceful degradation:
+**EmbeddingService interface:**
+- Single interface, two implementations (OllamaEmbedding, VoyageEmbedding)
+- `embed(text: string): Promise<number[] | null>` — returns vector or null on failure
+- `embedBatch(texts: string[]): Promise<(number[] | null)[]>` — batch support for seed scripts
+
+**Embed source:** `"{topic}: {content}"` — concatenate both. Topic gives the model a strong domain anchor, content provides nuance. Don't embed `type` — it's a structured filter, not a similarity signal.
+
+**Synchronous embedding with graceful degradation:**
 1. Write row with metadata (topic, type, content, scope, expiry)
-2. Call Voyage AI for embedding
+2. Call embedding provider for vector
 3. Success → update row with vector
 4. Failure → log warning, row stays with null vector, still queryable by structured fields (type, topic)
 
-Query embedding fallback:
+**Query embedding fallback:**
 - If embedding the query text fails, fall back to structured-only search using provided filters (type, topic)
 - If no structured filters provided either, return empty — a pure semantic search with no embedding has nothing to work with
 - Aligns with MEM-08: partial functionality over silent failure
@@ -109,7 +133,8 @@ Query embedding fallback:
 ### Claude's Discretion
 
 - Voyage AI SDK vs raw HTTP — check ecosystem, pick based on maintenance quality
-- Embedding model version selection (voyage-3 vs newer)
+- Embedding model version selection (voyage-3 vs newer for production, specific Ollama model for dev)
+- Ollama model selection for development (nomic-embed-text or similar lightweight embedding model)
 - Background cleanup job implementation (pg-boss scheduled job vs setInterval)
 - HNSW index parameters (ef_construction, m) — tune for the expected entry volume
 - Similarity threshold value (suggested 0.3 cosine, tune based on testing)
