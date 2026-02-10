@@ -96,13 +96,13 @@ See `.planning/milestones/v2.6-ROADMAP.md` for full details.
   3. Linear OAuth tokens refresh automatically before expiry and retry transparently on 401 without agent loop disruption
   4. Agent session creation triggers a synchronous thought activity within 10 seconds (before conversation is queued)
   5. Echo filtering by `LINEAR_BOT_USER_ID` is removed -- agent activities and user prompts are structurally distinct and never re-enter the inbound pipeline
-**Plans**: ~4 plans
+**Plans**: 4 plans
 
 Plans:
-- [ ] 67-01: Token refresh middleware (proactive refresh at 80% lifetime, 401 retry)
-- [ ] 67-02: OAuth actor=app migration and agent activity MCP tools
-- [ ] 67-03: Session ID tracking through adapter/replyContext/denormalizer and agent_session.prompted event handling
-- [ ] 67-04: Agent Plans integration, echo filter removal, and prompt updates
+- [ ] 67-01-PLAN.md -- Token refresh middleware (proactive at 80% lifetime, reactive 401 retry, mutex, Slack alerting)
+- [ ] 67-02-PLAN.md -- OAuth actor=app migration and agent activity MCP tools (create_agent_activity, update_session_state)
+- [ ] 67-03-PLAN.md -- Session ID tracking through adapter/replyContext/denormalizer, intent-to-activity mapping, 10s acknowledgment thought
+- [ ] 67-04-PLAN.md -- Echo filter removal, error activity emission on conversation failure, dev-agent prompt updates
 
 #### Phase 68: Shared Memory
 **Goal**: Agents store and retrieve classified knowledge with semantic search, enabling collaboration efficiency through shared context
