@@ -21,14 +21,14 @@ Requirements for v2.7 Agent Collaboration milestone. Each maps to roadmap phases
 
 ### Shared Memory
 
-- [ ] **MEM-01**: Agents can store knowledge entries via `knowledge:store` tool with classification (discovery, constraint, architecture_decision, thought, preference, test_result)
-- [ ] **MEM-02**: Agents can query shared knowledge via `knowledge:query` tool with semantic search (pgvector) and type/scope filtering
-- [ ] **MEM-03**: Agents can update existing knowledge entries via `knowledge:update` tool (supersede, invalidate, extend)
-- [ ] **MEM-04**: Knowledge entries have mandatory expiry by category (discoveries 24h, architecture_decisions 7d, constraints 30d, thoughts 24h, preferences 30d, test_results 7d)
-- [ ] **MEM-05**: Private agent notepad stores per-agent knowledge with `scope=private` (not visible to other agents)
-- [ ] **MEM-06**: Shared knowledge defaults are sensible without configuration (discoveries and constraints shared, thoughts private) with YAML-based overrides
-- [ ] **MEM-07**: Knowledge deduplication: before storing, query existing entries on same topic and supersede rather than duplicate
-- [ ] **MEM-08**: Knowledge store gracefully degrades: `knowledge:query` returns empty results on connection failure, never crashes agent loop
+- [x] **MEM-01**: Agents can store knowledge entries via `knowledge:store` tool with classification (discovery, constraint, architecture_decision, thought, preference, test_result)
+- [x] **MEM-02**: Agents can query shared knowledge via `knowledge:query` tool with semantic search (pgvector) and type/scope filtering
+- [x] **MEM-03**: Agents can update existing knowledge entries via `knowledge:update` tool (supersede, invalidate). Extend deferred — agents should supersede with complete replacement rather than accumulate appended content.
+- [x] **MEM-04**: Knowledge entries have mandatory expiry by category (discoveries 24h, architecture_decisions 7d, constraints 30d, thoughts 24h, preferences 30d, test_results 7d)
+- [x] **MEM-05**: Private agent notepad stores per-agent knowledge with `scope=private` (not visible to other agents)
+- [x] **MEM-06**: Shared knowledge defaults are sensible without configuration: shared (discovery, constraint, architecture_decision, preference, test_result) and private (thought). YAML-based scope overrides deferred — hardcoded defaults sufficient for v1.
+- [x] **MEM-07**: Knowledge deduplication: before storing, query existing entries on same topic and supersede rather than duplicate
+- [x] **MEM-08**: Knowledge store gracefully degrades: `knowledge:query` returns empty results on connection failure, never crashes agent loop
 
 ### Entity Directory
 

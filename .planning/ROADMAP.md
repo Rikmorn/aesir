@@ -77,7 +77,7 @@ See `.planning/milestones/v2.6-ROADMAP.md` for full details.
 ### Phases
 
 - [x] **Phase 67: Linear Agent SDK** - Agents operate as first-class Linear workspace entities with typed activities (completed 2026-02-10)
-- [ ] **Phase 68: Shared Memory** - Agents store and retrieve shared knowledge with semantic search (PARALLEL with Phase 67)
+- [x] **Phase 68: Shared Memory** - Agents store and retrieve shared knowledge with semantic search (completed 2026-02-10)
 - [ ] **Phase 69: Entity Directory** - Agents discover each other by capability for informed delegation decisions
 - [ ] **Phase 70: Task Delegation** - Agents delegate work to other agents through tasks with negotiation handshake
 - [ ] **Phase 71: Completion Signaling** - Delegating agents receive reliable notification when delegated work completes or fails
@@ -117,10 +117,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 68-01-PLAN.md -- Schema (knowledge_entries table, pgvector extension, HNSW indexes), env config, Docker image swap
-- [ ] 68-02-PLAN.md -- Embedding pipeline (EmbeddingService interface, Ollama + Voyage AI providers, factory)
-- [ ] 68-03-PLAN.md -- KnowledgeService factory + knowledge:store and knowledge:query tools + framework registration
-- [ ] 68-04-PLAN.md -- knowledge:update tool (supersede/invalidate) + background expiry cleanup via pg-boss
+- [x] 68-01-PLAN.md -- Schema (knowledge_entries table, pgvector extension, HNSW indexes), env config, Docker image swap
+- [x] 68-02-PLAN.md -- Embedding pipeline (EmbeddingService interface, Ollama + Voyage AI providers, factory)
+- [x] 68-03-PLAN.md -- KnowledgeService factory + knowledge:store and knowledge:query tools + framework registration
+- [x] 68-04-PLAN.md -- knowledge:update tool (supersede/invalidate) + background expiry cleanup via pg-boss
 
 #### Phase 69: Entity Directory
 **Goal**: Agents discover each other by capability, enabling dynamic delegation decisions instead of hardcoded routing
@@ -221,14 +221,14 @@ Phases 67+68 execute in parallel, then 69 -> 70 -> 71 -> 72 -> 73 sequentially.
 | 56-59 | v2.5 | 17 | Complete | 2026-02-08 |
 | 60-66 | v2.6 | 16 | Complete | 2026-02-09 |
 | 67. Linear Agent SDK | v2.7 | 5/5 | Complete | 2026-02-10 |
-| 68. Shared Memory | v2.7 | 0/~4 | Not started | - |
+| 68. Shared Memory | v2.7 | 4/4 | Complete | 2026-02-10 |
 | 69. Entity Directory | v2.7 | 0/~3 | Not started | - |
 | 70. Task Delegation | v2.7 | 0/~3 | Not started | - |
 | 71. Completion Signaling | v2.7 | 0/~4 | Not started | - |
 | 72. Delegation Graph Observability | v2.7 | 0/~3 | Not started | - |
 | 73. QA Agent + Validation | v2.7 | 0/~3 | Not started | - |
 
-**Total: 8 milestones shipped (69 phases, 301 plans) + v2.7 in progress (1/7 phases complete, 5/~24 plans)**
+**Total: 8 milestones shipped (69 phases, 301 plans) + v2.7 in progress (2/7 phases complete, 9/~24 plans)**
 
 ---
 
