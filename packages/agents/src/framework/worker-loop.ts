@@ -354,6 +354,90 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
     }
   }
 
+  // ─── Resume Activity Emission ─────────────────────────────────────────
+
+  /**
+   * Emit a best-effort thought activity to Linear when a conversation resumes.
+   * Transitions the Linear session to `active` state promptly.
+   * Only fires when the conversation has a Linear agent session in its replyContext.
+   * Fire-and-forget: failures are logged but never mask execution.
+   */
+  async function emitResumeActivity(
+    replyContext: unknown,
+    deps: { logger: PinoLogger; agentId: string; correlationId: string },
+  ): Promise<void> {
+    try {
+      const ctx = replyContext as Record<string, unknown> | undefined;
+      if (!ctx || ctx.channel !== "linear" || !ctx.agentSessionId) return;
+
+      const { callMcpTool } = await import("../shared/mcp/client.js");
+
+      await callMcpTool({
+        integration: "linear",
+        tool: "create_agent_activity",
+        params: {
+          agentSessionId: ctx.agentSessionId as string,
+          type: "thought",
+          body: "Resuming work...",
+        },
+        agentId: deps.agentId,
+        correlationId: deps.correlationId,
+      });
+
+      deps.logger.info(
+        { sessionId: ctx.agentSessionId },
+        "Resume activity emitted to Linear",
+      );
+    } catch (error) {
+      deps.logger.warn(
+        { err: error },
+        "Failed to emit resume activity to Linear (non-fatal)",
+      );
+    }
+  }
+
+  // ─── Completion Activity Emission ───────────────────────────────────────
+
+  /**
+   * Emit a best-effort response activity to Linear when a conversation completes.
+   * Transitions the Linear session to `complete` state.
+   * Only fires when the conversation has a Linear agent session in its replyContext.
+   * Fire-and-forget: failures are logged but never mask execution.
+   */
+  async function emitCompletionActivity(
+    replyContext: unknown,
+    deps: { logger: PinoLogger; agentId: string; correlationId: string },
+  ): Promise<void> {
+    try {
+      const ctx = replyContext as Record<string, unknown> | undefined;
+      if (!ctx || ctx.channel !== "linear" || !ctx.agentSessionId) return;
+
+      const { callMcpTool } = await import("../shared/mcp/client.js");
+
+      await callMcpTool({
+        integration: "linear",
+        tool: "create_agent_activity",
+        params: {
+          agentSessionId: ctx.agentSessionId as string,
+          type: "response",
+          body: "Task completed.",
+        },
+        agentId: deps.agentId,
+        correlationId: deps.correlationId,
+      });
+
+      deps.logger.info(
+        { sessionId: ctx.agentSessionId },
+        "Completion activity emitted to Linear",
+      );
+    } catch (error) {
+      deps.logger.warn(
+        { err: error },
+        "Failed to emit completion activity to Linear (non-fatal)",
+      );
+    }
+  }
+
   // State
   let draining = false;
   let started = false;
@@ -566,6 +650,15 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
               initialContext,
             },
       });
+
+      // 3a. Emit resume activity to Linear (best-effort, transitions session to active)
+      if (isResumed) {
+        await emitResumeActivity(conv.reply_context, {
+          logger: childLogger,
+          agentId: conv.agent_definition_id,
+          correlationId: conv.id,
+        });
+      }
 
       // 3b. Inject task context if conversation has a task (Phase 58.2, TASK-23)
       if (conv.task_id && taskService) {
@@ -1067,6 +1160,13 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
           );
         }
       } else if (result.status === "completed") {
+        // Emit completion activity to Linear (best-effort, transitions session to complete)
+        await emitCompletionActivity(conv.reply_context, {
+          logger: childLogger,
+          agentId: conv.agent_definition_id,
+          correlationId: conv.id,
+        });
+
         // Completed successfully
         await db
           .update(conversations)
