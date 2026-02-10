@@ -54,6 +54,7 @@ Progress: [██████░░░░] ~69%
 | 70 | 03 | 2min | 2 | 4 |
 
 *Updated after each plan completion*
+| Phase 70 P02 | 3min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -99,6 +100,8 @@ See PROJECT.md Key Decisions table for full history.
 - **70-01:** task:delegate returns wait_for guidance with task_handshake type and 30s timeout
 - **70-03:** Delegation guidance as prompt section (agent-first principle -- behavior via prompts, not executor code)
 - **70-03:** Spawn vs delegate heuristic: subAgents list = spawn (internal specialist), directory lookup = delegate (cross-domain)
+- [Phase 70]: Worker loop populates delegationDeps for both task:delegate AND task:respond (target agent needs executor.signal())
+- [Phase 70]: Orphan case still transitions task to active if accepted (completion signaling delivers results)
 
 ### Pending Todos
 
