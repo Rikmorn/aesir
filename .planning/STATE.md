@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.7 Agent Collaboration -- Phase 71 (Completion Signaling) in progress
+**Current focus:** v2.7 Agent Collaboration -- Phase 71 (Completion Signaling) complete, ready for Phase 72
 
 ## Current Position
 
 Phase: 71 of 73 (Completion Signaling)
-Plan: 1 of 3 in phase (plan 01 complete)
-Status: Phase 71 plan 01 complete, continuing with plan 02
-Last activity: 2026-02-10 -- Plan 71-01 complete (multi-type wait_for, signal matching, wait_for_task)
+Plan: 3 of 3 in phase (all plans complete)
+Status: Phase 71 complete, ready for phase 72
+Last activity: 2026-02-10 -- Plan 71-03 complete (active_delegations lifecycle management)
 
-Progress: [███████░░░] ~75%
+Progress: [████████░░] ~80%
 
 ## Milestone History
 
@@ -54,6 +54,7 @@ Progress: [███████░░░] ~75%
 | 70 | 02 | 3min | 2 | 4 |
 | 70 | 03 | 2min | 2 | 4 |
 | 71 | 01 | 9min | 2 | 14 |
+| 71 | 03 | 5min | 2 | 4 |
 
 *Updated after each plan completion*
 
@@ -107,6 +108,10 @@ See PROJECT.md Key Decisions table for full history.
 - **71-01:** Backward compat: signalMatchesPendingWait normalizes old { type } and new { types } formats
 - **71-01:** wait_for_task is a separate tool (not a mode of wait_for) for safety-by-design
 - **71-01:** Synthetic pendingWait for worker-loop post-execution queued signal matching
+- **71-03:** db added to DelegationDeps for direct conversation row access (active_delegations writes)
+- **71-03:** Non-fatal delegation tracking -- write failure never fails the delegation itself
+- **71-03:** Three signal injection points for delegation context: pre-loop, executor.signal(), post-loop re-enqueue
+- **71-03:** computeUpdatedDelegations as pure function for testable delegation state transitions
 
 ### Pending Todos
 
@@ -123,9 +128,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed 71-01-PLAN.md
+Stopped at: Completed 71-03-PLAN.md
 Resume file: None
-Next action: Execute 71-02-PLAN.md (callback routing and completion result delivery)
+Next action: Execute Phase 72 (Delegation Graph Observability)
 
 ---
-*Updated: 2026-02-10 -- Phase 71 plan 01 complete: multi-type wait_for, signal matching, wait_for_task tool*
+*Updated: 2026-02-10 -- Phase 71 plan 03 complete: active_delegations lifecycle management*
