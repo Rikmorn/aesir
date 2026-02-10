@@ -34,7 +34,7 @@ Progress: [████████░░] ~80%
 **Cumulative:**
 - Total milestones shipped: 8
 - Total phases completed: 71
-- Total plans completed: 318
+- Total plans completed: 319
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -55,6 +55,7 @@ Progress: [████████░░] ~80%
 | 70 | 03 | 2min | 2 | 4 |
 | 71 | 01 | 9min | 2 | 14 |
 | 71 | 02 | 7min | 2 | 8 |
+| 70 | 04 | 6min | 3 | 12 |
 | 71 | 03 | 5min | 2 | 4 |
 
 *Updated after each plan completion*
@@ -116,6 +117,8 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 71]: Late-bind setDispatcher() on TaskService (same pattern as DelegationDeps executor reference)
 - [Phase 71]: Direct db.update for completion_result bypasses TaskService to avoid infinite recursion
 - [Phase 71]: Dispatcher failures are non-fatal: logged but never thrown (at-most-once delivery)
+- **70-04:** timeoutSignalType fallback chain: explicit type > first waitType > unknown (safe for both wait_for and wait_for_task)
+- **70-04:** Regular wait_for gets timeoutSignalType: null (falls back to first/only waitType, preserving existing behavior)
 
 ### Pending Todos
 
@@ -132,9 +135,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Phase 71 verified and complete
+Stopped at: Completed 70-04-PLAN.md (Phase 70 all 4 plans complete)
 Resume file: None
-Next action: Begin Phase 72 (Delegation Graph Observability)
+Next action: Verify Phase 70 or begin Phase 72 (Delegation Graph Observability)
 
 ---
 *Updated: 2026-02-10 -- Phase 71 complete: completion signaling with orphan handling (3 plans, verified 7/7)*

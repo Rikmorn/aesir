@@ -63,7 +63,6 @@ function createMockDb() {
   };
   return {
     update: vi.fn().mockReturnValue(chainable),
-    // biome-ignore lint/style/useNamingConvention: test helper internal reference
     chain_ref: chainable,
   };
 }
