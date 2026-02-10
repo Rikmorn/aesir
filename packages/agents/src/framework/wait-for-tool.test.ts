@@ -167,6 +167,7 @@ describe("createDefaultWaitForState", () => {
       reason: null,
       timeout: null,
       metadata: null,
+      timeoutSignalType: null,
     });
   });
 });
