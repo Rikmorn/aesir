@@ -31,6 +31,12 @@ vi.mock("@aesir/platform", () => ({
   createDevContainerGit: vi.fn(),
 }));
 
+// Mock MCP client for activity emission tests (dynamic import in worker-loop)
+const mockCallMcpTool = vi.fn().mockResolvedValue(undefined);
+vi.mock("../shared/mcp/client.js", () => ({
+  callMcpTool: (...args: unknown[]) => mockCallMcpTool(...args),
+}));
+
 import { createDevContainerGit } from "@aesir/platform";
 import { runAgentLoop } from "../shared/agent-loop/run-agent-loop.js";
 import type { AgentLoopResult } from "../shared/agent-loop/types.js";
@@ -75,6 +81,8 @@ interface MockConversationRow {
   parent_conversation_id: string | null;
   retry_count: number;
   max_retries: number;
+  task_id: string | null;
+  reply_context: Record<string, unknown> | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -98,6 +106,8 @@ function createMockConversationRow(
     parent_conversation_id: null,
     retry_count: 0,
     max_retries: 2,
+    task_id: null,
+    reply_context: null,
     created_at: new Date("2026-02-01T00:00:00Z"),
     updated_at: new Date("2026-02-01T00:00:00Z"),
     ...overrides,
@@ -278,6 +288,8 @@ describe("createWorkerLoop", () => {
   beforeEach(() => {
     mockRunAgentLoop.mockReset();
     mockRunAgentLoop.mockResolvedValue(createDefaultLoopResult());
+    mockCallMcpTool.mockReset();
+    mockCallMcpTool.mockResolvedValue(undefined);
     mockCreateDevContainerGit.mockReset();
     mockCreateDevContainerGit.mockReturnValue({
       configureCredentials: vi.fn().mockResolvedValue(undefined),
@@ -1787,6 +1799,230 @@ describe("createWorkerLoop", () => {
       const loopCall = mockRunAgentLoop.mock.calls[0];
       const loopOpts = loopCall?.[0] as Record<string, unknown>;
       expect(loopOpts.tokenBudget).toBeUndefined();
+    });
+  });
+
+  // ── Activity Emission (Resume & Completion) ──────────────────────────
+
+  describe("activity emission", () => {
+    it("should emit resume activity on resume with Linear session", async () => {
+      const { options, mockDb } = createTestOptions();
+      const conv = createMockConversationRow({
+        messages: [
+          { role: "user", content: "Do something" },
+          { role: "assistant", content: "Working on it" },
+        ],
+        reply_context: {
+          channel: "linear",
+          agentSessionId: "sess_123",
+        },
+      });
+      mockDb.setExecuteResult([conv]);
+      mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+
+      const loop = createWorkerLoop(options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      // Find the resume activity call (type: "thought")
+      const resumeCall = mockCallMcpTool.mock.calls.find((call: unknown[]) => {
+        const arg = call[0] as Record<string, unknown>;
+        const params = arg.params as Record<string, unknown>;
+        return (
+          arg.tool === "create_agent_activity" && params.type === "thought"
+        );
+      });
+      expect(resumeCall).toBeDefined();
+      const resumeArg = resumeCall?.[0] as Record<string, unknown>;
+      expect(resumeArg.integration).toBe("linear");
+      const resumeParams = resumeArg.params as Record<string, unknown>;
+      expect(resumeParams.agentSessionId).toBe("sess_123");
+      expect(resumeParams.body).toBe("Resuming work...");
+    });
+
+    it("should skip resume activity when no Linear session", async () => {
+      const { options, mockDb } = createTestOptions();
+      const conv = createMockConversationRow({
+        messages: [
+          { role: "user", content: "Do something" },
+          { role: "assistant", content: "Working on it" },
+        ],
+        reply_context: {
+          channel: "slack",
+          threadTs: "123",
+        },
+      });
+      mockDb.setExecuteResult([conv]);
+      mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+
+      const loop = createWorkerLoop(options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      // No call with type "thought" should exist
+      const resumeCall = mockCallMcpTool.mock.calls.find((call: unknown[]) => {
+        const arg = call[0] as Record<string, unknown>;
+        const params = arg.params as Record<string, unknown>;
+        return (
+          arg.tool === "create_agent_activity" && params.type === "thought"
+        );
+      });
+      expect(resumeCall).toBeUndefined();
+    });
+
+    it("should skip resume activity for new conversations (not resumed)", async () => {
+      const { options, mockDb } = createTestOptions();
+      const conv = createMockConversationRow({
+        messages: [{ role: "user", content: "Do something" }],
+        reply_context: {
+          channel: "linear",
+          agentSessionId: "sess_456",
+        },
+      });
+      mockDb.setExecuteResult([conv]);
+      mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+
+      const loop = createWorkerLoop(options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      // No call with type "thought" should exist (not resumed)
+      const resumeCall = mockCallMcpTool.mock.calls.find((call: unknown[]) => {
+        const arg = call[0] as Record<string, unknown>;
+        const params = arg.params as Record<string, unknown>;
+        return (
+          arg.tool === "create_agent_activity" && params.type === "thought"
+        );
+      });
+      expect(resumeCall).toBeUndefined();
+    });
+
+    it("should emit completion activity on completed conversation with Linear session", async () => {
+      const { options, mockDb } = createTestOptions();
+      const conv = createMockConversationRow({
+        reply_context: {
+          channel: "linear",
+          agentSessionId: "sess_789",
+        },
+      });
+      mockDb.setExecuteResult([conv]);
+      mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+      mockRunAgentLoop.mockResolvedValue(createDefaultLoopResult());
+
+      const loop = createWorkerLoop(options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      // Find the completion activity call (type: "response")
+      const completionCall = mockCallMcpTool.mock.calls.find(
+        (call: unknown[]) => {
+          const arg = call[0] as Record<string, unknown>;
+          const params = arg.params as Record<string, unknown>;
+          return (
+            arg.tool === "create_agent_activity" && params.type === "response"
+          );
+        },
+      );
+      expect(completionCall).toBeDefined();
+      const completionArg = completionCall?.[0] as Record<string, unknown>;
+      expect(completionArg.integration).toBe("linear");
+      const completionParams = completionArg.params as Record<string, unknown>;
+      expect(completionParams.agentSessionId).toBe("sess_789");
+      expect(completionParams.body).toBe("Task completed.");
+    });
+
+    it("should skip completion activity when no Linear session", async () => {
+      const { options, mockDb } = createTestOptions();
+      const conv = createMockConversationRow({
+        reply_context: null,
+      });
+      mockDb.setExecuteResult([conv]);
+      mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+      mockRunAgentLoop.mockResolvedValue(createDefaultLoopResult());
+
+      const loop = createWorkerLoop(options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      // No call with type "response" should exist
+      const completionCall = mockCallMcpTool.mock.calls.find(
+        (call: unknown[]) => {
+          const arg = call[0] as Record<string, unknown>;
+          const params = arg.params as Record<string, unknown>;
+          return (
+            arg.tool === "create_agent_activity" && params.type === "response"
+          );
+        },
+      );
+      expect(completionCall).toBeUndefined();
+    });
+
+    it("should not crash executor when activity emission fails", async () => {
+      const { options, mockDb } = createTestOptions();
+      const conv = createMockConversationRow({
+        reply_context: {
+          channel: "linear",
+          agentSessionId: "sess_fail",
+        },
+      });
+      mockDb.setExecuteResult([conv]);
+      mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+      mockRunAgentLoop.mockResolvedValue(createDefaultLoopResult());
+
+      // Make callMcpTool throw for all calls
+      mockCallMcpTool.mockRejectedValue(new Error("MCP connection refused"));
+
+      const loop = createWorkerLoop(options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      // Conversation should still complete successfully despite activity emission failure
+      const setCalls = mockDb.mocks.updateSet.mock.calls;
+      const completedCall = setCalls.find(
+        (call: unknown[]) =>
+          call[0] &&
+          (call[0] as Record<string, unknown>).status === "completed",
+      );
+      expect(completedCall).toBeDefined();
+    });
+
+    it("should not crash executor when resume activity emission fails", async () => {
+      const { options, mockDb } = createTestOptions();
+      const conv = createMockConversationRow({
+        messages: [
+          { role: "user", content: "Do something" },
+          { role: "assistant", content: "Working on it" },
+        ],
+        reply_context: {
+          channel: "linear",
+          agentSessionId: "sess_fail2",
+        },
+      });
+      mockDb.setExecuteResult([conv]);
+      mockDb.setSelectWhereResult([{ claimed_by: "wrkr_test" }]);
+
+      // Make callMcpTool throw for all calls
+      mockCallMcpTool.mockRejectedValue(new Error("MCP timeout"));
+
+      const loop = createWorkerLoop(options);
+      loop.start();
+      await tick();
+      await loop.close();
+
+      // Conversation should still complete successfully despite resume activity failure
+      const setCalls = mockDb.mocks.updateSet.mock.calls;
+      const completedCall = setCalls.find(
+        (call: unknown[]) =>
+          call[0] &&
+          (call[0] as Record<string, unknown>).status === "completed",
+      );
+      expect(completedCall).toBeDefined();
     });
   });
 });
