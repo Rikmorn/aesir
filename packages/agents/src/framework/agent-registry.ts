@@ -117,6 +117,10 @@ export function createAgentRegistry(
       (definition as { triggers: Array<{ event: string }> }).triggers =
         config.triggers;
     }
+    if (config.capabilities !== undefined) {
+      (definition as { capabilities: string[] }).capabilities =
+        config.capabilities;
+    }
 
     // Cache and log
     cache.set(id, { definition, mtime });

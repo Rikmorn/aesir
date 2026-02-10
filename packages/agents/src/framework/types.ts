@@ -261,6 +261,9 @@ export const AgentDefinitionYamlSchema = z.object({
   /** Sub-agent mappings: role -> agent definition ID */
   subAgents: z.record(z.string(), z.string()).optional(),
 
+  /** Capabilities this agent provides (used for entity directory semantic matching) */
+  capabilities: z.array(z.string().min(1)).optional(),
+
   /** Maximum agent loop iterations before forced stop */
   maxIterations: z.number().int().positive(),
   /** Total token budget for the agent (input + output) */
