@@ -139,25 +139,9 @@ export function createWebhookRouter(deps: WebhookRouterDeps): Router {
           return;
         }
 
-        // Echo filter: drop self-authored comments to prevent infinite loops
-        const botUserId = config.linear.botUserId;
-        if (botUserId) {
-          if (commentPayload.data.userId === botUserId) {
-            childLogger.info(
-              {
-                commentId: commentPayload.data.id,
-                userId: commentPayload.data.userId,
-              },
-              "Ignoring self-authored comment (echo filter)",
-            );
-            res.status(200).json({ received: true });
-            return;
-          }
-        } else {
-          childLogger.debug(
-            "LINEAR_BOT_USER_ID not configured, echo filter disabled",
-          );
-        }
+        // Echo filter removed: agent activities and user comments are structurally distinct.
+        // Agent uses create_agent_activity (activity types), users use comments.
+        // No filtering needed -- activities never re-enter the inbound comment pipeline.
 
         // Normalize and dispatch comment event
         const normalizedEvent = normalizeCommentCreatedEvent(

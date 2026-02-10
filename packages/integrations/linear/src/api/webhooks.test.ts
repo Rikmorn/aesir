@@ -1,8 +1,10 @@
 /**
- * Linear Webhook Echo Filter Tests
+ * Linear Webhook Comment Dispatch Tests
  *
- * Tests for the echo filter that prevents self-authored comment webhooks
- * from being re-dispatched to the agent pipeline (infinite loop prevention).
+ * Verifies that all inbound comment webhooks are dispatched to the agent
+ * pipeline. Echo filtering was removed in 67-04 because agent activities
+ * and user comments are structurally distinct -- activities never re-enter
+ * the inbound comment pipeline.
  *
  * Uses vi.mock with vi.hoisted to control config, signature verification,
  * dispatcher, and task correlations. Tests the createWebhookRouter handler
@@ -11,14 +13,13 @@
 
 import { createHmac } from "node:crypto";
 import express from "express";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // vi.hoisted runs before vi.mock factories -- safe for shared state
 const { mockConfig, mockDispatch } = vi.hoisted(() => ({
   mockConfig: {
     linear: {
       webhookSecret: "test-secret",
-      botUserId: undefined as string | undefined,
     },
   },
   mockDispatch: vi.fn(),
@@ -145,51 +146,42 @@ async function postWebhook(
   });
 }
 
-describe("Linear webhook echo filter", () => {
+describe("Linear webhook comment dispatch", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  afterEach(() => {
-    // Reset botUserId between tests
-    mockConfig.linear.botUserId = undefined;
+  it("dispatches all comments regardless of userId (echo filter removed)", async () => {
+    const { app } = createTestApp();
+    const payload = createCommentPayload("any-user-001");
+    const result = await postWebhook(app, payload);
+
+    expect(result.status).toBe(200);
+    expect(result.body).toEqual({ received: true });
+    expect(mockDispatch).toHaveBeenCalledTimes(1);
   });
 
-  it("drops self-authored comment when userId matches LINEAR_BOT_USER_ID", async () => {
-    mockConfig.linear.botUserId = "bot-user-001";
-
+  it("dispatches comment from any user without filtering", async () => {
     const { app } = createTestApp();
+    // Even a user ID that would have been a "bot" is dispatched now
     const payload = createCommentPayload("bot-user-001");
     const result = await postWebhook(app, payload);
 
     expect(result.status).toBe(200);
     expect(result.body).toEqual({ received: true });
-    // Dispatcher should NOT have been called
+    expect(mockDispatch).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores non-create comment actions", async () => {
+    const { app } = createTestApp();
+    const payload = {
+      ...createCommentPayload("user-001"),
+      action: "update",
+    };
+    const result = await postWebhook(app, payload);
+
+    expect(result.status).toBe(200);
+    expect(result.body).toEqual({ received: true });
     expect(mockDispatch).not.toHaveBeenCalled();
-  });
-
-  it("dispatches human-authored comment when userId does not match LINEAR_BOT_USER_ID", async () => {
-    mockConfig.linear.botUserId = "bot-user-001";
-
-    const { app } = createTestApp();
-    const payload = createCommentPayload("human-user-002");
-    const result = await postWebhook(app, payload);
-
-    expect(result.status).toBe(200);
-    expect(result.body).toEqual({ received: true });
-    // Dispatcher SHOULD have been called
-    expect(mockDispatch).toHaveBeenCalledTimes(1);
-  });
-
-  it("dispatches comment normally when LINEAR_BOT_USER_ID is not configured", async () => {
-    // botUserId is already undefined (default from afterEach)
-    const { app } = createTestApp();
-    const payload = createCommentPayload("any-user-003");
-    const result = await postWebhook(app, payload);
-
-    expect(result.status).toBe(200);
-    expect(result.body).toEqual({ received: true });
-    // Dispatcher SHOULD have been called (graceful degradation)
-    expect(mockDispatch).toHaveBeenCalledTimes(1);
   });
 });
