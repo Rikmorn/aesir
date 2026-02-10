@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 67+68 of 73 (Linear Agent SDK + Shared Memory -- parallel)
-Plan: 3 of ~24 total (~4+~4 in current phases)
-Status: Executing Phase 67
-Last activity: 2026-02-10 -- Completed 67-03 (Denormalizer Routing + Session ID Pipeline)
+Plan: 4 of ~24 total (~4+~4 in current phases)
+Status: Phase 67 complete, Phase 68 in progress
+Last activity: 2026-02-10 -- Completed 67-04 (Echo Filter Removal + Error Activity + Prompt Update)
 
-Progress: [███░░░░░░░] ~12%
+Progress: [████░░░░░░] ~17%
 
 ## Milestone History
 
@@ -34,13 +34,14 @@ Progress: [███░░░░░░░] ~12%
 **Cumulative:**
 - Total milestones shipped: 8
 - Total phases completed: 69
-- Total plans completed: 304
+- Total plans completed: 305
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 67 | 01 | 5min | 2 | 5 |
 | 67 | 02 | 6min | 2 | 6 |
 | 67 | 03 | 4min | 2 | 10 |
+| 67 | 04 | 4min | 2 | 6 |
 
 *Updated after each plan completion*
 
@@ -59,6 +60,9 @@ See PROJECT.md Key Decisions table for full history.
 - **67-03:** withTokenRefresh for acknowledgment thought (consistent 401 retry pattern across all Linear API calls)
 - **67-03:** Action activities use action+parameter fields (not body) matching Linear SDK ActionActivityContent schema
 - **67-03:** Single notify tool with intent parameter (reasoning|action) rather than separate tools
+- **67-04:** Error activity emission in worker-loop.ts (not conversation-executor.ts) because failure transitions happen in the worker loop
+- **67-04:** Three contextual error messages: token budget, agent abort, generic -- gives Linear users actionable feedback
+- **67-04:** Dynamic import for callMcpTool in emitErrorActivity to avoid circular dependencies
 
 ### Pending Todos
 
@@ -75,9 +79,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed 67-03-PLAN.md (Denormalizer Routing + Session ID Pipeline)
+Stopped at: Completed 67-04-PLAN.md (Echo Filter Removal + Error Activity + Prompt Update) -- Phase 67 complete
 Resume file: None
-Next action: Execute 67-04 (Echo Filter Removal) or continue with Phase 68 in parallel
+Next action: Continue with Phase 68 (Shared Memory)
 
 ---
-*Updated: 2026-02-10 -- 67-03 complete*
+*Updated: 2026-02-10 -- 67-04 complete, Phase 67 fully shipped*
