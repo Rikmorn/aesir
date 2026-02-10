@@ -14,9 +14,11 @@
  * 6. Return task ID and suggest wait_for with task_handshake type
  */
 
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import type { ToolContext } from "../../../framework/types.js";
 import type { ToolDefinition, ToolResult } from "../../agent-loop/types.js";
+import { conversations } from "../../db/schema.js";
 import { MAX_DELEGATION_DEPTH } from "./types.js";
 
 const DelegateTaskInputSchema = z.object({
@@ -165,7 +167,44 @@ export function createDelegateTaskTool(ctx: ToolContext): ToolDefinition {
           taskId: task.id,
         });
 
-        // 7. Return success with guidance
+        // 7. Write active_delegations entry on delegator's conversation row
+        try {
+          const delegationEntry = {
+            taskId: task.id,
+            targetEntityId: entity.id,
+            description: description.slice(0, 200),
+            delegatedAt: new Date().toISOString(),
+            handshakeStatus: "pending",
+          };
+
+          const [conv] = await deps.db
+            .select({
+              active_delegations: conversations.active_delegations,
+            })
+            .from(conversations)
+            .where(eq(conversations.id, ctx.correlationId))
+            .limit(1);
+
+          const currentDelegations = (conv?.active_delegations ??
+            []) as unknown[];
+          const updatedDelegations = [...currentDelegations, delegationEntry];
+
+          await deps.db
+            .update(conversations)
+            .set({
+              active_delegations: updatedDelegations,
+              updated_at: new Date(),
+            })
+            .where(eq(conversations.id, ctx.correlationId));
+        } catch (delegationTrackingError) {
+          // Non-fatal: failure to write delegation context should not fail the delegation itself
+          ctx.logger.warn(
+            { err: delegationTrackingError, taskId: task.id },
+            "Failed to write active_delegations entry (non-fatal)",
+          );
+        }
+
+        // 8. Return success with guidance
         return {
           content: [
             `Delegation created successfully.`,

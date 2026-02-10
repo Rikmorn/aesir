@@ -386,6 +386,8 @@ export interface DelegationDeps {
   directoryService: DirectoryService;
   /** Task service for creating delegation tasks and reading depth */
   taskService: TaskService;
+  /** Database client for direct conversation row access (active_delegations) */
+  db: NodePgDatabase<typeof agentsSchemaModule>;
 }
 
 /**

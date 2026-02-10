@@ -793,6 +793,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
               executor: options.executor,
               directoryService,
               taskService,
+              db,
             },
           }),
       };
