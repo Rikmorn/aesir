@@ -36,7 +36,7 @@ Requirements for v2.7 Agent Collaboration milestone. Each maps to roadmap phases
 - [ ] **DIR-02**: Agents are seeded from YAML definitions at deploy time, extracting capabilities from a new `capabilities` field in `definition.yaml`
 - [ ] **DIR-03**: `directory:find` tool queries entities by capability using semantic matching (pgvector embeddings, reusing Phase 68 embedding pipeline)
 - [ ] **DIR-04**: `directory:get` tool retrieves full entity details by ID
-- [ ] **DIR-05**: Seed script is idempotent (`ON CONFLICT DO UPDATE`) with `last_seeded_at` timestamp
+- [ ] **DIR-05**: Seed script is idempotent (`ON CONFLICT DO UPDATE`) with `last_seeded_at` timestamp. Agents removed from YAML are marked `status='inactive'` (scoped to `type='agent'` only)
 - [ ] **DIR-06**: Directory gracefully degrades: `directory:find` returns empty results on failure, agents fall back to self-execution
 
 ### Task Delegation
