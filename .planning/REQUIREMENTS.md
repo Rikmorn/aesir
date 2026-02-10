@@ -1,0 +1,189 @@
+# Requirements: Aesir v2.7 Agent Collaboration
+
+**Defined:** 2026-02-10
+**Core Value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
+
+## v2.7 Requirements
+
+Requirements for v2.7 Agent Collaboration milestone. Each maps to roadmap phases.
+
+### Linear Agent SDK
+
+- [ ] **LSDK-01**: Agent authenticates with Linear using `actor=app` OAuth identity with `app:assignable` and `app:mentionable` scopes (own workspace entity, not impersonating user)
+- [ ] **LSDK-02**: Token refresh middleware proactively refreshes Linear OAuth tokens before expiry (80% lifetime threshold) and retries on 401
+- [ ] **LSDK-03**: Agent communication is delivered to Linear as typed activities (thought, elicitation, action, response, error) via `createAgentActivity`
+- [ ] **LSDK-04**: Agent session ID (`agentSessionId`) flows from webhook through adapter, conversation, replyContext, and denormalizer
+- [ ] **LSDK-05**: Communication tool intents map to Linear activity types (reply->response, ask->elicitation, reasoning->thought)
+- [ ] **LSDK-06**: `agent_session.prompted` webhook event replaces `comment.created` for active Linear agent sessions
+- [ ] **LSDK-07**: Echo filtering by `LINEAR_BOT_USER_ID` is removed (agent activities and user prompts are structurally distinct)
+- [ ] **LSDK-08**: Agent Plans display checklist-style progress in Linear UI, mapped from task steps
+- [ ] **LSDK-09**: Webhook handler emits `thought` activity synchronously within 10 seconds of session creation (before conversation is queued)
+
+### Shared Memory
+
+- [ ] **MEM-01**: Agents can store knowledge entries via `knowledge:store` tool with classification (discovery, constraint, architecture_decision, thought, preference, test_result)
+- [ ] **MEM-02**: Agents can query shared knowledge via `knowledge:query` tool with semantic search (pgvector) and type/scope filtering
+- [ ] **MEM-03**: Agents can update existing knowledge entries via `knowledge:update` tool (supersede, invalidate, extend)
+- [ ] **MEM-04**: Knowledge entries have mandatory expiry by category (discoveries 24h, architecture_decisions 7d, constraints 30d, thoughts 24h, preferences 30d, test_results 7d)
+- [ ] **MEM-05**: Private agent notepad stores per-agent knowledge with `scope=private` (not visible to other agents)
+- [ ] **MEM-06**: Shared knowledge defaults are sensible without configuration (discoveries and constraints shared, thoughts private) with YAML-based overrides
+- [ ] **MEM-07**: Knowledge deduplication: before storing, query existing entries on same topic and supersede rather than duplicate
+- [ ] **MEM-08**: Knowledge store gracefully degrades: `knowledge:query` returns empty results on connection failure, never crashes agent loop
+
+### Entity Directory
+
+- [ ] **DIR-01**: Entity directory table stores agents with type, capabilities, status, and metadata (schema supports `type='human'` for future)
+- [ ] **DIR-02**: Agents are seeded from YAML definitions at deploy time, extracting capabilities from a new `capabilities` field in `definition.yaml`
+- [ ] **DIR-03**: `directory:find` tool queries entities by capability using semantic matching (pgvector embeddings, reusing Phase 68 embedding pipeline)
+- [ ] **DIR-04**: `directory:get` tool retrieves full entity details by ID
+- [ ] **DIR-05**: Seed script is idempotent (`ON CONFLICT DO UPDATE`) with `last_seeded_at` timestamp
+- [ ] **DIR-06**: Directory gracefully degrades: `directory:find` returns empty results on failure, agents fall back to self-execution
+
+### Task Delegation
+
+- [ ] **DEL-01**: `task:delegate` tool creates a task targeting a directory entity and starts a conversation for the target agent via `executor.start()`
+- [ ] **DEL-02**: Delegated tasks carry focused brief (task description, expectations, relevant knowledge references) not full message history
+- [ ] **DEL-03**: Negotiation handshake: target agent receives delegation, evaluates, and responds accept (with optional estimate) or reject (with reason) via `task:respond` tool
+- [ ] **DEL-04**: Handshake has its own timeout (30s default, configurable) separate from task timeout; timeout treated as rejection
+- [ ] **DEL-05**: Materialization abstraction layer exists as extensible interface, but v1 implementation is agent-only (single path: `executor.start()`)
+- [ ] **DEL-06**: Delegation judgment guidance in agent prompts distinguishes sub-agent spawn (within conversation) from cross-conversation delegation (different agent capabilities)
+- [ ] **DEL-07**: Maximum task delegation depth reduced to 3 for v1 (orchestrator -> orchestrator -> sub-agent is natural maximum)
+
+### Completion Signaling
+
+- [ ] **SIG-01**: TaskSignalDispatcher fires signal to callback conversation when delegated task reaches terminal state (completed or failed)
+- [ ] **SIG-02**: `wait_for` accepts multiple signal types (`pending_wait.types` array); signal matching checks membership in array
+- [ ] **SIG-03**: `wait_for_task` variant auto-registers for all task-lifecycle signal types (completion, failure, timeout) so agents cannot forget
+- [ ] **SIG-04**: Orphan-aware signal handling: when callback conversation is terminal, store completion result on task (`completion_result` JSONB) and log `signal.orphaned` event
+- [ ] **SIG-05**: Callback routing resolves through tasks (latest active conversation for parent task) not static conversation IDs (survives re-trigger)
+- [ ] **SIG-06**: Expectation-based timeout: handshake estimate feeds pg-boss delayed signal for task timeout
+- [ ] **SIG-07**: Delegation context preserved: `active_delegations` JSONB column on conversations survives history compaction; self-contained signal payloads include original task description and results
+
+### Delegation Graph Observability
+
+- [ ] **OBS-01**: Task tree API endpoint returns hierarchical task structure with status, entity assignments, and timestamps (recursive CTE with depth limit)
+- [ ] **OBS-02**: Dashboard task tree view renders delegation graph with expandable nodes, status indicators, and lazy loading for deep trees
+- [ ] **OBS-03**: Delegation timeline shows chronological event list (delegation, handshake, signals) filterable by task tree
+- [ ] **OBS-04**: Cross-conversation trace view enables click-through from task node to conversation detail page
+- [ ] **OBS-05**: Signal flow visualization shows edges between conversations with delivery timestamps and payloads
+- [ ] **OBS-06**: Health indicators detect and surface orphaned completions, excessive delegation depth, rejection chains, and timeout patterns
+
+### QA Agent + Validation Workflow
+
+- [ ] **QA-01**: QA agent defined as YAML + prompt.md with capabilities registered in entity directory
+- [ ] **QA-02**: QA agent has thin tool wrappers for running tests (sandbox) and reviewing PR diffs (GitHub MCP)
+- [ ] **QA-03**: QA agent uses collaboration tools (directory:find, knowledge:store/query, communication tools) as a consumer of Phases 68-71 infrastructure
+- [ ] **QA-04**: Triangular validation workflow: product delegates to dev, dev implements, dev delegates verification to QA, QA validates, failure triggers fix delegation back to dev
+- [ ] **QA-05**: Feedback loop exercises 3-level delegation depth, completion signaling cascade, and shared memory across the delegation chain
+- [ ] **QA-06**: One happy-path end-to-end integration test validates the full triangular workflow
+
+## Future Requirements
+
+Deferred to future milestone. Tracked but not in current roadmap.
+
+### Human Collaboration
+
+- **HUM-01**: Human entries seeded in entity directory from config (name, role, capabilities, reachVia)
+- **HUM-02**: `task:delegate` materializes human-targeted tasks as Slack messages
+- **HUM-03**: Human negotiation protocol handles async responses (minutes/hours vs seconds)
+- **HUM-04**: Human responses parsed back into handshake protocol (accept/reject via Slack buttons)
+
+### Advanced Signaling
+
+- **ASIG-01**: Bidirectional clarification signal: target agent signals delegator for more info mid-task, delegator wakes and responds
+- **ASIG-02**: Task groups with completion policies (all_required, any_sufficient, majority) for parallel delegation fan-out
+- **ASIG-03**: Tree-level token budget enforcement across entire delegation tree (currently per-conversation)
+
+### Advanced Delegation
+
+- **ADEL-01**: Counter-propose in negotiation handshake (strategy abstraction enables future addition)
+- **ADEL-02**: Materialization as configurable policy (prompt decides: internal conversation vs Linear ticket vs Slack thread)
+- **ADEL-03**: Transparent delegation mode that creates Linear tickets for auditability
+
+### Production QA
+
+- **PQA-01**: Continuous test monitoring (automated regression detection)
+- **PQA-02**: Test coverage analysis and gap identification
+- **PQA-03**: Comprehensive E2E test suite covering failure modes and edge cases
+
+## Out of Scope
+
+Explicitly excluded. Documented to prevent scope creep.
+
+| Feature | Reason |
+|---------|--------|
+| Central orchestrator agent | Anti-pattern: bottleneck with 200%+ token overhead. Peer-to-peer delegation with directory discovery instead. |
+| Full message history on handoff | Anti-pattern: wastes context window, leaks irrelevant info. Task description + knowledge references instead. |
+| Agent-to-agent chat channels | Anti-pattern: massive token waste, no clear ownership. Task-scoped communication only. |
+| Consensus protocols between agents | Excessive complexity for marginal benefit. Single-authority delegation instead. |
+| Real-time agent presence/availability | Infrastructure complexity for <10 agent types. Assume always-available for v1. |
+| Cross-workspace collaboration | Authorization/isolation complexity not needed for single-team tool. Schema accommodates later. |
+| Complex taxonomy (20+ knowledge types) | Over-classification leads to miscategorization. Start with 5 types, expand based on usage. |
+| Automatic delegation without criteria | Causes over-delegation (CrewAI disabled by default). Prompt guidance provides judgment criteria. |
+| Separate vector database | Operational complexity for moderate volume. pgvector in PostgreSQL is sufficient. |
+| GitHub/Slack agent identity | Out of scope for v2.7. Linear Agent SDK only. GitHub Apps and Slack bot identity are separate concerns. |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| LSDK-01 | Phase 67 | Pending |
+| LSDK-02 | Phase 67 | Pending |
+| LSDK-03 | Phase 67 | Pending |
+| LSDK-04 | Phase 67 | Pending |
+| LSDK-05 | Phase 67 | Pending |
+| LSDK-06 | Phase 67 | Pending |
+| LSDK-07 | Phase 67 | Pending |
+| LSDK-08 | Phase 67 | Pending |
+| LSDK-09 | Phase 67 | Pending |
+| MEM-01 | Phase 68 | Pending |
+| MEM-02 | Phase 68 | Pending |
+| MEM-03 | Phase 68 | Pending |
+| MEM-04 | Phase 68 | Pending |
+| MEM-05 | Phase 68 | Pending |
+| MEM-06 | Phase 68 | Pending |
+| MEM-07 | Phase 68 | Pending |
+| MEM-08 | Phase 68 | Pending |
+| DIR-01 | Phase 69 | Pending |
+| DIR-02 | Phase 69 | Pending |
+| DIR-03 | Phase 69 | Pending |
+| DIR-04 | Phase 69 | Pending |
+| DIR-05 | Phase 69 | Pending |
+| DIR-06 | Phase 69 | Pending |
+| DEL-01 | Phase 70 | Pending |
+| DEL-02 | Phase 70 | Pending |
+| DEL-03 | Phase 70 | Pending |
+| DEL-04 | Phase 70 | Pending |
+| DEL-05 | Phase 70 | Pending |
+| DEL-06 | Phase 70 | Pending |
+| DEL-07 | Phase 70 | Pending |
+| SIG-01 | Phase 71 | Pending |
+| SIG-02 | Phase 71 | Pending |
+| SIG-03 | Phase 71 | Pending |
+| SIG-04 | Phase 71 | Pending |
+| SIG-05 | Phase 71 | Pending |
+| SIG-06 | Phase 71 | Pending |
+| SIG-07 | Phase 71 | Pending |
+| OBS-01 | Phase 72 | Pending |
+| OBS-02 | Phase 72 | Pending |
+| OBS-03 | Phase 72 | Pending |
+| OBS-04 | Phase 72 | Pending |
+| OBS-05 | Phase 72 | Pending |
+| OBS-06 | Phase 72 | Pending |
+| QA-01 | Phase 73 | Pending |
+| QA-02 | Phase 73 | Pending |
+| QA-03 | Phase 73 | Pending |
+| QA-04 | Phase 73 | Pending |
+| QA-05 | Phase 73 | Pending |
+| QA-06 | Phase 73 | Pending |
+
+**Coverage:**
+- v2.7 requirements: 49 total
+- Mapped to phases: 49
+- Unmapped: 0
+
+---
+*Requirements defined: 2026-02-10*
+*Last updated: 2026-02-10 after initial definition*
