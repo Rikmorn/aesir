@@ -153,7 +153,7 @@ Plans:
 Plans:
 - [ ] 70-01: task:delegate tool, MaterializationLayer (agent-only: executor.start()), and task schema extensions
 - [ ] 70-02: Negotiation handshake (task:respond tool, accept/reject signal exchange, 30s timeout)
-- [ ] 70-03: Prompt updates (delegation judgment guidance) and depth enforcement (MAX_DEPTH=3)
+- [ ] 70-03: Prompt updates (delegation judgment guidance), depth enforcement (MAX_DEPTH=3), and add knowledge:store/query/update + directory:find/get to orchestrator agent definitions (dev-agent, product-agent)
 
 #### Phase 71: Completion Signaling
 **Goal**: Delegating agents receive reliable notification when delegated work completes or fails, with orphan handling and context preservation
@@ -201,7 +201,7 @@ Plans:
 **Plans**: ~3 plans
 
 Plans:
-- [ ] 73-01: QA agent definition (YAML + prompt.md, capabilities) and thin tool wrappers (sandbox test runner, GitHub PR diff reviewer)
+- [ ] 73-01: QA agent definition (YAML + prompt.md, capabilities, knowledge + directory tools) and thin tool wrappers (sandbox test runner, GitHub PR diff reviewer)
 - [ ] 73-02: Triangular workflow wiring (product->dev->QA delegation chain, failure->fix loop, completion cascade)
 - [ ] 73-03: End-to-end integration test (happy-path triangular workflow against running services)
 
