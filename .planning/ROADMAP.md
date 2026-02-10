@@ -80,7 +80,7 @@ See `.planning/milestones/v2.6-ROADMAP.md` for full details.
 - [x] **Phase 68: Shared Memory** - Agents store and retrieve shared knowledge with semantic search (completed 2026-02-10)
 - [x] **Phase 69: Entity Directory** - Agents discover each other by capability for informed delegation decisions (completed 2026-02-10)
 - [x] **Phase 70: Task Delegation** - Agents delegate work to other agents through tasks with negotiation handshake (completed 2026-02-10)
-- [ ] **Phase 71: Completion Signaling** - Delegating agents receive reliable notification when delegated work completes or fails
+- [x] **Phase 71: Completion Signaling** - Delegating agents receive reliable notification when delegated work completes or fails (completed 2026-02-10)
 - [ ] **Phase 72: Delegation Graph Observability** - Operators see delegation hierarchies, signal flows, and health indicators in the dashboard
 - [ ] **Phase 73: QA Agent + Validation Workflow** - Triangular product-dev-QA workflow validates the entire collaboration system end-to-end
 
@@ -168,9 +168,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 71-01-PLAN.md -- Schema migration (completion_result, active_delegations), multi-type wait_for, signal matching helper, wait_for_task tool
-- [ ] 71-02-PLAN.md -- TaskSignalDispatcher (signal dispatch on terminal task transitions), orphan handling (completion_result, signal.orphaned), callback routing through tasks
-- [ ] 71-03-PLAN.md -- active_delegations lifecycle (write on delegate, inject on resume, remove after processing)
+- [x] 71-01-PLAN.md -- Schema migration (completion_result, active_delegations), multi-type wait_for, signal matching helper, wait_for_task tool
+- [x] 71-02-PLAN.md -- TaskSignalDispatcher (signal dispatch on terminal task transitions), orphan handling (completion_result, signal.orphaned), callback routing through tasks
+- [x] 71-03-PLAN.md -- active_delegations lifecycle (write on delegate, inject on resume, remove after processing)
 
 #### Phase 72: Delegation Graph Observability
 **Goal**: Operators see delegation hierarchies, signal flows, and health indicators in the dashboard for debugging and monitoring multi-agent workflows
@@ -223,11 +223,11 @@ Phases 67+68 execute in parallel, then 69 -> 70 -> 71 -> 72 -> 73 sequentially.
 | 68. Shared Memory | v2.7 | 4/4 | Complete | 2026-02-10 |
 | 69. Entity Directory | v2.7 | 3/3 | Complete | 2026-02-10 |
 | 70. Task Delegation | v2.7 | 3/3 | Complete | 2026-02-10 |
-| 71. Completion Signaling | v2.7 | 0/3 | Not started | - |
+| 71. Completion Signaling | v2.7 | 3/3 | Complete | 2026-02-10 |
 | 72. Delegation Graph Observability | v2.7 | 0/~3 | Not started | - |
 | 73. QA Agent + Validation | v2.7 | 0/~3 | Not started | - |
 
-**Total: 8 milestones shipped (69 phases, 301 plans) + v2.7 in progress (4/7 phases complete, 15/~24 plans)**
+**Total: 8 milestones shipped (69 phases, 301 plans) + v2.7 in progress (5/7 phases complete, 18/~24 plans)**
 
 ---
 
