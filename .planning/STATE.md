@@ -43,6 +43,7 @@ Progress: [████░░░░░░] ~24%
 | 67 | 03 | 4min | 2 | 10 |
 | 67 | 04 | 4min | 2 | 6 |
 | 67 | 05 | 4min | 2 | 2 |
+| 68 | 01 | 4min | 2 | 7 |
 | 68 | 02 | 3min | 1 | 7 |
 
 *Updated after each plan completion*
@@ -69,6 +70,9 @@ See PROJECT.md Key Decisions table for full history.
 - **67-05:** Completion activity uses type=response (transitions Linear session to complete state)
 - **67-05:** Resume fires after agent.resumed event but before task context injection for prompt state transition
 - **67-05:** Completion fires before DB update so Linear reflects completion before conversation closes
+- **68-01:** customType for unconstrained vector -- Drizzle built-in vector() requires fixed dimensions, customType allows 768/1024 without schema changes
+- **68-01:** Ollama via Docker profile ("embedding") -- keeps default docker compose up unchanged
+- **68-01:** text placeholder in schema.drizzle.ts -- drizzle-kit CJS bundler cannot resolve customType
 - **68-02:** Voyage AI SDK timeoutInSeconds=10 via RequestOptions (SDK-native timeout, no AbortSignal needed)
 - **68-02:** Ollama embedBatch uses Promise.all with sequential embed calls (no native batch support)
 
@@ -82,7 +86,7 @@ See PROJECT.md Key Decisions table for full history.
 
 - Linear Agent SDK is developer preview -- feature flag (LINEAR_AGENT_SDK_ENABLED) needed for fallback
 - Linear OAuth token migration deadline: April 1, 2026 (LSDK-02 must ship before)
-- pgvector Docker image swap (pgvector/pgvector:pg15 replaces postgres:15-alpine) -- existing volumes compatible but needs verification
+- pgvector Docker image swap shipped in 68-01 (pgvector/pgvector:pg15 replaces postgres:15-alpine) -- existing volumes compatible
 
 ## Session Continuity
 
