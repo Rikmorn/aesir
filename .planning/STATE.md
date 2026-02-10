@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 67+68 of 73 (Linear Agent SDK + Shared Memory -- parallel)
-Plan: 5 of ~24 total (~5+~4 in current phases)
-Status: Phase 67 fully complete (including gap closure), Phase 68 in progress
-Last activity: 2026-02-10 -- Completed 67-05 (Session Lifecycle Activity Emissions)
+Plan: 7 of ~24 total (~5+~4 in current phases)
+Status: Phase 67 fully complete, Phase 68 plans 01+02 complete (parallel)
+Last activity: 2026-02-10 -- Completed 68-02 (Embedding Pipeline)
 
-Progress: [████░░░░░░] ~17%
+Progress: [████░░░░░░] ~24%
 
 ## Milestone History
 
@@ -43,6 +43,7 @@ Progress: [████░░░░░░] ~17%
 | 67 | 03 | 4min | 2 | 10 |
 | 67 | 04 | 4min | 2 | 6 |
 | 67 | 05 | 4min | 2 | 2 |
+| 68 | 02 | 3min | 1 | 7 |
 
 *Updated after each plan completion*
 
@@ -68,6 +69,8 @@ See PROJECT.md Key Decisions table for full history.
 - **67-05:** Completion activity uses type=response (transitions Linear session to complete state)
 - **67-05:** Resume fires after agent.resumed event but before task context injection for prompt state transition
 - **67-05:** Completion fires before DB update so Linear reflects completion before conversation closes
+- **68-02:** Voyage AI SDK timeoutInSeconds=10 via RequestOptions (SDK-native timeout, no AbortSignal needed)
+- **68-02:** Ollama embedBatch uses Promise.all with sequential embed calls (no native batch support)
 
 ### Pending Todos
 
@@ -84,9 +87,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed 67-05-PLAN.md (Session Lifecycle Activity Emissions) -- Phase 67 gap closure complete
+Stopped at: Completed 68-02-PLAN.md (Embedding Pipeline)
 Resume file: None
-Next action: Continue with Phase 68 (Shared Memory)
+Next action: Continue with Phase 68 plans 03-04
 
 ---
-*Updated: 2026-02-10 -- 67-05 complete, Phase 67 gap closure fully shipped*
+*Updated: 2026-02-10 -- 68-02 complete, embedding pipeline shipped*
