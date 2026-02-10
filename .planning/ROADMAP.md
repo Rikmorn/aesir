@@ -148,12 +148,12 @@ Plans:
   3. The target agent responds with accept (with optional estimate) or reject (with reason) via `task:respond`, and the delegator is notified of the outcome
   4. Delegation depth is enforced at MAX_DEPTH=3; attempts to delegate deeper are rejected with a clear error
   5. Agent prompts distinguish sub-agent spawn (within conversation, shared budget) from cross-conversation delegation (different agent capabilities)
-**Plans**: ~3 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] 70-01: task:delegate tool, MaterializationLayer (agent-only: executor.start()), and task schema extensions
-- [ ] 70-02: Negotiation handshake (task:respond tool, accept/reject signal exchange, 30s timeout)
-- [ ] 70-03: Prompt updates (delegation judgment guidance), depth enforcement (MAX_DEPTH=3), and add knowledge:store/query/update + directory:find/get to orchestrator agent definitions (dev-agent, product-agent)
+- [ ] 70-01-PLAN.md -- Schema migration (depth column), DelegationDeps type, task:delegate tool, seconds timeout support, worker-loop injection
+- [ ] 70-02-PLAN.md -- task:respond tool (handshake accept/reject signal), main.ts DelegationDeps wiring
+- [ ] 70-03-PLAN.md -- Delegation tools added to orchestrator definitions, delegation judgment guidance in prompts
 
 #### Phase 71: Completion Signaling
 **Goal**: Delegating agents receive reliable notification when delegated work completes or fails, with orphan handling and context preservation
