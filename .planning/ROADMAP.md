@@ -76,7 +76,7 @@ See `.planning/milestones/v2.6-ROADMAP.md` for full details.
 
 ### Phases
 
-- [ ] **Phase 67: Linear Agent SDK** - Agents operate as first-class Linear workspace entities with typed activities
+- [x] **Phase 67: Linear Agent SDK** - Agents operate as first-class Linear workspace entities with typed activities (completed 2026-02-10)
 - [ ] **Phase 68: Shared Memory** - Agents store and retrieve shared knowledge with semantic search (PARALLEL with Phase 67)
 - [ ] **Phase 69: Entity Directory** - Agents discover each other by capability for informed delegation decisions
 - [ ] **Phase 70: Task Delegation** - Agents delegate work to other agents through tasks with negotiation handshake
@@ -99,10 +99,10 @@ See `.planning/milestones/v2.6-ROADMAP.md` for full details.
 **Plans**: 4 plans
 
 Plans:
-- [ ] 67-01-PLAN.md -- Token refresh middleware (proactive at 80% lifetime, reactive 401 retry, mutex, Slack alerting)
-- [ ] 67-02-PLAN.md -- OAuth actor=app migration and agent activity MCP tools (create_agent_activity, update_session_state)
-- [ ] 67-03-PLAN.md -- Session ID tracking through adapter/replyContext/denormalizer, intent-to-activity mapping, 10s acknowledgment thought
-- [ ] 67-04-PLAN.md -- Echo filter removal, error activity emission on conversation failure, dev-agent prompt updates
+- [x] 67-01-PLAN.md -- Token refresh middleware (proactive at 80% lifetime, reactive 401 retry, mutex, Slack alerting)
+- [x] 67-02-PLAN.md -- OAuth actor=app migration and agent activity MCP tools (create_agent_activity, update_session_state)
+- [x] 67-03-PLAN.md -- Session ID tracking through adapter/replyContext/denormalizer, intent-to-activity mapping, 10s acknowledgment thought
+- [x] 67-04-PLAN.md -- Echo filter removal, error activity emission on conversation failure, dev-agent prompt updates
 
 #### Phase 68: Shared Memory
 **Goal**: Agents store and retrieve classified knowledge with semantic search, enabling collaboration efficiency through shared context
@@ -219,7 +219,7 @@ Phases 67+68 execute in parallel, then 69 -> 70 -> 71 -> 72 -> 73 sequentially.
 | 48-55 | v2.4 | 22 | Complete | 2026-02-05 |
 | 56-59 | v2.5 | 17 | Complete | 2026-02-08 |
 | 60-66 | v2.6 | 16 | Complete | 2026-02-09 |
-| 67. Linear Agent SDK | v2.7 | 0/~4 | Not started | - |
+| 67. Linear Agent SDK | v2.7 | 4/4 | Complete | 2026-02-10 |
 | 68. Shared Memory | v2.7 | 0/~4 | Not started | - |
 | 69. Entity Directory | v2.7 | 0/~3 | Not started | - |
 | 70. Task Delegation | v2.7 | 0/~3 | Not started | - |
@@ -227,7 +227,7 @@ Phases 67+68 execute in parallel, then 69 -> 70 -> 71 -> 72 -> 73 sequentially.
 | 72. Delegation Graph Observability | v2.7 | 0/~3 | Not started | - |
 | 73. QA Agent + Validation | v2.7 | 0/~3 | Not started | - |
 
-**Total: 8 milestones shipped (69 phases, 301 plans) + v2.7 in progress (7 phases, ~24 plans)**
+**Total: 8 milestones shipped (69 phases, 301 plans) + v2.7 in progress (1/7 phases complete, 4/~24 plans)**
 
 ---
 
