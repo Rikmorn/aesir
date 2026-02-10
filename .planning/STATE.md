@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 67+68 of 73 (Linear Agent SDK + Shared Memory -- parallel)
-Plan: 2 of ~24 total (~4+~4 in current phases)
+Plan: 3 of ~24 total (~4+~4 in current phases)
 Status: Executing Phase 67
-Last activity: 2026-02-10 -- Completed 67-02 (Actor=App Migration + Activity MCP Tools)
+Last activity: 2026-02-10 -- Completed 67-03 (Denormalizer Routing + Session ID Pipeline)
 
-Progress: [██░░░░░░░░] ~8%
+Progress: [███░░░░░░░] ~12%
 
 ## Milestone History
 
@@ -34,12 +34,13 @@ Progress: [██░░░░░░░░] ~8%
 **Cumulative:**
 - Total milestones shipped: 8
 - Total phases completed: 69
-- Total plans completed: 303
+- Total plans completed: 304
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 67 | 01 | 5min | 2 | 5 |
 | 67 | 02 | 6min | 2 | 6 |
+| 67 | 03 | 4min | 2 | 10 |
 
 *Updated after each plan completion*
 
@@ -55,6 +56,9 @@ See PROJECT.md Key Decisions table for full history.
 - **67-02:** update_session_state emits activities (not direct status mutation) because Linear SDK AgentSessionUpdateInput has no status field
 - **67-02:** ActivityToolDeps uses PinoLogger (not MCPLogger) because withTokenRefresh requires richer interface
 - **67-02:** STATUS_TO_ACTIVITY mapping provides default body messages for infrastructure-driven state transitions
+- **67-03:** withTokenRefresh for acknowledgment thought (consistent 401 retry pattern across all Linear API calls)
+- **67-03:** Action activities use action+parameter fields (not body) matching Linear SDK ActionActivityContent schema
+- **67-03:** Single notify tool with intent parameter (reasoning|action) rather than separate tools
 
 ### Pending Todos
 
@@ -71,9 +75,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed 67-02-PLAN.md (Actor=App Migration + Activity MCP Tools)
+Stopped at: Completed 67-03-PLAN.md (Denormalizer Routing + Session ID Pipeline)
 Resume file: None
-Next action: Execute 67-03 (Denormalizer Routing) or continue with Phase 68 in parallel
+Next action: Execute 67-04 (Echo Filter Removal) or continue with Phase 68 in parallel
 
 ---
-*Updated: 2026-02-10 -- 67-02 complete*
+*Updated: 2026-02-10 -- 67-03 complete*
