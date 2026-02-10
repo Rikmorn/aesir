@@ -43,6 +43,13 @@
       "when": 1739001600000,
       "tag": "0006_add_reply_context",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1739232000000,
+      "tag": "0010_completion_signaling",
+      "breakpoints": true
     }
   ]
 }

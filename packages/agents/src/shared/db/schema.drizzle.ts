@@ -49,6 +49,7 @@ const agentEventTypeValues = [
   "agent.resumed",
   "agent.reopened",
   "signal.received",
+  "signal.orphaned",
 ] as const;
 
 const sessionStatusValues = [
@@ -98,6 +99,7 @@ export const tasks = agentsSchema.table(
     objective: text("objective"),
     metadata: jsonb("metadata").default({}),
     depth: integer("depth").notNull().default(0),
+    completion_result: jsonb("completion_result"),
 
     created_at: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -143,6 +145,8 @@ export const conversations = agentsSchema.table(
     delivered_signal_ids: jsonb("delivered_signal_ids").notNull().default([]),
     parent_conversation_id: text("parent_conversation_id"),
     task_id: text("task_id"),
+    // Active delegations tracking (Phase 71 -- survives history compaction)
+    active_delegations: jsonb("active_delegations").notNull().default([]),
     // Communication context: last-received channel address for reply routing (v2.6)
     reply_context: jsonb("reply_context"),
     created_at: timestamp("created_at", { withTimezone: true })

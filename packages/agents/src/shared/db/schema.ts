@@ -107,6 +107,11 @@ export const conversations = agentsSchema.table(
     parent_conversation_id: text("parent_conversation_id"),
     // Task association (Phase 58.1 -- v2.5 task primitive)
     task_id: text("task_id").references(() => tasks.id),
+    // Active delegations tracking (Phase 71 -- survives history compaction)
+    active_delegations: jsonb("active_delegations")
+      .$type<unknown[]>()
+      .notNull()
+      .default([]),
     // Communication context: last-received channel address for reply routing (v2.6)
     reply_context: jsonb("reply_context").$type<Record<
       string,
@@ -143,6 +148,7 @@ export const agentEventTypeValues = [
   "agent.resumed",
   "agent.reopened",
   "signal.received",
+  "signal.orphaned",
 ] as const;
 export type AgentEventType = (typeof agentEventTypeValues)[number];
 
@@ -304,6 +310,10 @@ export const tasks = agentsSchema.table(
     objective: text("objective"),
     metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
     depth: integer("depth").notNull().default(0),
+    completion_result: jsonb("completion_result").$type<Record<
+      string,
+      unknown
+    > | null>(),
 
     created_at: timestamp("created_at", { withTimezone: true })
       .defaultNow()

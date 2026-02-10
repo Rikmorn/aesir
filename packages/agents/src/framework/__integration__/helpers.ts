@@ -323,7 +323,7 @@ export function createTestToolRegistry(logger: PinoLogger): ToolRegistry {
     // before each agent loop invocation.
     const state: WaitForState = {
       triggered: false,
-      waitType: null,
+      waitTypes: null,
       reason: null,
       timeout: null,
       metadata: null,

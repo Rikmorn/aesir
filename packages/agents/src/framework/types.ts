@@ -484,8 +484,8 @@ export type Signal = z.infer<typeof SignalSchema>;
 export interface WaitForState {
   /** Whether the wait_for tool was called during this loop run */
   triggered: boolean;
-  /** Signal type the agent is waiting for (e.g., "approval", "pr_review") */
-  waitType: string | null;
+  /** Signal types the agent is waiting for (e.g., ["approval"], ["task_completion", "task_failure", "task_timeout"]) */
+  waitTypes: string[] | null;
   /** Human-readable reason for pausing */
   reason: string | null;
   /** Timeout duration string (e.g., "72h", "7d") or null for no timeout */
