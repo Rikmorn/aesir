@@ -19,4 +19,15 @@ export {
   readIssue,
   updateIssueStatus,
 } from "./issues.js";
+export type {
+  ProactiveRefreshHandle,
+  ProactiveRefreshOptions,
+  RefreshMiddlewareOptions,
+} from "./refresh-middleware.js";
+// === REFRESH MIDDLEWARE ===
+export {
+  isAuthError,
+  startProactiveRefresh,
+  withTokenRefresh,
+} from "./refresh-middleware.js";
 export type { LinearOAuthConfig } from "./types.js";
