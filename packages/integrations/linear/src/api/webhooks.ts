@@ -10,8 +10,11 @@
 
 import type { PinoLogger } from "@aesir/platform";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { Request, Response } from "express";
 import { Router } from "express";
+import { withTokenRefresh } from "../client/refresh-middleware.js";
+import { createLinearCredentialStore } from "../db/credential-store.js";
 import { lookupTaskCorrelation } from "../db/task-correlations.js";
 import {
   createDispatcher,
@@ -227,6 +230,22 @@ export function createWebhookRouter(deps: WebhookRouterDeps): Router {
           await onAgentSession(payload as AgentSessionPayload);
         }
 
+        // Emit ephemeral acknowledgment thought on session creation (fire-and-forget)
+        // This provides immediate feedback in Linear while the agent processes the request.
+        // Non-blocking: do NOT await -- webhook must respond within 5 seconds.
+        if (payload.action === "created") {
+          emitAcknowledgmentThought(
+            payload.agentSession.id,
+            db as unknown as PostgresJsDatabase,
+            logger,
+          ).catch((err) => {
+            childLogger.error(
+              { err, sessionId: payload.agentSession.id },
+              "Failed to emit acknowledgment thought",
+            );
+          });
+        }
+
         // Normalize and dispatch event (fire-and-forget)
         const normalizedEvent = normalizeAgentSessionEvent(
           payload as AgentSessionPayload,
@@ -274,4 +293,47 @@ export function createWebhookRouter(deps: WebhookRouterDeps): Router {
   });
 
   return router;
+}
+
+/**
+ * Emit an ephemeral acknowledgment thought on a newly created agent session.
+ *
+ * This provides immediate visual feedback in Linear's UI ("Looking into this...")
+ * while the agent processes the request. The activity is ephemeral, so it
+ * disappears when the agent emits its first real activity.
+ *
+ * Uses withTokenRefresh for automatic 401 retry with fresh credentials.
+ * Non-fatal: failures are logged but do not affect webhook processing.
+ */
+async function emitAcknowledgmentThought(
+  sessionId: string,
+  db: PostgresJsDatabase,
+  logger: PinoLogger,
+): Promise<void> {
+  const childLogger = logger.child({
+    component: "session-acknowledgment",
+    sessionId,
+  });
+
+  try {
+    const credentialStore = createLinearCredentialStore({ db, logger });
+
+    await withTokenRefresh(
+      async (client) =>
+        client.createAgentActivity({
+          agentSessionId: sessionId,
+          content: {
+            type: "thought",
+            body: "Looking into this...",
+          },
+          ephemeral: true,
+        }),
+      { credentialStore, workspaceId: "ws_default", logger },
+    );
+
+    childLogger.info("Acknowledgment thought emitted");
+  } catch (error) {
+    childLogger.error({ err: error }, "Failed to emit acknowledgment thought");
+    // Non-fatal: agent will still process the session
+  }
 }

@@ -57,6 +57,10 @@ export interface AgentSessionPayload
       id: string;
     };
   };
+  /** User's actual prompt text (prompted events only) */
+  prompt?: string;
+  /** Linear-generated formatted context (prompted events only) */
+  promptContext?: string;
 }
 
 /**

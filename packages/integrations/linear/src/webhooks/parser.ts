@@ -44,6 +44,10 @@ export const AgentSessionSchema = z.object({
   agentSession: AgentSessionObjectSchema,
   /** Resource data (from WebhookPayloadBase) */
   data: z.unknown(),
+  /** User's actual prompt text (prompted events only) */
+  prompt: z.string().optional(),
+  /** Linear-generated formatted context (prompted events only) */
+  promptContext: z.string().optional(),
 });
 
 /**

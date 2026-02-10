@@ -30,15 +30,20 @@ export function adaptLinearEvent(event: NormalizedEvent): IncomingEvent | null {
   switch (event.type) {
     case "linear.agent_session.created": {
       const issueId = payload.issueId as string;
+      const sessionId = payload.sessionId as string;
       return {
         type: "linear.agent_session.created",
-        data: { issueId },
+        data: { issueId, sessionId },
         source: "linear:webhook",
         correlationKey: issueId,
         deduplicationId: event.correlationId,
         message: `New agent session created for issue ${issueId}`,
         ...(taskId !== undefined && { taskId }),
-        replyContext: { channel: "linear" as const, issueId },
+        replyContext: {
+          channel: "linear" as const,
+          issueId,
+          agentSessionId: sessionId,
+        },
       };
     }
 
@@ -80,10 +85,12 @@ export function adaptLinearEvent(event: NormalizedEvent): IncomingEvent | null {
 
     case "linear.agent_session.prompted": {
       const issueId = payload.issueId as string;
+      const sessionId = payload.sessionId as string;
       return {
         type: "agent_prompt",
         data: {
           issueId,
+          sessionId,
           prompt: (payload.prompt ?? payload.body) as string,
         },
         source: "linear:webhook",
@@ -91,7 +98,11 @@ export function adaptLinearEvent(event: NormalizedEvent): IncomingEvent | null {
         deduplicationId: event.correlationId,
         message: (payload.prompt ?? payload.body) as string,
         ...(taskId !== undefined && { taskId }),
-        replyContext: { channel: "linear" as const, issueId },
+        replyContext: {
+          channel: "linear" as const,
+          issueId,
+          agentSessionId: sessionId,
+        },
       };
     }
 

@@ -31,6 +31,11 @@ export function normalizeAgentSessionEvent(
       status: payload.agentSession.status,
       url: payload.agentSession.url,
       creatorId: payload.agentSession.creator?.id,
+      // Include prompted-specific fields when present
+      ...(payload.prompt !== undefined && { prompt: payload.prompt }),
+      ...(payload.promptContext !== undefined && {
+        promptContext: payload.promptContext,
+      }),
     },
   };
 }
