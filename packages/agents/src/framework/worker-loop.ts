@@ -310,6 +310,50 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
     return block;
   }
 
+  // ─── Error Activity Emission ─────────────────────────────────────────
+
+  /**
+   * Emit a best-effort error activity to Linear when a conversation fails.
+   * Only fires when the conversation has a Linear agent session in its replyContext.
+   * Fire-and-forget: failures are logged but never mask the original error.
+   */
+  async function emitErrorActivity(
+    replyContext: unknown,
+    errorMessage: string,
+    deps: { logger: PinoLogger; agentId: string; correlationId: string },
+  ): Promise<void> {
+    try {
+      // Check if this conversation has a Linear agent session
+      const ctx = replyContext as Record<string, unknown> | undefined;
+      if (!ctx || ctx.channel !== "linear" || !ctx.agentSessionId) return;
+
+      const { callMcpTool } = await import("../shared/mcp/client.js");
+
+      await callMcpTool({
+        integration: "linear",
+        tool: "create_agent_activity",
+        params: {
+          agentSessionId: ctx.agentSessionId as string,
+          type: "error",
+          body: errorMessage,
+        },
+        agentId: deps.agentId,
+        correlationId: deps.correlationId,
+      });
+
+      deps.logger.info(
+        { sessionId: ctx.agentSessionId },
+        "Error activity emitted to Linear",
+      );
+    } catch (error) {
+      // Best-effort: don't let error activity emission failure mask the original error
+      deps.logger.warn(
+        { err: error },
+        "Failed to emit error activity to Linear (non-fatal)",
+      );
+    }
+  }
+
   // State
   let draining = false;
   let started = false;
@@ -1059,6 +1103,21 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
           conv.retry_count >= conv.max_retries;
 
         if (isNonRetryable) {
+          // Emit error activity to Linear (best-effort, fire-and-forget)
+          const errorActivityMessage = result.output.includes(
+            "Token budget exhausted",
+          )
+            ? "I've run out of processing capacity for this request. Please try again or simplify the request."
+            : result.output.includes("Agent aborted")
+              ? "I encountered an issue I couldn't recover from. Please try again."
+              : "Something went wrong. Please try again.";
+
+          await emitErrorActivity(conv.reply_context, errorActivityMessage, {
+            logger: childLogger,
+            agentId: conv.agent_definition_id,
+            correlationId: conv.id,
+          });
+
           await db
             .update(conversations)
             .set({
@@ -1164,6 +1223,19 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         const isRetryable = conv.retry_count < conv.max_retries;
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
+
+        // Emit error activity to Linear on terminal failure (best-effort)
+        if (!isRetryable) {
+          await emitErrorActivity(
+            conv.reply_context,
+            "Something went wrong. Please try again.",
+            {
+              logger: childLogger,
+              agentId: conv.agent_definition_id,
+              correlationId: conv.id,
+            },
+          );
+        }
 
         await db
           .update(conversations)
