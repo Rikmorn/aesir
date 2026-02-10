@@ -323,6 +323,112 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
     return block;
   }
 
+  // ─── Active Delegations Context ──────────────────────────────────────
+
+  /**
+   * Format the active_delegations array as an XML block for injection
+   * into signal messages. Gives the agent full orientation on what
+   * delegations are currently pending, regardless of why it was woken.
+   *
+   * Returns empty string if no active delegations.
+   */
+  function formatActiveDelegations(delegations: unknown[]): string {
+    if (!delegations || delegations.length === 0) return "";
+
+    const entries = delegations as Array<{
+      taskId?: string;
+      targetEntityId?: string;
+      description?: string;
+      delegatedAt?: string;
+      handshakeStatus?: string;
+      estimate?: string;
+    }>;
+
+    const lines: string[] = ["<active_delegations>"];
+    for (const entry of entries) {
+      const attrs = [
+        `task_id="${entry.taskId ?? "unknown"}"`,
+        `target="${entry.targetEntityId ?? "unknown"}"`,
+        `status="${entry.handshakeStatus ?? "pending"}"`,
+      ];
+      if (entry.estimate) {
+        attrs.push(`estimate="${entry.estimate}"`);
+      }
+      lines.push(
+        `<delegation ${attrs.join(" ")}>${entry.description ?? "No description"}`,
+      );
+      lines.push(`Delegated: ${entry.delegatedAt ?? "unknown"}</delegation>`);
+    }
+    lines.push("</active_delegations>");
+    return lines.join("\n");
+  }
+
+  /**
+   * Compute updated active_delegations after processing a signal.
+   *
+   * - task_completion / task_failure / task_timeout: remove the matching entry
+   * - task_handshake with response=accepted: update handshakeStatus + estimate
+   * - task_handshake with response=rejected: remove the matching entry
+   * - Other signal types: no change
+   *
+   * Returns null if no changes needed (caller should skip the update).
+   */
+  function computeUpdatedDelegations(
+    currentDelegations: unknown[],
+    signalType: string,
+    signalData: Record<string, unknown> | undefined,
+  ): unknown[] | null {
+    if (!currentDelegations || currentDelegations.length === 0) return null;
+
+    const taskId = signalData?.taskId as string | undefined;
+    if (!taskId) return null;
+
+    const REMOVAL_SIGNAL_TYPES = [
+      "task_completion",
+      "task_failure",
+      "task_timeout",
+    ];
+
+    if (REMOVAL_SIGNAL_TYPES.includes(signalType)) {
+      const filtered = currentDelegations.filter(
+        (d) => (d as { taskId?: string }).taskId !== taskId,
+      );
+      // Only return if something changed
+      return filtered.length !== currentDelegations.length ? filtered : null;
+    }
+
+    if (signalType === "task_handshake") {
+      const response = signalData?.response as string | undefined;
+      if (response === "rejected") {
+        // Remove the rejected delegation
+        const filtered = currentDelegations.filter(
+          (d) => (d as { taskId?: string }).taskId !== taskId,
+        );
+        return filtered.length !== currentDelegations.length ? filtered : null;
+      }
+      if (response === "accepted") {
+        // Update handshakeStatus and add estimate if provided
+        const updated = currentDelegations.map((d) => {
+          const entry = d as { taskId?: string; [key: string]: unknown };
+          if (entry.taskId === taskId) {
+            const updated: Record<string, unknown> = {
+              ...entry,
+              handshakeStatus: "accepted",
+            };
+            if (signalData?.estimate) {
+              updated.estimate = signalData.estimate as string;
+            }
+            return updated;
+          }
+          return d;
+        });
+        return updated;
+      }
+    }
+
+    return null;
+  }
+
   // ─── Error Activity Emission ─────────────────────────────────────────
 
   /**
@@ -837,6 +943,9 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         replyContext?: unknown;
       }>;
       const pendingWait = conv.pending_wait as Record<string, unknown> | null;
+      // Track consumed signal for post-loop active_delegations cleanup
+      let consumedSignalType: string | undefined;
+      let consumedSignalData: Record<string, unknown> | undefined;
 
       if (queuedSignals.length > 0 && pendingWait) {
         const matchIndex = queuedSignals.findIndex((sig) =>
@@ -848,8 +957,17 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
           const signalContent =
             matchedSignal.message ??
             `Signal received: ${matchedSignal.type}. Data: ${JSON.stringify(matchedSignal.data ?? {})}`;
+
+          // Inject active_delegations context so agent knows what is in flight
+          const activeDelegations = (conv.active_delegations ??
+            []) as unknown[];
+          const delegationContext = formatActiveDelegations(activeDelegations);
+          const contentWithDelegations = delegationContext
+            ? `${delegationContext}\n\n${signalContent}`
+            : signalContent;
+
           const finalContent = appendReplyContextTag(
-            signalContent,
+            contentWithDelegations,
             matchedSignal.replyContext as ReplyContext | undefined,
           );
 
@@ -875,6 +993,10 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
               updated_at: new Date(),
             })
             .where(eq(conversations.id, conv.id));
+
+          // Track for post-loop active_delegations cleanup
+          consumedSignalType = matchedSignal.type;
+          consumedSignalData = matchedSignal.data;
 
           childLogger.info(
             { signalType: matchedSignal.type },
@@ -1064,6 +1186,52 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
       // slice(1) skips the loop's initial user message (already in currentMessages
       // as the original initial message or context-wrapper for resumed conversations).
       const finalMessages = [...currentMessages, ...result.messages.slice(1)];
+
+      // 13b. Update active_delegations if a task lifecycle signal was consumed
+      if (consumedSignalType) {
+        try {
+          // Re-read active_delegations from DB (may have been modified during loop)
+          const [freshDelegations] = await db
+            .select({
+              active_delegations: conversations.active_delegations,
+            })
+            .from(conversations)
+            .where(eq(conversations.id, conv.id))
+            .limit(1);
+
+          const currentDelegations = (freshDelegations?.active_delegations ??
+            []) as unknown[];
+          const activeDelegationsUpdate = computeUpdatedDelegations(
+            currentDelegations,
+            consumedSignalType,
+            consumedSignalData,
+          );
+
+          if (activeDelegationsUpdate !== null) {
+            await db
+              .update(conversations)
+              .set({
+                active_delegations: activeDelegationsUpdate,
+                updated_at: new Date(),
+              })
+              .where(eq(conversations.id, conv.id));
+
+            childLogger.info(
+              {
+                signalType: consumedSignalType,
+                delegationsRemaining: activeDelegationsUpdate.length,
+              },
+              "Updated active_delegations after processing signal",
+            );
+          }
+        } catch (delegationCleanupError) {
+          // Non-fatal: log and continue
+          childLogger.warn(
+            { err: delegationCleanupError },
+            "Failed to update active_delegations after signal processing (non-fatal)",
+          );
+        }
+      }
 
       // 14. Handle result based on waitForState and loop status
       if (waitForState.triggered) {

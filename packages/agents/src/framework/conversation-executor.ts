@@ -406,12 +406,46 @@ export function createConversationExecutor(
             }
           }
 
-          // Build signal message
+          // Build signal message with active_delegations context
           const signalContent =
             signal.message ??
             `Signal received: ${signal.type}. Data: ${JSON.stringify(signal.data ?? {})}`;
+
+          // Inject active_delegations so agent knows what is in flight on resume
+          const activeDelegations = (row.active_delegations ?? []) as unknown[];
+          let contentWithDelegations = signalContent;
+          if (activeDelegations.length > 0) {
+            const delegationLines: string[] = ["<active_delegations>"];
+            for (const d of activeDelegations) {
+              const entry = d as {
+                taskId?: string;
+                targetEntityId?: string;
+                description?: string;
+                delegatedAt?: string;
+                handshakeStatus?: string;
+                estimate?: string;
+              };
+              const attrs = [
+                `task_id="${entry.taskId ?? "unknown"}"`,
+                `target="${entry.targetEntityId ?? "unknown"}"`,
+                `status="${entry.handshakeStatus ?? "pending"}"`,
+              ];
+              if (entry.estimate) {
+                attrs.push(`estimate="${entry.estimate}"`);
+              }
+              delegationLines.push(
+                `<delegation ${attrs.join(" ")}>${entry.description ?? "No description"}`,
+              );
+              delegationLines.push(
+                `Delegated: ${entry.delegatedAt ?? "unknown"}</delegation>`,
+              );
+            }
+            delegationLines.push("</active_delegations>");
+            contentWithDelegations = `${delegationLines.join("\n")}\n\n${signalContent}`;
+          }
+
           const finalContent = appendReplyContextTag(
-            signalContent,
+            contentWithDelegations,
             signal.replyContext,
           );
           const signalMessage = {
