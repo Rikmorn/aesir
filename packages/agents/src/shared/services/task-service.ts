@@ -123,6 +123,14 @@ export interface TaskServiceOptions {
   logger: PinoLogger;
 }
 
+/** Dispatcher callback signature for post-update signal dispatch */
+export type TaskDispatcherCallback = (
+  taskId: string,
+  oldStatus: string,
+  newStatus: string,
+  handoffContext?: Record<string, unknown>,
+) => Promise<void>;
+
 export interface TaskService {
   create(params: CreateTaskParams): Promise<Task>;
   get(taskId: string): Promise<Task | null>;
@@ -149,6 +157,8 @@ export interface TaskService {
     filters?: { status?: string; limit?: number },
   ): Promise<Task[]>;
   linkConversation(taskId: string, conversationId: string): Promise<void>;
+  /** Late-bind the dispatcher callback for signal dispatch on terminal task transitions. */
+  setDispatcher(callback: TaskDispatcherCallback): void;
   health(): Promise<{ healthy: boolean; latencyMs: number }>;
   close(): Promise<void>;
 }
@@ -162,6 +172,12 @@ export function createTaskService(options: TaskServiceOptions): TaskService {
   if (!logger) throw new Error("logger is required for TaskService");
 
   const log = logger.child({ component: "task-service" });
+
+  // Terminal statuses that trigger signal dispatch
+  const TERMINAL_STATUSES = new Set(["completed", "failed", "cancelled"]);
+
+  // Late-bound dispatcher callback (set via setDispatcher after construction)
+  let onTaskUpdate: TaskDispatcherCallback | null = null;
 
   return {
     async create(params) {
@@ -209,6 +225,17 @@ export function createTaskService(options: TaskServiceOptions): TaskService {
       const validated = UpdateTaskParamsSchema.parse(fields);
       const now = new Date();
 
+      // Capture old status before update (for dispatcher callback)
+      let oldStatus: string | null = null;
+      if (validated.status !== undefined && onTaskUpdate) {
+        const [existing] = await db
+          .select({ status: tasks.status })
+          .from(tasks)
+          .where(eq(tasks.id, taskId))
+          .limit(1);
+        oldStatus = existing?.status ?? null;
+      }
+
       // Build the update values, mapping camelCase to snake_case
       const updateValues: Record<string, unknown> = {
         updated_at: now,
@@ -247,6 +274,25 @@ export function createTaskService(options: TaskServiceOptions): TaskService {
       }
 
       log.info({ taskId, fields: Object.keys(validated) }, "Task updated");
+
+      // Dispatch signal if status changed to terminal (AFTER DB commit)
+      if (
+        onTaskUpdate &&
+        validated.status !== undefined &&
+        oldStatus !== null &&
+        oldStatus !== validated.status &&
+        TERMINAL_STATUSES.has(validated.status)
+      ) {
+        try {
+          await onTaskUpdate(taskId, oldStatus, validated.status);
+        } catch (dispatchError) {
+          log.error(
+            { err: dispatchError, taskId },
+            "Dispatcher callback failed (non-fatal)",
+          );
+        }
+      }
+
       return task;
     },
 
@@ -289,6 +335,17 @@ export function createTaskService(options: TaskServiceOptions): TaskService {
       });
       const now = new Date();
       const handoffId = createId.handoff();
+
+      // Capture old status before transaction (for dispatcher callback)
+      let oldStatus: string | null = null;
+      if (onTaskUpdate) {
+        const [existing] = await db
+          .select({ status: tasks.status })
+          .from(tasks)
+          .where(eq(tasks.id, taskId))
+          .limit(1);
+        oldStatus = existing?.status ?? null;
+      }
 
       const result = await db.transaction(async (tx) => {
         const updateValues: Record<string, unknown> = {
@@ -338,6 +395,28 @@ export function createTaskService(options: TaskServiceOptions): TaskService {
         },
         "Task transitioned with handoff",
       );
+
+      // Dispatch signal if status changed to terminal (AFTER DB commit)
+      if (
+        onTaskUpdate &&
+        oldStatus !== null &&
+        oldStatus !== newStatus &&
+        TERMINAL_STATUSES.has(newStatus)
+      ) {
+        try {
+          // Pass handoff context so dispatcher can include summary/artifacts in signal
+          const handoffContext = validatedHandoff.context as Record<
+            string,
+            unknown
+          >;
+          await onTaskUpdate(taskId, oldStatus, newStatus, handoffContext);
+        } catch (dispatchError) {
+          log.error(
+            { err: dispatchError, taskId },
+            "Dispatcher callback failed (non-fatal)",
+          );
+        }
+      }
 
       return result;
     },
@@ -417,6 +496,11 @@ export function createTaskService(options: TaskServiceOptions): TaskService {
       }
 
       log.info({ taskId, conversationId }, "Conversation linked to task");
+    },
+
+    setDispatcher(callback) {
+      onTaskUpdate = callback;
+      log.info("Dispatcher callback registered");
     },
 
     async health() {

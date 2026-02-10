@@ -49,6 +49,7 @@ import { config } from "../shared/env/config.js";
 import { createDirectoryService } from "../shared/services/directory-service.js";
 import { createKnowledgeService } from "../shared/services/knowledge-service.js";
 import { createTaskService } from "../shared/services/task-service.js";
+import { createTaskSignalDispatcher } from "../shared/services/task-signal-dispatcher.js";
 import { createApiRouter } from "./api/router.js";
 
 // Resolve definitions directory relative to this file's location.
@@ -179,7 +180,19 @@ async function bootstrap(): Promise<void> {
     directoryService,
   });
 
-  // 8b. Knowledge cleanup -- hourly hard-delete of entries expired 24h+ ago
+  // 8b. TaskSignalDispatcher -- fires completion/failure signals to delegating agents
+  const taskSignalDispatcher = createTaskSignalDispatcher({
+    executor,
+    taskService,
+    eventLog,
+    db,
+    logger,
+  });
+  taskService.setDispatcher((taskId, oldStatus, newStatus, ctx) =>
+    taskSignalDispatcher.onTaskUpdate(taskId, oldStatus, newStatus, ctx),
+  );
+
+  // 8c. Knowledge cleanup -- hourly hard-delete of entries expired 24h+ ago
   // Uses setInterval (single-process deployment). The 24h grace period after expiry
   // allows debugging before permanent deletion. cleanupExpired() is idempotent.
   const KNOWLEDGE_CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour

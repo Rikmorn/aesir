@@ -180,6 +180,7 @@ function createMockTaskService(overrides?: Partial<TaskService>): TaskService {
     listByAssignee: vi.fn().mockResolvedValue([]),
     listByParent: vi.fn().mockResolvedValue([]),
     linkConversation: vi.fn().mockResolvedValue(undefined),
+    setDispatcher: vi.fn(),
     health: vi.fn().mockResolvedValue({ healthy: true, latencyMs: 1 }),
     close: vi.fn().mockResolvedValue(undefined),
     ...overrides,

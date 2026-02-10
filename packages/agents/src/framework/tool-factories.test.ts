@@ -51,6 +51,7 @@ function createMockTaskService(): TaskService {
     listByAssignee: vi.fn(),
     listByParent: vi.fn(),
     linkConversation: vi.fn(),
+    setDispatcher: vi.fn(),
     health: vi.fn().mockResolvedValue({ healthy: true, latencyMs: 1 }),
     close: vi.fn(),
   } as unknown as TaskService;

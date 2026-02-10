@@ -36,6 +36,7 @@ function createMockTaskService(): {
     listByAssignee: vi.fn(),
     listByParent: vi.fn(),
     linkConversation: vi.fn(),
+    setDispatcher: vi.fn(),
     health: vi.fn(),
     close: vi.fn(),
   };
