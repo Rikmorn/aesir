@@ -247,6 +247,9 @@ export const agentEventContent = agentsSchema.table("agent_event_content", {
 
 // ─── Knowledge Entries ──────────────────────────────────────────────────────
 
+const entityDirectoryStatusValues = ["active", "inactive"] as const;
+const entityDirectoryTypeValues = ["agent", "human"] as const;
+
 const knowledgeEntryTypeValues = [
   "discovery",
   "constraint",
@@ -293,5 +296,46 @@ export const knowledgeEntries = agentsSchema.table(
     index("idx_knowledge_scope_author").on(table.scope, table.author),
     index("idx_knowledge_expires").on(table.expires_at),
     index("idx_knowledge_not_superseded").on(table.id),
+  ],
+);
+
+// ─── Entity Directory ──────────────────────────────────────────────────────
+
+/**
+ * Entity Directory table (drizzle-kit mirror)
+ *
+ * Note: The `capabilities_embedding` column is defined as `text` here because
+ * drizzle-kit's CJS bundler cannot resolve the customType vector definition
+ * from schema.ts. The actual column type is `vector` (pgvector) -- defined in
+ * the hand-written migration 0008_add_entity_directory.sql. This placeholder
+ * prevents drizzle-kit from generating destructive migration diffs.
+ */
+export const entityDirectory = agentsSchema.table(
+  "entity_directory",
+  {
+    id: text("id").primaryKey(),
+    type: text("type", { enum: entityDirectoryTypeValues }).notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    capabilities: jsonb("capabilities").notNull().default([]),
+    // Placeholder: actual type is `vector` (pgvector), defined in migration SQL.
+    // Using text here because drizzle-kit CJS cannot resolve customType vector.
+    capabilities_embedding: text("capabilities_embedding"),
+    reach_via: jsonb("reach_via"),
+    status: text("status", { enum: entityDirectoryStatusValues })
+      .notNull()
+      .default("active"),
+    metadata: jsonb("metadata").notNull().default({}),
+    last_seeded_at: timestamp("last_seeded_at", { withTimezone: true }),
+    created_at: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updated_at: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("idx_directory_type_status").on(table.type, table.status),
+    index("idx_directory_name").on(table.name),
   ],
 );

@@ -413,6 +413,62 @@ export const knowledgeEntries = agentsSchema.table(
   ],
 );
 
+// ─── Entity Directory ──────────────────────────────────────────────────────
+
+/**
+ * Entity directory status values
+ */
+export const entityDirectoryStatusValues = ["active", "inactive"] as const;
+export type EntityDirectoryStatus =
+  (typeof entityDirectoryStatusValues)[number];
+
+/**
+ * Entity directory type values
+ */
+export const entityDirectoryTypeValues = ["agent", "human"] as const;
+export type EntityDirectoryType = (typeof entityDirectoryTypeValues)[number];
+
+/**
+ * Entity Directory table
+ *
+ * Stores agents (and future humans) with capabilities and pgvector embeddings
+ * for semantic matching. Agents use their definition ID as the primary key
+ * (e.g., "dev-agent"). Future human entries use createId.directoryEntry().
+ *
+ * Capabilities are stored as a JSONB string array and embedded via pgvector
+ * for semantic capability matching in agent discovery.
+ */
+export const entityDirectory = agentsSchema.table(
+  "entity_directory",
+  {
+    id: text("id").primaryKey(),
+    type: text("type", { enum: entityDirectoryTypeValues }).notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    capabilities: jsonb("capabilities").$type<string[]>().notNull().default([]),
+    capabilities_embedding: vectorColumn("capabilities_embedding"),
+    reach_via: jsonb("reach_via").$type<Record<string, unknown> | null>(),
+    status: text("status", { enum: entityDirectoryStatusValues })
+      .notNull()
+      .default("active"),
+    metadata: jsonb("metadata")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    last_seeded_at: timestamp("last_seeded_at", { withTimezone: true }),
+    created_at: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updated_at: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("idx_directory_type_status").on(table.type, table.status),
+    index("idx_directory_name").on(table.name),
+  ],
+);
+
 // ─── Type Exports ────────────────────────────────────────────────────────────
 
 export type Conversation = typeof conversations.$inferSelect;
@@ -429,3 +485,5 @@ export type TaskHandoff = typeof taskHandoffs.$inferSelect;
 export type NewTaskHandoff = typeof taskHandoffs.$inferInsert;
 export type KnowledgeEntry = typeof knowledgeEntries.$inferSelect;
 export type NewKnowledgeEntry = typeof knowledgeEntries.$inferInsert;
+export type EntityDirectory = typeof entityDirectory.$inferSelect;
+export type NewEntityDirectory = typeof entityDirectory.$inferInsert;

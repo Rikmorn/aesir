@@ -43,6 +43,9 @@ export const createId = {
   /** Dev container ID (platform.dev_containers) */
   devContainer: () => `dcont_${nanoid()}`,
 
+  /** Directory entry ID (agents.entity_directory, for future human entries) */
+  directoryEntry: () => `dent_${nanoid()}`,
+
   /** Event ID (event dispatch) */
   event: () => `evt_${nanoid()}`,
 
