@@ -30,12 +30,14 @@ import type { ReplyContext } from "../shared/communication/types.js";
 import type * as agentsSchemaModule from "../shared/db/schema.js";
 import type { Conversation, TaskHandoff } from "../shared/db/schema.js";
 import { conversations } from "../shared/db/schema.js";
+import type { DirectoryService } from "../shared/services/directory-service.js";
 import type { TaskService } from "../shared/services/task-service.js";
 import { hasTextContent } from "./event-content.js";
 import { createHistoryManager } from "./history-manager.js";
 import type { TimeoutScheduler } from "./timeout-scheduler.js";
 import type {
   AgentRegistry,
+  ConversationExecutor,
   EventLog,
   SandboxManager,
   SessionProjection,
@@ -91,6 +93,10 @@ export interface WorkerLoopOptions {
     | undefined;
   /** TaskService for task context injection (Phase 58.2) */
   taskService?: TaskService | undefined;
+  /** DirectoryService for delegation target validation (Phase 70) */
+  directoryService?: DirectoryService | undefined;
+  /** ConversationExecutor for starting delegated conversations (Phase 70, late-bound) */
+  executor?: ConversationExecutor | undefined;
 }
 
 /**
@@ -155,7 +161,12 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
     sandboxManager,
     sandboxSetup,
     taskService,
+    directoryService,
   } = options;
+
+  // executor is accessed via options.executor (late-bound reference)
+  // because the executor and worker loop are created in sequence and
+  // the executor passes itself after both are constructed.
 
   const logger = parentLogger.child({ component: "worker-loop", workerId });
 
@@ -768,6 +779,17 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
               abortSignal,
               currentDepth: 0,
               maxSpawnDepth: 3,
+            },
+          }),
+        // Delegation deps: populated when agent has task:delegate in its tools
+        ...(definition.tools.includes("task:delegate") &&
+          taskService &&
+          directoryService &&
+          options.executor && {
+            delegationDeps: {
+              executor: options.executor,
+              directoryService,
+              taskService,
             },
           }),
       };

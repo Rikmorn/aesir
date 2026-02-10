@@ -667,6 +667,8 @@ export interface ConversationExecutorOptions {
     | undefined;
   /** TaskService for task context injection in the worker loop (Phase 58.2) */
   taskService?: TaskService | undefined;
+  /** DirectoryService for delegation target validation in the worker loop (Phase 70) */
+  directoryService?: DirectoryService | undefined;
 }
 
 // ─── Non-Retryable Error Classes ────────────────────────────────────────────

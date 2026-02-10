@@ -176,6 +176,7 @@ async function bootstrap(): Promise<void> {
     pollIntervalMs: config.service.workerPollIntervalMs,
     concurrencyLimit: config.service.maxConcurrentConversations,
     taskService,
+    directoryService,
   });
 
   // 8b. Knowledge cleanup -- hourly hard-delete of entries expired 24h+ ago

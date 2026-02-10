@@ -125,6 +125,10 @@ export function createConversationExecutor(
         loopOpts.sandboxSetup = options.sandboxSetup;
       if (options.taskService !== undefined)
         loopOpts.taskService = options.taskService;
+      if (options.directoryService !== undefined)
+        loopOpts.directoryService = options.directoryService;
+      // Late-bind executor reference so the worker loop can start delegated conversations
+      loopOpts.executor = executor;
       workerLoop = createWorkerLoop(loopOpts);
     }
     return workerLoop;
