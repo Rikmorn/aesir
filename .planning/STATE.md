@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 67+68 of 73 (Linear Agent SDK + Shared Memory -- parallel)
-Plan: 7 of ~24 total (~5+~4 in current phases)
-Status: Phase 67 fully complete, Phase 68 plans 01+02 complete (parallel)
-Last activity: 2026-02-10 -- Completed 68-02 (Embedding Pipeline)
+Plan: 8 of ~24 total (~5+~4 in current phases)
+Status: Phase 67 fully complete, Phase 68 plans 01+02+03 complete
+Last activity: 2026-02-10 -- Completed 68-03 (Knowledge Service & Tools)
 
-Progress: [████░░░░░░] ~24%
+Progress: [████░░░░░░] ~28%
 
 ## Milestone History
 
@@ -34,7 +34,7 @@ Progress: [████░░░░░░] ~24%
 **Cumulative:**
 - Total milestones shipped: 8
 - Total phases completed: 69
-- Total plans completed: 306
+- Total plans completed: 307
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -45,6 +45,7 @@ Progress: [████░░░░░░] ~24%
 | 67 | 05 | 4min | 2 | 2 |
 | 68 | 01 | 4min | 2 | 7 |
 | 68 | 02 | 3min | 1 | 7 |
+| 68 | 03 | 6min | 2 | 9 |
 
 *Updated after each plan completion*
 
@@ -75,6 +76,9 @@ See PROJECT.md Key Decisions table for full history.
 - **68-01:** text placeholder in schema.drizzle.ts -- drizzle-kit CJS bundler cannot resolve customType
 - **68-02:** Voyage AI SDK timeoutInSeconds=10 via RequestOptions (SDK-native timeout, no AbortSignal needed)
 - **68-02:** Ollama embedBatch uses Promise.all with sequential embed calls (no native batch support)
+- **68-03:** cosineDistance from drizzle-orm for pgvector similarity queries (1 - cosineDistance = similarity score)
+- **68-03:** Scope visibility as SQL condition (not application-level filtering) for row-level security
+- **68-03:** EmbeddingConfig.voyage.apiKey changed from optional property to explicit string|undefined for exactOptionalPropertyTypes compatibility
 
 ### Pending Todos
 
@@ -91,9 +95,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed 68-02-PLAN.md (Embedding Pipeline)
+Stopped at: Completed 68-03-PLAN.md (Knowledge Service & Tools)
 Resume file: None
-Next action: Continue with Phase 68 plans 03-04
+Next action: Continue with Phase 68 plan 04
 
 ---
-*Updated: 2026-02-10 -- 68-02 complete, embedding pipeline shipped*
+*Updated: 2026-02-10 -- 68-03 complete, KnowledgeService and knowledge:store/query tools shipped*
