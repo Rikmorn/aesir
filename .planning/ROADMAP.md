@@ -165,13 +165,12 @@ Plans:
   3. When the callback conversation is terminal, the completion result is stored on the task (`completion_result` JSONB) and a `signal.orphaned` event is logged -- work product is never silently lost
   4. Callback routing resolves through tasks (latest active conversation for parent task), surviving conversation re-triggers
   5. Delegation context (active_delegations JSONB, signal payloads with original task description and results) survives history compaction
-**Plans**: ~4 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] 71-01: Multi-type wait_for (pending_wait.types array, signal matching checks membership) and wait_for_task variant
-- [ ] 71-02: TaskSignalDispatcher (EventEmitter on task state changes, signal dispatch to callback conversations)
-- [ ] 71-03: Orphan handling (completion_result JSONB, signal.orphaned events) and callback routing through tasks
-- [ ] 71-04: Expectation-based timeout (handshake estimate feeds pg-boss delayed signal) and delegation context preservation (active_delegations column, self-contained payloads)
+- [ ] 71-01-PLAN.md -- Schema migration (completion_result, active_delegations), multi-type wait_for, signal matching helper, wait_for_task tool
+- [ ] 71-02-PLAN.md -- TaskSignalDispatcher (signal dispatch on terminal task transitions), orphan handling (completion_result, signal.orphaned), callback routing through tasks
+- [ ] 71-03-PLAN.md -- active_delegations lifecycle (write on delegate, inject on resume, remove after processing)
 
 #### Phase 72: Delegation Graph Observability
 **Goal**: Operators see delegation hierarchies, signal flows, and health indicators in the dashboard for debugging and monitoring multi-agent workflows
@@ -224,7 +223,7 @@ Phases 67+68 execute in parallel, then 69 -> 70 -> 71 -> 72 -> 73 sequentially.
 | 68. Shared Memory | v2.7 | 4/4 | Complete | 2026-02-10 |
 | 69. Entity Directory | v2.7 | 3/3 | Complete | 2026-02-10 |
 | 70. Task Delegation | v2.7 | 3/3 | Complete | 2026-02-10 |
-| 71. Completion Signaling | v2.7 | 0/~4 | Not started | - |
+| 71. Completion Signaling | v2.7 | 0/3 | Not started | - |
 | 72. Delegation Graph Observability | v2.7 | 0/~3 | Not started | - |
 | 73. QA Agent + Validation | v2.7 | 0/~3 | Not started | - |
 
