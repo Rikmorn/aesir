@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.7 Agent Collaboration -- Phase 67 (Linear Agent SDK) + Phase 68 (Shared Memory)
+**Current focus:** v2.7 Agent Collaboration -- Phase 69 (Entity Directory)
 
 ## Current Position
 
-Phase: 68 of 73 (Shared Memory -- complete)
-Plan: 9 of ~24 total (Phase 67 complete, Phase 68 complete)
-Status: Phase 67 + Phase 68 fully complete, ready for Phase 69
-Last activity: 2026-02-10 -- Completed 68-04 (Knowledge Update & Cleanup)
+Phase: 69 of 73 (Entity Directory -- in progress)
+Plan: 1 of 3 in phase (69-01 complete)
+Status: Phase 69 in progress, 69-01 schema foundation complete
+Last activity: 2026-02-10 -- Completed 69-01 (Entity Directory Schema)
 
-Progress: [████░░░░░░] ~32%
+Progress: [████░░░░░░] ~34%
 
 ## Milestone History
 
@@ -34,7 +34,7 @@ Progress: [████░░░░░░] ~32%
 **Cumulative:**
 - Total milestones shipped: 8
 - Total phases completed: 69
-- Total plans completed: 308
+- Total plans completed: 309
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -47,6 +47,7 @@ Progress: [████░░░░░░] ~32%
 | 68 | 02 | 3min | 1 | 7 |
 | 68 | 03 | 6min | 2 | 9 |
 | 68 | 04 | 3min | 2 | 5 |
+| 69 | 01 | 2min | 2 | 6 |
 
 *Updated after each plan completion*
 
@@ -82,6 +83,9 @@ See PROJECT.md Key Decisions table for full history.
 - **68-03:** EmbeddingConfig.voyage.apiKey changed from optional property to explicit string|undefined for exactOptionalPropertyTypes compatibility
 - **68-04:** setInterval over pg-boss cron for cleanup (TimeoutScheduler doesn't expose boss instance, single-process deployment)
 - **68-04:** Cleanup as first shutdown step (stop generating new work before draining existing)
+- **69-01:** Agent entries use definition ID as PK; directoryEntry ID generator for future human entries only
+- **69-01:** Unconstrained vector for capabilities_embedding (matches knowledge_entries pattern, supports 768/1024)
+- **69-01:** HNSW index m=16, ef_construction=64 matches knowledge_entries for consistent pgvector configuration
 
 ### Pending Todos
 
@@ -98,9 +102,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed 68-04-PLAN.md (Knowledge Update & Cleanup)
+Stopped at: Completed 69-01-PLAN.md (Entity Directory Schema)
 Resume file: None
-Next action: Continue with Phase 69 (Entity Directory)
+Next action: Continue with 69-02-PLAN.md (Entity Directory Service)
 
 ---
-*Updated: 2026-02-10 -- 68-04 complete, Phase 68 (Shared Memory) fully shipped: knowledge lifecycle complete with store/query/update tools and background cleanup*
+*Updated: 2026-02-10 -- 69-01 complete: entity directory schema foundation with table, migration, HNSW index, and YAML capabilities field*
