@@ -24,6 +24,7 @@ import type {
   ConversationStatus,
   NewAgentEvent,
 } from "../shared/db/schema.js";
+import type { DirectoryService } from "../shared/services/directory-service.js";
 import type { TaskService } from "../shared/services/task-service.js";
 import type { TimeoutScheduler } from "./timeout-scheduler.js";
 import type { WorkerLoopStatus } from "./worker-loop.js";
@@ -334,6 +335,8 @@ export interface ToolContext {
   logger: PinoLogger;
   /** Spawn dependencies for sub-agent execution (populated by worker loop when agent has coordination:spawn_agent) */
   spawnDeps?: SpawnAgentDeps | undefined;
+  /** Delegation dependencies for cross-agent task delegation (populated by worker loop when agent has task:delegate) */
+  delegationDeps?: DelegationDeps | undefined;
 }
 
 // ─── Spawn Agent Dependencies ───────────────────────────────────────────────
@@ -365,6 +368,24 @@ export interface SpawnAgentDeps {
   currentDepth: number;
   /** Maximum allowed spawn depth (default: 3) */
   maxSpawnDepth: number;
+}
+
+// ─── Delegation Dependencies ─────────────────────────────────────────────
+
+/**
+ * Dependencies for cross-agent task delegation via the task:delegate tool.
+ *
+ * Populated by the worker loop when the agent definition includes
+ * `task:delegate` in its tool list. Carried inside ToolContext
+ * so tool factories have access at resolve time.
+ */
+export interface DelegationDeps {
+  /** Executor for starting target agent conversations */
+  executor: ConversationExecutor;
+  /** Directory service for validating target entity existence */
+  directoryService: DirectoryService;
+  /** Task service for creating delegation tasks and reading depth */
+  taskService: TaskService;
 }
 
 /**

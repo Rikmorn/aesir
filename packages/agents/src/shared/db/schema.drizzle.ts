@@ -97,6 +97,7 @@ export const tasks = agentsSchema.table(
     title: text("title").notNull(),
     objective: text("objective"),
     metadata: jsonb("metadata").default({}),
+    depth: integer("depth").notNull().default(0),
 
     created_at: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -114,6 +115,7 @@ export const tasks = agentsSchema.table(
     ),
     index("idx_tasks_parent").on(table.parent_id),
     index("idx_tasks_status").on(table.status),
+    index("idx_tasks_depth").on(table.depth),
   ],
 );
 

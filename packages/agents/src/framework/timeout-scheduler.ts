@@ -103,6 +103,7 @@ export function createPgBossAdapter(pool: Pool) {
 /**
  * Parse a timeout duration string into milliseconds.
  * Supported formats:
+ * - "<number>s" (seconds) -- useful for short timeouts like delegation handshakes
  * - "<number>m" (minutes) -- useful for testing
  * - "<number>h" (hours)
  * - "<number>d" (days)
@@ -110,16 +111,18 @@ export function createPgBossAdapter(pool: Pool) {
  * @throws Error on invalid format
  */
 export function parseTimeoutDuration(duration: string): number {
-  const match = duration.match(/^(\d+)(m|h|d)$/);
+  const match = duration.match(/^(\d+)(s|m|h|d)$/);
   if (!match?.[1] || !match[2]) {
     throw new Error(
-      `Invalid timeout duration: "${duration}". Expected format: <number>m, <number>h, or <number>d`,
+      `Invalid timeout duration: "${duration}". Expected format: <number>s, <number>m, <number>h, or <number>d`,
     );
   }
   const value = Number.parseInt(match[1], 10);
   const unit = match[2];
 
   switch (unit) {
+    case "s":
+      return value * 1000;
     case "m":
       return value * 60 * 1000;
     case "h":

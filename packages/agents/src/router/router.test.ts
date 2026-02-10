@@ -113,6 +113,7 @@ function createMockTask(overrides?: Partial<Task>): Task {
     title: "Fix authentication bug",
     objective: null,
     metadata: {},
+    depth: 0,
     created_at: new Date("2026-02-07T00:00:00Z"),
     updated_at: new Date("2026-02-07T00:00:00Z"),
     completed_at: null,
