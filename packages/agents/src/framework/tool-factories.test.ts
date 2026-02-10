@@ -110,9 +110,9 @@ describe("registerAllTools", () => {
       expect(() => setupRegistry()).not.toThrow();
     });
 
-    it("should register exactly 41 tools", () => {
+    it("should register exactly 42 tools", () => {
       const { registry } = setupRegistry();
-      expect(registry.listRegistered()).toHaveLength(41);
+      expect(registry.listRegistered()).toHaveLength(42);
     });
 
     it("should register all expected namespaces", () => {
@@ -209,6 +209,7 @@ describe("registerAllTools", () => {
 
       expect(registry.has("knowledge:store")).toBe(true);
       expect(registry.has("knowledge:query")).toBe(true);
+      expect(registry.has("knowledge:update")).toBe(true);
     });
 
     it("should register all communication tools", () => {
@@ -346,7 +347,7 @@ describe("registerAllTools", () => {
       const { logger } = setupRegistry();
 
       expect(logger.info).toHaveBeenCalledWith(
-        { toolCount: 41 },
+        { toolCount: 42 },
         "All tool factories registered",
       );
     });

@@ -1,7 +1,7 @@
 /**
  * Tool Factory Registration
  *
- * Registers all 41 tool factories in the ToolRegistry, bridging the v2.3
+ * Registers all 42 tool factories in the ToolRegistry, bridging the v2.3
  * ToolContext interface to the existing v2.2 tool factory signatures.
  *
  * Tool categories:
@@ -12,7 +12,7 @@
  * - Slack (5): send_message, send_approval_request, get_message, reply_to_thread, list_channels
  * - Coordination (3): spawn_agent, request_human_input, wait_for
  * - Task (6): create_task, complete_task, pause_task, handoff_task, list_tasks, get_task_context
- * - Knowledge (2): knowledge_store, knowledge_query
+ * - Knowledge (3): knowledge_store, knowledge_query, knowledge_update
  * - Communication (3): reply, ask, notify
  *
  * Adapters bridge ToolContext to the existing factory signatures:
@@ -48,6 +48,7 @@ import { createSlackTools } from "../shared/tools/integration/slack-tools.js";
 import {
   createKnowledgeQueryTool,
   createKnowledgeStoreTool,
+  createKnowledgeUpdateTool,
 } from "../shared/tools/knowledge/index.js";
 import {
   createCompleteTaskTool,
@@ -154,7 +155,7 @@ function communicationAdapter(
 // ─── Registration ────────────────────────────────────────────────────────────
 
 /**
- * Register all 41 tool factories in the ToolRegistry.
+ * Register all 42 tool factories in the ToolRegistry.
  *
  * This bridges the v2.3 registry-based tool resolution to the existing v2.2
  * tool factory functions. After calling this, `registry.resolve(refs, context)`
@@ -323,7 +324,7 @@ export function registerAllTools(options: RegisterAllToolsOptions): void {
     createGetTaskContextTool(ts, ctx),
   );
 
-  // ── Knowledge tools (2) ─────────────────────────────────────────────
+  // ── Knowledge tools (3) ─────────────────────────────────────────────
 
   const ks = options.knowledgeService;
   registry.register("knowledge:store", (ctx) =>
@@ -331,6 +332,9 @@ export function registerAllTools(options: RegisterAllToolsOptions): void {
   );
   registry.register("knowledge:query", (ctx) =>
     createKnowledgeQueryTool(ks, ctx),
+  );
+  registry.register("knowledge:update", (ctx) =>
+    createKnowledgeUpdateTool(ks, ctx),
   );
 
   // ── Communication tools (3) ──────────────────────────────────────────

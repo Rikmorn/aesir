@@ -7,3 +7,4 @@
 export { createKnowledgeQueryTool } from "./query.js";
 export { createKnowledgeStoreTool } from "./store.js";
 export type { KnowledgeType } from "./types.js";
+export { createKnowledgeUpdateTool } from "./update.js";
