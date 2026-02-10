@@ -1327,7 +1327,9 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
               timeoutJobId = await timeoutScheduler.schedule(
                 conv.id,
                 waitForState.timeout,
-                waitForState.waitTypes?.join(",") ?? "unknown",
+                waitForState.timeoutSignalType ??
+                  waitForState.waitTypes?.[0] ??
+                  "unknown",
                 waitForState.reason ?? "Agent paused",
               );
             } catch (scheduleError) {

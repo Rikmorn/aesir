@@ -494,6 +494,8 @@ export interface WaitForState {
   timeout: string | null;
   /** Additional metadata stored with the pause */
   metadata: Record<string, unknown> | null;
+  /** Signal type to use for timeout delivery. Defaults to first waitType if not set. */
+  timeoutSignalType: string | null;
 }
 
 // ─── ConversationExecutor ───────────────────────────────────────────────────

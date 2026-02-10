@@ -78,6 +78,7 @@ export function createWaitForTaskTool(
       waitForState.reason = `Waiting for delegated task ${parsed.taskId}`;
       waitForState.timeout = parsed.timeout ?? null;
       waitForState.metadata = { taskId: parsed.taskId };
+      waitForState.timeoutSignalType = "task_timeout";
 
       // Build confirmation message for the LLM
       let message = `Conversation paused. Waiting for task ${parsed.taskId} to complete, fail, or timeout.`;

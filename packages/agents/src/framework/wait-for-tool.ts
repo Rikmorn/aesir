@@ -112,5 +112,6 @@ export function createDefaultWaitForState(): WaitForState {
     reason: null,
     timeout: null,
     metadata: null,
+    timeoutSignalType: null,
   };
 }

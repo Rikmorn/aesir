@@ -327,6 +327,7 @@ export function createTestToolRegistry(logger: PinoLogger): ToolRegistry {
       reason: null,
       timeout: null,
       metadata: null,
+      timeoutSignalType: null,
     };
     return createWaitForTool(state);
   });
