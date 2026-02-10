@@ -47,7 +47,11 @@ export function createReplyTool(deps: CommunicationToolDeps): ToolDefinition {
 
       try {
         const result = await denormalize(
-          { replyContext: parsed.data.replyContext, text: parsed.data.message },
+          {
+            replyContext: parsed.data.replyContext,
+            text: parsed.data.message,
+            intent: "reply",
+          },
           deps,
         );
         return { content: JSON.stringify(result, null, 2) };

@@ -24,10 +24,14 @@ export const SlackReplyContextSchema = z.object({
 
 /**
  * Linear reply context -- identifies a Linear issue to comment on.
+ * When agentSessionId is present, outbound messages route to typed activities
+ * instead of comments (Agent SDK path). When absent, falls back to comments
+ * (product-agent path).
  */
 export const LinearReplyContextSchema = z.object({
   channel: z.literal("linear"),
   issueId: z.string(),
+  agentSessionId: z.string().optional(),
 });
 
 /**

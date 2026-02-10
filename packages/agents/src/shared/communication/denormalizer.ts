@@ -14,11 +14,28 @@ import { callMcpTool } from "../mcp/client.js";
 import type { CommunicationToolDeps, ReplyContext } from "./types.js";
 
 /**
+ * Communication intent types for activity mapping.
+ *
+ * When targeting a Linear agent session, intent determines the activity type:
+ * - reply -> response
+ * - ask -> elicitation
+ * - notify_reasoning -> thought
+ * - notify_action -> action
+ */
+export type CommunicationIntent =
+  | "reply"
+  | "ask"
+  | "notify_reasoning"
+  | "notify_action";
+
+/**
  * Parameters for the denormalize dispatch function.
  */
 export interface DenormalizeParams {
   replyContext: ReplyContext;
   text: string;
+  /** Communication intent -- used to determine activity type for agent sessions */
+  intent?: CommunicationIntent;
 }
 
 /**
@@ -80,6 +97,37 @@ export async function denormalize(
     }
 
     case "linear": {
+      if (replyContext.agentSessionId) {
+        // Agent session active: use typed activity via Agent SDK
+        const activityType = resolveActivityType(params.intent);
+
+        if (params.intent === "notify_action") {
+          // Action activities use action + parameter fields (not body)
+          return callMcpTool({
+            integration: "linear",
+            tool: "create_agent_activity",
+            params: {
+              agentSessionId: replyContext.agentSessionId,
+              type: activityType,
+              action: text,
+              parameter: "",
+            },
+            ...mcpBase,
+          });
+        }
+
+        return callMcpTool({
+          integration: "linear",
+          tool: "create_agent_activity",
+          params: {
+            agentSessionId: replyContext.agentSessionId,
+            type: activityType,
+            body: text,
+          },
+          ...mcpBase,
+        });
+      }
+      // No session: fall back to comment (product-agent path)
       return callMcpTool({
         integration: "linear",
         tool: "create_comment",
@@ -118,8 +166,35 @@ function resolveToolName(replyContext: ReplyContext): string {
     case "slack":
       return replyContext.threadTs ? "reply_to_thread" : "send_message";
     case "linear":
-      return "create_comment";
+      return replyContext.agentSessionId
+        ? "create_agent_activity"
+        : "create_comment";
     case "github":
       return "create_pr_comment";
+  }
+}
+
+/**
+ * Map communication intent to Linear activity type.
+ *
+ * Intent-to-activity mapping (locked decisions):
+ * - reply -> response
+ * - ask -> elicitation
+ * - notify_reasoning -> thought
+ * - notify_action -> action
+ * - default (undefined) -> response (backward compat)
+ */
+function resolveActivityType(intent?: CommunicationIntent): string {
+  switch (intent) {
+    case "reply":
+      return "response";
+    case "ask":
+      return "elicitation";
+    case "notify_reasoning":
+      return "thought";
+    case "notify_action":
+      return "action";
+    default:
+      return "response";
   }
 }

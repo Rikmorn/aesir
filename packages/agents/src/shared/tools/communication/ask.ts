@@ -73,7 +73,10 @@ export function createAskTool(deps: CommunicationToolDeps): ToolDefinition {
           : question;
 
       try {
-        const result = await denormalize({ replyContext, text }, deps);
+        const result = await denormalize(
+          { replyContext, text, intent: "ask" },
+          deps,
+        );
         return { content: JSON.stringify(result, null, 2) };
       } catch (error) {
         if (error instanceof McpError) {

@@ -20,6 +20,13 @@ const NotifyInputSchema = z.object({
     "Explicit channel target to send the notification to",
   ),
   message: z.string().describe("Notification message text"),
+  intent: z
+    .enum(["reasoning", "action"])
+    .optional()
+    .describe(
+      "Notification intent: 'reasoning' emits a thought activity, 'action' emits an action activity. " +
+        "Only affects Linear agent sessions. Defaults to reasoning.",
+    ),
 });
 
 /**
@@ -46,8 +53,17 @@ export function createNotifyTool(deps: CommunicationToolDeps): ToolDefinition {
       }
 
       try {
+        const notifyIntent =
+          parsed.data.intent === "action"
+            ? ("notify_action" as const)
+            : ("notify_reasoning" as const);
+
         const result = await denormalize(
-          { replyContext: parsed.data.target, text: parsed.data.message },
+          {
+            replyContext: parsed.data.target,
+            text: parsed.data.message,
+            intent: notifyIntent,
+          },
           deps,
         );
         return { content: JSON.stringify(result, null, 2) };
