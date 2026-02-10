@@ -1,22 +1,22 @@
 ---
-phase: 70-task-delegation
+phase: 71-completion-signaling
 plan: 04
 subsystem: agents
-tags: [wait_for_task, signal-matching, timeout, task-delegation, vitest]
+tags: [wait_for_task, signal-matching, timeout, completion-signaling, vitest]
 
 # Dependency graph
 requires:
-  - phase: 70-01
-    provides: signal-matching.ts, wait-for-task-tool.ts, task-signal-dispatcher.ts
-  - phase: 70-02
-    provides: task signal dispatcher hook in TaskService
-  - phase: 70-03
-    provides: delegation prompts and active_delegations lifecycle
+  - phase: 71-01
+    provides: signal-matching.ts, wait-for-task-tool.ts, WaitForState.waitTypes
+  - phase: 71-02
+    provides: task-signal-dispatcher.ts, TaskService dispatcher hook
+  - phase: 71-03
+    provides: active_delegations lifecycle
 provides:
   - Fixed timeout signal type for wait_for_task (prevents silent hang bug)
   - coordination:wait_for_task in agent definitions (dev-agent, product-agent)
   - Unit tests for signal-matching (10 cases), wait-for-task-tool (11 cases), task-signal-dispatcher (9 cases)
-affects: [completion-signaling, delegation-graph-observability]
+affects: [delegation-graph-observability]
 
 # Tech tracking
 tech-stack:
@@ -54,7 +54,7 @@ duration: 6min
 completed: 2026-02-10
 ---
 
-# Phase 70 Plan 04: Timeout Bug Fix, Agent Definitions, and Test Coverage Summary
+# Phase 71 Plan 04: Timeout Bug Fix, Agent Definitions, and Test Coverage Summary
 
 **Fixed wait_for_task timeout hang bug via timeoutSignalType fallback chain, added coordination:wait_for_task to agent definitions with prompt guidance, and 30 new unit tests across 3 components**
 
@@ -130,10 +130,10 @@ None
 None - no external service configuration required.
 
 ## Next Phase Readiness
-- Phase 70 (Task Delegation) is now fully complete with all 4 plans executed
+- Phase 71 (Completion Signaling) is now fully complete with all 4 plans executed
 - All must_haves truths verified: timeout uses task_timeout, agents list wait_for_task, all 3 components have test coverage
-- Ready for phase-level verification before proceeding to Phase 72 (Delegation Graph Observability)
+- Ready for Phase 72 (Delegation Graph Observability)
 
 ---
-*Phase: 70-task-delegation*
+*Phase: 71-completion-signaling*
 *Completed: 2026-02-10*

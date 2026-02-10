@@ -55,8 +55,8 @@ Progress: [████████░░] ~80%
 | 70 | 03 | 2min | 2 | 4 |
 | 71 | 01 | 9min | 2 | 14 |
 | 71 | 02 | 7min | 2 | 8 |
-| 70 | 04 | 6min | 3 | 12 |
 | 71 | 03 | 5min | 2 | 4 |
+| 71 | 04 | 6min | 3 | 12 |
 
 *Updated after each plan completion*
 
