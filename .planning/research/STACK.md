@@ -1,509 +1,588 @@
-# Technology Stack: v2.6 Unified Agent Communication
+# Technology Stack: v2.7 Agent Collaboration
 
-**Project:** Aesir v2.6 -- Domain-language I/O (symmetric outbound normalization)
-**Researched:** 2026-02-08
-**Research mode:** Stack dimension for subsequent milestone
-**Overall confidence:** HIGH (zero new runtime dependencies; extends existing patterns with pure TypeScript)
+**Project:** Aesir v2.7 -- Multi-agent collaboration (shared memory, entity directory, task delegation, completion signaling, delegation graph observability, QA agent)
+**Researched:** 2026-02-10
+**Research mode:** Stack additions for subsequent milestone
+**Overall confidence:** HIGH (most additions are well-established; Linear Agent SDK is developer preview -- MEDIUM)
 
 ---
 
 ## Executive Summary
 
-v2.6 requires **zero new npm dependencies**. The unified communication layer -- ReplyContext types, outbound denormalizer, communication tools, and MCP tool additions -- is implementable entirely within the existing stack: Zod for discriminated union validation, the existing ToolRegistry + ToolFactory pattern for new `communication:*` tools, the existing `callMcpTool` MCP client for outbound dispatch, and Octokit (already installed at `@octokit/rest@^22.0.1`) for the new `create_pr_comment` MCP tool.
+v2.7 introduces **5 new npm dependencies** and **1 infrastructure change** (Docker image swap). The core additions are:
 
-This is a pure architecture layer, not a technology change. The spec describes:
-1. **New Zod schemas** for `ReplyContext` discriminated union and `NotifyTarget`
-2. **Schema extensions** to `IncomingEventSchema` and `SignalSchema` (optional `replyContext` field)
-3. **Three new tool factories** (`communication:reply`, `communication:ask`, `communication:notify`) following the existing `ToolFactory` pattern
-4. **An outbound denormalizer** -- a pure function that maps domain actions to `callMcpTool` calls via a `switch` on `replyContext.channel`
-5. **Two MCP tool additions** -- expose existing `linear:create_comment`, add new `github:create_pr_comment`
-6. **Adapter modifications** -- attach `replyContext` to outbound `IncomingEvent` objects
-7. **Signal pipeline changes** -- propagate `replyContext` through signals into agent messages
+1. **`@linear/sdk` upgrade to ^75.0.0** -- for agent activity methods (`createAgentActivity`, `agentSessionId` tracking)
+2. **Docker image swap from `postgres:15-alpine` to `pgvector/pgvector:pg15`** -- adds pgvector extension for vector similarity search
+3. **`pgvector` npm package** -- type-safe vector operations with Drizzle ORM
+4. **`voyageai` npm package** -- embedding generation via Voyage AI's TypeScript SDK (Anthropic's recommended provider)
+5. **`@xyflow/react` + `@dagrejs/dagre`** -- delegation graph visualization in the dashboard
 
-No new libraries. No new infrastructure. No new database tables. The entire feature is TypeScript types, Zod schemas, tool factories, and function composition built on existing primitives.
+This is a significant but controlled expansion. The new dependencies are tightly scoped: pgvector + voyageai serve shared memory and entity directory; @xyflow/react + dagre serve dashboard visualization; @linear/sdk upgrade serves the Agent SDK migration. No new services are added -- all capabilities integrate into existing packages.
 
 ---
 
-## 1. ReplyContext Type System (Zod Discriminated Unions)
+## Recommended Stack
 
-### Recommendation: Zod discriminated union on `channel` field
+### 1. Linear Agent SDK Migration (Phase 70)
 
-| Property | Value |
-|----------|-------|
-| Library | zod@3.25.67 (existing, pinned) |
-| Pattern | `z.discriminatedUnion("channel", [...])` |
-| Location | `packages/agents/src/shared/tools/communication/types.ts` (new file) |
-| Confidence | HIGH -- Zod discriminated unions are well-established; pattern used implicitly in existing adapter code |
-
-### Why Zod discriminated union (not plain TypeScript union)
-
-The `ReplyContext` type flows through the entire signal pipeline: adapters produce it, signals carry it, agents pass it through, communication tools consume it. At multiple boundaries (adapter output, signal delivery, tool input), this data is validated from `unknown` input. Zod discriminated unions provide:
-
-1. **Runtime validation with exhaustive matching** -- `z.discriminatedUnion("channel", [...])` validates the discriminant and applies the correct variant schema automatically
-2. **Type inference** -- `z.infer<typeof ReplyContextSchema>` produces the correct TypeScript discriminated union type, avoiding manual type definition drift
-3. **JSON Schema generation** -- `zod-to-json-schema` (already used in the agents package) can convert the schema for tool `inputSchema` definitions the LLM sees
-4. **Parse-don't-validate** -- adapters call `ReplyContextSchema.parse(data)` once and the validated type flows through the rest of the pipeline
-
-### Schema Design
-
-```typescript
-// Zod discriminated union -- validates the channel discriminant first,
-// then applies the variant-specific schema
-export const ReplyContextSchema = z.discriminatedUnion("channel", [
-  z.object({
-    channel: z.literal("slack"),
-    teamId: z.string(),
-    channelId: z.string(),
-    threadTs: z.string(),
-  }),
-  z.object({
-    channel: z.literal("linear"),
-    issueId: z.string(),
-  }),
-  z.object({
-    channel: z.literal("github"),
-    owner: z.string(),
-    repo: z.string(),
-    prNumber: z.number(),
-    commentId: z.number().optional(),
-  }),
-]);
-
-export type ReplyContext = z.infer<typeof ReplyContextSchema>;
-```
-
-### Alternatives Considered
-
-| Option | Why Not |
-|--------|---------|
-| Plain TypeScript union (no Zod) | ReplyContext arrives as `unknown` from JSON (signal payloads, tool inputs). Without Zod, every consumer needs manual validation. |
-| Separate schema per channel | Fragmented validation; the discriminated union is the idiomatic Zod pattern for this exact case. |
-| io-ts or valibot | Project already uses Zod everywhere. Adding a second validation library for one type is waste. |
-
----
-
-## 2. Schema Extensions (IncomingEvent + Signal)
-
-### Recommendation: Add optional `replyContext` field to existing Zod schemas
+#### @linear/sdk Upgrade
 
 | Property | Value |
 |----------|-------|
-| Files modified | `packages/agents/src/adapters/types.ts` (IncomingEventSchema), `packages/agents/src/framework/types.ts` (SignalSchema) |
-| Pattern | `.extend({ replyContext: ReplyContextSchema.optional() })` or direct addition to existing `z.object()` |
-| Breaking changes | None -- field is optional, existing code that doesn't produce/consume replyContext is unaffected |
-| Confidence | HIGH -- additive schema change, no migration needed |
+| Package | `@linear/sdk` |
+| Current version | `^70.0.0` |
+| Target version | `^75.0.0` |
+| Location | `packages/integrations/linear/package.json` |
+| Confidence | MEDIUM -- Agent SDK is developer preview as of 2025-07-30 |
 
-### Why Extend Existing Schemas (Not New Types)
+**Why upgrade:** Version 75.0.0 (published 2026-02-10) includes the full Agent Interaction SDK: `createAgentActivity()` method, `AgentActivityCreateInput` types, agent session webhook event types. The current ^70.0.0 may already resolve to a version with these features (npm semver range), but pinning to ^75.0.0 ensures the agent activity API is available.
 
-The spec explicitly requires `replyContext` to flow through the existing pipeline: adapters -> IncomingEvent -> router -> Signal -> executor -> agent message. Creating separate event types would require forking the entire routing pipeline. Adding an optional field to existing schemas is both simpler and backward-compatible.
-
-### Implementation Pattern
+**Key SDK additions used:**
 
 ```typescript
-// In adapters/types.ts -- extend IncomingEventSchema
-export const IncomingEventSchema = z.object({
-  type: z.string().min(1),
-  data: z.record(z.unknown()),
-  source: z.string().min(1),
-  correlationKey: z.string().optional(),
-  deduplicationId: z.string().optional(),
-  message: z.string().optional(),
-  taskId: z.string().optional(),
-  replyContext: ReplyContextSchema.optional(),  // NEW
-});
-
-// In framework/types.ts -- extend SignalSchema
-export const SignalSchema = z.object({
-  type: z.string().min(1),
-  data: z.record(z.unknown()).optional(),
-  message: z.string().optional(),
-  source: z.string().optional(),
-  deduplicationId: z.string().optional(),
-  replyContext: ReplyContextSchema.optional(),  // NEW
+// Agent activity creation (new in Agent SDK)
+const { success, agentActivity } = await linearClient.createAgentActivity({
+  agentSessionId: "session-uuid",
+  content: {
+    type: "response",    // thought | elicitation | action | response | error
+    body: "Implementation complete. PR #42 created.",
+  },
 });
 ```
 
----
+**Activity content types:**
 
-## 3. Communication Tools (ToolFactory Pattern)
+| Type | Fields | Maps from |
+|------|--------|-----------|
+| `thought` | `body: string` | Reasoning blocks, internal notes |
+| `elicitation` | `body: string` | `communication:ask` |
+| `action` | `action: string, parameter: string, result?: string` | Tool invocations |
+| `response` | `body: string` (Markdown) | `communication:reply` |
+| `error` | `body: string` (Markdown) | Agent errors |
 
-### Recommendation: New `communication` namespace with 3 tools following existing patterns
+**No separate Agent SDK package.** Linear ships agent features within `@linear/sdk` itself -- there is no `@linear/agent-sdk` or similar. The SDK is auto-generated from Linear's GraphQL schema, so agent activity methods appear when the schema includes them.
 
-| Property | Value |
-|----------|-------|
-| Namespace | `communication` |
-| Tools | `reply`, `ask`, `notify` |
-| Location | `packages/agents/src/shared/tools/communication/` (new directory) |
-| Registration | `packages/agents/src/framework/tool-factories.ts` |
-| Adapter pattern | New `communicationAdapter()` following existing `mcpAdapter()` and `codebaseAdapter()` |
-| Confidence | HIGH -- follows established ToolFactory -> ToolRegistry -> agent definition YAML pattern |
-
-### Why Not Extend Existing MCP Tools
-
-The communication tools are **not** MCP tools. They don't call a single integration endpoint -- they dispatch to different integration MCP endpoints based on `replyContext.channel`. The denormalizer logic (choosing which integration and tool to call) lives inside these tool factories, not in an external MCP server. This is infrastructure-layer routing, not integration-layer functionality.
-
-### Tool Factory Dependencies
-
-The communication tools need the same `McpToolDeps` that existing integration tools use (`agentId`, `correlationId`, `taskId`), plus a `logger`. The spec defines `CommunicationToolDeps`:
-
-```typescript
-export interface CommunicationToolDeps {
-  agentId: string;
-  correlationId: string;
-  taskId?: string;
-  logger: PinoLogger;
-}
-```
-
-This is extracted from `ToolContext` by a `communicationAdapter()` function, mirroring the existing `mcpAdapter()` pattern:
-
-```typescript
-function communicationAdapter(
-  factory: (deps: CommunicationToolDeps) => ToolDefinition,
-): (ctx: ToolContext) => ToolDefinition {
-  return (ctx: ToolContext) =>
-    factory({
-      agentId: ctx.agentId,
-      correlationId: ctx.correlationId,
-      taskId: ctx.taskId,
-      logger: ctx.logger,
-    });
-}
-```
-
-### Registration
-
-```typescript
-// In tool-factories.ts
-registry.register("communication:reply", communicationAdapter(createReplyTool));
-registry.register("communication:ask", communicationAdapter(createAskTool));
-registry.register("communication:notify", communicationAdapter(createNotifyTool));
-```
-
-This brings the total tool count from 34 to 37 (3 new communication tools).
-
-### Alternatives Considered
-
-| Option | Why Not |
-|--------|---------|
-| Add communication tools as MCP endpoints in a new service | Overengineered. The denormalizer calls existing MCP tools -- it doesn't need its own HTTP server. |
-| Extend each integration MCP server with "smart routing" | Violates separation of concerns. Integrations are channel-specific by design; routing belongs in the agents layer. |
-| Use existing Slack tools and add "if not Slack, use X" logic in prompts | Exactly the anti-pattern the spec eliminates. Agent should not reason about channels. |
-
----
-
-## 4. Outbound Denormalizer (Pure Function Dispatch)
-
-### Recommendation: `switch` dispatch on `replyContext.channel`, calling `callMcpTool` for each variant
+#### OAuth Changes
 
 | Property | Value |
 |----------|-------|
-| Location | `packages/agents/src/shared/tools/communication/denormalizer.ts` (new file) |
-| Pattern | Pure function with discriminant-based dispatch |
-| MCP client | Existing `callMcpTool` from `packages/agents/src/shared/mcp/client.ts` |
-| Confidence | HIGH -- straightforward dispatch; no new libraries or patterns needed |
+| Parameter | `actor=app` added to OAuth authorization URL |
+| New scopes | `app:assignable`, `app:mentionable` |
+| Impact | Re-authorization required for existing installations |
+| File | `packages/integrations/linear/src/oauth/flow.ts` (or wherever auth URL is constructed) |
 
-### Why Not a Library/Framework for Message Routing
+**What `actor=app` does:** All mutations (issue creates, comments, status changes) are performed by the app itself, not on behalf of the installing user. The agent gets its own workspace identity with configurable name and avatar.
 
-I searched for existing TypeScript libraries or frameworks for outbound message routing / denormalization in agent systems. **None exist as standalone libraries.** The closest patterns are:
+**Identity customization via mutation fields:**
+- `createAsUser`: Display name for the app actor
+- `displayIconUrl`: Avatar URL
 
-1. **Enterprise Integration Patterns** (Message Dispatcher, Content-Based Router) -- these are architectural patterns, not libraries. The denormalizer implements a Content-Based Router pattern where the routing key is `replyContext.channel`.
-2. **Mastra framework** -- has model routing (LLM provider dispatch) but no outbound channel routing.
-3. **Google ADK** -- has agent-to-agent routing but no multi-channel output abstraction.
-4. **Spring Integration** (Java) -- has channel adapters and message dispatchers, but nothing equivalent exists in the TypeScript ecosystem.
+These fields on `issueCreate` and `commentCreate` mutations configure how the agent appears. For `createAgentActivity`, the app identity is used automatically.
 
-The denormalizer is ~100 lines of straightforward TypeScript. A library would add dependency weight for no value. The `switch` pattern on a discriminated union is the idiomatic TypeScript solution.
+**Webhook events (agent sessions):**
+- `agent_session.created` -- new session triggered by mention or delegation; agent must respond within 10 seconds
+- `agent_session.prompted` -- user sent follow-up message; prompt text in `agentActivity.body`
 
-### Implementation Structure
+Both include `promptContext` (formatted string with issue details, comments, workspace guidance) and structured fields like `agentSession.issue`.
 
-```typescript
-export interface DenormalizeAction {
-  action: "reply" | "ask" | "notify";
-  replyContext: ReplyContext | NotifyTarget;
-  content: MessageContent;
-}
-
-export async function denormalize(
-  action: DenormalizeAction,
-  deps: CommunicationToolDeps,
-): Promise<DenormalizeResult> {
-  switch (action.replyContext.channel) {
-    case "slack":
-      return denormalizeSlack(action, action.replyContext, deps);
-    case "linear":
-      return denormalizeLinear(action, action.replyContext, deps);
-    case "github":
-      return denormalizeGitHub(action, action.replyContext, deps);
-    default: {
-      const _exhaustive: never = action.replyContext;
-      throw new Error(`Unknown channel: ${(action.replyContext as ReplyContext).channel}`);
-    }
-  }
-}
-```
-
-Each channel denormalizer maps the domain action to the correct `callMcpTool` invocation:
-
-| Channel | action=reply | action=ask (with options) | action=ask (no options) | action=notify |
-|---------|-------------|--------------------------|------------------------|---------------|
-| slack | `slack:reply_to_thread` | `slack:send_approval_request` | `slack:reply_to_thread` | `slack:send_message` |
-| linear | `linear:create_comment` | `linear:create_comment` (options as text) | `linear:create_comment` | `linear:create_comment` |
-| github | `github:create_pr_comment` | `github:create_pr_comment` (options as text) | `github:create_pr_comment` | `github:create_pr_comment` |
-
-### Why Exhaustive Switch (Not If-Else Chain)
-
-TypeScript's exhaustive check on discriminated unions (`const _exhaustive: never = ...`) catches missing channels at compile time. When a new channel is added (e.g., `"email"`), the compiler forces updating the denormalizer. This is critical because a silently unhandled channel means messages are lost.
-
----
-
-## 5. New MCP Tools (Integration Layer)
-
-### 5a. Expose `linear:create_comment`
-
-| Property | Value |
-|----------|-------|
-| Status | **Handler already implemented** in `packages/integrations/linear/src/mcp/tools/issues.ts` (`handleCreateComment`) |
-| Status | **Schema already defined** in `packages/integrations/linear/src/mcp/schemas.ts` (`CreateCommentInputSchema`) |
-| Status | **Handler already exported** from `packages/integrations/linear/src/mcp/tools/index.ts` |
-| Gap | NOT registered in MCP server's `ListToolsRequestSchema` handler |
-| Gap | NOT registered in MCP server's `CallToolRequestSchema` handler |
-| Gap | NOT registered in agent-side `linear-tools.ts` |
-| Gap | NOT in MCP permission seed script |
-| Work required | 4 additions (server tool list entry, server handler case, agent-side wrapper, seed script) |
-| Confidence | HIGH -- implementation is complete, just needs wiring |
-
-The `handleCreateComment` function follows the exact same pattern as all other Linear tools (permission check, input validation, Linear SDK call). The only work is registration:
-
-1. Add `create_comment` to `ListToolsRequestSchema` handler in `linear/src/mcp/server.ts`
-2. Add `case "create_comment"` to `CallToolRequestSchema` handler
-3. Add `linear:create_comment` wrapper to `agents/src/shared/tools/integration/linear-tools.ts`
-4. Add permission seed for `create_comment`
-5. Register `linear:create_comment` in `tool-factories.ts`
-
-### 5b. Add `github:create_pr_comment`
-
-| Property | Value |
-|----------|-------|
-| Library | `@octokit/rest@^22.0.1` (existing in `@aesir/integration-github`) |
-| API method | `octokit.rest.issues.createComment()` |
-| Why issues API | GitHub's REST API treats PR comments as issue comments. PR-level comments (not inline review comments) use `issues.createComment({ owner, repo, issue_number: prNumber, body })`. This is well-documented and stable. |
-| Location | `packages/integrations/github/src/mcp/tools/pullrequests.ts` (add `handleCreatePRComment`) |
-| Schema | `packages/integrations/github/src/mcp/schemas.ts` (add `CreatePRCommentInputSchema`) |
-| Confidence | HIGH -- `issues.createComment` is a stable Octokit API; already used widely in GitHub Actions |
-
-### Octokit API Verification
-
-The `@octokit/rest` package already installed in the GitHub integration provides `octokit.rest.issues.createComment()`. PR-level comments in GitHub's API are issue comments (since every PR is also an issue). The implementation:
-
-```typescript
-// GitHub API: PR comments are issue comments
-const { data: comment } = await octokit.rest.issues.createComment({
-  owner,
-  repo,
-  issue_number: prNumber,  // PR number works as issue number
-  body,
-});
-```
-
-For inline review comment replies (replying to a specific line comment), the API is `octokit.rest.pulls.createReplyForReviewComment()`. The spec marks this as optional -- implementing the PR-level comment first is sufficient for the denormalizer.
-
-### Schema Addition
-
-```typescript
-// New schema in github/src/mcp/schemas.ts
-export const CreatePRCommentInputSchema = z.object({
-  owner: z.string().min(1, "Owner is required"),
-  repo: z.string().min(1, "Repository name is required"),
-  prNumber: z.number().int().positive("PR number must be positive"),
-  body: z.string().min(1, "Comment body is required"),
-});
-```
-
-### Alternatives Considered
-
-| Option | Why Not |
-|--------|---------|
-| Use `pulls.createReview` instead of `issues.createComment` | `createReview` is for code review submissions (approve/request changes). PR-level discussion comments use the issues API. |
-| Use `pulls.createReviewComment` | That's for inline code comments on specific diff lines, not general PR comments. |
-| Use GraphQL API | Octokit REST is already the established pattern. No benefit to switching for one endpoint. |
-
----
-
-## 6. Signal Pipeline Modifications
-
-### Recommendation: Propagate `replyContext` through XML tags in signal user messages
-
-| Property | Value |
-|----------|-------|
-| Files modified | `packages/agents/src/framework/conversation-executor.ts`, `packages/agents/src/framework/worker-loop.ts` |
-| Pattern | Append `<reply_context>` XML tag to signal message content |
-| Parsing | Agent passes opaque JSON back through `communication:reply` tool input; Zod validates |
-| Confidence | HIGH -- simple string concatenation; agents already process structured content in messages |
-
-### Why XML Tags (Not Structured Tool Results)
-
-The signal message is injected as a `user` role message in the conversation. There are three options for including `replyContext`:
-
-| Option | Pros | Cons |
-|--------|------|------|
-| **XML tags in message text** | Simple to implement; LLM natively handles XML-like structured data in text; agent just passes the blob through to `reply()` | Agent could theoretically hallucinate or modify the context |
-| Structured system message | Separates context from content | Anthropic API doesn't support structured metadata in user messages; would require a separate system message injection |
-| Tool result content block | Type-safe | Signals aren't tool results; this would require an awkward tool call/result simulation |
-
-XML tags are the pragmatic choice. The agent doesn't need to understand the content -- it just passes `replyContext` from the signal message into the `reply()` / `ask()` tool call. The Zod schema in the tool validates the JSON structure.
-
-### Signal Message Format
-
-```
-Signal received: approval. Approved: yes, by Roberto.
-
-<reply_context>{"channel":"linear","issueId":"uuid-abc"}</reply_context>
-```
-
-The `<reply_context>` tag is:
-- Machine-parseable (JSON inside tags)
-- LLM-transparent (agent can reference it without understanding internals)
-- Safe to validate (Zod schema in communication tool validates before dispatch)
-
----
-
-## 7. Adapter Modifications (Inbound ReplyContext Attachment)
-
-### Recommendation: Add `replyContext` construction to each adapter's return path
-
-| Property | Value |
-|----------|-------|
-| Files modified | `packages/agents/src/adapters/slack.ts`, `packages/agents/src/adapters/linear.ts`, `packages/agents/src/adapters/github.ts` |
-| Pattern | Construct `ReplyContext` from existing webhook payload data |
-| Breaking changes | None -- `replyContext` is optional on `IncomingEvent` |
-| Confidence | HIGH -- all required data (channelId, threadTs, issueId, prNumber, owner, repo) is already present in webhook payloads |
-
-### Data Availability by Adapter
-
-| Adapter | ReplyContext channel | Required data | Source in payload |
-|---------|---------------------|---------------|-------------------|
-| Slack | `slack` | teamId, channelId, threadTs | `payload.teamId`, `payload.channel`, `payload.threadTs` -- all already extracted |
-| Linear | `linear` | issueId | `payload.issueId` or derived from webhook data -- already available |
-| GitHub | `github` | owner, repo, prNumber | `payload.repository.owner`, `payload.repository.name`, `payload.pull_request.number` -- already in webhook payloads |
-
-No new API calls or data fetches are needed. The adapters already extract all the information required to construct `ReplyContext`.
-
----
-
-## 8. Router Tool Extension
-
-### Recommendation: Add optional `replyContext` field to `signal_conversation` tool input
-
-| Property | Value |
-|----------|-------|
-| File modified | `packages/agents/src/router/tools/signal-conversation.ts` |
-| Pattern | Add `replyContext: ReplyContextSchema.optional()` to input schema |
-| Propagation | Include in `Signal` object passed to `executor.signal()` |
-| Confidence | HIGH -- additive field, no breaking changes |
-
-The router already receives `IncomingEvent` objects with `replyContext` (after adapter modifications). The slow-path LLM router needs to propagate this through to `signal_conversation` so it reaches the agent. Fast-path routing (e.g., block actions) constructs signals directly in the adapter -- those already have the data.
-
----
-
-## 9. Agent Definition and Prompt Changes
-
-### Recommendation: Swap channel-specific tools for `communication:*` tools in YAML definitions
-
-| Property | Value |
-|----------|-------|
-| Files modified | `packages/agents/definitions/dev-agent/definition.yaml`, `packages/agents/definitions/product-agent/definition.yaml` |
-| Pattern | Replace `slack:send_message`, `slack:send_approval_request` with `communication:reply`, `communication:ask`, `communication:notify` |
-| Prompt files | `packages/agents/definitions/dev-agent/prompt.md`, `packages/agents/definitions/product-agent/prompt.md` |
-| Confidence | HIGH -- declarative YAML changes; prompt updates follow existing PROMPT_GUIDE.md |
-
-### Tool Assignment Changes
-
-**dev-agent tools (21 -> 21, net zero change):**
-- Remove: `slack:send_message`, `slack:send_approval_request` (-2)
-- Add: `communication:reply`, `communication:ask`, `communication:notify` (+3)
-- Net: +1 tool (was 21, becomes 22)
-
-**product-agent tools (13 -> 15, +2 tools):**
-- Remove: `slack:send_message` (-1)
-- Add: `communication:reply`, `communication:ask`, `communication:notify` (+3)
-- Net: +2 tools (was 13, becomes 15)
-
-### Why Keep Integration-Specific Read Tools
-
-Agents retain `linear:get_issue`, `github:get_pull_request`, etc. These are not communication tools -- they're information retrieval tools. The agent needs to read issue details, check PR status, etc. The unified communication layer replaces only *outbound message delivery*, not data queries.
-
----
-
-## 10. What NOT to Add
-
-### No New Runtime Dependencies
+#### What NOT to add for Linear
 
 | Temptation | Why Not |
 |------------|---------|
-| Message queue (Redis, RabbitMQ) for outbound dispatch | The denormalizer is synchronous dispatch within a tool execution. No async fan-out needed. |
-| Template engine (Handlebars, EJS) for channel-specific formatting | The denormalizer's per-channel functions handle formatting differences directly. Templates add complexity for minimal benefit. |
-| Abstract messaging library | Nothing in the npm ecosystem fits this use case. The denormalizer is ~100 LOC of `callMcpTool` dispatch. |
-| New MCP server for communication tools | Communication tools dispatch to existing MCP servers. Adding an intermediary server adds latency and complexity for no value. |
-| Database tables for message history | Agent conversation history already captures tool calls and results. Duplicating this in a separate message store is waste. |
-| WebSocket connections between agent and integrations | MCP HTTP is the established pattern. WebSockets add connection management complexity. |
-
-### No New Database Schema
-
-The unified communication layer is stateless. `ReplyContext` is ephemeral data carried through the signal pipeline -- it doesn't need persistence. The existing `agent_events` table already captures tool calls (including `communication:reply` calls with their parameters) for observability.
-
-### No Changes to MCP Client
-
-The existing `callMcpTool` function in `packages/agents/src/shared/mcp/client.ts` is sufficient. The denormalizer calls it with `integration: "slack" | "linear" | "github"` and the appropriate tool name. No client changes needed.
+| Separate Linear Agent SDK package | Does not exist. Agent features are in `@linear/sdk`. |
+| Custom GraphQL client for agent mutations | The SDK wraps GraphQL. Use `linearClient.createAgentActivity()`, not raw mutations. |
+| Webhook signature library change | Existing webhook verification is unchanged. Agent session events use the same delivery mechanism. |
 
 ---
 
-## Recommended Stack Summary
+### 2. Vector Search Infrastructure (Phases 71, 72)
 
-### New Files (to create)
+#### pgvector Extension (Docker Image Swap)
 
-| File | Purpose |
-|------|---------|
-| `packages/agents/src/shared/tools/communication/types.ts` | `ReplyContext`, `NotifyTarget`, `MessageContent`, `CommunicationToolDeps` Zod schemas and types |
-| `packages/agents/src/shared/tools/communication/denormalizer.ts` | Outbound dispatch function (`denormalize`) |
-| `packages/agents/src/shared/tools/communication/reply.ts` | `communication:reply` tool factory |
-| `packages/agents/src/shared/tools/communication/ask.ts` | `communication:ask` tool factory |
-| `packages/agents/src/shared/tools/communication/notify.ts` | `communication:notify` tool factory |
-| `packages/agents/src/shared/tools/communication/index.ts` | Barrel export |
-| `packages/integrations/github/src/mcp/tools/comments.ts` | `handleCreatePRComment` MCP handler |
+| Property | Value |
+|----------|-------|
+| Current image | `postgres:15-alpine` |
+| Target image | `pgvector/pgvector:pg15` |
+| Location | `docker-compose.yml` line 53 |
+| Extension | `CREATE EXTENSION IF NOT EXISTS vector;` |
+| Confidence | HIGH -- pgvector is the standard Postgres vector extension; Docker image is officially maintained |
 
-### Existing Files (to modify)
+**Why swap the Docker image (not compile pgvector in Alpine):** The `postgres:15-alpine` image does not include pgvector. Options:
 
-| File | Change |
-|------|--------|
-| `packages/agents/src/adapters/types.ts` | Add `replyContext` to `IncomingEventSchema` |
-| `packages/agents/src/adapters/slack.ts` | Attach `replyContext` to outbound events |
-| `packages/agents/src/adapters/linear.ts` | Attach `replyContext` to outbound events |
-| `packages/agents/src/adapters/github.ts` | Attach `replyContext` to outbound events |
-| `packages/agents/src/framework/types.ts` | Add `replyContext` to `SignalSchema` |
-| `packages/agents/src/framework/conversation-executor.ts` | Include `replyContext` in signal user messages |
-| `packages/agents/src/framework/worker-loop.ts` | Include `replyContext` in signal user messages (3 locations) |
-| `packages/agents/src/framework/tool-factories.ts` | Register 3 `communication:*` tools |
-| `packages/agents/src/shared/tools/integration/linear-tools.ts` | Add `linear_create_comment` wrapper |
-| `packages/agents/src/router/tools/signal-conversation.ts` | Add `replyContext` to input schema |
-| `packages/integrations/linear/src/mcp/server.ts` | Register `create_comment` in server |
-| `packages/integrations/github/src/mcp/server.ts` | Register `create_pr_comment` in server |
-| `packages/integrations/github/src/mcp/schemas.ts` | Add `CreatePRCommentInputSchema` |
-| `packages/integrations/github/src/mcp/tools/index.ts` | Export new handler |
-| `packages/agents/definitions/dev-agent/definition.yaml` | Swap tools |
-| `packages/agents/definitions/dev-agent/prompt.md` | Domain-language communication guidance |
-| `packages/agents/definitions/product-agent/definition.yaml` | Swap tools |
-| `packages/agents/definitions/product-agent/prompt.md` | Domain-language communication guidance |
+1. **`pgvector/pgvector:pg15`** -- Official pgvector Docker image based on the official PostgreSQL image. Drop-in replacement. Includes pgvector pre-compiled. **Use this.**
+2. Custom Dockerfile extending `postgres:15-alpine` with `apk add` + compile -- fragile, slow builds, Alpine's musl libc can cause issues with pgvector's C code.
+3. `ankane/pgvector` -- community image, less maintained than the official pgvector org image.
 
-### No New Dependencies
+The `pgvector/pgvector:pg15` image is a thin layer over the official `postgres:15` image (Debian-based, not Alpine). This means the data directory format is compatible -- existing volumes will work. The image adds only the pgvector shared library.
+
+**Migration note:** The first migration for Phase 71 must include `CREATE EXTENSION IF NOT EXISTS vector;` before any vector column definitions. This is a one-time operation per database.
+
+#### pgvector npm Package
+
+| Property | Value |
+|----------|-------|
+| Package | `pgvector` |
+| Version | `^0.2.0` |
+| Install in | `packages/agents/package.json` |
+| Confidence | HIGH -- 430+ stars, supports Drizzle ORM, node-postgres, and postgres.js |
+
+**Why this package:** Provides type registration for the `pg` driver (which the agents package uses) and utility functions for vector serialization. Drizzle ORM has built-in `vector()` column type support, but `pgvector` npm package adds:
+
+1. `pgvector.registerTypes(client)` -- registers the vector type with node-postgres so query results return proper arrays instead of strings
+2. `pgvector.toSql([1, 2, 3])` -- serializes arrays to PostgreSQL vector format for raw queries
+3. Named distance function imports for use outside Drizzle
+
+**Drizzle ORM vector support (already available, no new package):**
+
+```typescript
+import { index, pgTable, text, vector } from "drizzle-orm/pg-core";
+import { cosineDistance, gt, sql, desc } from "drizzle-orm";
+
+// Schema definition with vector column
+export const knowledgeEntries = pgTable(
+  "knowledge_entries",
+  {
+    id: text("id").primaryKey(),
+    content: text("content").notNull(),
+    embedding: vector("embedding", { dimensions: 1024 }),
+    // ... other columns
+  },
+  (table) => [
+    index("knowledge_embedding_idx")
+      .using("hnsw", table.embedding.op("vector_cosine_ops")),
+  ],
+);
+
+// Similarity search query
+const similarity = sql<number>`1 - (${cosineDistance(knowledgeEntries.embedding, queryEmbedding)})`;
+
+const results = await db
+  .select({ id: knowledgeEntries.id, content: knowledgeEntries.content, similarity })
+  .from(knowledgeEntries)
+  .where(gt(similarity, 0.5))
+  .orderBy(desc(similarity))
+  .limit(10);
+```
+
+**Available distance functions in Drizzle:**
+- `cosineDistance` -- use this (normalized, matches Voyage AI output)
+- `l2Distance` -- Euclidean distance
+- `innerProduct` -- dot product
+- `l1Distance`, `hammingDistance`, `jaccardDistance`
+
+**Index type recommendation:** Use HNSW (Hierarchical Navigable Small World) over IVFFlat. HNSW provides better recall at query time without requiring periodic rebuilds. For the expected dataset size (thousands of knowledge entries, not millions), HNSW performance is excellent.
+
+#### Embedding Generation: Voyage AI
+
+| Property | Value |
+|----------|-------|
+| Package | `voyageai` |
+| Version | `^0.1.0` |
+| Install in | `packages/agents/package.json` |
+| Model | `voyage-3.5-lite` (1024 dimensions, optimized for latency/cost) |
+| Confidence | HIGH -- Anthropic's official recommendation; TypeScript SDK is production-ready |
+
+**Why Voyage AI over OpenAI:**
+
+| Factor | Voyage AI (`voyage-3.5-lite`) | OpenAI (`text-embedding-3-small`) |
+|--------|-------------------------------|-----------------------------------|
+| Anthropic alignment | Official Anthropic partner and recommendation | Competitor's service |
+| Dimensions | 1024 (default), configurable 256/512/2048 | 1536 (fixed) |
+| Pricing | $0.02/1M tokens (200M free tokens per account) | $0.02/1M tokens |
+| Code optimized model | `voyage-code-3` available for code knowledge | No code-specific variant |
+| Retrieval quality | Higher on MTEB benchmarks (68.6%) | Lower overall retrieval scores |
+| TypeScript SDK | `voyageai` (0.1.0, official) | `openai` (6.18.0, mature) |
+
+**Recommendation: Use `voyage-3.5-lite` for general knowledge, `voyage-code-3` for code-related knowledge.**
+
+The platform already uses Anthropic for LLM -- aligning on Anthropic's recommended embedding provider simplifies vendor management. Voyage's `input_type` parameter (query vs document) improves retrieval quality for the knowledge:query use case.
+
+**Usage pattern:**
+
+```typescript
+import { VoyageAIClient } from "voyageai";
+
+const voyage = new VoyageAIClient({ apiKey: process.env.VOYAGE_API_KEY });
+
+// Store: embed as document
+const docResult = await voyage.embed({
+  input: ["Auth middleware uses JWT, located at src/middleware/auth.ts"],
+  model: "voyage-3.5-lite",
+  inputType: "document",
+});
+const embedding = docResult.data[0].embedding; // number[1024]
+
+// Query: embed as query
+const queryResult = await voyage.embed({
+  input: ["what do we know about authentication?"],
+  model: "voyage-3.5-lite",
+  inputType: "query",
+});
+```
+
+**Environment variable:** `VOYAGE_API_KEY` -- add to `.env.example`, Docker Compose agent-service environment, and Zod env config.
+
+**Fallback option:** If Voyage AI is not available or adds unacceptable latency, OpenAI `text-embedding-3-small` via the `openai` npm package (v6.18.0) is a drop-in alternative. The embedding dimension would change to 1536, requiring a schema migration. Design the embedding service as an abstraction layer to enable provider swapping.
+
+#### Embedding Dimensions: 1024
+
+**Use 1024 dimensions** across all vector columns. This matches `voyage-3.5-lite` default output and provides a good balance between retrieval quality and storage/index performance. Both the knowledge store (Phase 71) and entity directory (Phase 72) should use the same dimensionality for consistency.
+
+If code-specific knowledge uses `voyage-code-3`, that model also defaults to 1024 dimensions, so no separate column dimension is needed.
+
+---
+
+### 3. Knowledge Store Schema (Phase 71)
+
+#### PostgreSQL Schema Pattern
+
+No new npm packages needed -- uses existing Drizzle ORM with pgvector support.
+
+**Schema design for `agents.knowledge_entries`:**
+
+```sql
+CREATE TABLE agents.knowledge_entries (
+  id            TEXT PRIMARY KEY,
+
+  -- Classification
+  type          TEXT NOT NULL CHECK (type IN ('discovery', 'architecture_decision', 'constraint', 'thought', 'test_result')),
+  scope         TEXT NOT NULL DEFAULT 'shared' CHECK (scope IN ('shared', 'private')),
+
+  -- Content
+  content       TEXT NOT NULL,
+  embedding     vector(1024),
+
+  -- Metadata
+  confidence    TEXT NOT NULL DEFAULT 'medium' CHECK (confidence IN ('low', 'medium', 'high')),
+  author_agent  TEXT NOT NULL,
+  conversation_id TEXT,
+  tags          TEXT[] DEFAULT '{}',
+  metadata      JSONB DEFAULT '{}',
+
+  -- Lifecycle
+  expires_at    TIMESTAMPTZ,
+  superseded_by TEXT REFERENCES agents.knowledge_entries(id),
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Vector similarity search index
+CREATE INDEX knowledge_embedding_idx ON agents.knowledge_entries
+  USING hnsw (embedding vector_cosine_ops);
+
+-- Scoped queries (shared knowledge for all agents, private for specific agent)
+CREATE INDEX knowledge_scope_type_idx ON agents.knowledge_entries(scope, type)
+  WHERE superseded_by IS NULL AND (expires_at IS NULL OR expires_at > now());
+
+-- Author lookup (for private notepad)
+CREATE INDEX knowledge_author_idx ON agents.knowledge_entries(author_agent, scope)
+  WHERE scope = 'private';
+```
+
+**Why NOT ltree for knowledge classification:** The knowledge classification is a flat taxonomy (type + tags), not a deep hierarchy. `ltree` is designed for deep tree structures (file paths, org charts). For a flat set of types with tag-based filtering, standard `TEXT CHECK` + `TEXT[]` is simpler and sufficient. If knowledge needs hierarchical topics later, add a `topic` ltree column -- but don't over-engineer for v1.
+
+**Why NOT a separate vector database (Pinecone, Weaviate, Qdrant):** pgvector in PostgreSQL keeps the architecture simple. Knowledge entries need transactional consistency with other agent data (conversations, tasks). A separate vector DB adds operational complexity (another service, connection management, consistency issues) for a dataset that will be thousands of entries, not millions. pgvector handles this scale with HNSW indexes trivially.
+
+---
+
+### 4. Entity Directory Schema (Phase 72)
+
+#### PostgreSQL Schema Pattern
+
+No new npm packages needed -- uses existing Drizzle ORM with pgvector support.
+
+**Schema design for `agents.entities`:**
+
+```sql
+CREATE TABLE agents.entities (
+  id              TEXT PRIMARY KEY,
+  type            TEXT NOT NULL CHECK (type IN ('agent', 'human')),
+  name            TEXT NOT NULL,
+  description     TEXT,
+
+  -- Capabilities (natural language, embedded for semantic search)
+  capabilities    TEXT[] NOT NULL DEFAULT '{}',
+  capability_embedding vector(1024),
+
+  -- Reachability
+  reach_via       JSONB DEFAULT '{}',  -- { "slack": "#aesir-dev", "linear": true }
+
+  -- Metadata
+  source          TEXT NOT NULL CHECK (source IN ('yaml', 'config', 'manual')),
+  metadata        JSONB DEFAULT '{}',
+
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Semantic capability search
+CREATE INDEX entity_capability_idx ON agents.entities
+  USING hnsw (capability_embedding vector_cosine_ops);
+
+-- Type-based queries
+CREATE INDEX entity_type_idx ON agents.entities(type);
+```
+
+**Capability matching strategy:** Combine the capabilities array into a single text for embedding: `"implement code changes, open pull requests, write tests"`. The `directory:find` tool embeds the query ("who can implement code changes?") and performs cosine similarity against `capability_embedding`. This is more flexible than keyword matching -- "code implementation" matches "implement code changes" semantically.
+
+**Why embed capabilities (not just text search):** Text search (`tsvector`) requires exact keyword overlap. An agent asking "who can review PRs?" should match an entity with capability "code review and pull request approval" -- semantic similarity handles this naturally. The entity directory is small (tens of entities), so embedding at seed time is cheap.
+
+---
+
+### 5. Task Tree Schema (Phase 73)
+
+#### Existing Infrastructure (No New Packages)
+
+The task tree structure already exists in the `agents.tasks` table:
+
+```sql
+-- Already exists in migration 0005_add_task_tables.sql
+parent_id TEXT REFERENCES agents.tasks(id)
+```
+
+**What needs to be added for delegation:**
+
+```sql
+-- New columns for delegation (migration 0007 or similar)
+ALTER TABLE agents.tasks
+  ADD COLUMN callback_conversation_id TEXT REFERENCES agents.conversations(id),
+  ADD COLUMN delegation_status TEXT CHECK (delegation_status IN ('pending', 'accepted', 'rejected', 'completed', 'failed', 'timed_out')),
+  ADD COLUMN delegated_to_entity TEXT,
+  ADD COLUMN delegation_context JSONB DEFAULT '{}',
+  ADD COLUMN estimated_duration_ms BIGINT,
+  ADD COLUMN deadline_at TIMESTAMPTZ;
+```
+
+**Tree query pattern -- recursive CTE (not ltree):**
+
+```sql
+-- Get full task tree from root
+WITH RECURSIVE task_tree AS (
+  SELECT id, parent_id, title, status, delegation_status, 0 AS depth
+  FROM agents.tasks
+  WHERE id = $1  -- root task ID
+
+  UNION ALL
+
+  SELECT t.id, t.parent_id, t.title, t.status, t.delegation_status, tt.depth + 1
+  FROM agents.tasks t
+  JOIN task_tree tt ON t.parent_id = tt.id
+)
+SELECT * FROM task_tree ORDER BY depth, created_at;
+```
+
+**Why recursive CTE (not ltree):** Task trees are shallow (3-4 levels in practice) and write-heavy (new tasks created frequently). ltree requires maintaining a materialized path column, which adds trigger complexity for no performance benefit at shallow depths. Recursive CTEs are the idiomatic PostgreSQL solution for task trees and are well-supported by Drizzle ORM's `sql` template literal.
+
+---
+
+### 6. Dashboard Visualization (Phase 75)
+
+#### @xyflow/react (React Flow)
+
+| Property | Value |
+|----------|-------|
+| Package | `@xyflow/react` |
+| Version | `^12.10.0` |
+| Install in | `packages/dashboard/package.json` |
+| Confidence | HIGH -- actively maintained, React 19 compatible, Next.js examples available |
+
+**Why @xyflow/react (not react-d3-tree or custom SVG):**
+
+| Factor | @xyflow/react | react-d3-tree | Custom SVG |
+|--------|---------------|---------------|------------|
+| React 19 | Yes (v12.10.0, updated Oct 2025) | Unclear (last published ~1 year ago) | N/A |
+| Interactivity | Built-in pan, zoom, click, selection | Basic click handling | Must build everything |
+| Node customization | Full React components as nodes | Limited via `renderCustomNodeElement` | Full control but high effort |
+| Edge routing | Bezier, step, smoothstep, straight | Fixed tree links | Must implement |
+| Layout algorithms | Dagre, ELK via examples | Built-in D3 tree only | Must implement |
+| Ecosystem | 23K+ GitHub stars, active maintenance | 1K stars, infrequent updates | N/A |
+| Dashboard fit | shadcn/ui + Tailwind compatible | Harder to style consistently | Full control |
+
+React Flow is the de facto standard for interactive node-based UIs in React. The delegation graph (task tree with conversation links and signal edges) maps directly to React Flow's node + edge model. Custom node components can render task status, agent identity, and timing information inline.
+
+**Usage pattern:**
+
+```typescript
+import { ReactFlow, Background, Controls } from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+
+// Task tree nodes
+const nodes = taskTree.map((task) => ({
+  id: task.id,
+  type: "taskNode", // custom node component
+  position: { x: 0, y: 0 }, // computed by dagre
+  data: { task },
+}));
+
+// Delegation edges
+const edges = taskTree
+  .filter((t) => t.parentId)
+  .map((task) => ({
+    id: `${task.parentId}-${task.id}`,
+    source: task.parentId,
+    target: task.id,
+    type: "smoothstep",
+    animated: task.status === "active",
+  }));
+```
+
+#### @dagrejs/dagre (Layout Algorithm)
+
+| Property | Value |
+|----------|-------|
+| Package | `@dagrejs/dagre` |
+| Version | `^2.0.3` |
+| Install in | `packages/dashboard/package.json` |
+| Confidence | HIGH -- standard layout library for React Flow, 137 dependents |
+
+**Why dagre (not elkjs or custom):** Dagre is a directed graph layout algorithm specifically designed for hierarchical/tree layouts. It is the recommended layout library in React Flow's documentation. ELK (Eclipse Layout Kernel) is more powerful but adds significant bundle size (~400KB vs dagre's ~30KB) and is overkill for task trees.
+
+**Layout computation:**
+
+```typescript
+import dagre from "@dagrejs/dagre";
+
+function getLayoutedElements(nodes, edges) {
+  const g = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
+  g.setGraph({ rankdir: "TB", ranksep: 80, nodesep: 40 });
+
+  nodes.forEach((node) => g.setNode(node.id, { width: 280, height: 120 }));
+  edges.forEach((edge) => g.setEdge(edge.source, edge.target));
+
+  dagre.layout(g);
+
+  return {
+    nodes: nodes.map((node) => {
+      const pos = g.node(node.id);
+      return { ...node, position: { x: pos.x - 140, y: pos.y - 60 } };
+    }),
+    edges,
+  };
+}
+```
+
+#### What NOT to add for dashboard
+
+| Temptation | Why Not |
+|------------|---------|
+| D3.js directly | React Flow wraps D3 concepts in React idioms. Direct D3 + React is painful (imperative vs declarative mismatch). |
+| Mermaid.js for diagrams | Static rendering, no interactivity. Task trees need click-through to conversations. |
+| vis.js / vis-network | Not React-native. Requires ref-based imperative code. Poor fit with Next.js RSC. |
+| elkjs for layout | 10x bundle size of dagre for features we don't need (port constraints, layer optimization). Use dagre. |
+| Recharts for tree viz | Recharts is for charts (bar, line, area). Already in dashboard for metrics. Not for graph layouts. |
+
+---
+
+### 7. Completion Signaling (Phase 74)
+
+#### No New Packages
+
+Completion signaling builds entirely on existing infrastructure:
+
+- **pg-boss** (already at `^12.8.0` in agents) -- for timeout scheduling. Delegation timeouts use `pg-boss.send()` with a delay, same pattern as `wait_for` timeouts.
+- **Signal infrastructure** -- existing `signal()` method on ConversationExecutor handles waking waiting conversations.
+- **Task state machine** -- new status transitions (`pending` -> `accepted` -> `completed`/`failed`) trigger signal dispatch via event log subscribers.
+
+The `callbackConversationId` on tasks (see Section 5) enables routing: when a task completes, the system looks up the callback conversation and delivers a completion signal.
+
+---
+
+### 8. QA Agent (Phase 76)
+
+#### No New Packages
+
+The QA agent is a new agent definition (YAML + prompt.md) that uses existing tool namespaces:
+- `codebase:run_command` -- for test execution
+- `codebase:read_file`, `codebase:search_codebase` -- for PR diff review
+- `knowledge:store`, `knowledge:query` -- for storing/retrieving test results
+- `directory:find`, `directory:get` -- for discovering dev-agent
+- `task:delegate` -- for delegating fixes back
+- `communication:reply`, `communication:ask` -- for reporting results
+
+No new runtime dependencies. The QA agent exercises existing collaboration primitives.
+
+---
+
+## Full Dependency Summary
+
+### New Dependencies (5 packages)
+
+| Package | Version | Install in | Purpose | Phase |
+|---------|---------|------------|---------|-------|
+| `voyageai` | `^0.1.0` | `@aesir/agents` | Embedding generation for knowledge store + entity directory | 71, 72 |
+| `pgvector` | `^0.2.0` | `@aesir/agents` | Vector type registration for node-postgres driver | 71, 72 |
+| `@xyflow/react` | `^12.10.0` | `@aesir/dashboard` | Interactive delegation graph visualization | 75 |
+| `@dagrejs/dagre` | `^2.0.3` | `@aesir/dashboard` | Hierarchical layout algorithm for task trees | 75 |
+| `@xyflow/react` CSS | (included) | `@aesir/dashboard` | Required stylesheet for React Flow | 75 |
+
+### Upgraded Dependencies (1 package)
+
+| Package | From | To | Install in | Purpose | Phase |
+|---------|------|----|------------|---------|-------|
+| `@linear/sdk` | `^70.0.0` | `^75.0.0` | `@aesir/integration-linear` | Agent activity API, session types | 70 |
+
+### Infrastructure Changes (1 change)
+
+| Change | From | To | Location | Phase |
+|--------|------|----|----------|-------|
+| Docker image | `postgres:15-alpine` | `pgvector/pgvector:pg15` | `docker-compose.yml` | 71 |
+
+### New Environment Variables (2 variables)
+
+| Variable | Service | Purpose | Phase |
+|----------|---------|---------|-------|
+| `VOYAGE_API_KEY` | agent-service | Voyage AI API key for embedding generation | 71 |
+| `VOYAGE_MODEL` | agent-service | Model name override (default: `voyage-3.5-lite`) | 71 |
+
+### No-Change Dependencies (confirmed sufficient)
+
+| Package | Current | Used for | Why sufficient |
+|---------|---------|----------|----------------|
+| `drizzle-orm` | `^0.45.1` | Vector column type, distance functions | Built-in pgvector support since v0.28.0 |
+| `pg` | `^8.17.2` | PostgreSQL driver | Works with pgvector npm package for type registration |
+| `pg-boss` | `^12.8.0` | Delegation timeout scheduling | Same delayed job pattern as wait_for timeouts |
+| `zod` | `3.25.67` | New tool schemas, knowledge entry validation | Already used everywhere |
+| `nanoid` | `^5.1.6` | ID generation for knowledge entries, entities | Already used for all IDs |
+| `@anthropic-ai/sdk` | `^0.72.0` | Agent loops | Unchanged |
+| `recharts` | `^2.15.4` | Dashboard metrics charts | Not used for graph visualization |
+
+---
+
+## Installation
 
 ```bash
-# No installation commands needed
-# All required packages are already in the monorepo:
-# - zod@3.25.67 (agents, integrations)
-# - @octokit/rest@^22.0.1 (github integration)
-# - @linear/sdk@^70.0.0 (linear integration)
-# - @slack/bolt@^4.3.0, @slack/web-api@^7.10.0 (slack integration)
+# Phase 70: Linear Agent SDK
+pnpm --filter @aesir/integration-linear add @linear/sdk@^75.0.0
+
+# Phase 71-72: Vector search (shared memory + entity directory)
+pnpm --filter @aesir/agents add voyageai@^0.1.0 pgvector@^0.2.0
+
+# Phase 75: Dashboard visualization (delegation graph)
+pnpm --filter @aesir/dashboard add @xyflow/react@^12.10.0 @dagrejs/dagre@^2.0.3
+
+# Docker image swap (docker-compose.yml)
+# Change: image: postgres:15-alpine
+# To:     image: pgvector/pgvector:pg15
+
+# Database migration (first vector-enabled migration)
+# Include: CREATE EXTENSION IF NOT EXISTS vector;
 ```
+
+---
+
+## Alternatives Considered
+
+| Category | Recommended | Alternative | Why Not |
+|----------|-------------|-------------|---------|
+| Embedding provider | Voyage AI (`voyage-3.5-lite`) | OpenAI (`text-embedding-3-small`) | Anthropic recommends Voyage; 1024 dims vs 1536; code-specific model available; same pricing |
+| Embedding provider | Voyage AI | Local model (e.g., `all-MiniLM-L6-v2`) | Adds model serving infrastructure; lower quality; not worth complexity for agent knowledge |
+| Vector database | pgvector (in PostgreSQL) | Pinecone / Weaviate / Qdrant | Separate service adds operational complexity; knowledge dataset is small (thousands, not millions); pgvector handles this trivially |
+| Graph visualization | @xyflow/react | react-d3-tree | Unclear React 19 support; less interactive; limited customization |
+| Graph visualization | @xyflow/react | vis.js / vis-network | Not React-native; imperative API; poor fit with Next.js |
+| Graph layout | @dagrejs/dagre | elkjs | 10x bundle size for features not needed; dagre handles hierarchical trees perfectly |
+| Hierarchical queries | Recursive CTE | PostgreSQL ltree | Task trees are shallow (3-4 levels); ltree adds trigger maintenance overhead for no performance benefit |
+| Linear agent features | @linear/sdk upgrade | Custom GraphQL client | SDK provides typed methods; no benefit to bypassing it |
+| Embedding SDK | `voyageai` npm | Raw fetch to Voyage HTTP API | SDK provides retry, timeout, TypeScript types; raw fetch loses all of this |
 
 ---
 
@@ -511,22 +590,43 @@ The existing `callMcpTool` function in `packages/agents/src/shared/mcp/client.ts
 
 | Area | Confidence | Reason |
 |------|------------|--------|
-| ReplyContext type design | HIGH | Zod discriminated unions are a well-established pattern; data is already available in webhooks |
-| Denormalizer dispatch | HIGH | Pure function, exhaustive switch on 3 channels, calls existing MCP tools |
-| Communication tool factories | HIGH | Follows exact ToolFactory pattern used by 34 existing tools |
-| Linear create_comment exposure | HIGH | Handler already implemented and tested; just needs registration |
-| GitHub create_pr_comment | HIGH | `octokit.rest.issues.createComment()` is stable and well-documented |
-| Signal pipeline replyContext propagation | HIGH | Simple string concatenation in 3 existing code locations |
-| Adapter replyContext attachment | HIGH | All required data already present in webhook payloads |
-| Agent prompt changes | MEDIUM | Prompt effectiveness for domain-language communication needs E2E validation |
+| pgvector + Drizzle ORM | HIGH | Well-documented integration, official Drizzle guide, widely used |
+| Voyage AI embeddings | HIGH | Anthropic's official recommendation, TypeScript SDK exists, competitive pricing |
+| @xyflow/react + dagre | HIGH | Industry standard for React graph visualization, React 19 compatible, active maintenance |
+| @linear/sdk agent activities | MEDIUM | Agent SDK is developer preview (launched 2025-07-30); API surface may evolve; schema is generated from GraphQL so types are correct when available |
+| Docker image swap | HIGH | pgvector/pgvector:pg15 is official, drop-in replacement for postgres:15 |
+| Task tree recursive CTE | HIGH | Standard PostgreSQL pattern, shallow trees, well-supported by Drizzle |
+| Schema design patterns | MEDIUM | Knowledge classification taxonomy and entity capability embedding strategy need validation with real agent usage |
 
 ---
 
 ## Sources
 
-- Octokit PR comment API: verified via `@octokit/rest` types and [community examples](https://gist.github.com/smarr/317e83149bb564e54dc2b662a312ae03)
-- Existing codebase: `packages/agents/src/shared/tools/integration/mcp-wrapper.ts`, `packages/agents/src/framework/tool-factories.ts`, `packages/agents/src/adapters/types.ts`
-- Linear create_comment: verified implemented in `packages/integrations/linear/src/mcp/tools/issues.ts` (lines 469-563)
-- Zod discriminated unions: verified in Zod documentation and existing codebase patterns
-- GitHub API PR comments: GitHub REST API treats PR comments as issue comments via `issues.createComment`
-- Agent framework landscape: [Mastra](https://mastra.ai/), [VoltAgent](https://github.com/VoltAgent/voltagent), [Google ADK](https://developers.googleblog.com/introducing-agent-development-kit-for-typescript-build-ai-agents-with-the-power-of-a-code-first-approach/) -- none provide outbound channel routing abstractions; this is an application-layer concern, not a framework feature
+### Linear Agent SDK
+- [Getting Started -- Linear Agents](https://linear.app/developers/agents) -- OAuth scopes, actor=app, agent identity
+- [Agent Interaction -- Linear Developers](https://linear.app/developers/agent-interaction) -- Activity types, createAgentActivity, webhook events
+- [OAuth Actor Authorization](https://linear.app/developers/oauth-actor-authorization) -- actor=app flow, identity customization
+- [@linear/sdk npm](https://www.npmjs.com/package/@linear/sdk) -- Version 75.0.0, auto-generated from GraphQL schema
+- [Agent Interaction SDK Changelog](https://linear.app/changelog/2025-07-30-agent-interaction-guidelines-and-sdk) -- Developer preview announcement
+
+### pgvector + Drizzle ORM
+- [Drizzle ORM -- Vector similarity search](https://orm.drizzle.team/docs/guides/vector-similarity-search) -- Full setup guide, distance functions, HNSW indexes
+- [Drizzle ORM -- PostgreSQL extensions](https://orm.drizzle.team/docs/extensions/pg) -- Extension enablement
+- [pgvector/pgvector-node GitHub](https://github.com/pgvector/pgvector-node) -- TypeScript support, Drizzle ORM integration
+- [pgvector Docker Hub](https://hub.docker.com/r/pgvector/pgvector) -- pg15 tag confirmed available
+
+### Embedding Generation
+- [Anthropic Embeddings Guide](https://platform.claude.com/docs/en/build-with-claude/embeddings) -- Official Voyage AI recommendation, model comparison, usage patterns
+- [Voyage AI TypeScript SDK](https://github.com/voyage-ai/typescript-sdk) -- Version 0.1.0, client API, input_type parameter
+- [Voyage AI Pricing](https://docs.voyageai.com/docs/pricing) -- $0.02/1M tokens for voyage-3.5-lite, 200M free tokens
+- [Best Embedding Models 2026](https://elephas.app/blog/best-embedding-models) -- Comparative benchmark data
+
+### Dashboard Visualization
+- [React Flow -- Quick Start](https://reactflow.dev/learn) -- Version 12.10.0, API overview
+- [React Flow -- Dagre Tree Example](https://reactflow.dev/examples/layout/dagre) -- Layout integration pattern
+- [React Flow UI Components -- React 19 + Tailwind 4](https://reactflow.dev/whats-new/2025-10-28) -- React 19 compatibility confirmed
+- [@dagrejs/dagre npm](https://www.npmjs.com/package/@dagrejs/dagre) -- Version 2.0.3, 137 dependents
+
+### PostgreSQL Patterns
+- [PostgreSQL ltree vs WITH RECURSIVE](https://www.cybertec-postgresql.com/en/postgresql-ltree-vs-with-recursive/) -- Performance comparison, use case guidance
+- [Modeling Hierarchical Tree Data](https://leonardqmarcq.com/posts/modeling-hierarchical-tree-data) -- Pattern comparison for PostgreSQL hierarchies

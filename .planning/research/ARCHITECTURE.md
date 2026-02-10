@@ -1,660 +1,838 @@
-# Architecture Patterns: Unified Agent Communication (v2.6)
+# Architecture Patterns: v2.7 Agent Collaboration
 
-**Domain:** Symmetric outbound normalization for an agentic development platform
-**Researched:** 2026-02-08
-**Confidence:** HIGH -- analysis based entirely on verified codebase inspection (no external sources needed; this is internal architecture extension)
+**Domain:** Multi-agent collaboration features for an existing agentic development platform
+**Researched:** 2026-02-10
+**Overall confidence:** HIGH (extensive codebase review, official docs for external dependencies)
 
-## Executive Summary
-
-The v2.6 unified agent communication milestone adds symmetric outbound normalization to Aesir's existing inbound normalization pipeline. Today, inbound events flow through adapters that normalize integration-specific webhooks into domain-language `IncomingEvent` objects. Outbound communication has no equivalent -- agents call channel-specific tools (`slack:send_message`, `slack:send_approval_request`) directly. This creates O(agents x integrations) complexity and means agents cannot "reply where the conversation is happening" because signal messages lose their origin context by the time they reach the agent.
-
-The proposed architecture introduces three new components: (1) `ReplyContext` type threaded through the adapter-to-signal-to-agent pipeline, (2) unified `communication:reply/ask/notify` tools that accept domain-language intent, and (3) a denormalizer that dispatches to the correct integration MCP tool. These fit cleanly into the existing 3-layer architecture without violating any dependency rules.
-
-## Current Architecture (Verified)
-
-### Inbound Flow (What Exists)
-
-```
-Integration Webhook
-  |
-  v
-NormalizedEvent (from @aesir/types)
-  |
-  v (POST /events to agent-service:3004)
-  |
-  v
-Adapter Pipeline (adapters/slack.ts, linear.ts, github.ts, pass-through.ts)
-  |
-  v
-IncomingEvent { type, data, source, correlationKey, message, taskId }
-  |
-  v
-routeEvent() -> Task Router (if taskId) -> EventRouter.handle()
-  |
-  +-- start: executor.start() -> conversation row, queued
-  +-- signal: executor.signal() -> resume/queue/reject
-  +-- slow_path: routeViaAgentLoopV2() -> LLM classification -> signal/start/ignore
-  +-- ignore: no-op
-```
-
-### Signal Delivery (Current Gap)
-
-When a signal is delivered to a waiting conversation, the executor builds a plain text user message:
-
-```typescript
-// conversation-executor.ts line 388
-const signalContent = signal.message ??
-  `Signal received: ${signal.type}. Data: ${JSON.stringify(signal.data ?? {})}`;
-```
-
-The agent sees: `"Signal received: approval. Data: {"approved":true}"` -- no structured reply context. It has no way to know WHERE the signal came from (Slack thread, Linear comment, GitHub PR review) and therefore cannot reply back to the originating channel without hardcoded channel IDs.
-
-### Outbound Flow (Current -- Channel-Specific)
-
-```
-Agent Loop
-  |
-  v
-Tool call: slack:send_message({ channel: "C123", text: "..." })
-  |
-  v
-mcpAdapter extracts McpToolDeps { agentId, correlationId, taskId }
-  |
-  v
-callMcpTool({ integration: "slack", tool: "send_message", params, agentId, correlationId })
-  |
-  v
-HTTP POST http://slack-integration:3003/mcp/tools/send_message
-```
-
-**The problem:** The agent must know the exact channel, thread timestamp, and integration to use. This is hardcoded in agent prompts (dev-agent always escalates to Slack). When a signal comes from Linear, the agent still tries to reply on Slack because it has no mechanism to know otherwise.
-
-### Current Tool Assignments (Verified from definition.yaml)
-
-**dev-agent (20 tools):**
-- Codebase: `read_file`, `search_codebase`, `list_directory`
-- Coordination: `spawn_agent`, `request_human_input`, `wait_for`
-- Task: `create_task`, `complete_task`, `pause_task`, `handoff_task`, `list_tasks`, `get_task_context`
-- Linear: `get_issue`, `update_issue_status`
-- GitHub: `create_branch`, `create_commit`, `create_pull_request`, `get_pull_request`
-- Slack: `send_message`, `send_approval_request` -- **these get replaced**
-
-**product-agent (11 tools):**
-- Coordination: `wait_for`
-- Task: `create_task`, `complete_task`, `pause_task`, `handoff_task`, `list_tasks`, `get_task_context`
-- Linear: `create_issue`, `get_issue`, `list_labels`, `search_issues`
-- Slack: `send_message` -- **this gets replaced**
-
-### Integration MCP Gaps (Verified)
-
-1. **Linear `create_comment`**: Handler exists in `packages/integrations/linear/src/mcp/tools/issues.ts` (line 472, `handleCreateComment`), exported from tools barrel, but NOT registered in the MCP server's `ListToolsRequestSchema` handler or `CallToolRequestSchema` switch. The tool is implemented but invisible.
-
-2. **GitHub `create_pr_comment`**: Does NOT exist anywhere. No handler, no schema, no registration. Needs to be built from scratch using Octokit's `issues.createComment` (PR-level comments are issue comments in GitHub's API) or `pulls.createReviewComment` (for inline review replies).
-
-3. **Slack**: Complete. `send_message`, `reply_to_thread`, and `send_approval_request` cover all needed outbound patterns.
+---
 
 ## Recommended Architecture
 
-### Component Boundary Map
+The v2.7 collaboration features integrate into the existing architecture through three patterns: **new tables in existing schemas**, **new tool namespaces in the existing ToolRegistry**, and **new services following the existing factory pattern**. No new packages or services are needed -- everything lives in `@aesir/agents` and `@aesir/integration-linear`.
+
+### Architecture Principle: Extend, Don't Restructure
+
+The existing architecture was designed with collaboration in mind (polymorphic creator/assignee on tasks, event log as ground truth, tool-based control flow). v2.7 adds capabilities by:
+1. Adding tables to `agents.*` schema (knowledge, directory)
+2. Adding tool namespaces (`knowledge:*`, `directory:*`) to ToolRegistry
+3. Extending existing services (TaskService gains delegation, denormalizer gains Linear activities)
+4. Adding new services following the same factory pattern (KnowledgeService, DirectoryService)
+
+Nothing about the ConversationExecutor, WorkerLoop, or EventRouter fundamentals changes.
+
+---
+
+## Component Architecture
+
+### 1. Shared Memory (Knowledge Store)
+
+**Where it lives:** `@aesir/agents` -- new tables in `agents.*` schema, new service, new tools.
+
+**Storage approach: pgvector in existing Postgres** because:
+- Already using PostgreSQL for everything. No new infrastructure service to deploy or maintain.
+- Drizzle ORM has first-class pgvector support via `vector()` column type and distance functions (`cosineDistance`, `l2Distance`).
+- Knowledge entries are dual-indexed: structured metadata queries (type, scope, author, expiry) via standard columns + semantic search via pgvector embeddings.
+- The volume of knowledge entries is moderate (hundreds to low thousands per workspace), well within pgvector's comfortable range.
+- Alternative (dedicated vector DB like Pinecone/Weaviate) adds operational complexity for marginal benefit at this scale.
+
+**Confidence:** HIGH -- Drizzle pgvector integration verified via [official Drizzle docs](https://orm.drizzle.team/docs/guides/vector-similarity-search). pgvector extension is widely supported in managed Postgres (RDS, Supabase, Neon).
 
 ```
-packages/agents/src/
-  |
-  +-- adapters/                        [MODIFY] Attach replyContext to IncomingEvent
-  |     +-- types.ts                   [MODIFY] Add replyContext to IncomingEventSchema
-  |     +-- slack.ts                   [MODIFY] Populate replyContext on thread_reply, block_actions, app_mention
-  |     +-- linear.ts                  [MODIFY] Populate replyContext on comment_created, agent_session
-  |     +-- github.ts                  [MODIFY] Populate replyContext on pr_review events
-  |
-  +-- shared/tools/
-  |     +-- communication/             [NEW DIRECTORY]
-  |     |     +-- types.ts             [NEW] ReplyContext, NotifyTarget, MessageContent, CommunicationToolDeps
-  |     |     +-- denormalizer.ts      [NEW] dispatch(action, deps) -> callMcpTool
-  |     |     +-- reply.ts            [NEW] communication:reply tool factory
-  |     |     +-- ask.ts              [NEW] communication:ask tool factory
-  |     |     +-- notify.ts           [NEW] communication:notify tool factory
-  |     |     +-- index.ts            [NEW] barrel export
-  |     |
-  |     +-- integration/
-  |           +-- linear-tools.ts      [MODIFY] Add linear:create_comment wrapper
-  |
-  +-- framework/
-  |     +-- types.ts                   [MODIFY] Add replyContext to SignalSchema
-  |     +-- tool-factories.ts          [MODIFY] Register communication:* tools + linear:create_comment
-  |     +-- conversation-executor.ts   [MODIFY] Include replyContext in signal user message
-  |
-  +-- router/
-        +-- tools/
-        |     +-- signal-conversation.ts [MODIFY] Add optional replyContext field to input schema
-        +-- system-prompt.ts           [MODIFY] Add replyContext propagation guidance, Linear comment routing
+agents.knowledge_entries (NEW TABLE)
+  id                  TEXT PK
+  workspace_id        TEXT NOT NULL (future multi-tenancy ready)
+  scope               TEXT NOT NULL ('shared' | 'private')
+  author_agent_id     TEXT NOT NULL (agent that stored this)
+  author_conversation_id TEXT (conversation context)
+  entry_type          TEXT NOT NULL ('discovery' | 'architecture_decision' | 'constraint' | 'pattern' | 'thought')
+  topic               TEXT NOT NULL (human-readable topic)
+  content             TEXT NOT NULL (the actual knowledge)
+  confidence          REAL (0.0-1.0, agent's confidence)
+  embedding           VECTOR(1536) (for semantic search)
+  metadata            JSONB (extensible key-value)
+  superseded_by       TEXT REFERENCES knowledge_entries(id) (chain)
+  expires_at          TIMESTAMPTZ (optional TTL)
+  created_at          TIMESTAMPTZ NOT NULL
+  updated_at          TIMESTAMPTZ NOT NULL
 
-packages/integrations/
-  +-- linear/src/mcp/
-  |     +-- server.ts                  [MODIFY] Register create_comment in tool list + switch
-  |
-  +-- github/src/mcp/
-        +-- tools/pullrequests.ts      [MODIFY] Add handleCreatePRComment handler
-        +-- server.ts                  [MODIFY] Register create_pr_comment in tool list + switch
-        +-- schemas.ts                 [MODIFY] Add CreatePRCommentInputSchema
-
-packages/agents/definitions/
-  +-- dev-agent/
-  |     +-- definition.yaml            [MODIFY] Swap slack:* for communication:*
-  |     +-- prompt.md                  [MODIFY] Domain-language communication guidance
-  +-- product-agent/
-        +-- definition.yaml            [MODIFY] Swap slack:send_message for communication:*
-        +-- prompt.md                  [MODIFY] Domain-language communication guidance
+  INDEXES:
+  - idx_knowledge_scope ON (scope, workspace_id)
+  - idx_knowledge_type ON (entry_type)
+  - idx_knowledge_author ON (author_agent_id)
+  - idx_knowledge_topic ON (topic) -- text search
+  - idx_knowledge_embedding USING hnsw (embedding vector_cosine_ops) -- semantic search
+  - idx_knowledge_expiry ON (expires_at) WHERE expires_at IS NOT NULL
 ```
 
-### New Components Detail
+**New service: `KnowledgeService`**
 
-#### 1. ReplyContext Type (`shared/tools/communication/types.ts`)
+```
+packages/agents/src/shared/services/knowledge-service.ts
 
-Discriminated union on `channel` field. Opaque to the agent -- it passes it through from signal to tool call without parsing.
+Interface:
+  store(params: StoreKnowledgeParams): Promise<KnowledgeEntry>
+  query(params: QueryKnowledgeParams): Promise<KnowledgeEntry[]>
+  update(id: string, fields: UpdateKnowledgeParams): Promise<KnowledgeEntry>
+  invalidate(id: string, supersededBy?: string): Promise<void>
+  health(): Promise<{ healthy: boolean; latencyMs: number }>
+  close(): Promise<void>
+
+Dependencies:
+  db: NodePgDatabase  (existing pool)
+  logger: PinoLogger
+  embeddingModel?: string (default: text-embedding-3-small)
+```
+
+Query supports dual-mode: structured filters (type, scope, topic ILIKE) AND semantic similarity (cosine distance on embedding). Results are scored by combining relevance and recency, excluding expired/superseded entries.
+
+**Embedding generation:** Call Anthropic/OpenAI embeddings API at store time. The KnowledgeService generates embeddings synchronously on store -- the latency (50-100ms) is acceptable since `knowledge:store` is not in the hot path of every tool call.
+
+**New tools: `knowledge:store`, `knowledge:query`, `knowledge:update`**
+
+```
+packages/agents/src/shared/tools/knowledge/
+  store.ts       -- knowledge:store tool factory
+  query.ts       -- knowledge:query tool factory
+  update.ts      -- knowledge:update tool factory
+  index.ts       -- barrel export
+```
+
+Registered in `tool-factories.ts` using a new `knowledgeAdapter` following the existing `communicationAdapter` pattern -- extracts agentId and correlationId from ToolContext, passes to KnowledgeService.
+
+**Private notepad:** Uses the same table with `scope = 'private'`. Query tool filters: private entries only visible when `author_agent_id` matches the querying agent. This is a query-time filter, not a separate table -- simpler and the security model is sufficient (agents don't have direct DB access).
+
+### 2. Entity Directory
+
+**Where it lives:** `@aesir/agents` -- new table in `agents.*` schema, new service, new tools, seed script.
+
+```
+agents.entity_directory (NEW TABLE)
+  id                  TEXT PK
+  entity_type         TEXT NOT NULL ('agent' | 'human')
+  name                TEXT NOT NULL
+  description         TEXT
+  capabilities        TEXT[] NOT NULL (natural language capability strings)
+  capabilities_embedding VECTOR(1536) (semantic search on combined capabilities)
+  reach_via           JSONB (how to contact: channel type + target)
+  source_definition   TEXT (for agents: definition.yaml path, for seeding)
+  status              TEXT NOT NULL DEFAULT 'active' ('active' | 'inactive')
+  metadata            JSONB DEFAULT '{}'
+  created_at          TIMESTAMPTZ NOT NULL
+  updated_at          TIMESTAMPTZ NOT NULL
+
+  INDEXES:
+  - idx_directory_type ON (entity_type, status)
+  - idx_directory_capabilities USING hnsw (capabilities_embedding vector_cosine_ops)
+  - idx_directory_name ON (name)
+```
+
+**Capability matching: semantic similarity** because:
+- Agents query with intent descriptions ("who can implement code changes?"), not exact strings.
+- Capability descriptions are short natural language phrases -- embeddings handle synonyms and paraphrases naturally.
+- Same pgvector infrastructure as knowledge store -- no additional complexity.
+- Alternative (keyword search, pg_trgm) would miss semantic matches like "write code" matching "implement features".
+
+**Seeding pattern:** `pnpm seed:directory` reads YAML definitions, extracts `id`, `name`, `description`, and new `capabilities` field (list of strings), generates embedding from combined capabilities text, upserts to `entity_directory`. Follows the same pattern as `pnpm seed:permissions`. Human entries from a config file or environment variable (JSON array).
+
+```
+packages/agents/scripts/seed-directory.ts
+
+Reads: definitions/*/definition.yaml (capabilities field)
+Reads: DIRECTORY_HUMANS env var or .directory-humans.json config
+Writes: agents.entity_directory (upsert on id)
+```
+
+**AgentDefinitionYamlSchema extension:** Add optional `capabilities` field:
+
+```yaml
+# definition.yaml addition
+capabilities:
+  - "Implement code changes and create pull requests"
+  - "Research codebases and analyze architecture"
+  - "Run tests and verify implementations"
+```
 
 ```typescript
-export type ReplyContext =
-  | { channel: "slack"; teamId: string; channelId: string; threadTs: string }
-  | { channel: "linear"; issueId: string }
-  | { channel: "github"; owner: string; repo: string; prNumber: number; commentId?: number };
-
-export type NotifyTarget =
-  | { channel: "slack"; teamId: string; channelId: string; threadTs?: string }
-  | { channel: "linear"; issueId: string };
+// types.ts schema addition
+capabilities: z.array(z.string()).optional(),
 ```
 
-**Design decision:** ReplyContext uses a discriminated union rather than a generic `Record<string, unknown>` because the denormalizer needs typed access to channel-specific fields (`channelId`, `threadTs`, `issueId`, `prNumber`). The discriminant `channel` makes the `switch` in the denormalizer exhaustive and type-safe.
-
-#### 2. Denormalizer (`shared/tools/communication/denormalizer.ts`)
-
-Pure function that maps (action + replyContext + content) to the correct MCP tool call. Lives in the agents package (not integrations) because it orchestrates MCP HTTP calls -- it does not import integration SDKs.
+**New service: `DirectoryService`**
 
 ```
-denormalize({ action: "reply", replyContext: { channel: "slack", ... }, content: { text } })
-  |
-  switch (replyContext.channel)
-    case "slack":
-      if action === "ask" && content.options -> callMcpTool("slack", "send_approval_request", ...)
-      else -> callMcpTool("slack", "reply_to_thread", ...)
-    case "linear":
-      -> callMcpTool("linear", "create_comment", ...)
-    case "github":
-      -> callMcpTool("github", "create_pr_comment", ...)
+packages/agents/src/shared/services/directory-service.ts
+
+Interface:
+  find(query: string, opts?: { type?: 'agent' | 'human'; limit?: number }): Promise<DirectoryEntry[]>
+  get(entityId: string): Promise<DirectoryEntry | null>
+  upsert(entry: UpsertDirectoryEntry): Promise<DirectoryEntry>
+  health(): Promise<{ healthy: boolean; latencyMs: number }>
+  close(): Promise<void>
 ```
 
-**Placement rationale:** The denormalizer uses `callMcpTool` from `shared/mcp/client.ts` to call integration HTTP endpoints. This maintains the HTTP boundary between agents and integrations. The denormalizer is the outbound counterpart to adapters -- adapters normalize inbound, denormalizer denormalizes outbound.
+`find()` generates an embedding for the query string, then runs cosine similarity search against `capabilities_embedding`. Returns ranked results with similarity scores. The `type` filter enables searching for only agents or only humans.
 
-#### 3. Communication Tools (`shared/tools/communication/reply.ts`, `ask.ts`, `notify.ts`)
+**New tools: `directory:find`, `directory:get`**
 
-Follow the exact same pattern as existing tool factories. Each creates a `ToolDefinition` with:
-- `name`: e.g., `"reply"`
-- `description`: describes intent, not channel
-- `inputSchema`: Zod schema (replyContext + message/question/target)
-- `execute`: validates input, calls `denormalize()`, returns result
+```
+packages/agents/src/shared/tools/directory/
+  find.ts        -- directory:find tool factory
+  get.ts         -- directory:get tool factory
+  index.ts       -- barrel export
+```
 
-**Tool naming:** Display names are `reply`, `ask`, `notify` (no namespace prefix) because tools registered as `communication:reply` already have a namespace. The `mcpAdapter` pattern uses display names with integration prefix (`slack_send_message`, `linear_get_issue`) because multiple integrations share the same tool name space. Communication tools are unique -- no prefix needed.
+**Integration with existing ToolRegistry:** Same registration pattern as other namespaces. DirectoryService injected via `RegisterAllToolsOptions` extension (same as TaskService).
 
-#### 4. communicationAdapter (`framework/tool-factories.ts`)
+### 3. Task Delegation
 
-New adapter function following the existing `mcpAdapter` and `codebaseAdapter` patterns:
+**Where it lives:** `@aesir/agents` -- extends existing TaskService, new tool, new materialization layer.
+
+**`task:delegate` tool is NOT a new TaskService method.** It is a composite tool that orchestrates multiple existing and new services:
+
+```
+task:delegate tool execution flow:
+  1. Creates task via TaskService.create() with parentTaskId
+  2. Sets callbackConversationId in task metadata
+  3. Triggers materialization layer
+  4. Returns task ID to the agent
+```
+
+**Materialization layer:** A new module that sits between task creation and conversation start / external delivery.
+
+```
+packages/agents/src/shared/services/materialization.ts
+
+Interface:
+  materialize(task: Task, entity: DirectoryEntry): Promise<MaterializationResult>
+
+Dispatch logic:
+  entity.type === 'agent':
+    - Internal: calls ConversationExecutor.start() with taskId
+    - Transparent: creates Linear ticket (via MCP) + starts conversation
+  entity.type === 'human':
+    - Slack: sends approval-style message with task details
+    - Linear: creates issue assigned to human (future)
+```
+
+The materialization layer extends the denormalizer pattern: task:delegate creates a task, then the materializer dispatches based on entity type and team policy. The policy decision (internal vs transparent) comes from task metadata or a workspace config -- it is NOT hardcoded.
+
+**Interaction with existing ConversationExecutor:** The materializer calls `executor.start()` for agent-to-agent delegation. This is the same `start()` used by the EventRouter -- no new executor methods needed.
 
 ```typescript
-function communicationAdapter(
-  createFn: (deps: CommunicationToolDeps) => ToolDefinition,
-): (ctx: ToolContext) => ToolDefinition {
-  return (ctx: ToolContext) =>
-    createFn({
-      agentId: ctx.agentId,
-      correlationId: ctx.correlationId,
-      taskId: ctx.taskId,
-      logger: ctx.logger,
-    });
-}
+// Materialization for agent recipient (internal)
+const conversationId = await executor.start({
+  agentDefinitionId: entity.id,      // target agent
+  correlationKey: `task:${task.id}`,  // deterministic ID from task
+  initialMessage: task.objective ?? task.title,
+  taskId: task.id,                    // links conversation to task
+  context: buildDelegationContext(task, sourceConversation),
+});
 ```
 
-Extracts `CommunicationToolDeps` from `ToolContext`, same pattern as `mcpAdapter` extracts `McpToolDeps`. No new fields needed on `ToolContext`.
+**Task table extension:**
 
-### Data Flow: Complete Round-Trip
-
-```
-INBOUND:
-  Linear comment "looks good, ship it" on issue uuid-abc
-    |
-    v
-  adaptLinearEvent() -> IncomingEvent {
-    type: "issue_comment",
-    data: { body: "looks good...", issueId: "uuid-abc" },
-    source: "linear:webhook",
-    correlationKey: "uuid-abc",
-    message: "looks good, ship it",
-    replyContext: { channel: "linear", issueId: "uuid-abc" }    <-- NEW
-  }
-    |
-    v
-  EventRouter -> slow_path
-    |
-    v
-  Router LLM classifies -> approval
-    |
-    v
-  signal_conversation({
-    conversationId: "dev-agent-uuid-abc",
-    signalType: "approval",
-    payload: { approved: true },
-    message: "looks good, ship it",
-    replyContext: { channel: "linear", issueId: "uuid-abc" }    <-- NEW: propagated
-  })
-    |
-    v
-  ConversationExecutor.signal() builds user message:
-    "Signal received: approval. Approved: yes.
-     <reply_context>{"channel":"linear","issueId":"uuid-abc"}</reply_context>"
-    |
-    v
-  Agent resumes, sees replyContext in message
-
-OUTBOUND:
-  Agent calls communication:reply({
-    replyContext: { channel: "linear", issueId: "uuid-abc" },
-    message: "Starting implementation now."
-  })
-    |
-    v
-  denormalize({ action: "reply", replyContext, content: { text: "Starting..." } })
-    |
-    v
-  switch (replyContext.channel) -> "linear"
-    |
-    v
-  callMcpTool({ integration: "linear", tool: "create_comment",
-    params: { issueId: "uuid-abc", body: "Starting implementation now." },
-    agentId: "dev-agent", correlationId: "dev-agent-uuid-abc" })
-    |
-    v
-  HTTP POST http://linear-integration:3001/mcp/tools/create_comment
-    |
-    v
-  Comment appears on Linear issue -- same channel the human used
+```sql
+ALTER TABLE agents.tasks
+  ADD COLUMN callback_conversation_id TEXT,    -- who to signal on completion
+  ADD COLUMN delegation_depth INTEGER DEFAULT 0, -- for cycle detection
+  ADD COLUMN expectations JSONB;                -- priority, estimated_effort, deadline
 ```
 
-### replyContext Propagation Chain
+**Negotiation handshake:** Implemented as a signal exchange, not a separate mechanism:
+
+1. Delegator creates task (status='created') + calls `wait_for` with type='delegation_response'
+2. Materializer starts target conversation with task context
+3. Target agent evaluates and calls `task:respond` (accept/reject/estimate)
+4. `task:respond` tool updates task status + fires signal to callbackConversationId
+5. Delegator wakes, reads response, decides to proceed or pivot
 
 ```
-Adapter          IncomingEvent.replyContext
-  |                    |
-  v                    v
-Router           event.replyContext accessible to slow-path LLM
-  |                    |
-  v                    v
-signal_conversation  signal.replyContext (new optional field)
-  |                    |
-  v                    v
-executor.signal()    Injected as <reply_context> XML tag in user message
-  |                    |
-  v                    v
-Agent sees it        Passes it back opaquely to communication:reply
-  |                    |
-  v                    v
-denormalizer         Dispatches to correct integration MCP tool
+New tool: task:respond
+  - Sets task status to 'active' (accept) or 'cancelled' (reject)
+  - Fires signal to callback_conversation_id
+  - Carries: accepted, estimate, reason (on reject)
 ```
 
-**Key design decisions:**
+This reuses the existing `signal()` infrastructure entirely. No new signal delivery mechanism needed.
 
-1. **replyContext is a top-level field on IncomingEvent and Signal, not nested in data.** This makes it structurally visible at every pipeline stage. If it were buried in `data`, each pipeline stage would need to know to extract and re-attach it.
+### 4. Completion Signaling
 
-2. **XML tags in signal messages, not structured message content.** The `<reply_context>` tag approach is simple, LLM-friendly (Claude naturally parses XML tags), and requires no changes to the `Anthropic.MessageParam` shape. The agent doesn't need to understand the JSON -- it just extracts and passes it through.
+**Where it lives:** `@aesir/agents` -- extends existing task lifecycle events, new event subscriber, signal dispatch.
 
-3. **Denormalizer lives in agents package, calls MCP via HTTP.** This maintains the 3-layer boundary. The denormalizer is NOT part of integrations -- it's the outbound equivalent of adapters, which also live in the agents package.
+**Core mechanism: task state change triggers signal dispatch.**
+
+When a task transitions to a terminal state (completed, failed, cancelled), the system fires a signal to `callback_conversation_id`. This is a new subscriber on the task state change, not a modification to the ConversationExecutor.
+
+```
+packages/agents/src/shared/services/task-signal-dispatcher.ts
+
+Interface:
+  TaskSignalDispatcher:
+    initialize(): void  // subscribes to task events
+    close(): void       // unsubscribes
+```
+
+**How it works:**
+
+```
+Task state changes (via task:complete_task, task:pause_task, etc.)
+  |
+  v
+TaskService emits state change (new: add EventEmitter or event log append)
+  |
+  v
+TaskSignalDispatcher catches state change
+  |
+  v
+If task.callback_conversation_id exists:
+  |
+  v
+ConversationExecutor.signal(callbackConversationId, {
+  type: 'task_completed' | 'task_failed' | 'task_clarification',
+  data: { taskId, status, summary, artifacts },
+  source: 'task-system'
+})
+```
+
+**Implementation approach for task state change notification:** Two options:
+
+1. **EventEmitter on TaskService** (recommended) -- TaskService gains an `on('stateChange', handler)` method. TaskSignalDispatcher subscribes at bootstrap. Lightweight, in-process, follows the EventLog subscriber pattern.
+
+2. **Database trigger + pg_notify** -- Postgres LISTEN/NOTIFY on task status changes. Heavier, but survives process restarts. Overkill for v1 where all services are in one process.
+
+Recommend option 1 for simplicity. The TaskService emits after successful `update()` or `transitionWithHandoff()`.
+
+**Signal types added:**
+
+| Signal Type | When | Payload |
+|-------------|------|---------|
+| `delegation_response` | Target responds to delegation | `{ accepted, estimate?, reason? }` |
+| `task_completed` | Delegated task finishes | `{ taskId, summary, artifacts }` |
+| `task_failed` | Delegated task fails | `{ taskId, reason, partialResults? }` |
+| `task_clarification` | Target needs more info | `{ taskId, question }` |
+| `task_timeout` | Estimated time exceeded | `{ taskId, elapsedMs, estimatedMs }` |
+
+These are domain-typed signals exactly like existing `approval`, `pr_review`, etc. -- the signal infrastructure handles them identically.
+
+**Timeout mechanism:** Uses existing pg-boss TimeoutScheduler. When the delegator accepts an estimate, it calls `wait_for` with a timeout matching the estimate. If the timeout fires before completion, the delegator receives `task_timeout` and decides to keep waiting, cancel, or escalate. Zero new timeout infrastructure needed.
+
+**Orphan handling:** If `signal()` returns `rejected` (conversation in terminal state), the TaskSignalDispatcher logs an `orphaned_completion` event to the event log. Dashboard can query these for visibility.
+
+### 5. Linear Agent SDK Migration
+
+**Where it lives:** `@aesir/integration-linear` -- modifies existing OAuth, adds new MCP tools, updates webhook handling.
+
+**Confidence:** MEDIUM -- Linear Agent APIs are in "Developer Preview" per [Linear docs](https://linear.app/developers/agents). API surface may change. All implementation should be behind feature flags.
+
+**OAuth changes (`linear/src/oauth/flow.ts`):**
+
+Current: `createLinearClientFromDatabase()` uses user OAuth token.
+New: Add `actor=app` parameter to authorization URL, request `app:assignable` + `app:mentionable` scopes.
+
+```typescript
+// OAuth URL modification
+const authUrl = `https://linear.app/oauth/authorize?${params.toString()}&actor=app`;
+```
+
+The `actor=app` parameter makes Linear create a dedicated app user in the workspace. This user appears in mention menus and can be assigned issues. The access token represents the app, not the installing user.
+
+**New MCP tools (replace `create_comment` for agent sessions):**
+
+```
+linear:create_agent_activity
+  Input: { agentSessionId, type, body?, action?, parameter?, result? }
+  Maps to: linearClient.createAgentActivity({ agentSessionId, content })
+  Activity types: thought, response, elicitation, action, error
+
+linear:update_agent_session
+  Input: { agentSessionId, state?, externalUrl? }
+  Maps to: linearClient.agentSessionUpdate(...)
+```
+
+**ReplyContext extension:**
+
+```typescript
+// LinearReplyContextSchema gains agentSessionId
+export const LinearReplyContextSchema = z.object({
+  channel: z.literal("linear"),
+  issueId: z.string(),
+  agentSessionId: z.string().optional(), // NEW: for agent activity routing
+});
+```
+
+**Denormalizer modification:**
+
+When `replyContext.agentSessionId` is present, the denormalizer routes to `linear:create_agent_activity` instead of `linear:create_comment`. The communication-to-activity type mapping:
+
+| Communication Intent | Activity Type |
+|---------------------|---------------|
+| `reply` | `response` |
+| `ask` | `elicitation` |
+| `notify` | `thought` |
+
+**Webhook handling changes:**
+
+- `agent_session.created` -- already handled, but adapter now extracts `agentSessionId` into replyContext
+- `agent_session.prompted` -- already handled as `agent_prompt`, replyContext now includes `agentSessionId`
+- Echo filter removal -- `LINEAR_BOT_USER_ID` filtering in webhooks becomes unnecessary since agent activities and user prompts are structurally distinct types
+
+**Agent session tracking:** The `agentSessionId` is carried in the `replyContext` (already persisted in the `reply_context` JSONB column on conversations). No new table needed -- the session ID flows through the existing replyContext pipeline.
+
+### 6. Delegation Graph Observability
+
+**Where it lives:** Dashboard reads from existing + new tables, agent-service exposes new API endpoints.
+
+**Data sources -- no new tables needed:**
+
+The delegation graph is fully derivable from existing data:
+- `agents.tasks` -- tree structure via `parent_id`, with new `callback_conversation_id`
+- `agents.task_handoffs` -- handoff events in the delegation chain
+- `agents.conversations` -- linked via `task_id`
+- `agents.agent_events` -- signal delivery, lifecycle events
+- `agents.knowledge_entries` -- knowledge shared during delegation
+
+**New API endpoints on agent-service:**
+
+```
+GET /api/tasks/:taskId/tree
+  Returns: full task tree with subtasks, statuses, linked conversations
+
+GET /api/tasks/:taskId/timeline
+  Returns: chronological delegation events across the tree
+
+GET /api/tasks/:taskId/signals
+  Returns: signals exchanged between conversations in the tree
+```
+
+These endpoints query across tasks, conversations, and events using existing indexed columns (`parent_id`, `task_id`, `conversation_id`).
+
+**Dashboard additions:**
+
+```
+packages/dashboard/src/
+  app/tasks/[taskId]/tree/page.tsx      -- task tree view
+  components/task-tree.tsx               -- tree visualization component
+  components/delegation-timeline.tsx     -- chronological event view
+  components/signal-flow.tsx             -- signal edges between conversations
+  services/task-tree.ts                  -- data fetching for tree queries
+```
+
+Dashboard mirrors the new tables in its local `lib/schema.ts` (read-only copies, same pattern as existing).
+
+---
+
+## Data Flow Diagrams
+
+### Delegation Flow (Agent-to-Agent)
+
+```
+Product-Agent conversation
+  |
+  | 1. directory:find("implement code changes")
+  |    -> DirectoryService.find() -> returns dev-agent
+  |
+  | 2. task:delegate({target: "dev-agent", description: "..."})
+  |    -> TaskService.create({parentId, callbackConversationId})
+  |    -> MaterializationLayer.materialize(task, entity)
+  |       -> ConversationExecutor.start({agentDefinitionId: "dev-agent", taskId})
+  |    -> Agent calls wait_for({type: "delegation_response"})
+  |
+  v
+Dev-Agent conversation (new, with task context injected)
+  |
+  | 3. Evaluates task, calls task:respond({accept: true, estimate: "30m"})
+  |    -> TaskService.update(taskId, {status: "active"})
+  |    -> Signal dispatched to product-agent: {type: "delegation_response", data: {accepted: true}}
+  |
+  v
+Product-Agent resumes
+  |
+  | 4. Reads acceptance, calls wait_for({type: "task_completed", timeout: "30m"})
+  |
+  v
+Dev-Agent works... completes... calls task:complete_task
+  |
+  | 5. TaskService.transitionWithHandoff(taskId, "completed", handoff)
+  |    -> TaskSignalDispatcher fires signal to callbackConversationId
+  |    -> Signal: {type: "task_completed", data: {summary, artifacts}}
+  |
+  v
+Product-Agent resumes with completion results
+```
+
+### Knowledge Flow
+
+```
+Dev-Agent discovers architecture pattern
+  |
+  | knowledge:store({
+  |   type: "architecture_decision",
+  |   topic: "auth middleware",
+  |   content: "JWT-based, located at src/middleware/auth.ts",
+  |   confidence: 0.95
+  | })
+  |    -> KnowledgeService.store()
+  |    -> Generates embedding
+  |    -> Inserts into agents.knowledge_entries
+  |
+  v
+Later: Different QA-Agent conversation
+  |
+  | knowledge:query({ query: "what do we know about authentication?" })
+  |    -> KnowledgeService.query()
+  |    -> Semantic search via cosine distance on embedding
+  |    -> Filters: scope='shared', not expired, not superseded
+  |    -> Returns ranked results
+  |
+  v
+QA-Agent has context without re-discovering
+```
+
+### Linear Agent SDK Flow
+
+```
+User mentions @aesir-agent on Linear issue
+  |
+  v
+Linear webhook: agent_session.created
+  payload: { issueId, agentSessionId, promptContext }
+  |
+  v
+Linear Integration (port 3001)
+  -> Webhook verification
+  -> NormalizedEvent to agent-service POST /events
+  |
+  v
+Linear Adapter
+  -> Extracts issueId, agentSessionId
+  -> ReplyContext: { channel: "linear", issueId, agentSessionId }
+  |
+  v
+EventRouter -> start dev-agent conversation
+  |
+  v
+Dev-Agent works, calls communication:reply
+  |
+  v
+Denormalizer checks replyContext.agentSessionId
+  YES -> callMcpTool("linear", "create_agent_activity", {
+           agentSessionId, content: { type: "response", body: text }
+         })
+  NO  -> callMcpTool("linear", "create_comment", { issueId, body: text })
+  |
+  v
+Agent appears in Linear UI with native activity types
+```
+
+---
+
+## Component Boundaries
+
+| Component | Responsibility | Communicates With |
+|-----------|---------------|-------------------|
+| **KnowledgeService** | Store/query/update knowledge entries, manage embeddings, enforce scope | DB (agents.knowledge_entries), Embedding API |
+| **DirectoryService** | Entity CRUD, capability-based semantic search | DB (agents.entity_directory), Embedding API |
+| **MaterializationLayer** | Dispatch delegated tasks to appropriate channel based on entity type | ConversationExecutor, Slack MCP, Linear MCP |
+| **TaskSignalDispatcher** | React to task state changes, fire signals to callback conversations | TaskService (events), ConversationExecutor.signal() |
+| **Knowledge tools** (`knowledge:*`) | Agent-facing interface to KnowledgeService | KnowledgeService via ToolRegistry |
+| **Directory tools** (`directory:*`) | Agent-facing interface to DirectoryService | DirectoryService via ToolRegistry |
+| **Delegation tool** (`task:delegate`) | Composite: create task + materialize + wait | TaskService, DirectoryService, MaterializationLayer |
+| **Response tool** (`task:respond`) | Negotiation: accept/reject delegation | TaskService, ConversationExecutor.signal() |
+| **Linear activity MCP tools** | `create_agent_activity`, `update_agent_session` | Linear SDK (via OAuth app token) |
+| **Updated denormalizer** | Routes to activity tools when agentSessionId present | Linear MCP (activity or comment) |
+
+---
+
+## New Tables, Migrations, Indexes Summary
+
+### New Tables
+
+| Table | Schema | Purpose |
+|-------|--------|---------|
+| `agents.knowledge_entries` | Phase 71 | Shared knowledge store with vector embeddings |
+| `agents.entity_directory` | Phase 72 | Entity directory (agents + humans) |
+
+### Table Modifications
+
+| Table | Change | Phase |
+|-------|--------|-------|
+| `agents.tasks` | Add `callback_conversation_id TEXT`, `delegation_depth INTEGER DEFAULT 0`, `expectations JSONB` | Phase 73 |
+| `agents.tasks` | Add index `idx_tasks_callback` on `callback_conversation_id` | Phase 73 |
+
+### Migration Plan
+
+```
+Phase 70: No schema changes (Linear integration only)
+Phase 71: Migration 1 - CREATE EXTENSION vector; CREATE TABLE agents.knowledge_entries with indexes
+Phase 72: Migration 2 - CREATE TABLE agents.entity_directory with indexes
+Phase 73: Migration 3 - ALTER TABLE agents.tasks ADD COLUMN callback_conversation_id, delegation_depth, expectations
+Phase 74: No schema changes (uses existing signal infrastructure)
+Phase 75: No schema changes (reads from existing tables)
+Phase 76: No schema changes (new agent definition only)
+```
+
+**Important: pgvector extension must be created before knowledge_entries table.** The migration must include `CREATE EXTENSION IF NOT EXISTS vector;` before the table creation. This requires superuser or extension-creation privileges on the Postgres instance. Docker Compose Postgres image has this by default; managed services (RDS, Cloud SQL) require enabling the extension via console/CLI first.
+
+### Existing Schema Retention
+
+Per CLAUDE.md: `schema.drizzle.ts` retains old table definitions to prevent destructive DROP TABLE migrations. New tables must be added to BOTH `schema.ts` (runtime) and `schema.drizzle.ts` (drizzle-kit migration generation).
+
+---
+
+## New vs Modified Components
+
+### New Components (create from scratch)
+
+| Component | Location | Phase |
+|-----------|----------|-------|
+| `KnowledgeService` | `agents/src/shared/services/knowledge-service.ts` | 71 |
+| Knowledge tools (3) | `agents/src/shared/tools/knowledge/` | 71 |
+| `DirectoryService` | `agents/src/shared/services/directory-service.ts` | 72 |
+| Directory tools (2) | `agents/src/shared/tools/directory/` | 72 |
+| Seed directory script | `agents/scripts/seed-directory.ts` | 72 |
+| `MaterializationLayer` | `agents/src/shared/services/materialization.ts` | 73 |
+| `task:delegate` tool | `agents/src/shared/tools/task/delegate.ts` | 73 |
+| `task:respond` tool | `agents/src/shared/tools/task/respond.ts` | 73 |
+| `TaskSignalDispatcher` | `agents/src/shared/services/task-signal-dispatcher.ts` | 74 |
+| Linear activity MCP tools | `linear/src/mcp/tools/activities.ts` | 70 |
+| Task tree API endpoints | `agents/src/service/api/task-tree.ts` | 75 |
+| Dashboard task tree views | `dashboard/src/app/tasks/`, `dashboard/src/components/task-*` | 75 |
+| QA agent definition | `agents/definitions/qa-agent/` | 76 |
+
+### Modified Components (extend existing)
+
+| Component | Location | Change | Phase |
+|-----------|----------|--------|-------|
+| `tool-factories.ts` | `agents/src/framework/` | Register knowledge:*, directory:*, task:delegate, task:respond | 71-73 |
+| `RegisterAllToolsOptions` | `agents/src/framework/tool-factories.ts` | Add knowledgeService, directoryService, materializationLayer | 71-73 |
+| `schema.ts` | `agents/src/shared/db/` | Add knowledge_entries, entity_directory tables; extend tasks | 71-73 |
+| `schema.drizzle.ts` | `agents/src/shared/db/` | Mirror schema.ts changes for drizzle-kit | 71-73 |
+| `main.ts` | `agents/src/service/` | Bootstrap new services, pass to registerAllTools | 71-74 |
+| `api/router.ts` | `agents/src/service/api/` | Mount task tree API routes | 75 |
+| `AgentDefinitionYamlSchema` | `agents/src/framework/types.ts` | Add optional `capabilities` field | 72 |
+| `LinearReplyContextSchema` | `agents/src/shared/communication/types.ts` | Add optional `agentSessionId` | 70 |
+| `denormalizer.ts` | `agents/src/shared/communication/` | Route to activity tools when agentSessionId present | 70 |
+| `linear/src/oauth/flow.ts` | Linear integration | Add `actor=app` to auth URL | 70 |
+| `linear/src/mcp/server.ts` | Linear integration | Register new activity tools | 70 |
+| `linear/src/mcp/schemas.ts` | Linear integration | Add activity schemas | 70 |
+| `linear/scripts/seed-permissions.ts` | Linear integration | Add permissions for new tools | 70 |
+| `agents/src/adapters/linear.ts` | Agents adapters | Extract agentSessionId into replyContext | 70 |
+| Agent definition YAMLs | `agents/definitions/*/definition.yaml` | Add capabilities, new tool refs | 72-76 |
+| Agent prompts | `agents/definitions/*/prompt.md` | Add delegation/knowledge guidance | 71-76 |
+| Dashboard `lib/schema.ts` | Dashboard | Mirror new agents schema tables | 75 |
+| TaskService | `agents/src/shared/services/task-service.ts` | Add EventEmitter for state changes | 74 |
+
+---
 
 ## Patterns to Follow
 
-### Pattern 1: Adapter Symmetry
+### Pattern 1: Service Factory with Tool Adapter
 
-**What:** Inbound adapters normalize integration-specific payloads into domain events. Outbound denormalizers do the reverse -- domain actions into integration-specific tool calls.
+**What:** New services (KnowledgeService, DirectoryService) follow the existing `createService(options)` factory pattern. Tools use adapter functions to bridge ToolContext to service dependencies.
 
-**When:** Any time the agent needs to communicate with a human through an integration.
-
-**Architecture:**
-```
-Adapter (inbound):  Integration payload -> IncomingEvent { type, data, replyContext }
-Denormalizer (out):  DenormalizeAction { action, replyContext, content } -> callMcpTool(...)
-```
-
-Both live in the agents package. Both use MCP HTTP as the transport. Neither imports integration SDKs.
-
-### Pattern 2: Opaque Context Pass-Through
-
-**What:** The agent receives `replyContext` as a JSON object inside an XML tag. It passes it back to `communication:reply` without parsing or modifying it. The denormalizer is the only component that inspects the `channel` discriminant.
-
-**When:** Signal delivery and reply routing.
-
-**Why:** Agents should reason about WHAT to communicate, not WHERE. The infrastructure handles channel routing. This decouples agent behavior from integration specifics and makes it trivial to add new channels -- only the adapters, denormalizer, and integration MCP tools need changes, not the agents.
-
-### Pattern 3: Additive Tool Registration
-
-**What:** New `communication:*` tools are registered alongside existing `slack:*`, `linear:*` tools. The old tools remain available in the registry for the router and for backward compatibility.
-
-**When:** Any tool namespace addition.
-
-**Why:** The router uses `slack:send_message` directly (in `send-message.ts`) for system alerts. Removing the Slack tools from the registry would break the router. Only agent definitions change -- the registry stays additive.
-
-### Pattern 4: Channel-Specific Capability Adaptation
-
-**What:** The denormalizer adapts to each channel's capabilities. `ask()` with options renders as Block Kit buttons on Slack, but as text instructions on Linear and GitHub (which don't support interactive UI).
-
-**When:** The `ask` tool is called with `options` array.
+**When:** Always -- this is the established pattern for all services in Aesir.
 
 **Example:**
-```
-Slack: send_approval_request with Block Kit buttons
-Linear: create_comment with "- **Approve**: reply 'approve'\n- **Reject**: reply 'reject'"
-GitHub: create_pr_comment with similar text fallback
-```
-
-## Anti-Patterns to Avoid
-
-### Anti-Pattern 1: Embedding Channel Logic in Agents
-
-**What:** Agents calling `slack:send_message` or `linear:create_comment` directly when they should use `communication:reply`.
-
-**Why bad:** Creates O(agents x integrations) complexity. Every new channel means updating every agent's tools and prompts. The agent reasons about channels instead of intent.
-
-**Instead:** Agents use domain-language tools (`communication:reply/ask/notify`) and let the denormalizer handle channel dispatch.
-
-### Anti-Pattern 2: Stripping replyContext at Pipeline Boundaries
-
-**What:** A pipeline stage receives replyContext but doesn't propagate it to the next stage. Most likely to happen at the router slow-path LLM -> `signal_conversation` boundary, or at the executor signal -> user message boundary.
-
-**Why bad:** Breaks the round-trip. Agent cannot reply to the originating channel.
-
-**Instead:** Every pipeline stage that handles events or signals must propagate replyContext. Test each boundary explicitly.
-
-### Anti-Pattern 3: Agent Parsing replyContext
-
-**What:** Agent prompts instructing the agent to extract fields from replyContext (e.g., "check the channel field to decide if this is Slack or Linear").
-
-**Why bad:** Defeats the purpose of channel abstraction. The agent should not reason about channels.
-
-**Instead:** Agent treats replyContext as opaque. It receives it from signal messages and passes it back to communication tools unchanged. The denormalizer is the only component that inspects the structure.
-
-### Anti-Pattern 4: Adding Communication Logic to the Executor
-
-**What:** Having the conversation executor automatically reply to signals (e.g., "when signal is received, auto-reply with acknowledgment").
-
-**Why bad:** Violates agent-first principles. The AGENT decides when and what to communicate. The executor manages conversation lifecycle, not communication behavior.
-
-**Instead:** The executor's only new responsibility is injecting replyContext into the signal user message. The agent decides whether to call `reply()`.
-
-## Scalability Considerations
-
-| Concern | Current State | After v2.6 | At Scale |
-|---------|--------------|------------|----------|
-| Adding a new channel | N/A (hardcoded to Slack) | Add adapter replyContext + denormalizer case + MCP tool | Same -- O(1) per new channel |
-| Adding a new agent | Copy/adapt channel tool list + prompt | Add communication:* tools (3 lines in YAML) | Same -- O(1) per new agent |
-| MCP call overhead | 1 callMcpTool per outbound message | Same -- denormalizer calls 1 callMcpTool | Same |
-| replyContext size | N/A | ~100-200 bytes per signal in user message | Negligible vs token budget |
-| Tool count per agent | 20 (dev-agent), 11 (product-agent) | 21 (dev-agent), 13 (product-agent) | Net +1/+2 tools after swap |
-
-## Inventory: Modified vs New Files
-
-### New Files (7)
-
-| File | Layer | Purpose |
-|------|-------|---------|
-| `shared/tools/communication/types.ts` | Agents | ReplyContext, NotifyTarget, MessageContent, CommunicationToolDeps types |
-| `shared/tools/communication/denormalizer.ts` | Agents | Outbound dispatch: action + replyContext -> callMcpTool |
-| `shared/tools/communication/reply.ts` | Agents | communication:reply tool factory |
-| `shared/tools/communication/ask.ts` | Agents | communication:ask tool factory |
-| `shared/tools/communication/notify.ts` | Agents | communication:notify tool factory |
-| `shared/tools/communication/index.ts` | Agents | Barrel export |
-| `integrations/github/src/mcp/tools/comments.ts` | Integration | handleCreatePRComment handler |
-
-### Modified Files (16)
-
-| File | Layer | Change |
-|------|-------|--------|
-| `adapters/types.ts` | Agents | Add `replyContext` to IncomingEventSchema |
-| `adapters/slack.ts` | Agents | Attach replyContext on thread_reply, block_actions, app_mention |
-| `adapters/linear.ts` | Agents | Attach replyContext on comment_created, agent_session |
-| `adapters/github.ts` | Agents | Attach replyContext on pr_review, pr_merged, pr_closed |
-| `framework/types.ts` | Agents | Add `replyContext` to SignalSchema |
-| `framework/tool-factories.ts` | Agents | Register communication:* + linear:create_comment tools, add communicationAdapter |
-| `framework/conversation-executor.ts` | Agents | Include replyContext XML tag in signal user messages |
-| `shared/tools/integration/linear-tools.ts` | Agents | Add linear:create_comment wrapper |
-| `router/tools/signal-conversation.ts` | Agents | Add optional replyContext to input schema |
-| `router/system-prompt.ts` | Agents | replyContext propagation guidance, Linear comment routing |
-| `integrations/linear/src/mcp/server.ts` | Integration | Register create_comment in ListTools + CallTool |
-| `integrations/github/src/mcp/server.ts` | Integration | Register create_pr_comment in ListTools + CallTool |
-| `integrations/github/src/mcp/schemas.ts` | Integration | Add CreatePRCommentInputSchema |
-| `definitions/dev-agent/definition.yaml` | Agent Def | Swap slack:* for communication:* |
-| `definitions/dev-agent/prompt.md` | Agent Def | Domain-language communication guidance |
-| `definitions/product-agent/definition.yaml` | Agent Def | Swap slack:send_message for communication:* |
-| `definitions/product-agent/prompt.md` | Agent Def | Domain-language communication guidance |
-
-## Suggested Build Order
-
-The build order is driven by dependencies: types must exist before they can be used, integration MCP tools must exist before the denormalizer can call them, and the denormalizer must exist before communication tools can call it.
-
-### Phase 1: Types and MCP Prerequisites
-
-**Goal:** Define all types and expose missing integration MCP tools. No agent behavior changes yet.
-
-1. **Communication types** (`shared/tools/communication/types.ts`)
-   - ReplyContext, NotifyTarget, MessageContent, CommunicationToolDeps
-   - ReplyContextSchema (Zod) for validation in tool input schemas
-   - No dependencies on other new code
-
-2. **Linear MCP: Expose create_comment** (`integrations/linear/src/mcp/server.ts`)
-   - Add `create_comment` to ListToolsRequestSchema handler (tool definition JSON)
-   - Add `case "create_comment"` to CallToolRequestSchema handler
-   - Handler already exists and is tested (`handleCreateComment`)
-   - Add `linear:create_comment` wrapper to `shared/tools/integration/linear-tools.ts`
-   - Register in `tool-factories.ts`
-
-3. **GitHub MCP: Add create_pr_comment** (`integrations/github/`)
-   - Add `CreatePRCommentInputSchema` to `schemas.ts`
-   - Create `handleCreatePRComment` in `tools/comments.ts` (new file)
-   - Uses `octokit.rest.issues.createComment` (PR comments are issue comments in GitHub API)
-   - Register in `server.ts` ListTools + CallTool handlers
-   - Add `github:create_pr_comment` wrapper to `shared/tools/integration/github-tools.ts`
-   - Register in `tool-factories.ts`
-
-**Why this order:** Types have no deps. Linear create_comment is mostly wiring (handler exists). GitHub create_pr_comment is a new handler but follows established patterns exactly.
-
-### Phase 2: Inbound Pipeline Extension
-
-**Goal:** Thread replyContext through the entire inbound pipeline from adapters through signals to agent messages.
-
-4. **Extend IncomingEvent** (`adapters/types.ts`)
-   - Add `replyContext: ReplyContextSchema.optional()` to IncomingEventSchema
-   - Import ReplyContextSchema from communication types
-
-5. **Extend adapters** (`adapters/slack.ts`, `linear.ts`, `github.ts`)
-   - Slack: attach replyContext on `thread_reply`, `block_actions.*`, `app_mention`
-   - Linear: attach replyContext on `issue_comment`, `agent_session.created`
-   - GitHub: attach replyContext on `pr_review`, `pr_merged`, `pr_closed`
-
-6. **Extend Signal schema** (`framework/types.ts`)
-   - Add `replyContext: ReplyContextSchema.optional()` to SignalSchema
-
-7. **Extend signal delivery** (`framework/conversation-executor.ts`)
-   - When building signal user message, append `<reply_context>` XML tag if signal has replyContext
-   - Also update the worker-loop.ts signal consumption (line 672) for queued signal auto-resume
-
-8. **Extend router signal tool** (`router/tools/signal-conversation.ts`)
-   - Add optional `replyContext` field to `SignalConversationInputSchema`
-   - Propagate to `signal` object passed to `executor.signal()`
-
-9. **Update router system prompt** (`router/system-prompt.ts`)
-   - Instruct LLM to propagate replyContext from event data to signal_conversation calls
-   - Add Linear comment reopen flow (query status, reopen if completed)
-
-**Why this order:** IncomingEvent schema first (adapters depend on it), then adapters (signal depends on adapter output), then Signal schema (executor depends on it), then executor (agents depend on signal messages), then router (wires adapters to signals).
-
-### Phase 3: Outbound Denormalizer and Tools
-
-**Goal:** Build the denormalizer and communication tools. Agents can now use them.
-
-10. **Denormalizer** (`shared/tools/communication/denormalizer.ts`)
-    - `denormalize(action, deps)` function
-    - Switch on `replyContext.channel`: slack, linear, github handlers
-    - Each handler calls `callMcpTool` with correct integration, tool, and params
-    - Slack: `reply_to_thread` for reply, `send_approval_request` for ask+options, `send_message` for notify
-    - Linear: `create_comment` for all actions
-    - GitHub: `create_pr_comment` for all actions
-
-11. **Communication tools** (`shared/tools/communication/reply.ts`, `ask.ts`, `notify.ts`)
-    - Each creates a `ToolDefinition` with Zod input schema and execute function
-    - Execute validates input, calls `denormalize()`, returns result
-    - Barrel export from `index.ts`
-
-12. **Register communication tools** (`framework/tool-factories.ts`)
-    - Add `communicationAdapter` function
-    - Register `communication:reply`, `communication:ask`, `communication:notify`
-    - Update tool count comment (34 -> 38: +3 communication, +1 linear:create_comment)
-
-**Why this order:** Denormalizer is pure (no framework deps). Tools depend on denormalizer. Registration wires them in.
-
-### Phase 4: Agent Migration
-
-**Goal:** Switch agents from channel-specific to domain-language communication.
-
-13. **Update agent definitions** (`definitions/*/definition.yaml`)
-    - dev-agent: remove `slack:send_message`, `slack:send_approval_request`; add `communication:reply`, `communication:ask`, `communication:notify`
-    - product-agent: remove `slack:send_message`; add `communication:reply`, `communication:ask`, `communication:notify`
-
-14. **Update agent prompts** (`definitions/*/prompt.md`)
-    - Replace channel-specific communication guidance with domain-language patterns
-    - Explain replyContext pass-through: "use the replyContext from the signal message"
-    - Explain notify for escalation: "when no replyContext is available, use notify with a target channel"
-
-**Why this order:** YAML changes are safe to make last -- if anything in Phase 1-3 is wrong, the agents still work with old tools. Prompt changes should happen alongside YAML changes since they reference the same tools.
-
-### Phase 5: Testing and Validation
-
-15. **Unit tests**
-    - Denormalizer dispatch: each channel routes to correct MCP tool
-    - Format adaptation: ask+options renders differently per channel
-    - replyContext propagation: adapter -> IncomingEvent -> Signal -> user message
-    - Each communication tool validates input correctly
-
-16. **Integration tests**
-    - Full round-trip: Slack event -> signal with replyContext -> agent reply -> correct MCP call
-    - Cross-channel: Linear comment signal -> agent reply -> linear:create_comment called
-    - Missing replyContext: agent uses notify() gracefully
-
-### Dependency Graph
-
-```
-Phase 1: Types + MCP Prerequisites          (no deps)
-    |
-    v
-Phase 2: Inbound Pipeline Extension         (depends on Phase 1 types)
-    |
-    v
-Phase 3: Outbound Denormalizer + Tools       (depends on Phase 1 MCP tools)
-    |
-    v
-Phase 4: Agent Migration                     (depends on Phase 2 + 3)
-    |
-    v
-Phase 5: Testing                             (depends on all)
-```
-
-**Parallelism opportunity:** Phase 2 (inbound) and Phase 3 (outbound) can be built in parallel after Phase 1 types are defined. They don't depend on each other -- Phase 2 threads replyContext through the pipeline, Phase 3 consumes it. They converge in Phase 4 when agents are updated to use both.
-
-## Critical Integration Points
-
-### 1. Adapter -> IncomingEvent (replyContext attachment)
-
-Each adapter constructs replyContext from event payload fields that already exist:
-
-- **Slack**: `channelId` and `threadTs` are already in the payload (verified in `adaptSlackEvent`, lines 130-141)
-- **Linear**: `issueId` is already in the payload (verified in `adaptLinearEvent`, lines 66-77)
-- **GitHub**: `prNumber` is already in the payload, but `owner` and `repo` are NOT currently in the payload. The GitHub adapter needs the router or enrichment step to inject owner/repo, or these must be added to the GitHub webhook NormalizedEvent payload.
-
-**Flag:** GitHub adapter lacks `owner` and `repo` in the payload. These are available in the GitHub webhook payload (`repository.owner.login`, `repository.name`) but may not be propagated through the NormalizedEvent. This needs verification in `packages/integrations/github/src/webhooks/` to confirm what fields are available. Alternatively, the GitHub integration knows its configured owner from env config -- the agent-service could read it from env, or the GitHub webhook normalizer could include it.
-
-### 2. Signal Schema -> Executor (replyContext in user message)
-
-The signal delivery in `conversation-executor.ts` (line 388) needs to change from:
 
 ```typescript
-const signalContent = signal.message ??
-  `Signal received: ${signal.type}. Data: ${JSON.stringify(signal.data ?? {})}`;
-```
+// Service factory (same as createTaskService)
+export function createKnowledgeService(options: KnowledgeServiceOptions): KnowledgeService {
+  const { db, logger } = options;
+  if (!db) throw new Error("db is required for KnowledgeService");
+  if (!logger) throw new Error("logger is required for KnowledgeService");
 
-To something like:
+  return {
+    async store(params) { /* ... */ },
+    async query(params) { /* ... */ },
+    async health() { /* ... */ },
+    async close() { /* ... */ },
+  };
+}
 
-```typescript
-let signalContent = signal.message ??
-  `Signal received: ${signal.type}. Data: ${JSON.stringify(signal.data ?? {})}`;
-if (signal.replyContext) {
-  signalContent += `\n\n<reply_context>${JSON.stringify(signal.replyContext)}</reply_context>`;
+// Tool adapter (same as task tools)
+function knowledgeAdapter(
+  createFn: (ks: KnowledgeService, ctx: ToolContext) => ToolDefinition,
+  knowledgeService: KnowledgeService,
+): (ctx: ToolContext) => ToolDefinition {
+  return (ctx: ToolContext) => createFn(knowledgeService, ctx);
 }
 ```
 
-**Same change needed in worker-loop.ts** at line 672 (queued signal consumption) and line 919 (queued signal consumption at pause point). These are three separate locations where signal content is built -- all three must include replyContext.
+### Pattern 2: Signal-Based Inter-Conversation Communication
 
-### 3. Router Slow-Path -> signal_conversation (replyContext forwarding)
+**What:** Conversations communicate via signals through the existing ConversationExecutor.signal() mechanism. Task lifecycle events trigger signals to callback conversations.
 
-The router LLM receives the IncomingEvent as context. The slow-path (`routeViaAgentLoopV2`) passes the full event to the LLM. The LLM then calls `signal_conversation` -- but currently the `signal_conversation` tool has no `replyContext` field in its input schema.
+**When:** Whenever one conversation needs to notify another (delegation response, task completion, clarification requests).
 
-Two approaches:
-- **Option A:** Add replyContext to signal_conversation input schema. The LLM extracts it from the event and passes it through. Risk: LLM might not consistently do this.
-- **Option B:** The `routeViaAgentLoopV2` function extracts replyContext from the IncomingEvent and auto-attaches it to any signal_conversation call. Risk: requires intercepting tool outputs.
-
-**Recommendation:** Option A is simpler and consistent with the agent-first principle. Add the field, update the router system prompt to explain it, and validate in testing. If the LLM inconsistently passes it, add deterministic extraction as a fallback in a subsequent iteration.
-
-### 4. Task Router Path (replyContext bypass)
-
-The task-aware routing path in `router.ts` (line 87-101) builds signals directly without going through the slow-path LLM:
+**Example:**
 
 ```typescript
-const signal = {
-  type: event.type,
-  data: event.data,
-  message: event.message,
-  source: event.source,
-  deduplicationId: event.deduplicationId,
-};
+// TaskSignalDispatcher subscribes to task state changes
+const dispatcher = createTaskSignalDispatcher({
+  executor,  // for signal()
+  taskService,  // for task lookups
+  eventLog,  // for orphan logging
+  logger,
+});
+
+// When task completes:
+await executor.signal(task.callback_conversation_id, {
+  type: "task_completed",
+  data: { taskId: task.id, summary: handoff.context.summary },
+  source: "task-system",
+});
 ```
 
-This must be updated to include:
+### Pattern 3: Denormalizer Extension for New Channels
+
+**What:** The outbound denormalizer gains a new dispatch path for Linear agent activities, following the existing channel-based routing pattern.
+
+**When:** Extending the denormalizer for any new outbound delivery mechanism.
+
+**Example:**
+
 ```typescript
-...(event.replyContext && { replyContext: event.replyContext }),
+// denormalizer.ts extension
+case "linear": {
+  if (replyContext.agentSessionId) {
+    // Agent SDK path: use activity types
+    return callMcpTool({
+      integration: "linear",
+      tool: "create_agent_activity",
+      params: {
+        agentSessionId: replyContext.agentSessionId,
+        content: { type: activityType, body: text },
+      },
+      ...mcpBase,
+    });
+  }
+  // Legacy path: comment on issue
+  return callMcpTool({ /* existing create_comment call */ });
+}
 ```
 
-**This is a one-line change but critical** -- without it, task-routed events lose their replyContext even though the adapter attached it.
+### Pattern 4: Seed Scripts for Data Initialization
 
-### 5. Fast-Path Signal Delivery (EventRouter)
+**What:** New seed scripts follow the existing pattern from `seed:permissions` -- standalone tsx scripts that use `loadEnvFromRoot()`, connect to the database, and upsert data.
 
-The deterministic `EventRouter.handle()` produces routing decisions that include a `signal` field for signal routes. The EventRouter builds signals from IncomingEvent data. Currently, the `EventRouterRouteResult` for signal action includes the full Signal object -- this must include replyContext from the IncomingEvent.
+**When:** Initializing entity directory from YAML definitions, seeding permissions for new MCP tools.
 
-Check `event-router.ts` to verify how signals are constructed in the fast-path. If the EventRouter copies fields from IncomingEvent to Signal, replyContext propagation is automatic once both schemas have the field. If not, explicit forwarding is needed.
+**Example:**
+
+```typescript
+#!/usr/bin/env tsx
+import { loadEnvFromRoot } from "@aesir/platform";
+loadEnvFromRoot();
+
+// Read YAML definitions, extract capabilities, generate embeddings, upsert to DB
+```
+
+---
+
+## Anti-Patterns to Avoid
+
+### Anti-Pattern 1: Orchestrator-Driven Delegation
+
+**What:** Building a central orchestrator that decides which agent delegates to which.
+**Why bad:** Violates agent-first principles. Agents decide when to delegate through their tools and reasoning. A central orchestrator creates a bottleneck and single point of failure.
+**Instead:** Agents discover capabilities via `directory:find`, decide to delegate via their own judgment, and use `task:delegate` as a tool. The agent makes the decision; the infrastructure executes it.
+
+### Anti-Pattern 2: Separate Vector Database
+
+**What:** Running Pinecone, Weaviate, or Qdrant alongside Postgres for knowledge embeddings.
+**Why bad:** Operational complexity for low-volume use case. Consistency issues between Postgres metadata and external vector store. Extra infrastructure to deploy, monitor, and maintain.
+**Instead:** pgvector in existing Postgres. Single source of truth, transactional consistency, adequate performance for the expected volume (hundreds to low thousands of entries).
+
+### Anti-Pattern 3: Knowledge Store as Message Passing
+
+**What:** Using the knowledge store for real-time communication between agents instead of signals.
+**Why bad:** Knowledge is for persistent, queryable facts. Real-time coordination uses signals. Mixing these creates stale-data bugs where agents read knowledge entries that are mid-update.
+**Instead:** Signals for real-time coordination (delegation response, task completion). Knowledge for persistent facts that outlive conversations.
+
+### Anti-Pattern 4: Task Status as Framework Logic
+
+**What:** Adding `if (task.status === 'completed') { fireSignal() }` in the ConversationExecutor or WorkerLoop.
+**Why bad:** The executor manages conversation lifecycle, not task lifecycle. Mixing these creates coupling.
+**Instead:** TaskSignalDispatcher is a separate service that subscribes to task state changes and dispatches signals independently. The executor only knows about conversations and signals.
+
+### Anti-Pattern 5: Modifying ConversationExecutor for Delegation
+
+**What:** Adding delegation-specific methods or branching to the ConversationExecutor or WorkerLoop.
+**Why bad:** The executor is the most critical, most tested component. Adding delegation concerns increases its surface area and risk of regression.
+**Instead:** Delegation uses the existing `executor.start()` and `executor.signal()` methods. The MaterializationLayer and TaskSignalDispatcher sit alongside the executor, not inside it.
+
+---
+
+## Scalability Considerations
+
+| Concern | At Current Scale (~10 agents) | At 100 Agents | At 1000 Agents |
+|---------|------------------------------|---------------|----------------|
+| Knowledge entries | pgvector fine, no partitioning | pgvector fine, HNSW index handles 100K+ entries | Consider partitioning by workspace, HNSW tuning |
+| Directory queries | In-memory cache viable | pgvector search, ~5ms per query | pgvector with aggressive caching |
+| Delegation depth | Max 3 levels sufficient | May need deeper trees, cycle detection | Delegation graph analysis, depth limits |
+| Embedding generation | Sync call acceptable | Batch embedding for bulk operations | Async embedding queue |
+| Signal volume | Low, existing infra handles | Moderate, existing infra handles | May need dedicated signal queue |
+| Task tree queries | Simple recursive CTE | Indexed, millisecond range | Materialized task tree projection |
+
+---
+
+## Build Order Rationale
+
+```
+Phase 70 (Linear Agent SDK) + Phase 71 (Shared Memory) -- PARALLEL
+  |
+  v
+Phase 72 (Entity Directory)
+  Depends on: Phase 70 (agent identity must be resolved for directory)
+  |
+  v
+Phase 73 (Task Delegation)
+  Depends on: Phase 72 (agents need to discover who to delegate to)
+  |
+  v
+Phase 74 (Completion Signaling)
+  Depends on: Phase 73 (signals need tasks to signal about)
+  |
+  v
+Phase 75 (Delegation Graph Observability)
+  Depends on: Phase 74 (full lifecycle must exist before visualization)
+  |
+  v
+Phase 76 (QA Agent + Validation Workflow)
+  Depends on: Phase 75 (all infrastructure must be in place)
+```
+
+**Why this order:**
+
+1. **Phases 70+71 parallel** -- No dependencies between Linear SDK and knowledge store. Different packages, different concerns. Parallel execution cuts timeline.
+
+2. **Phase 72 after 70** -- The directory needs to know about agent identity. With `actor=app`, the agent has a real Linear identity that should be reflected in the directory. Building directory before agent identity is resolved risks misalignment.
+
+3. **Phase 73 after 72** -- Delegation requires knowing WHO to delegate to. Without the directory, delegation is blind. The directory enables informed delegation decisions.
+
+4. **Phase 74 after 73** -- Completion signaling only makes sense after delegation exists. The callback routing mechanism depends on task structure created in 73.
+
+5. **Phase 75 after 74** -- You cannot visualize what doesn't exist yet. Observability requires the full delegation lifecycle.
+
+6. **Phase 76 last** -- The QA agent exercises everything. Building it before the infrastructure is complete would require constant rework.
+
+---
+
+## Open Architecture Questions
+
+1. **Embedding provider choice** -- OpenAI `text-embedding-3-small` (1536 dims) is the pragmatic default. Anthropic does not yet offer an embeddings API. Should we use OpenAI, or a local embedding model (e.g., via Ollama) to avoid the external dependency? Trade-off: OpenAI is simpler but adds a dependency; local is self-contained but adds infra.
+
+2. **MaterializationLayer and ConversationExecutor coupling** -- The materializer needs access to `executor.start()`. Passing the executor to the materializer creates a circular-feeling dependency (executor -> tools -> materializer -> executor). In practice this is fine (it is a runtime call, not an import cycle), but the DI wiring in `main.ts` needs careful ordering.
+
+3. **Task state change notification mechanism** -- EventEmitter on TaskService vs. event log append with subscriber. EventEmitter is simpler but in-memory only. Event log approach is durable but heavier. For v1 where everything is one process, EventEmitter wins. If services split later, switch to event log.
+
+4. **Linear API stability** -- Agent SDK is "Developer Preview." Changes may require adaptation. All Linear Agent SDK code should be behind a feature flag (`LINEAR_AGENT_SDK_ENABLED=true`) so the system can fall back to comment-based communication.
+
+---
 
 ## Sources
 
-All findings are from direct codebase inspection. File paths and line numbers are verified against the current codebase as of 2026-02-08.
-
-| File | What Was Verified |
-|------|-------------------|
-| `packages/agents/src/framework/tool-factories.ts` | All 34 tool registrations, adapter patterns |
-| `packages/agents/src/framework/types.ts` | ToolContext, SignalSchema, ToolRegistry interfaces |
-| `packages/agents/src/framework/conversation-executor.ts` | Signal delivery logic (line 388), message construction |
-| `packages/agents/src/framework/worker-loop.ts` | Signal consumption at 3 locations (lines 672, 919) |
-| `packages/agents/src/adapters/types.ts` | IncomingEventSchema fields, no replyContext |
-| `packages/agents/src/adapters/slack.ts` | All event handlers, payload fields available |
-| `packages/agents/src/adapters/linear.ts` | All event handlers, issueId availability |
-| `packages/agents/src/adapters/github.ts` | PR events, payload fields (prNumber present, owner/repo absent) |
-| `packages/agents/src/shared/tools/integration/mcp-wrapper.ts` | McpToolDeps pattern, createMcpToolWrapper |
-| `packages/agents/src/shared/mcp/client.ts` | callMcpTool HTTP protocol, retry logic |
-| `packages/agents/src/router/tools/signal-conversation.ts` | Signal schema (no replyContext) |
-| `packages/agents/src/router/system-prompt.ts` | Full router prompt, no replyContext guidance |
-| `packages/agents/src/router/router.ts` | Task routing signal construction (line 87-101) |
-| `packages/integrations/linear/src/mcp/server.ts` | 6 tools registered, create_comment MISSING |
-| `packages/integrations/linear/src/mcp/tools/issues.ts` | handleCreateComment EXISTS (line 472) |
-| `packages/integrations/github/src/mcp/server.ts` | 9 tools registered, no comment tool |
-| `packages/integrations/github/src/mcp/tools/pullrequests.ts` | PR handlers, no comment handler |
-| `packages/agents/definitions/dev-agent/definition.yaml` | 20 tools, slack:send_message + send_approval_request |
-| `packages/agents/definitions/product-agent/definition.yaml` | 11 tools, slack:send_message |
+- Linear Agent SDK: [Getting Started](https://linear.app/developers/agents), [Agent Interaction](https://linear.app/developers/agent-interaction), [Changelog](https://linear.app/changelog/2025-07-30-agent-interaction-guidelines-and-sdk)
+- pgvector + Drizzle ORM: [Vector Similarity Search Guide](https://orm.drizzle.team/docs/guides/vector-similarity-search), [PostgreSQL Extensions](https://orm.drizzle.team/docs/extensions/pg)
+- pgvector general: [pgvector-node GitHub](https://github.com/pgvector/pgvector-node), [pgvector 2026 guide](https://www.instaclustr.com/education/vector-database/pgvector-key-features-tutorial-and-pros-and-cons-2026-guide/)
+- Existing codebase: `packages/agents/src/framework/`, `packages/agents/src/shared/`, `packages/integrations/linear/src/`, `packages/dashboard/src/`
