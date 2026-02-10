@@ -9,8 +9,10 @@ import { createHttpLogger, createPinoLogger } from "@aesir/platform";
 import { sql } from "drizzle-orm";
 import express from "express";
 import { createMCPRouter, createRoutes } from "./api/routes.js";
+import { startProactiveRefresh } from "./client/refresh-middleware.js";
 import { config } from "./config.js";
 import { db } from "./db/client.js";
+import { createLinearCredentialStore } from "./db/credential-store.js";
 
 const logger = createPinoLogger({ component: "integrations:linear" });
 
@@ -81,9 +83,27 @@ async function main() {
     );
   });
 
+  // Start proactive token refresh timer
+  const credentialStore = createLinearCredentialStore({
+    // biome-ignore lint/suspicious/noExplicitAny: Database type mismatch between node-postgres and postgres-js drivers
+    db: db as any,
+    logger,
+  });
+  const refreshTimer = startProactiveRefresh({
+    credentialStore,
+    workspaceId: "ws_default",
+    logger: logger.child({ component: "token-refresh" }),
+  });
+
+  logger.info("Proactive token refresh timer started");
+
   // Graceful shutdown
   const shutdown = () => {
     logger.info("SIGTERM received, shutting down gracefully");
+
+    // Stop the proactive refresh timer first
+    refreshTimer.stop();
+
     server.close(() => {
       logger.info("Server closed");
       process.exit(0);

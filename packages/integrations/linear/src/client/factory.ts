@@ -23,11 +23,15 @@ interface TokenRefreshResponse {
 }
 
 /**
- * Refresh an OAuth token using the refresh token
+ * Refresh an OAuth token using the refresh token.
+ *
+ * Retries up to 3 times with exponential backoff (1s, 2s, 4s) for transient
+ * failures. Non-transient errors (HTTP 400 with `invalid_grant` indicating a
+ * revoked token) throw immediately without retrying.
  *
  * @param refreshToken - The refresh token to use
  * @returns New token data including access token and expiration
- * @throws Error if token refresh fails
+ * @throws Error if token refresh fails after all retries or on non-transient error
  */
 export async function refreshOAuthToken(refreshToken: string): Promise<{
   accessToken: string;
@@ -43,44 +47,102 @@ export async function refreshOAuthToken(refreshToken: string): Promise<{
     );
   }
 
-  logger.info("Refreshing OAuth token");
+  const delays = [1_000, 2_000, 4_000];
+  let lastError: Error | undefined;
 
-  const response = await fetch("https://api.linear.app/oauth/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      grant_type: "refresh_token",
-      refresh_token: refreshToken,
-      client_id: clientId,
-      client_secret: clientSecret,
-    }),
-  });
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      logger.info({ attempt: attempt + 1 }, "Refreshing OAuth token");
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    logger.error(
-      { status: response.status },
-      `Token refresh failed: ${response.status} ${errorText}`,
-    );
-    throw new Error(
-      `Failed to refresh Linear OAuth token: ${response.status} ${errorText}`,
-    );
+      const response = await fetch("https://api.linear.app/oauth/token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          grant_type: "refresh_token",
+          refresh_token: refreshToken,
+          client_id: clientId,
+          client_secret: clientSecret,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        const error = new Error(
+          `Failed to refresh Linear OAuth token: ${response.status} ${errorText}`,
+        );
+
+        // Non-transient: HTTP 400 with invalid_grant means revoked token
+        if (response.status === 400 && errorText.includes("invalid_grant")) {
+          logger.error(
+            { status: response.status },
+            `Token refresh failed (non-transient): ${response.status} ${errorText}`,
+          );
+          throw error;
+        }
+
+        // Non-transient: 401 from token endpoint means invalid credentials
+        if (response.status === 401) {
+          logger.error(
+            { status: response.status },
+            `Token refresh failed (non-transient): ${response.status} ${errorText}`,
+          );
+          throw error;
+        }
+
+        // Transient: throw to trigger retry
+        logger.warn(
+          { status: response.status, attempt: attempt + 1 },
+          `Token refresh failed (transient): ${response.status}`,
+        );
+        throw error;
+      }
+
+      const data = (await response.json()) as TokenRefreshResponse;
+
+      logger.info(
+        { expiresIn: data.expires_in },
+        "OAuth token refreshed successfully",
+      );
+
+      return {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        expiresIn: data.expires_in,
+      };
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+
+      // Non-transient errors already logged and re-thrown above; if we reach
+      // here with a non-transient error it means the throw propagated through.
+      // Check if this is a non-transient error that should not be retried.
+      if (
+        lastError.message.includes("invalid_grant") ||
+        lastError.message.includes("(non-transient)")
+      ) {
+        throw lastError;
+      }
+
+      // Transient: retry with backoff (skip delay on last attempt)
+      const delay = delays[attempt];
+      if (delay !== undefined && attempt < 2) {
+        logger.warn(
+          { attempt: attempt + 1, nextDelayMs: delay },
+          "Retrying token refresh after backoff",
+        );
+        await sleep(delay);
+      }
+    }
   }
 
-  const data = (await response.json()) as TokenRefreshResponse;
+  // All retries exhausted
+  logger.error("Token refresh failed after 3 attempts");
+  throw lastError ?? new Error("Token refresh failed after 3 attempts");
+}
 
-  logger.info(
-    { expiresIn: data.expires_in },
-    "OAuth token refreshed successfully",
-  );
-
-  return {
-    accessToken: data.access_token,
-    refreshToken: data.refresh_token,
-    expiresIn: data.expires_in,
-  };
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
