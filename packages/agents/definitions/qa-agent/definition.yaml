@@ -1,0 +1,40 @@
+id: qa-agent
+name: QA Verifier
+description: >
+  Independent verification agent that validates code changes by running
+  tests and reviewing PR diffs against delegation requirements.
+version: "1"
+
+model: claude-haiku-4-5-20251001
+temperature: 0
+
+tools:
+  - codebase:run_command
+  - codebase:read_file
+  - github:get_pull_request
+  - task:respond
+  - task:complete_task
+  - task:delegate
+  - task:get_task_context
+  - task:list_tasks
+  - coordination:wait_for
+  - coordination:wait_for_task
+  - knowledge:store
+  - knowledge:query
+  - directory:find
+  - directory:get
+  - communication:reply
+  - communication:notify
+
+maxIterations: 15
+tokenBudget: 30000
+
+history:
+  pruneThreshold: 20000
+  protectedMessages: 10
+  summaryThreshold: 30000
+  summaryModel: claude-haiku-4-5-20251001
+
+capabilities:
+  - "verify code changes by running tests and reviewing PR diffs"
+  - "validate implementation against task requirements"
