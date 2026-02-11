@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.7 Agent Collaboration -- Phase 73 (QA Agent + Validation Workflow) in progress
+**Current focus:** v2.7 Agent Collaboration -- Phase 73 complete, milestone ready for validation
 
 ## Current Position
 
 Phase: 73 of 73 (QA Agent + Validation Workflow)
-Plan: 2 of 3 in phase (73-02 complete)
-Status: Phase 73 in progress -- plans 01 and 02 complete (parallel wave 1)
-Last activity: 2026-02-11 -- Phase 73 plan 02 complete (prompt delegation guidance)
+Plan: 3 of 3 in phase (73-03 complete)
+Status: Phase 73 complete -- all 3 plans shipped
+Last activity: 2026-02-11 -- Phase 73 plan 03 complete (validation script)
 
-Progress: [██████████] ~95%
+Progress: [██████████] 100%
 
 ## Milestone History
 
@@ -33,8 +33,8 @@ Progress: [██████████] ~95%
 
 **Cumulative:**
 - Total milestones shipped: 8
-- Total phases completed: 72
-- Total plans completed: 325
+- Total phases completed: 73
+- Total plans completed: 328
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -63,6 +63,7 @@ Progress: [██████████] ~95%
 | 72 | 04 | 5min | 2 | 8 |
 | 73 | 01 | 3min | 2 | 5 |
 | 73 | 02 | 2min | 2 | 2 |
+| 73 | 03 | 2min | 2 | 2 |
 
 *Updated after each plan completion*
 
@@ -146,6 +147,9 @@ See PROJECT.md Key Decisions table for full history.
 - **73-01:** MAX_DELEGATION_DEPTH raised from 3 to 5 for product->dev->QA->dev-fix chain + safety margin
 - **73-02:** Delegation guidance as domain_knowledge sections (not constraints) -- advisory not mandatory
 - **73-02:** Examples show full delegation flow including directory:find, task:delegate, wait_for_task
+- **73-03:** console.log/console.error for CLI output (not pino -- script, not service)
+- **73-03:** Global fetch (Node 18+) -- no additional HTTP dependencies needed
+- **73-03:** Optional --poll flag as convenience (primary observation path is dashboard)
 
 ### Pending Todos
 
@@ -162,9 +166,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed 73-02-PLAN.md (prompt delegation guidance)
+Stopped at: Completed 73-03-PLAN.md (validation script)
 Resume file: None
-Next action: Execute 73-03-PLAN.md (remaining plan in Phase 73)
+Next action: v2.7 Agent Collaboration milestone complete -- validate with pnpm --filter @aesir/agents validate:workflow
 
 ---
-*Updated: 2026-02-11 -- Phase 73 plan 02 complete: product-agent + dev-agent delegation guidance*
+*Updated: 2026-02-11 -- Phase 73 complete: validation script shipped, v2.7 milestone complete*
