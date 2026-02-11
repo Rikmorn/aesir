@@ -62,3 +62,7 @@ export function BackToConversations() {
 export function BackToAgents() {
   return <BackLink fallbackHref="/agents" />;
 }
+
+export function BackToTasks() {
+  return <BackLink fallbackHref="/tasks" />;
+}
