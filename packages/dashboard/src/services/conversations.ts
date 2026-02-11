@@ -69,6 +69,7 @@ export interface ConversationDetail {
   reopenCount: number;
   errorMessage: string | null;
   parentConversationId: string | null;
+  taskId: string | null;
   createdAt: Date;
   updatedAt: Date;
   artifacts: Record<string, string>;
@@ -249,6 +250,7 @@ export async function getConversationById(
       reopen_count: conversations.reopen_count,
       error_message: conversations.error_message,
       parent_conversation_id: conversations.parent_conversation_id,
+      task_id: conversations.task_id,
       created_at: conversations.created_at,
       updated_at: conversations.updated_at,
       artifacts: agentSessions.artifacts,
@@ -274,6 +276,7 @@ export async function getConversationById(
     reopenCount: row.reopen_count,
     errorMessage: row.error_message,
     parentConversationId: row.parent_conversation_id,
+    taskId: row.task_id ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     artifacts: row.artifacts ?? {},

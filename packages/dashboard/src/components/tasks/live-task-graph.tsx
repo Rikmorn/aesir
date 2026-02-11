@@ -3,15 +3,22 @@
 /**
  * Live Task Graph
  *
- * Client wrapper that owns polling state and coordinates the delegation graph.
- * Polls every 30s for updated tree data and stops when all tasks are terminal.
+ * Client wrapper that owns polling state and coordinates the delegation graph,
+ * detail panel, and timeline. Polls every 30s for updated tree data and stops
+ * when all tasks are terminal.
+ *
+ * Bidirectional linking:
+ * - Graph node click -> opens detail panel + scrolls timeline to that task's events
+ * - Timeline event click -> briefly highlights the corresponding graph node (2s pulse)
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
-
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 import type { TaskTreeNode, TimelineEvent, TreeHealth } from "@/services/tasks";
 
 import { DelegationGraph } from "./delegation-graph";
+import { DelegationTimeline } from "./delegation-timeline";
+import { TaskDetailPanel } from "./task-detail-panel";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -50,11 +57,17 @@ export function LiveTaskGraph({
     health: initialHealth,
   });
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(
+    null,
+  );
+  const [timelineExpanded, setTimelineExpanded] = useState(false);
   const [isPolling, setIsPolling] = useState(
     () => !isTreeTerminal(initialNodes),
   );
   const abortRef = useRef<AbortController | null>(null);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Polling
   useEffect(() => {
     if (!isPolling) return;
 
@@ -95,12 +108,57 @@ export function LiveTaskGraph({
     };
   }, [isPolling, taskId]);
 
+  // Cleanup highlight timer
+  useEffect(() => {
+    return () => {
+      if (highlightTimerRef.current) {
+        clearTimeout(highlightTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Get selected node data
+  const selectedNode = useMemo(
+    () =>
+      selectedNodeId
+        ? (tree.nodes.find((n) => n.id === selectedNodeId) ?? null)
+        : null,
+    [tree.nodes, selectedNodeId],
+  );
+
+  // Filter events for selected node
+  const selectedNodeEvents = useMemo(
+    () =>
+      selectedNodeId
+        ? tree.events.filter((e) => e.taskId === selectedNodeId)
+        : [],
+    [tree.events, selectedNodeId],
+  );
+
+  // Graph node click -> open detail panel
   const handleNodeClick = useCallback((nodeId: string) => {
     setSelectedNodeId((prev) => (prev === nodeId ? null : nodeId));
   }, []);
 
+  // Pane click -> close panel
   const handlePaneClick = useCallback(() => {
     setSelectedNodeId(null);
+  }, []);
+
+  // Timeline event click -> highlight graph node briefly
+  const handleTimelineEventClick = useCallback((eventTaskId: string) => {
+    // Clear previous highlight timer
+    if (highlightTimerRef.current) {
+      clearTimeout(highlightTimerRef.current);
+    }
+
+    setHighlightedNodeId(eventTaskId);
+
+    // Clear highlight after 2s
+    highlightTimerRef.current = setTimeout(() => {
+      setHighlightedNodeId(null);
+      highlightTimerRef.current = null;
+    }, 2000);
   }, []);
 
   return (
@@ -113,8 +171,11 @@ export function LiveTaskGraph({
         </div>
       )}
 
-      {/* Graph */}
-      <div className="flex-1 relative" style={{ minHeight: 400 }}>
+      {/* Graph + detail panel */}
+      <div
+        className={cn("relative", timelineExpanded ? "h-[60%]" : "flex-1")}
+        style={{ minHeight: 300 }}
+      >
         <DelegationGraph
           treeNodes={tree.nodes}
           events={tree.events}
@@ -122,11 +183,25 @@ export function LiveTaskGraph({
           onNodeClick={handleNodeClick}
           onPaneClick={handlePaneClick}
           selectedNodeId={selectedNodeId}
+          highlightedNodeId={highlightedNodeId}
         />
+        {selectedNode && (
+          <TaskDetailPanel
+            node={selectedNode}
+            events={selectedNodeEvents}
+            onClose={() => setSelectedNodeId(null)}
+          />
+        )}
       </div>
 
-      {/* Detail panel placeholder -- added in Plan 03 */}
-      {/* Timeline placeholder -- added in Plan 03 */}
+      {/* Timeline */}
+      <DelegationTimeline
+        events={tree.events}
+        selectedNodeId={selectedNodeId}
+        onEventClick={handleTimelineEventClick}
+        isExpanded={timelineExpanded}
+        onToggle={() => setTimelineExpanded((prev) => !prev)}
+      />
     </div>
   );
 }

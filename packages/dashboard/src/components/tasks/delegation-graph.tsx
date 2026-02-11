@@ -199,6 +199,7 @@ interface DelegationGraphProps {
   onNodeClick: (nodeId: string) => void;
   onPaneClick?: () => void;
   selectedNodeId: string | null;
+  highlightedNodeId?: string | null;
 }
 
 export function DelegationGraph({
@@ -208,6 +209,7 @@ export function DelegationGraph({
   onNodeClick,
   onPaneClick,
   selectedNodeId,
+  highlightedNodeId,
 }: DelegationGraphProps) {
   const { nodes, edges } = useMemo(() => {
     const { nodes: rfNodes, edges: rfEdges } = transformTreeToGraph(
@@ -218,14 +220,18 @@ export function DelegationGraph({
     return getLayoutedElements(rfNodes, rfEdges);
   }, [treeNodes, events, health]);
 
-  // Highlight selected node
+  // Highlight selected node and apply timeline highlight ring
   const styledNodes = useMemo(
     () =>
       nodes.map((node) => ({
         ...node,
         selected: node.id === selectedNodeId,
+        className:
+          node.id === highlightedNodeId
+            ? "ring-2 ring-primary ring-offset-2 rounded-md"
+            : undefined,
       })),
-    [nodes, selectedNodeId],
+    [nodes, selectedNodeId, highlightedNodeId],
   );
 
   return (

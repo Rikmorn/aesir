@@ -1,3 +1,5 @@
+import { GitBranch } from "lucide-react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LiveDetailPanels } from "@/components/conversation-detail/live-detail-panels";
 import { BackToConversations } from "@/components/navigation/back-link";
@@ -6,6 +8,7 @@ import {
   getConversationById,
   getConversationEvents,
 } from "@/services/conversations";
+import { getRootTaskId } from "@/services/tasks";
 
 // Force dynamic rendering -- queries database on every request
 export const dynamic = "force-dynamic";
@@ -31,6 +34,11 @@ export default async function ConversationDetailPage({
     notFound();
   }
 
+  // Resolve root task ID for "View task tree" cross-link
+  const rootTaskId = conversation.taskId
+    ? await getRootTaskId(conversation.taskId)
+    : null;
+
   return (
     <main className="container mx-auto px-4 py-8">
       {/* Header with breadcrumb and title */}
@@ -39,9 +47,20 @@ export default async function ConversationDetailPage({
         <h1 className="mt-2 text-2xl font-bold tracking-tight">
           {conversation.agentDefinitionId}
         </h1>
-        <p className="font-mono text-sm text-muted-foreground">
-          {conversation.id}
-        </p>
+        <div className="flex items-center gap-3">
+          <p className="font-mono text-sm text-muted-foreground">
+            {conversation.id}
+          </p>
+          {rootTaskId && (
+            <Link
+              href={`/tasks/${rootTaskId}`}
+              className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+            >
+              <GitBranch className="h-3.5 w-3.5" />
+              View task tree
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Live detail panels with SSE real-time updates */}
