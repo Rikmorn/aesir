@@ -17,6 +17,8 @@ import { Router as createRouter } from "express";
 import rateLimit from "express-rate-limit";
 import { recordTaskCorrelation } from "../db/task-correlations.js";
 import {
+  type ActivityToolDeps,
+  handleCreateAgentActivity,
   handleCreateComment,
   handleCreateIssue,
   handleGetIssue,
@@ -24,6 +26,7 @@ import {
   handleListTeams,
   handleSearchIssues,
   handleUpdateIssueStatus,
+  handleUpdateSessionState,
   type IssueToolDeps,
   type TeamToolDeps,
 } from "../mcp/tools/index.js";
@@ -167,6 +170,71 @@ const TOOL_DEFINITIONS = [
       required: ["query"],
     },
   },
+  {
+    name: "create_agent_activity",
+    description:
+      "Create a typed activity on a Linear agent session. Use this to emit thoughts, actions, responses, errors, or elicitations during an agent session.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        agentSessionId: {
+          type: "string",
+          description: "Agent session ID from the webhook payload",
+        },
+        type: {
+          type: "string",
+          enum: ["thought", "action", "response", "error", "elicitation"],
+          description: "Activity type",
+        },
+        body: {
+          type: "string",
+          description:
+            "Body text for thought, response, error, elicitation types",
+        },
+        action: {
+          type: "string",
+          description:
+            'Action verb for action type (e.g., "Creating", "Reading")',
+        },
+        parameter: {
+          type: "string",
+          description:
+            'Action parameter for action type (e.g., "branch feature/auth")',
+        },
+        result: {
+          type: "string",
+          description:
+            "Action result for action type (optional completion message)",
+        },
+        ephemeral: {
+          type: "boolean",
+          description:
+            "Ephemeral flag -- only valid for thought and action types",
+        },
+      },
+      required: ["agentSessionId", "type"],
+    },
+  },
+  {
+    name: "update_session_state",
+    description:
+      "Update the status of a Linear agent session. Use this for explicit session lifecycle transitions (e.g., marking complete or error state).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        sessionId: {
+          type: "string",
+          description: "Agent session ID",
+        },
+        status: {
+          type: "string",
+          enum: ["pending", "active", "awaitingInput", "complete", "error"],
+          description: "Target session status",
+        },
+      },
+      required: ["sessionId", "status"],
+    },
+  },
 ];
 
 /**
@@ -221,6 +289,11 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
     workspaceId,
   };
   const teamToolDeps: TeamToolDeps = {
+    db: db as unknown as PostgresJsDatabase,
+    logger,
+    workspaceId,
+  };
+  const activityToolDeps: ActivityToolDeps = {
     db: db as unknown as PostgresJsDatabase,
     logger,
     workspaceId,
@@ -356,6 +429,22 @@ export function createMCPRouter(options: CreateMCPRouterOptions): Router {
 
           case "search_issues":
             result = await handleSearchIssues(context, args, issueToolDeps);
+            break;
+
+          case "create_agent_activity":
+            result = await handleCreateAgentActivity(
+              context,
+              args,
+              activityToolDeps,
+            );
+            break;
+
+          case "update_session_state":
+            result = await handleUpdateSessionState(
+              context,
+              args,
+              activityToolDeps,
+            );
             break;
 
           default:

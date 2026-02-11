@@ -129,11 +129,9 @@ export async function getTaskTree(rootTaskId: string): Promise<TaskTreeNode[]> {
     metadata: (row.metadata as Record<string, unknown>) ?? null,
     conversationId: (row.conversation_id as string) ?? null,
     conversationStatus: (row.conversation_status as string) ?? null,
-    createdAt: (row.created_at as Date).toISOString(),
-    updatedAt: (row.updated_at as Date).toISOString(),
-    completedAt: row.completed_at
-      ? (row.completed_at as Date).toISOString()
-      : null,
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+    completedAt: row.completed_at ? String(row.completed_at) : null,
   }));
 }
 
@@ -188,8 +186,14 @@ export async function getTaskTimeline(
     INNER JOIN agents.conversations c ON c.id = ae.conversation_id
     LEFT JOIN agents.tasks t ON t.id = c.task_id
     LEFT JOIN agents.entity_directory ed ON ed.id = t.assignee_id
-    WHERE c.task_id = ANY(${taskIds})
-      AND ae.type = ANY(${TIMELINE_EVENT_TYPES as unknown as string[]})
+    WHERE c.task_id IN (${sql.join(
+      taskIds.map((id) => sql`${id}`),
+      sql`, `,
+    )})
+      AND ae.type IN (${sql.join(
+        TIMELINE_EVENT_TYPES.map((t) => sql`${t}`),
+        sql`, `,
+      )})
     ORDER BY ae.timestamp ASC
   `);
 
@@ -202,7 +206,7 @@ export async function getTaskTimeline(
       entityName: (row.entity_name as string) ?? null,
       type: row.type as string,
       payload: (row.payload as Record<string, unknown>) ?? {},
-      timestamp: (row.timestamp as Date).toISOString(),
+      timestamp: String(row.timestamp),
     }))
     .filter((event) => {
       // Keep all non-tool events
@@ -228,7 +232,10 @@ export async function listRootTasks(
   const offset = params.offset ?? 0;
 
   const statusFilter = params.status?.length
-    ? sql`AND t.status = ANY(${params.status})`
+    ? sql`AND t.status IN (${sql.join(
+        params.status.map((s) => sql`${s}`),
+        sql`, `,
+      )})`
     : sql``;
 
   const rows = await db.execute(sql`
@@ -266,11 +273,9 @@ export async function listRootTasks(
       status: row.status as string,
       creatorEntityName: (row.creator_entity_name as string) ?? null,
       subtaskCount: Number(row.subtask_count),
-      createdAt: (row.created_at as Date).toISOString(),
-      updatedAt: (row.updated_at as Date).toISOString(),
-      completedAt: row.completed_at
-        ? (row.completed_at as Date).toISOString()
-        : null,
+      createdAt: String(row.created_at),
+      updatedAt: String(row.updated_at),
+      completedAt: row.completed_at ? String(row.completed_at) : null,
     })),
     total: Number(total),
   };

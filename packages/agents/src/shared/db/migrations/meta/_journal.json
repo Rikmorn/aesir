@@ -47,6 +47,27 @@
     {
       "idx": 6,
       "version": "7",
+      "when": 1739088000000,
+      "tag": "0007_add_knowledge_entries",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1739145600000,
+      "tag": "0008_add_entity_directory",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1739174400000,
+      "tag": "0009_add_task_depth",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
       "when": 1739232000000,
       "tag": "0010_completion_signaling",
       "breakpoints": true

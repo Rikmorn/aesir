@@ -42,3 +42,6 @@ temp/
 
 # Cloudflare Tunnel
 cloudflared.yml
+
+# Social media content (personal, not code)
+socials/
