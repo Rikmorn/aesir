@@ -48,6 +48,7 @@ export const conversations = agentsSchema.table("conversations", {
   error_message: text("error_message"),
   reopen_count: integer("reopen_count").notNull().default(0),
   parent_conversation_id: text("parent_conversation_id"),
+  task_id: text("task_id"),
   created_at: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -69,6 +70,7 @@ export const agentEventTypeValues = [
   "agent.resumed",
   "agent.reopened",
   "signal.received",
+  "signal.orphaned",
 ] as const;
 
 export type AgentEventType = (typeof agentEventTypeValues)[number];
@@ -100,6 +102,95 @@ export const agentEventContent = agentsSchema.table("agent_event_content", {
   event_id: text("event_id").primaryKey(),
   content: jsonb("content").$type<unknown[]>().notNull(),
   created_at: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+// ─── Tasks ──────────────────────────────────────────────────────────────────
+
+export const taskStatusValues = [
+  "created",
+  "active",
+  "paused",
+  "completed",
+  "cancelled",
+] as const;
+
+export type TaskStatus = (typeof taskStatusValues)[number];
+
+export const handoffTypeValues = [
+  "completion",
+  "pause",
+  "delegation",
+  "escalation",
+] as const;
+
+export type HandoffType = (typeof handoffTypeValues)[number];
+
+export const tasks = agentsSchema.table("tasks", {
+  id: text("id").primaryKey(),
+  parent_id: text("parent_id"),
+  creator_type: text("creator_type").notNull(),
+  creator_id: text("creator_id").notNull(),
+  assignee_type: text("assignee_type").notNull(),
+  assignee_id: text("assignee_id").notNull(),
+  status: text("status", { enum: taskStatusValues })
+    .notNull()
+    .default("created"),
+  title: text("title").notNull(),
+  objective: text("objective"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+  depth: integer("depth").notNull().default(0),
+  completion_result: jsonb("completion_result").$type<Record<
+    string,
+    unknown
+  > | null>(),
+  created_at: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updated_at: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  completed_at: timestamp("completed_at", { withTimezone: true }),
+});
+
+// ─── Task Handoffs ──────────────────────────────────────────────────────────
+
+export const taskHandoffs = agentsSchema.table("task_handoffs", {
+  id: text("id").primaryKey(),
+  task_id: text("task_id").notNull(),
+  conversation_id: text("conversation_id").notNull(),
+  handoff_type: text("handoff_type", { enum: handoffTypeValues }).notNull(),
+  context: jsonb("context").$type<Record<string, unknown>>().notNull(),
+  author_type: text("author_type").notNull(),
+  author_id: text("author_id").notNull(),
+  created_at: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+// ─── Entity Directory ───────────────────────────────────────────────────────
+
+export const entityDirectoryStatusValues = ["active", "inactive"] as const;
+export type EntityDirectoryStatus =
+  (typeof entityDirectoryStatusValues)[number];
+
+export const entityDirectoryTypeValues = ["agent", "human"] as const;
+export type EntityDirectoryType = (typeof entityDirectoryTypeValues)[number];
+
+export const entityDirectory = agentsSchema.table("entity_directory", {
+  id: text("id").primaryKey(),
+  type: text("type", { enum: entityDirectoryTypeValues }).notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  capabilities: jsonb("capabilities").$type<string[]>().notNull().default([]),
+  status: text("status", { enum: entityDirectoryStatusValues })
+    .notNull()
+    .default("active"),
+  created_at: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updated_at: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
 });
@@ -166,3 +257,6 @@ export type Conversation = typeof conversations.$inferSelect;
 export type AgentEvent = typeof agentEvents.$inferSelect;
 export type AgentSession = typeof agentSessions.$inferSelect;
 export type AgentEventContent = typeof agentEventContent.$inferSelect;
+export type Task = typeof tasks.$inferSelect;
+export type TaskHandoff = typeof taskHandoffs.$inferSelect;
+export type EntityDirectoryEntry = typeof entityDirectory.$inferSelect;
