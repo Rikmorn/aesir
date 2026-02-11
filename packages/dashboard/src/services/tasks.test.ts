@@ -134,11 +134,11 @@ describe("computeTreeHealth", () => {
     expect(health.severity).toBe("warning");
   });
 
-  it("detects depth limit reached when depth >= 3", () => {
+  it("detects depth limit reached when depth >= 5", () => {
     const nodes = [
       makeNode({ id: "t1", depth: 0 }),
       makeNode({ id: "t2", depth: 1, parentId: "t1" }),
-      makeNode({ id: "t3", depth: 3, parentId: "t2" }),
+      makeNode({ id: "t3", depth: 5, parentId: "t2" }),
     ];
 
     const health = computeTreeHealth(nodes, []);

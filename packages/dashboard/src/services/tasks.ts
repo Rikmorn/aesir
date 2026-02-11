@@ -285,7 +285,7 @@ export async function listRootTasks(
  * - orphanedCount: signals lost to terminal conversations
  * - timeoutCount: delegation timeouts
  * - rejectionChainCount: rejected delegations
- * - depthLimitReached: any node at depth >= 3
+ * - depthLimitReached: any node at depth >= 5
  * - severity: worst-case indicator (failure > warning > clean)
  */
 export function computeTreeHealth(
@@ -309,7 +309,7 @@ export function computeTreeHealth(
     return false;
   }).length;
 
-  const depthLimitReached = nodes.some((n) => n.depth >= 3);
+  const depthLimitReached = nodes.some((n) => n.depth >= 5);
 
   const hasFailures =
     nodes.some(
