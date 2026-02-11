@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.7 Agent Collaboration -- Phase 72 (Delegation Graph Observability) complete, ready for Phase 73
+**Current focus:** v2.7 Agent Collaboration -- Phase 73 (QA Agent + Validation Workflow) in progress
 
 ## Current Position
 
-Phase: 72 of 73 (Delegation Graph Observability)
-Plan: 4 of 4 in phase (72-04 complete)
-Status: Phase 72 complete (including gap closure), ready for Phase 73
-Last activity: 2026-02-11 -- Phase 72 plan 04 complete (gap closure: unit tests + incremental polling)
+Phase: 73 of 73 (QA Agent + Validation Workflow)
+Plan: 2 of 3 in phase (73-02 complete)
+Status: Phase 73 in progress -- plans 01 and 02 complete (parallel wave 1)
+Last activity: 2026-02-11 -- Phase 73 plan 02 complete (prompt delegation guidance)
 
-Progress: [██████████] ~91%
+Progress: [██████████] ~95%
 
 ## Milestone History
 
@@ -61,6 +61,7 @@ Progress: [██████████] ~91%
 | 72 | 02 | 7min | 2 | 10 |
 | 72 | 03 | 5min | 2 | 7 |
 | 72 | 04 | 5min | 2 | 8 |
+| 73 | 02 | 2min | 2 | 2 |
 
 *Updated after each plan completion*
 
@@ -138,6 +139,8 @@ See PROJECT.md Key Decisions table for full history.
 - **72-04:** Extracted pure functions to graph-utils.ts -- React Flow DOM dependency prevents testing in node environment
 - **72-04:** mergeTreeState filters stale nodes defensively (handles cancelled tasks removed from CTE)
 - **72-04:** vi.mock('@/lib/db') pattern for dashboard tests -- prevents pg.Pool creation at module load
+- **73-02:** Delegation guidance as domain_knowledge sections (not constraints) -- advisory not mandatory
+- **73-02:** Examples show full delegation flow including directory:find, task:delegate, wait_for_task
 
 ### Pending Todos
 
@@ -154,9 +157,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed 72-04-PLAN.md (gap closure: unit tests + incremental polling)
+Stopped at: Completed 73-02-PLAN.md (prompt delegation guidance)
 Resume file: None
-Next action: Begin Phase 73 (QA Agent + Validation Workflow)
+Next action: Execute 73-03-PLAN.md (remaining plan in Phase 73)
 
 ---
-*Updated: 2026-02-11 -- Phase 72 complete with gap closure: 43 unit tests + diff-and-merge polling*
+*Updated: 2026-02-11 -- Phase 73 plan 02 complete: product-agent + dev-agent delegation guidance*
