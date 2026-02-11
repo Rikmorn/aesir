@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.7 Agent Collaboration -- Phase 71 (Completion Signaling) verified and complete, ready for Phase 72
+**Current focus:** v2.7 Agent Collaboration -- Phase 72 (Delegation Graph Observability) in progress
 
 ## Current Position
 
-Phase: 71 of 73 (Completion Signaling -- complete)
-Plan: 3 of 3 in phase (all complete)
-Status: Phase 71 verified and complete, ready for Phase 72 (Delegation Graph Observability)
-Last activity: 2026-02-10 -- Phase 71 verified (7/7 SIG requirements met, 5/5 truths confirmed)
+Phase: 72 of 73 (Delegation Graph Observability)
+Plan: 1 of 3 in phase (72-01 complete)
+Status: Phase 72 plan 01 complete, continuing to plan 02
+Last activity: 2026-02-11 -- Phase 72 plan 01 complete (task data foundation + task list page)
 
-Progress: [████████░░] ~80%
+Progress: [█████████░] ~87%
 
 ## Milestone History
 
@@ -34,7 +34,7 @@ Progress: [████████░░] ~80%
 **Cumulative:**
 - Total milestones shipped: 8
 - Total phases completed: 71
-- Total plans completed: 319
+- Total plans completed: 320
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -57,6 +57,7 @@ Progress: [████████░░] ~80%
 | 71 | 02 | 7min | 2 | 8 |
 | 71 | 03 | 5min | 2 | 4 |
 | 71 | 04 | 6min | 3 | 12 |
+| 72 | 01 | 6min | 2 | 10 |
 
 *Updated after each plan completion*
 
@@ -119,6 +120,10 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 71]: Dispatcher failures are non-fatal: logged but never thrown (at-most-once delivery)
 - **70-04:** timeoutSignalType fallback chain: explicit type > first waitType > unknown (safe for both wait_for and wait_for_task)
 - **70-04:** Regular wait_for gets timeoutSignalType: null (falls back to first/only waitType, preserving existing behavior)
+- **72-01:** Flat node array with parentId (not nested tree) -- client builds hierarchy, simpler SQL
+- **72-01:** Raw SQL for recursive CTE -- Drizzle ORM lacks native WITH RECURSIVE support
+- **72-01:** Task statuses added to shared StatusBadge config -- avoids duplicating badge component
+- **72-01:** Batch health via Promise.all per root -- simpler than complex batched SQL
 
 ### Pending Todos
 
@@ -134,10 +139,10 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-02-10
-Stopped at: Completed 70-04-PLAN.md (Phase 70 all 4 plans complete)
+Last session: 2026-02-11
+Stopped at: Completed 72-01-PLAN.md (task data foundation + task list page)
 Resume file: None
-Next action: Verify Phase 70 or begin Phase 72 (Delegation Graph Observability)
+Next action: Continue Phase 72 plan 02 (graph visualization)
 
 ---
-*Updated: 2026-02-10 -- Phase 71 complete: completion signaling with orphan handling (3 plans, verified 7/7)*
+*Updated: 2026-02-11 -- Phase 72 plan 01 complete: task tree service, API route, task list page with health badges*
