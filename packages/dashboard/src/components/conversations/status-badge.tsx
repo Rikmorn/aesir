@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const statusConfig: Record<string, { label: string; className: string }> = {
+  // Conversation statuses
   queued: {
     label: "Queued",
     className:
@@ -28,6 +29,21 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   cancelled: {
     label: "Cancelled",
     className: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+  },
+  // Task statuses (shared component, no conflict)
+  created: {
+    label: "Created",
+    className:
+      "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+  },
+  active: {
+    label: "Active",
+    className: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+  },
+  paused: {
+    label: "Paused",
+    className:
+      "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
   },
 };
 

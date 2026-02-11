@@ -3,6 +3,7 @@
 import {
   Bot,
   Home,
+  ListChecks,
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
@@ -32,6 +33,11 @@ const navItems = [
     label: "Conversations",
     href: "/conversations",
     icon: MessageSquare,
+  },
+  {
+    label: "Tasks",
+    href: "/tasks",
+    icon: ListChecks,
   },
   {
     label: "Agents",
