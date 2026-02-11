@@ -182,12 +182,13 @@ Plans:
   2. The dashboard renders a delegation graph with expandable nodes, status indicators, and click-through to conversation detail pages
   3. A delegation timeline shows chronological events (delegation, handshake, signals) filterable by task tree
   4. Health indicators surface orphaned completions, excessive delegation depth, rejection chains, and timeout patterns
-**Plans**: 3 plans
+**Plans**: 4 plans
 
 Plans:
 - [x] 72-01-PLAN.md -- Schema extension, task tree service (recursive CTE), polling API route, task list page with health badges, sidebar navigation
 - [x] 72-02-PLAN.md -- React Flow graph view with dagre layout, custom task nodes, animated delegation edges, live 30s polling
 - [x] 72-03-PLAN.md -- Task detail panel, delegation timeline with bidirectional graph linking, conversation cross-linking
+- [ ] 72-04-PLAN.md -- Gap closure: pure function unit tests (computeTreeHealth, transformTreeToGraph), incremental poll updates (diff-and-merge)
 
 #### Phase 73: QA Agent + Validation Workflow
 **Goal**: A QA agent validates the triangular product-dev-QA workflow, exercising every collaboration primitive simultaneously as the integration test for the entire milestone
@@ -225,7 +226,7 @@ Phases 67+68 execute in parallel, then 69 -> 70 -> 71 -> 72 -> 73 sequentially.
 | 69. Entity Directory | v2.7 | 3/3 | Complete | 2026-02-10 |
 | 70. Task Delegation | v2.7 | 3/3 | Complete | 2026-02-10 |
 | 71. Completion Signaling | v2.7 | 4/4 | Complete | 2026-02-10 |
-| 72. Delegation Graph Observability | v2.7 | 3/3 | Complete | 2026-02-11 |
+| 72. Delegation Graph Observability | v2.7 | 3/4 | Gaps | 2026-02-11 |
 | 73. QA Agent + Validation | v2.7 | 0/~3 | Not started | - |
 
 **Total: 8 milestones shipped (69 phases, 301 plans) + v2.7 in progress (6/7 phases complete, 22/~25 plans)**
