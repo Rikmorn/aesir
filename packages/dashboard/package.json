@@ -8,7 +8,8 @@
     "dev:docker": "next dev --port 3005",
     "build": "next build",
     "start": "next start --port 3005",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@dagrejs/dagre": "^2.0.4",
@@ -38,6 +39,7 @@
     "@types/pg": "^8.16.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.0.0"
   }
 }

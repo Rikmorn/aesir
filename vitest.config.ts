@@ -16,6 +16,7 @@ export default defineConfig({
       "packages/integrations/github",
       "packages/integrations/slack",
       "packages/test-utils",
+      "packages/dashboard",
     ],
     // Coverage configuration at workspace level
     // Note: Vitest ignores project-level coverage settings when running from root
