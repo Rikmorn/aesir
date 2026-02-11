@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 72 of 73 (Delegation Graph Observability)
-Plan: 3 of 3 in phase (72-03 complete)
-Status: Phase 72 complete, ready for Phase 73
-Last activity: 2026-02-11 -- Phase 72 plan 03 complete (detail panel, timeline, cross-linking)
+Plan: 4 of 4 in phase (72-04 complete)
+Status: Phase 72 complete (including gap closure), ready for Phase 73
+Last activity: 2026-02-11 -- Phase 72 plan 04 complete (gap closure: unit tests + incremental polling)
 
 Progress: [██████████] ~91%
 
@@ -34,7 +34,7 @@ Progress: [██████████] ~91%
 **Cumulative:**
 - Total milestones shipped: 8
 - Total phases completed: 72
-- Total plans completed: 322
+- Total plans completed: 323
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -60,6 +60,7 @@ Progress: [██████████] ~91%
 | 72 | 01 | 6min | 2 | 10 |
 | 72 | 02 | 7min | 2 | 10 |
 | 72 | 03 | 5min | 2 | 7 |
+| 72 | 04 | 5min | 2 | 8 |
 
 *Updated after each plan completion*
 
@@ -134,6 +135,9 @@ See PROJECT.md Key Decisions table for full history.
 - **72-03:** forwardRef with HTMLButtonElement for timeline rows -- semantic button avoids a11y lint vs role=button div
 - **72-03:** highlightedNodeId separate from selectedNodeId -- 2s pulse effect independent from panel selection
 - **72-03:** getRootTaskId for conversation cross-link -- navigates to root task regardless of depth
+- **72-04:** Extracted pure functions to graph-utils.ts -- React Flow DOM dependency prevents testing in node environment
+- **72-04:** mergeTreeState filters stale nodes defensively (handles cancelled tasks removed from CTE)
+- **72-04:** vi.mock('@/lib/db') pattern for dashboard tests -- prevents pg.Pool creation at module load
 
 ### Pending Todos
 
@@ -150,9 +154,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed 72-03-PLAN.md (detail panel, timeline, cross-linking)
+Stopped at: Completed 72-04-PLAN.md (gap closure: unit tests + incremental polling)
 Resume file: None
 Next action: Begin Phase 73 (QA Agent + Validation Workflow)
 
 ---
-*Updated: 2026-02-11 -- Phase 72 complete: delegation graph observability with detail panel, timeline, and cross-linking*
+*Updated: 2026-02-11 -- Phase 72 complete with gap closure: 43 unit tests + diff-and-merge polling*
