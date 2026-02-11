@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 72 of 73 (Delegation Graph Observability)
-Plan: 1 of 3 in phase (72-01 complete)
-Status: Phase 72 plan 01 complete, continuing to plan 02
-Last activity: 2026-02-11 -- Phase 72 plan 01 complete (task data foundation + task list page)
+Plan: 2 of 3 in phase (72-02 complete)
+Status: Phase 72 plan 02 complete, continuing to plan 03
+Last activity: 2026-02-11 -- Phase 72 plan 02 complete (interactive delegation graph view)
 
 Progress: [█████████░] ~87%
 
@@ -34,7 +34,7 @@ Progress: [█████████░] ~87%
 **Cumulative:**
 - Total milestones shipped: 8
 - Total phases completed: 71
-- Total plans completed: 320
+- Total plans completed: 321
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -58,6 +58,7 @@ Progress: [█████████░] ~87%
 | 71 | 03 | 5min | 2 | 4 |
 | 71 | 04 | 6min | 3 | 12 |
 | 72 | 01 | 6min | 2 | 10 |
+| 72 | 02 | 7min | 2 | 10 |
 
 *Updated after each plan completion*
 
@@ -124,6 +125,11 @@ See PROJECT.md Key Decisions table for full history.
 - **72-01:** Raw SQL for recursive CTE -- Drizzle ORM lacks native WITH RECURSIVE support
 - **72-01:** Task statuses added to shared StatusBadge config -- avoids duplicating badge component
 - **72-01:** Batch health via Promise.all per root -- simpler than complex batched SQL
+- **72-02:** Module-level nodeTypes/edgeTypes constants outside component -- referential equality prevents React Flow re-mounts
+- **72-02:** Fresh dagre.graphlib.Graph() per layout call -- mutable state reuse causes layout bugs
+- **72-02:** SVG animateMotion for active edge animation -- GPU-accelerated per research recommendation
+- **72-02:** Edge state derived from child task status + orphaned/timeout events -- single source of truth
+- **72-02:** onPaneClick via React Flow prop (not wrapper div onClick) -- avoids biome a11y lint error
 
 ### Pending Todos
 
@@ -140,9 +146,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed 72-01-PLAN.md (task data foundation + task list page)
+Stopped at: Completed 72-02-PLAN.md (interactive delegation graph view)
 Resume file: None
-Next action: Continue Phase 72 plan 02 (graph visualization)
+Next action: Continue Phase 72 plan 03 (detail panel + timeline)
 
 ---
-*Updated: 2026-02-11 -- Phase 72 plan 01 complete: task tree service, API route, task list page with health badges*
+*Updated: 2026-02-11 -- Phase 72 plan 02 complete: React Flow + dagre delegation graph with animated edges and 30s polling*
