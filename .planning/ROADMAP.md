@@ -81,7 +81,7 @@ See `.planning/milestones/v2.6-ROADMAP.md` for full details.
 - [x] **Phase 69: Entity Directory** - Agents discover each other by capability for informed delegation decisions (completed 2026-02-10)
 - [x] **Phase 70: Task Delegation** - Agents delegate work to other agents through tasks with negotiation handshake (completed 2026-02-10)
 - [x] **Phase 71: Completion Signaling** - Delegating agents receive reliable notification when delegated work completes or fails (completed 2026-02-10)
-- [ ] **Phase 72: Delegation Graph Observability** - Operators see delegation hierarchies, signal flows, and health indicators in the dashboard
+- [x] **Phase 72: Delegation Graph Observability** - Operators see delegation hierarchies, signal flows, and health indicators in the dashboard (completed 2026-02-11)
 - [ ] **Phase 73: QA Agent + Validation Workflow** - Triangular product-dev-QA workflow validates the entire collaboration system end-to-end
 
 ### Phase Details
@@ -185,9 +185,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 72-01-PLAN.md -- Schema extension, task tree service (recursive CTE), polling API route, task list page with health badges, sidebar navigation
-- [ ] 72-02-PLAN.md -- React Flow graph view with dagre layout, custom task nodes, animated delegation edges, live 30s polling
-- [ ] 72-03-PLAN.md -- Task detail panel, delegation timeline with bidirectional graph linking, conversation cross-linking
+- [x] 72-01-PLAN.md -- Schema extension, task tree service (recursive CTE), polling API route, task list page with health badges, sidebar navigation
+- [x] 72-02-PLAN.md -- React Flow graph view with dagre layout, custom task nodes, animated delegation edges, live 30s polling
+- [x] 72-03-PLAN.md -- Task detail panel, delegation timeline with bidirectional graph linking, conversation cross-linking
 
 #### Phase 73: QA Agent + Validation Workflow
 **Goal**: A QA agent validates the triangular product-dev-QA workflow, exercising every collaboration primitive simultaneously as the integration test for the entire milestone
@@ -225,11 +225,11 @@ Phases 67+68 execute in parallel, then 69 -> 70 -> 71 -> 72 -> 73 sequentially.
 | 69. Entity Directory | v2.7 | 3/3 | Complete | 2026-02-10 |
 | 70. Task Delegation | v2.7 | 3/3 | Complete | 2026-02-10 |
 | 71. Completion Signaling | v2.7 | 4/4 | Complete | 2026-02-10 |
-| 72. Delegation Graph Observability | v2.7 | 0/~3 | Not started | - |
+| 72. Delegation Graph Observability | v2.7 | 3/3 | Complete | 2026-02-11 |
 | 73. QA Agent + Validation | v2.7 | 0/~3 | Not started | - |
 
-**Total: 8 milestones shipped (69 phases, 301 plans) + v2.7 in progress (5/7 phases complete, 19/~25 plans)**
+**Total: 8 milestones shipped (69 phases, 301 plans) + v2.7 in progress (6/7 phases complete, 22/~25 plans)**
 
 ---
 
-_Last updated: 2026-02-10_
+_Last updated: 2026-02-11_
