@@ -34,7 +34,7 @@ Progress: [██████████] ~95%
 **Cumulative:**
 - Total milestones shipped: 8
 - Total phases completed: 72
-- Total plans completed: 323
+- Total plans completed: 325
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -61,6 +61,7 @@ Progress: [██████████] ~95%
 | 72 | 02 | 7min | 2 | 10 |
 | 72 | 03 | 5min | 2 | 7 |
 | 72 | 04 | 5min | 2 | 8 |
+| 73 | 01 | 3min | 2 | 5 |
 | 73 | 02 | 2min | 2 | 2 |
 
 *Updated after each plan completion*
@@ -139,6 +140,10 @@ See PROJECT.md Key Decisions table for full history.
 - **72-04:** Extracted pure functions to graph-utils.ts -- React Flow DOM dependency prevents testing in node environment
 - **72-04:** mergeTreeState filters stale nodes defensively (handles cancelled tasks removed from CTE)
 - **72-04:** vi.mock('@/lib/db') pattern for dashboard tests -- prevents pg.Pool creation at module load
+- **73-01:** QA agent uses Haiku model (thin checks, near-deterministic tool calls, cost-efficient)
+- **73-01:** 16 tools covering codebase, delegation, knowledge, communication -- no subAgents
+- **73-01:** No triggers -- QA started exclusively via task:delegate (delegated-only agent pattern)
+- **73-01:** MAX_DELEGATION_DEPTH raised from 3 to 5 for product->dev->QA->dev-fix chain + safety margin
 - **73-02:** Delegation guidance as domain_knowledge sections (not constraints) -- advisory not mandatory
 - **73-02:** Examples show full delegation flow including directory:find, task:delegate, wait_for_task
 
