@@ -199,12 +199,12 @@ Plans:
   2. The triangular workflow executes: product delegates to dev, dev implements, dev delegates verification to QA, QA validates -- with failure triggering fix delegation back to dev
   3. The workflow exercises 3-level delegation depth, completion signaling cascade, and shared memory across the delegation chain
   4. One happy-path end-to-end integration test validates the full triangular workflow against running services
-**Plans**: ~3 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] 73-01: QA agent definition (YAML + prompt.md, capabilities, knowledge + directory tools) and thin tool wrappers (sandbox test runner, GitHub PR diff reviewer)
-- [ ] 73-02: Triangular workflow wiring (product->dev->QA delegation chain, failure->fix loop, completion cascade)
-- [ ] 73-03: End-to-end integration test (happy-path triangular workflow against running services)
+- [ ] 73-01-PLAN.md -- QA agent definition (YAML + prompt.md, capabilities, Haiku model) and MAX_DELEGATION_DEPTH raise to 5
+- [ ] 73-02-PLAN.md -- Triangular workflow prompt wiring (product-agent implementation delegation + dev-agent QA verification delegation)
+- [ ] 73-03-PLAN.md -- Validation script (synthetic event trigger, health check, dashboard observation checklist)
 
 ## Progress
 
