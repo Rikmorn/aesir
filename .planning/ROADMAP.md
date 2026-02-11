@@ -182,12 +182,12 @@ Plans:
   2. The dashboard renders a delegation graph with expandable nodes, status indicators, and click-through to conversation detail pages
   3. A delegation timeline shows chronological events (delegation, handshake, signals) filterable by task tree
   4. Health indicators surface orphaned completions, excessive delegation depth, rejection chains, and timeout patterns
-**Plans**: ~3 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] 72-01: Task tree API endpoint (recursive CTE with depth limit, timeline, and signal flow data)
-- [ ] 72-02: Dashboard task tree view (React Flow + dagre layout, expandable nodes, status indicators, cross-conversation links)
-- [ ] 72-03: Signal flow visualization, delegation timeline, and health indicator components
+- [ ] 72-01-PLAN.md -- Schema extension, task tree service (recursive CTE), polling API route, task list page with health badges, sidebar navigation
+- [ ] 72-02-PLAN.md -- React Flow graph view with dagre layout, custom task nodes, animated delegation edges, live 30s polling
+- [ ] 72-03-PLAN.md -- Task detail panel, delegation timeline with bidirectional graph linking, conversation cross-linking
 
 #### Phase 73: QA Agent + Validation Workflow
 **Goal**: A QA agent validates the triangular product-dev-QA workflow, exercising every collaboration primitive simultaneously as the integration test for the entire milestone
