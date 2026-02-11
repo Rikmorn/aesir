@@ -43,6 +43,50 @@ function isTreeTerminal(nodes: TaskTreeNode[]): boolean {
   return nodes.every((n) => TERMINAL_STATUSES.has(n.status));
 }
 
+/**
+ * Merge new tree data into existing state by diffing.
+ * - Nodes: update existing by ID, append new ones, remove stale ones
+ * - Events: append-only (events are immutable once created)
+ * - Health: always replace (derived from current state)
+ *
+ * Preserves React state references for unchanged nodes (React Flow uses
+ * reference equality for memoized node rendering) and keeps timeline scroll
+ * position stable by not replacing existing DOM elements.
+ */
+function mergeTreeState(prev: TreeState, next: TreeState): TreeState {
+  // Build lookup of existing IDs for O(1) membership checks
+  const existingNodeIds = new Set(prev.nodes.map((n) => n.id));
+  const existingEventIds = new Set(prev.events.map((e) => e.id));
+  const nextNodeIds = new Set(next.nodes.map((n) => n.id));
+
+  // Merge nodes: update existing in place, append new
+  const mergedNodes = prev.nodes
+    .map((existing) => {
+      const updated = next.nodes.find((n) => n.id === existing.id);
+      return updated ?? existing;
+    })
+    // Remove nodes no longer in the tree (cancelled and pruned)
+    .filter((n) => nextNodeIds.has(n.id));
+
+  // Append any nodes that didn't exist before
+  for (const node of next.nodes) {
+    if (!existingNodeIds.has(node.id)) {
+      mergedNodes.push(node);
+    }
+  }
+
+  // Append new events only (events are immutable)
+  const newEvents = next.events.filter((e) => !existingEventIds.has(e.id));
+  const mergedEvents =
+    newEvents.length > 0 ? [...prev.events, ...newEvents] : prev.events; // Reference equality if no new events
+
+  return {
+    nodes: mergedNodes,
+    events: mergedEvents,
+    health: next.health, // Always use latest health computation
+  };
+}
+
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export function LiveTaskGraph({
@@ -88,11 +132,13 @@ export function LiveTaskGraph({
           health: TreeHealth;
         };
 
-        setTree({
-          nodes: data.nodes,
-          events: data.events,
-          health: data.health,
-        });
+        setTree((prev) =>
+          mergeTreeState(prev, {
+            nodes: data.nodes,
+            events: data.events,
+            health: data.health,
+          }),
+        );
 
         if (isTreeTerminal(data.nodes)) {
           setIsPolling(false);
