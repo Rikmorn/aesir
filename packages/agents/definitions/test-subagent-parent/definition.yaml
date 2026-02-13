@@ -1,0 +1,32 @@
+id: test-subagent-parent
+name: Test SubAgent Parent
+description: >
+  Test agent that spawns a sub-agent and uses its result. Exercises
+  the sub-agent spawning mechanism with shared token budget.
+version: "1"
+
+model: claude-haiku-4-5-20251001
+temperature: 0
+
+tools:
+  - task:create_task
+  - task:complete_task
+  - coordination:spawn_agent
+
+subAgents:
+  worker: test-subagent-child
+
+maxIterations: 15
+tokenBudget: 15000
+
+history:
+  pruneThreshold: 10000
+  protectedMessages: 10
+  summaryThreshold: 15000
+  summaryModel: claude-haiku-4-5-20251001
+
+capabilities:
+  - "initiate sub-agent test workflows"
+
+triggers:
+  - event: testing.subagent.start

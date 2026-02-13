@@ -1,0 +1,34 @@
+id: test-chain-initiator
+name: Test Chain Initiator
+description: >
+  Test agent that initiates a delegation chain (A→B→C). Delegates to a relay
+  agent, which delegates further to an acceptor. Validates depth tracking and
+  result propagation across multiple hops.
+version: "1"
+
+model: claude-haiku-4-5-20251001
+temperature: 0
+
+tools:
+  - task:create_task
+  - task:complete_task
+  - task:delegate
+  - coordination:wait_for
+  - coordination:wait_for_task
+  - directory:find
+  - communication:notify
+
+maxIterations: 15
+tokenBudget: 15000
+
+history:
+  pruneThreshold: 10000
+  protectedMessages: 10
+  summaryThreshold: 15000
+  summaryModel: claude-haiku-4-5-20251001
+
+capabilities:
+  - "initiate chain delegation test workflows"
+
+triggers:
+  - event: testing.chain.start

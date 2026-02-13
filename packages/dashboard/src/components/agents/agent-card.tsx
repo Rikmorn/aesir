@@ -28,7 +28,7 @@ function MetadataItem({
 }
 
 export function AgentCard({ agent }: { agent: AgentSummary }) {
-  const agentType = getAgentType(agent.triggers);
+  const agentType = getAgentType(agent.triggers, agent.tools);
   const subAgentCount = agent.subAgents
     ? Object.keys(agent.subAgents).length
     : 0;

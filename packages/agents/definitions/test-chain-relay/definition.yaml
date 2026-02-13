@@ -1,0 +1,31 @@
+id: test-chain-relay
+name: Test Chain Relay
+description: >
+  Test agent that accepts a delegation, then delegates further to a downstream
+  acceptor. Exercises the middle node in an A→B→C delegation chain.
+version: "1"
+
+model: claude-haiku-4-5-20251001
+temperature: 0
+
+tools:
+  - task:respond
+  - task:create_task
+  - task:complete_task
+  - task:delegate
+  - task:get_task_context
+  - coordination:wait_for
+  - coordination:wait_for_task
+  - directory:find
+
+maxIterations: 15
+tokenBudget: 15000
+
+history:
+  pruneThreshold: 10000
+  protectedMessages: 10
+  summaryThreshold: 15000
+  summaryModel: claude-haiku-4-5-20251001
+
+capabilities:
+  - "relay delegated test tasks to downstream agents"

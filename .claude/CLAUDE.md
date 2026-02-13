@@ -406,11 +406,23 @@ pnpm run typecheck    # Type check without emit
 ### Testing
 
 ```bash
-pnpm test                 # Run all tests
+pnpm test                 # Run all tests (Vitest unit + integration)
 pnpm test:fast           # Skip integration tests (no Docker required)
 pnpm test:integration    # Run integration tests only (requires testcontainers)
 pnpm test:coverage       # Run with coverage report
 ```
+
+### Agent Integration Tests
+
+LLM-driven integration tests that exercise agent collaboration primitives against a live system. Requires agent-service running (`docker compose up`).
+
+```bash
+pnpm --filter @aesir/agents test:agents                  # Run all scenarios
+pnpm --filter @aesir/agents test:agents -- delegation     # Run specific scenario
+pnpm --filter @aesir/agents test:agents -- --tag handoff  # Run by tag
+```
+
+See `packages/agents/scripts/agent-tests/` for scenarios and framework.
 
 ### Code Quality
 
@@ -799,11 +811,11 @@ describe("MyService", () => {
 
 ## Testing
 
+### Unit & Integration Tests (Vitest)
+
 - Test files: `*.test.ts` next to source files
 - Run single test: `npx vitest run path/to/file.test.ts`
 - Vitest for unit tests, testcontainers for integration tests
-
-### Test Structure
 
 ```typescript
 import { describe, expect, it } from "vitest";
@@ -821,6 +833,56 @@ describe("ComponentName", () => {
   });
 });
 ```
+
+### Agent Integration Tests (LLM-Evaluated)
+
+LLM-driven integration tests that exercise agent collaboration primitives against a live system. Located at `packages/agents/scripts/agent-tests/`.
+
+**How it works:**
+1. Runner fires a trigger event (e.g., `testing.delegate.start`) via HTTP POST to agent-service
+2. Polls DB until all related conversations settle (completed/failed)
+3. Collects evidence: conversations, tasks, handoffs, events (tool calls, signals)
+4. Sends evidence + natural language success criteria to Haiku for pass/fail judgment
+5. Reports verdict with reasoning per criterion
+
+**Running:**
+```bash
+pnpm --filter @aesir/agents test:agents                  # All scenarios
+pnpm --filter @aesir/agents test:agents -- delegation     # Single scenario
+pnpm --filter @aesir/agents test:agents -- --tag handoff  # By tag
+```
+
+**Prerequisites:** Agent-service must be running (`docker compose up`). Requires `DATABASE_URL` and `ANTHROPIC_API_KEY`.
+
+**Current scenarios:** delegation, handoff, chain (A→B→C), rejection, timeout, subagent, tools
+
+**Adding a new scenario:**
+1. Create test agent definitions in `definitions/test-*/{definition.yaml,prompt.md}` (triggered by `testing.<name>.start`)
+2. Add scenario file at `scripts/agent-tests/scenarios/<name>.ts` exporting an `AgentTestScenario`
+3. Register in `scripts/agent-tests/scenarios/index.ts`
+4. Run `pnpm --filter @aesir/agents seed:directory` to register new test agents in the entity directory
+
+**Scenario structure:**
+```typescript
+export const myScenario: AgentTestScenario = {
+  id: "my-scenario",
+  name: "My Scenario",
+  description: "What this tests",
+  trigger: { eventType: "testing.my-scenario.start" },
+  timeoutMs: 60_000,
+  expect: `
+    - Natural language success criterion 1
+    - Natural language success criterion 2
+  `,
+  tags: ["delegation", "my-tag"],
+};
+```
+
+**Testing workflow:**
+- **Automated suite** (`test:agents`) is the regression safety net -- runs on CI, catches breakages
+- **Manual exploratory testing** with Claude is for investigating new features, edge cases, and root causes
+- When manual testing discovers an issue, codify it as a new scenario or updated criteria in the automated suite
+- Before manual testing, read the relevant scenario file to evaluate against the same criteria
 
 ## Gotchas
 

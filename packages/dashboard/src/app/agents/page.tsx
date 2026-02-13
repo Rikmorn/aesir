@@ -11,8 +11,8 @@ export default async function AgentsPage() {
   const agents = await getAgentList();
 
   const sorted = [...agents].sort((a, b) => {
-    const typeA = getAgentType(a.triggers);
-    const typeB = getAgentType(b.triggers);
+    const typeA = getAgentType(a.triggers, a.tools);
+    const typeB = getAgentType(b.triggers, b.tools);
 
     if (typeA !== typeB) {
       return typeA === "orchestrator" ? -1 : 1;

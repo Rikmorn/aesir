@@ -17,14 +17,21 @@ const typeConfig: Record<AgentType, { label: string; className: string }> = {
 };
 
 /**
- * Determine agent type from triggers field.
+ * Determine agent type from triggers and tools.
  *
- * An agent with non-empty triggers is an orchestrator (top-level agent that
- * responds to external events). An agent without triggers is a sub-agent
- * (spawned by orchestrators to handle specific tasks).
+ * An orchestrator is either:
+ * - An agent with external event triggers (webhook-activated), OR
+ * - An agent with task:respond (delegation-activated, e.g., qa-agent)
+ *
+ * Everything else is a sub-agent (spawned internally by orchestrators).
  */
-export function getAgentType(triggers?: Array<{ event: string }>): AgentType {
-  return triggers && triggers.length > 0 ? "orchestrator" : "sub-agent";
+export function getAgentType(
+  triggers?: Array<{ event: string }>,
+  tools?: string[],
+): AgentType {
+  if (triggers && triggers.length > 0) return "orchestrator";
+  if (tools?.includes("task:respond")) return "orchestrator";
+  return "sub-agent";
 }
 
 export function AgentTypeBadge({ type }: { type: AgentType }) {

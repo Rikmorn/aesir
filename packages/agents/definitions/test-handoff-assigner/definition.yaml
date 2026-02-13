@@ -1,0 +1,33 @@
+id: test-handoff-assigner
+name: Test Handoff Assigner
+description: >
+  Test agent that exercises the hand-off pattern: find an agent via
+  directory, delegate a task, wait for handshake acceptance, then
+  complete own task without waiting for the acceptor's result.
+version: "1"
+
+model: claude-haiku-4-5-20251001
+temperature: 0
+
+tools:
+  - task:create_task
+  - task:complete_task
+  - task:delegate
+  - coordination:wait_for
+  - directory:find
+  - communication:notify
+
+maxIterations: 15
+tokenBudget: 15000
+
+history:
+  pruneThreshold: 10000
+  protectedMessages: 10
+  summaryThreshold: 15000
+  summaryModel: claude-haiku-4-5-20251001
+
+capabilities:
+  - "initiate hand-off test workflows"
+
+triggers:
+  - event: testing.handoff.start

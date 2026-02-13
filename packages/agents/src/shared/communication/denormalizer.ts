@@ -102,15 +102,32 @@ export async function denormalize(
         const activityType = resolveActivityType(params.intent);
 
         if (params.intent === "notify_action") {
-          // Action activities use action + parameter fields (not body)
+          // Action activities use action + parameter fields (not body).
+          // Split text into action verb + parameter on first space.
+          // If text has no space (single word), fall back to thought type
+          // since action type requires both fields to be non-empty.
+          const spaceIdx = text.indexOf(" ");
+          if (spaceIdx > 0) {
+            return callMcpTool({
+              integration: "linear",
+              tool: "create_agent_activity",
+              params: {
+                agentSessionId: replyContext.agentSessionId,
+                type: activityType,
+                action: text.slice(0, spaceIdx),
+                parameter: text.slice(spaceIdx + 1),
+              },
+              ...mcpBase,
+            });
+          }
+          // No meaningful split possible — fall back to thought
           return callMcpTool({
             integration: "linear",
             tool: "create_agent_activity",
             params: {
               agentSessionId: replyContext.agentSessionId,
-              type: activityType,
-              action: text,
-              parameter: "",
+              type: "thought",
+              body: text,
             },
             ...mcpBase,
           });

@@ -1,0 +1,26 @@
+id: test-delegate-acceptor
+name: Test Delegate Acceptor
+description: >
+  Test agent that accepts delegated tasks and signals completion.
+  Exercises the acceptor side of the delegation handshake.
+version: "1"
+
+model: claude-haiku-4-5-20251001
+temperature: 0
+
+tools:
+  - task:respond
+  - task:complete_task
+  - task:get_task_context
+
+maxIterations: 5
+tokenBudget: 8000
+
+history:
+  pruneThreshold: 5000
+  protectedMessages: 5
+  summaryThreshold: 8000
+  summaryModel: claude-haiku-4-5-20251001
+
+capabilities:
+  - "accept delegated test tasks and signal completion"

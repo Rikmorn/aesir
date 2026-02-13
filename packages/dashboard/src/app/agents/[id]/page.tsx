@@ -40,7 +40,7 @@ export default async function AgentDetailPage({
     notFound();
   }
 
-  const agentType = getAgentType(agent.triggers);
+  const agentType = getAgentType(agent.triggers, agent.tools);
 
   return (
     <main className="container mx-auto px-4 py-8">

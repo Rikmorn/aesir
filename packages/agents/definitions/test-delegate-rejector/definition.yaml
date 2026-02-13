@@ -1,0 +1,25 @@
+id: test-delegate-rejector
+name: Test Delegate Rejector
+description: >
+  Test agent that rejects any delegated work. Exercises the rejection path
+  of the handshake protocol.
+version: "1"
+
+model: claude-haiku-4-5-20251001
+temperature: 0
+
+tools:
+  - task:respond
+  - task:get_task_context
+
+maxIterations: 5
+tokenBudget: 8000
+
+history:
+  pruneThreshold: 5000
+  protectedMessages: 5
+  summaryThreshold: 8000
+  summaryModel: claude-haiku-4-5-20251001
+
+capabilities:
+  - "reject delegated test tasks"

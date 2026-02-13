@@ -22,7 +22,8 @@
     "test:watch": "vitest",
     "db:migrate": "drizzle-kit migrate",
     "seed:directory": "tsx scripts/seed-directory.ts",
-    "validate:workflow": "tsx scripts/validate-workflow.ts"
+    "validate:workflow": "tsx scripts/validate-workflow.ts",
+    "test:agents": "tsx scripts/agent-tests/run.ts"
   },
   "dependencies": {
     "@aesir/observability": "workspace:*",

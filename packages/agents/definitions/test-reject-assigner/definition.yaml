@@ -1,0 +1,32 @@
+id: test-reject-assigner
+name: Test Reject Assigner
+description: >
+  Test agent that delegates to an agent known to reject. Validates that the
+  assigner handles rejection gracefully and completes its own task.
+version: "1"
+
+model: claude-haiku-4-5-20251001
+temperature: 0
+
+tools:
+  - task:create_task
+  - task:complete_task
+  - task:delegate
+  - coordination:wait_for
+  - directory:find
+  - communication:notify
+
+maxIterations: 15
+tokenBudget: 15000
+
+history:
+  pruneThreshold: 10000
+  protectedMessages: 10
+  summaryThreshold: 15000
+  summaryModel: claude-haiku-4-5-20251001
+
+capabilities:
+  - "initiate rejection test workflows"
+
+triggers:
+  - event: testing.reject.start

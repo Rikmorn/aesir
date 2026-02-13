@@ -3,7 +3,12 @@ import { z } from "zod";
 /**
  * Event source - which integration produced this event
  */
-export const EventSourceSchema = z.enum(["linear", "github", "slack"]);
+export const EventSourceSchema = z.enum([
+  "linear",
+  "github",
+  "slack",
+  "testing",
+]);
 export type EventSource = z.infer<typeof EventSourceSchema>;
 
 /**
@@ -22,7 +27,7 @@ export const NormalizedEventSchema = z.object({
   /** Unique event ID (evt_<nanoid>) */
   id: z.string().startsWith("evt_"),
   /** Event type in dotted notation: {source}.{resource}.{action} */
-  type: z.string().regex(/^(linear|github|slack)\.[a-z_]+\.[a-z_]+$/),
+  type: z.string().regex(/^(linear|github|slack|testing)\.[a-z_]+\.[a-z_]+$/),
   /** Source integration */
   source: EventSourceSchema,
   /** ISO 8601 timestamp */

@@ -1,0 +1,24 @@
+id: test-delegate-staller
+name: Test Delegate Staller
+description: >
+  Test agent that receives a delegation but never responds. Forces the
+  delegator's handshake timeout to fire. Has no respond tool.
+version: "1"
+
+model: claude-haiku-4-5-20251001
+temperature: 0
+
+tools:
+  - task:get_task_context
+
+maxIterations: 2
+tokenBudget: 4000
+
+history:
+  pruneThreshold: 3000
+  protectedMessages: 5
+  summaryThreshold: 4000
+  summaryModel: claude-haiku-4-5-20251001
+
+capabilities:
+  - "stall on delegated test tasks"
