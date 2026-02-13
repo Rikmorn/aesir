@@ -23,7 +23,6 @@ tools:
   - knowledge:query
   - directory:find
   - directory:get
-  - communication:reply
   - communication:notify
 
 maxIterations: 15

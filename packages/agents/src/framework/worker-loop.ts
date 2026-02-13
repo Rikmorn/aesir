@@ -1331,6 +1331,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
                   waitForState.waitTypes?.[0] ??
                   "unknown",
                 waitForState.reason ?? "Agent paused",
+                waitForState.metadata ?? undefined,
               );
             } catch (scheduleError) {
               childLogger.error(

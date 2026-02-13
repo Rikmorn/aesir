@@ -76,6 +76,7 @@ const CreateTaskParamsSchema = z.object({
   title: z.string().min(1, "Title is required"),
   objective: z.string().optional(),
   metadata: TaskMetadataSchema.optional().default({}),
+  depth: z.number().int().min(0).optional().default(0),
 });
 
 /** Update task params (at least one field required) */
@@ -198,6 +199,7 @@ export function createTaskService(options: TaskServiceOptions): TaskService {
           title: validated.title,
           objective: validated.objective ?? null,
           metadata: validated.metadata,
+          depth: validated.depth,
           created_at: now,
           updated_at: now,
         })

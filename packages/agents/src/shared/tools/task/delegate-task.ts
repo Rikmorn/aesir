@@ -126,7 +126,7 @@ export function createDelegateTaskTool(ctx: ToolContext): ToolDefinition {
           newDepth = parentDepth + 1;
         }
 
-        // 4. Create delegation task
+        // 4. Create delegation task with depth tracking
         const task = await deps.taskService.create({
           parentId: parentId ?? undefined,
           creatorType: "agent",
@@ -136,19 +136,9 @@ export function createDelegateTaskTool(ctx: ToolContext): ToolDefinition {
           title: description.slice(0, 100),
           objective: description,
           status: "created",
-          metadata: { depth: newDepth, delegatedBy: ctx.agentId },
+          depth: newDepth,
+          metadata: { delegatedBy: ctx.agentId },
         });
-
-        // 4b. Update depth on the task (service.create uses default 0)
-        if (newDepth > 0) {
-          await deps.taskService.update(task.id, {
-            metadata: {
-              ...((task.metadata as Record<string, unknown>) ?? {}),
-              depth: newDepth,
-              delegatedBy: ctx.agentId,
-            },
-          });
-        }
 
         // 5. Build delegation XML block
         const delegationBlock = buildDelegationBlock({

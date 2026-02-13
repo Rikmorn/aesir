@@ -1255,6 +1255,7 @@ describe("createWorkerLoop", () => {
         "72h",
         "approval",
         "Review needed",
+        undefined,
       );
 
       // Verify pending_wait includes timeoutJobId

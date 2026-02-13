@@ -28,6 +28,8 @@ export interface TimeoutJobData {
   conversationId: string;
   waitType: string;
   reason: string;
+  /** Metadata from the pending wait (e.g., taskId for wait_for_task) */
+  metadata?: Record<string, unknown>;
 }
 
 /** Options for creating a TimeoutScheduler */
@@ -58,6 +60,7 @@ export interface TimeoutScheduler {
     timeoutDuration: string,
     waitType: string,
     reason: string,
+    metadata?: Record<string, unknown>,
   ): Promise<string>;
 
   /**
@@ -187,13 +190,14 @@ export function createTimeoutScheduler(
           const job = jobs[0];
           if (!job) return;
 
-          const { conversationId, waitType, reason } = job.data;
+          const { conversationId, waitType, reason, metadata } = job.data;
 
           const signal: Signal = {
             // Use the original wait type so the signal matches the pending_wait.
             // The timeout context is communicated via source and data fields.
+            // Metadata (e.g., taskId) is merged so taskId-scoped matching works.
             type: waitType,
-            data: { timeout: true, reason },
+            data: { timeout: true, reason, ...metadata },
             message: `Wait timeout: you have been paused waiting for '${waitType}'. No signal was received. Decide whether to escalate, retry, or complete.`,
             source: "internal:scheduler",
             deduplicationId: `timeout-${conversationId}-${job.id}`,
@@ -223,12 +227,13 @@ export function createTimeoutScheduler(
       timeoutDuration: string,
       waitType: string,
       reason: string,
+      metadata?: Record<string, unknown>,
     ): Promise<string> {
       const startAfter = computeStartAfter(timeoutDuration);
 
       const jobId = await boss.send(
         TIMEOUT_QUEUE,
-        { conversationId, waitType, reason },
+        { conversationId, waitType, reason, metadata },
         {
           startAfter,
           singletonKey: conversationId,
