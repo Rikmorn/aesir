@@ -1,5 +1,33 @@
 # Project Milestones: Aesir
 
+## v2.7 Agent Collaboration (Shipped: 2026-02-13)
+
+**Delivered:** Multi-agent collaboration -- agents discover each other by capability, delegate work through tasks with negotiation handshakes, signal completion reliably, and the entire chain is observable through the dashboard. Triangular product→dev→QA workflow validates all primitives end-to-end.
+
+**Phases completed:** 67-73 (7 phases, 26 plans total)
+
+**Key accomplishments:**
+- Linear Agent SDK: agents authenticate as first-class Linear workspace entities (actor=app) with typed activities (thought, elicitation, action, response, error), proactive token refresh, and echo elimination by design
+- Shared Memory: pgvector-backed knowledge store with 6 classification types (discovery, constraint, architecture_decision, thought, preference, test_result), semantic search, mandatory expiry, and deduplication
+- Entity Directory: agents discover each other by capability via semantic embedding matching, seeded from YAML definitions at deploy time with idempotent upsert
+- Task Delegation: cross-conversation delegation with accept/reject handshake (30s timeout), depth enforcement (max 5), and focused briefs instead of full message history
+- Completion Signaling: TaskSignalDispatcher fires signals on terminal task transitions, multi-type wait_for, wait_for_task auto-registration, orphan handling with completion_result JSONB, active_delegations context preservation
+- Delegation Graph Observability: React Flow task tree with dagre layout, custom task nodes with health badges, delegation timeline with bidirectional graph linking, conversation cross-links, incremental polling
+- QA Agent: delegation-only agent (Haiku model, no triggers) validating the triangular product→dev→QA workflow with 15 collaboration tools
+
+**Stats:**
+- 131 files created/modified (+11,291 / -90 lines)
+- ~85,000 lines of TypeScript total
+- 7 phases, 26 plans, 49 requirements (48 satisfied, 1 deferred)
+- 41 commits over 4 days (2026-02-10 → 2026-02-13)
+- 5 critical/major e2e issues discovered and fixed during live validation
+
+**Git range:** `849227d` → `a491b4e`
+
+**What's next:** Agent resilience, stale task cleanup, prompt evaluation tooling, CI/CD pipeline, monitoring/alerting
+
+---
+
 ## v2.6 Unified Agent Communication (Shipped: 2026-02-09)
 
 **Delivered:** Domain-language communication primitives (reply/ask/notify) replacing channel-specific outbound tools, with full inbound replyContext propagation and outbound denormalization so agents reason about intent while infrastructure handles channel translation
@@ -220,6 +248,16 @@
 ## v2.6 Unified Agent Communication (Shipped: 2026-02-09)
 
 **Phases completed:** 78 phases, 300 plans, 52 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
+
+
+## v2.7 Agent Collaboration (Shipped: 2026-02-13)
+
+**Phases completed:** 85 phases, 326 plans, 52 tasks
 
 **Key accomplishments:**
 - (none recorded)

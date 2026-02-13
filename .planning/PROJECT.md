@@ -8,33 +8,22 @@ An agentic development platform that automates software development workflows --
 
 End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-## Current Milestone: v2.7 Agent Collaboration
-
-**Goal:** Multi-agent collaboration — agents delegate work to each other and to humans through tasks, backed by shared memory, an entity directory, and first-class Linear agent identity.
-
-**Target features:**
-- Linear Agent SDK migration (actor=app, agent activities, echo elimination by design)
-- Shared memory (knowledge:store/query, classification, private notepad vs shared)
-- Entity directory (agents + humans queryable by capability, seeded from YAML)
-- Task delegation (task:delegate, materialization layer, negotiation handshake)
-- Completion signaling (callback routing, failure/timeout/clarification signals)
-- Delegation graph observability (task tree view, cross-conversation tracing)
-- QA agent validation workflow (triangular product→dev→QA loop)
-
 ## Current State
 
-**Version:** v2.6 Unified Agent Communication shipped (2026-02-09)
+**Version:** v2.7 Agent Collaboration shipped (2026-02-13)
 
 **Tech Stack:**
 - TypeScript/Node.js monorepo (pnpm workspaces)
-- ~74,000 lines across 8 packages
+- ~85,000 lines across 8 packages
 - @anthropic-ai/sdk for agentic tool-use loops
 - Postgres-backed ConversationExecutor with SKIP LOCKED claiming (no Temporal)
 - Declarative agent definitions (YAML + prompt.md) with AgentRegistry + ToolRegistry
 - Unified event log (agent_events) with SessionProjection
-- Task primitive with structured handoffs for multi-conversation continuity
-- PostgreSQL for all persistence (conversations, events, sessions, tasks, credentials)
-- Docker Compose for local development (7 services: PostgreSQL, nginx, 3 integrations, agent-service, dashboard)
+- Task primitive with structured handoffs and cross-conversation delegation for multi-agent collaboration
+- Shared memory (pgvector knowledge store with semantic search, classification, expiry)
+- Entity directory (agents discoverable by capability via embedding similarity)
+- PostgreSQL + pgvector for all persistence (conversations, events, sessions, tasks, knowledge, directory, credentials)
+- Docker Compose for local development (7 services: PostgreSQL/pgvector, nginx, 3 integrations, agent-service, dashboard)
 - MCP (Model Context Protocol) for agent-integration communication with task correlation
 - Smart router with hybrid event classification (deterministic + task-aware + LLM)
 - Next.js 15 operations dashboard with Tailwind, shadcn/ui, Drizzle ORM, SSE real-time updates
@@ -59,8 +48,11 @@ Agent definitions (YAML + prompt.md, constitutional + few-shot style)
 - Agentic tool-use loops: agents reason about what to do via @anthropic-ai/sdk native tool-use
 - Dev agent orchestrator with sub-agents (researcher, coder, tester) via spawn_agent tool
 - Product agent adapts conversation strategy based on input clarity
-- 39 tool factories in namespace:tool_name registry with ToolContext injection (including 6 task tools, 3 communication tools)
-- Task primitive: multi-conversation continuity with structured handoffs, hierarchy guardrails (depth 5, subtask 10, circular delegation prevention)
+- 45+ tool factories in namespace:tool_name registry with ToolContext injection (including 6 task tools, 3 communication tools, 3 knowledge tools, 2 directory tools, 2 delegation tools)
+- Task primitive: multi-conversation continuity with structured handoffs, cross-conversation delegation, hierarchy guardrails (depth 5, subtask 10, circular delegation prevention)
+- Task delegation: agents delegate to other agents via directory discovery, negotiation handshake (accept/reject), completion signaling cascade
+- Shared memory: knowledge:store/query/update with 6 classification types, pgvector semantic search, mandatory expiry, deduplication
+- Entity directory: agents discover each other by capability via semantic embedding matching, seeded from YAML definitions
 - Bidirectional task correlation across all integrations (X-Task-ID header, task_correlations tables)
 - Task-aware event routing with advisory lock serialization and automatic context enrichment
 - Conversation reopening: completed/failed conversations resume on follow-up events with world-state injection
@@ -72,8 +64,8 @@ Agent definitions (YAML + prompt.md, constitutional + few-shot style)
 - Goal-oriented agent prompts: constitutional constraints + few-shot reasoning examples (no procedural state machines)
 - Guardrails: sandbox enforcement, merge protection, token budgets, spawn depth limits, task hierarchy limits
 - Graceful shutdown with conversation draining
-- Real-time operations dashboard: conversations, agents, tools, system overview with SSE live updates
-- Dashboard features: dark mode, sidebar navigation, permission matrix, inline LLM content, URL-persisted state, reopen/retry actions
+- Real-time operations dashboard: conversations, agents, tools, task delegation graphs, system overview with SSE live updates
+- Dashboard features: dark mode, sidebar navigation, permission matrix, inline LLM content, URL-persisted state, reopen/retry actions, React Flow delegation graph with health indicators
 - Domain-language communication: agents use reply/ask/notify instead of channel-specific tools, infrastructure denormalizes to Slack/Linear/GitHub
 - ReplyContext propagation: inbound adapters extract channel context, signals carry it, agents receive opaque context to pass through
 - Echo loop prevention: agent-authored comments filtered at adapter level before re-entering inbound pipeline
@@ -166,17 +158,23 @@ Agent definitions (YAML + prompt.md, constitutional + few-shot style)
 - ✓ Echo loop prevention: Linear comment webhook filter — v2.6
 - ✓ Test coverage: 69 communication pipeline tests (42/45 requirements satisfied, 1 dropped, 2 moved) — v2.6
 
+**v2.7 Agent Collaboration (shipped 2026-02-13):**
+- ✓ Linear Agent SDK: actor=app OAuth, typed activities (thought/elicitation/action/response/error), proactive token refresh, echo elimination by design — v2.7
+- ✓ Shared Memory: pgvector knowledge store with 6 classification types, semantic search, mandatory expiry, deduplication — v2.7
+- ✓ Entity Directory: agents discover each other by capability via semantic embedding matching, idempotent YAML seeding — v2.7
+- ✓ Task Delegation: cross-conversation delegation with accept/reject handshake, depth enforcement (max 5), focused briefs — v2.7
+- ✓ Completion Signaling: TaskSignalDispatcher, multi-type wait_for, wait_for_task, orphan handling, active_delegations context — v2.7
+- ✓ Delegation Graph Observability: React Flow task tree, dagre layout, health badges, delegation timeline, conversation cross-links — v2.7
+- ✓ QA Agent: delegation-only agent validating triangular product→dev→QA workflow (48/49 requirements, LSDK-08 deferred) — v2.7
+
 ### Active
 
 **Candidates for future milestones:**
 - [ ] Stale task cleanup: timeout signal mechanism for inactive tasks (TASK-26, deferred from v2.5)
 - [ ] Prompt evaluation tooling (promptfoo, shadow mode)
-- [ ] Dashboard tasks view (list tasks, task detail with grouped conversations and handoffs)
 - [ ] CI/CD pipeline for deployment
 - [ ] Monitoring and alerting for agent health
 - [ ] Multi-environment configuration (dev/staging/prod)
-- [ ] QA agent for automated code review
-- [ ] Agent-managed memory (MemGPT/Letta style with memory:save/search tools)
 - [ ] Cross-session learning (agents improve from past task outcomes)
 - [ ] LISTEN/NOTIFY for event-driven worker wakeup (replace polling)
 - [ ] Dashboard authentication enforcement (Auth.js, multi-tenancy)
@@ -187,15 +185,23 @@ Agent definitions (YAML + prompt.md, constitutional + few-shot style)
 - [ ] Handoff quality evaluation (LLM-as-judge)
 - [ ] Correlation miss rate monitoring
 - [ ] Agent → human task notification delivery (Slack DM, Linear assignment)
+- [ ] LSDK-08: Agent Plans checklist-style progress in Linear UI (deferred from v2.7)
+- [ ] Human directory entries: seeding + delegation for human entities (schema ready from v2.7)
+- [ ] Counter-propose in delegation handshake (strategy interface ready from v2.7)
+- [ ] Parallel delegation: task groups with completion policies (sequential only in v2.7)
+- [ ] Markdown-to-Slack-mrkdwn format translation (FMT-01, deferred from v2.6)
+- [ ] Linear OAuth token migration (deadline: April 1, 2026)
 
 ### Out of Scope
 
-- Full codebase indexing / RAG — agents explore via read_file/search_codebase tools; no vector DB needed
+- Full codebase indexing / RAG — agents explore via read_file/search_codebase tools; pgvector used for knowledge + directory only
 - UI for agent creation — code/config first, UI is future enhancement
 - Streaming LLM responses — non-streaming appropriate for backend agents
 - Multi-repo support — agents work on single configured repo; future enhancement
-- Parallel sub-agents — sequential sub-agent execution is sufficient
 - Full event sourcing library — append-only store with ~200 lines is sufficient
+- Central orchestrator agent — bottleneck with 200%+ token overhead; peer-to-peer delegation with directory discovery instead
+- Agent-to-agent chat channels — massive token waste, no clear ownership; task-scoped communication only
+- Separate vector database — pgvector in PostgreSQL sufficient for knowledge + directory volume
 
 ## Context
 
@@ -210,16 +216,20 @@ Agent definitions (YAML + prompt.md, constitutional + few-shot style)
 - Prefer well-maintained external libraries over hand-rolling
 - Agent-first problem solving: fix agent behavior via prompts and tools, not deterministic overrides
 
-**Known Tech Debt (updated after v2.6):**
+**Known Tech Debt (updated after v2.7):**
 - Dispatcher route fallback defaults reference router:3006 instead of agent-service:3004 (22 occurrences; runtime correct via docker-compose)
 - Two signal types (user_reply, cancel) defined in SIGNAL_AGENT_MAP but no adapter produces them (reserved for future)
 - schema.drizzle.ts retains legacy table definitions (intentional, prevents destructive drizzle-kit migrations)
 - 4 pre-existing test failures, 11 tests skipped pending infrastructure
 - Run dev-agent container as non-root (infrastructure improvement)
 - Self-referential FK (tasks.parent_id) handled by SQL migration only, not Drizzle references() — avoids TypeScript circular reference issue
-- Prompts mention get_task_context but don't explicitly reference 4000-char truncation in injected task_context block
-- OUTB-04 in Phase 63 success criteria still mentions "interactive buttons" for Slack ask() (implementation renders text on all channels — criteria preserved as-is since it describes denormalizer dispatch capability)
-- Markdown-to-Slack-mrkdwn format translation not yet implemented (FMT-01, deferred to post-v2.6)
+- LSDK-08 deferred: Agent Plans checklist-style progress in Linear UI
+- Linear OAuth token migration deadline: April 1, 2026 (LSDK-02 token refresh shipped, must be tested before deadline)
+- Human directory entries: schema ready but seeding + delegation deferred
+- Counter-propose in handshake: accept/reject only; strategy interface ready for future
+- Parallel delegation: sequential only; task groups with completion policies deferred
+- Markdown-to-Slack-mrkdwn format translation not yet implemented (FMT-01, deferred from v2.6)
+- Linear Agent SDK is developer preview — feature flag (LINEAR_AGENT_SDK_ENABLED) may be needed for fallback
 
 ## Constraints
 
@@ -264,6 +274,14 @@ Agent definitions (YAML + prompt.md, constitutional + few-shot style)
 | Communication tools over direct MCP | reply/ask/notify abstractions with Zod validation | ✓ Good — 39 tools, agents use intent not channel (v2.6) |
 | Echo filter at adapter level | LINEAR_BOT_USER_ID env comparison, no API call | ✓ Good — zero per-webhook cost (v2.6) |
 | Text-rendered options on all channels | ask() pre-renders options as text, no interactive buttons | ✓ Good — consistent behavior, simpler denormalizer (v2.6) |
+| pgvector in PostgreSQL | No separate vector DB; pgvector handles knowledge + directory embeddings | ✓ Good — operational simplicity, sufficient for agent-scale volume (v2.7) |
+| Peer-to-peer delegation via directory | Agents discover + delegate to each other; no central orchestrator | ✓ Good — no bottleneck, emergent topologies (v2.7) |
+| Accept/reject handshake | Target agent evaluates delegation and accepts or rejects (30s timeout) | ✓ Good — strategy interface ready for future counter-propose (v2.7) |
+| Focused briefs over full history | Delegated tasks carry description + expectations, not delegator's message history | ✓ Good — prevents context pollution, agents stay focused (v2.7) |
+| TaskSignalDispatcher on terminal transitions | Completion signals fired when tasks reach completed/failed, with orphan fallback | ✓ Good — at-most-once delivery, completion_result JSONB preserves work (v2.7) |
+| wait_for_task as separate tool | Auto-registers for all task-lifecycle signals; safety-by-design vs manual wait_for | ✓ Good — agents cannot forget to listen for timeout/failure (v2.7) |
+| Knowledge classification taxonomy (6 types) | Fixed types with sensible defaults; avoids over-classification | ✓ Good — deduplication + expiry work well with fixed categories (v2.7) |
+| Delegation-only agent pattern | QA agent has no triggers, started exclusively via task:delegate | ✓ Good — clean separation of concerns, Haiku for cost efficiency (v2.7) |
 | Webhooks over polling | Cost/load savings; agents wake on events | ✓ Good |
 | Full containerization | Reproducible environments | ✓ Good |
 | PostgreSQL for persistence | Shared across all services | ✓ Good |
@@ -291,6 +309,8 @@ Lessons learned during development that guide future phases.
 | Static verification is necessary but insufficient | v2.5 code path tracing caught structural wiring issues, but 6 runtime bugs (migration journals, race conditions, deduplication, routing logic) only surfaced during live testing. Always validate E2E flows against running services. |
 | Soft language for agent guidance | Task lifecycle, handoff quality, and delegation patterns use "prefer"/"tend toward" instead of MUST/ALWAYS/NEVER. Strong directives reserved for safety boundaries (wait_for, merge protection). |
 | Domain abstraction over channel specifics | Agents should reason about intent (reply, ask, notify), not channels (Slack, Linear, GitHub). Infrastructure handles translation. Adding a new channel should not require agent prompt changes. |
+| E2E testing catches what static verification misses | v2.7 live validation found 5 critical/major issues (orphan signals, depth tracking, timeout metadata) that code review and unit tests did not catch. Budget time for live validation of multi-agent workflows. |
+| Hard constraints for critical agent behaviors | QA agent ended without completing tasks until a hard MUST constraint was added. For safety-critical tool calls (task:complete_task before end), strong directives earn their place. |
 
 ---
-*Last updated: 2026-02-09 after v2.6 milestone*
+*Last updated: 2026-02-13 after v2.7 milestone*

@@ -2,19 +2,16 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-10)
+See: .planning/PROJECT.md (updated 2026-02-13)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.7 Agent Collaboration shipped -- 9 milestones total
+**Current focus:** v2.7 Agent Collaboration shipped — planning next milestone
 
 ## Current Position
 
-Phase: 73 of 73 (QA Agent + Validation Workflow)
-Plan: 3 of 3 in phase (73-03 complete)
-Status: v2.7 milestone COMPLETE -- validated and approved 2026-02-13
-Last activity: 2026-02-13 -- Phase 73 validated, 5 e2e issues fixed (ISS-017/018/019/020/021)
-
-Progress: [██████████] 100%
+Phase: 73 of 73
+Status: v2.7 milestone ARCHIVED — ready for next milestone
+Last activity: 2026-02-13 — Milestone archived, PROJECT.md evolved
 
 ## Milestone History
 
@@ -28,45 +25,16 @@ Progress: [██████████] 100%
 | v2.4 Operations Dashboard | 2026-02-05 | 8 | 22 |
 | v2.5 Agentic Conversations | 2026-02-08 | 7 | 17 |
 | v2.6 Unified Agent Communication | 2026-02-09 | 7 | 16 |
-| v2.7 Agent Collaboration | 2026-02-13 | 7 | 30 |
+| v2.7 Agent Collaboration | 2026-02-13 | 7 | 26 |
 
 ## Performance Metrics
 
 **Cumulative:**
 - Total milestones shipped: 9
 - Total phases completed: 73
-- Total plans completed: 331
+- Total plans completed: 327
 
-| Phase | Plan | Duration | Tasks | Files |
-|-------|------|----------|-------|-------|
-| 67 | 01 | 5min | 2 | 5 |
-| 67 | 02 | 6min | 2 | 6 |
-| 67 | 03 | 4min | 2 | 10 |
-| 67 | 04 | 4min | 2 | 6 |
-| 67 | 05 | 4min | 2 | 2 |
-| 68 | 01 | 4min | 2 | 7 |
-| 68 | 02 | 3min | 1 | 7 |
-| 68 | 03 | 6min | 2 | 9 |
-| 68 | 04 | 3min | 2 | 5 |
-| 69 | 01 | 2min | 2 | 6 |
-| 69 | 02 | 6min | 2 | 7 |
-| 69 | 03 | 6min | 2 | 4 |
-| 70 | 01 | 5min | 2 | 12 |
-| 70 | 02 | 3min | 2 | 4 |
-| 70 | 03 | 2min | 2 | 4 |
-| 71 | 01 | 9min | 2 | 14 |
-| 71 | 02 | 7min | 2 | 8 |
-| 71 | 03 | 5min | 2 | 4 |
-| 71 | 04 | 6min | 3 | 12 |
-| 72 | 01 | 6min | 2 | 10 |
-| 72 | 02 | 7min | 2 | 10 |
-| 72 | 03 | 5min | 2 | 7 |
-| 72 | 04 | 5min | 2 | 8 |
-| 73 | 01 | 3min | 2 | 5 |
-| 73 | 02 | 2min | 2 | 2 |
-| 73 | 03 | 2min | 2 | 2 |
-
-*Updated after each plan completion*
+*Performance metrics for v2.7 archived in .planning/milestones/v2.7-ROADMAP.md*
 
 ## Accumulated Context
 
@@ -74,102 +42,26 @@ Progress: [██████████] 100%
 
 See PROJECT.md Key Decisions table for full history.
 
-- **67-01:** Retry at two levels -- factory handles HTTP retry, middleware handles credential coordination
-- **67-01:** setTimeout chain over setInterval for proactive refresh (prevents overlapping checks)
-- **67-01:** Best-effort Slack alerting -- alert failures never block token refresh
-- **67-02:** update_session_state emits activities (not direct status mutation) because Linear SDK AgentSessionUpdateInput has no status field
-- **67-02:** ActivityToolDeps uses PinoLogger (not MCPLogger) because withTokenRefresh requires richer interface
-- **67-02:** STATUS_TO_ACTIVITY mapping provides default body messages for infrastructure-driven state transitions
-- **67-03:** withTokenRefresh for acknowledgment thought (consistent 401 retry pattern across all Linear API calls)
-- **67-03:** Action activities use action+parameter fields (not body) matching Linear SDK ActionActivityContent schema
-- **67-03:** Single notify tool with intent parameter (reasoning|action) rather than separate tools
-- **67-04:** Error activity emission in worker-loop.ts (not conversation-executor.ts) because failure transitions happen in the worker loop
-- **67-04:** Three contextual error messages: token budget, agent abort, generic -- gives Linear users actionable feedback
-- **67-04:** Dynamic import for callMcpTool in emitErrorActivity to avoid circular dependencies
-- **67-05:** Resume activity uses type=thought (transitions Linear session to active state)
-- **67-05:** Completion activity uses type=response (transitions Linear session to complete state)
-- **67-05:** Resume fires after agent.resumed event but before task context injection for prompt state transition
-- **67-05:** Completion fires before DB update so Linear reflects completion before conversation closes
-- **68-01:** customType for unconstrained vector -- Drizzle built-in vector() requires fixed dimensions, customType allows 768/1024 without schema changes
-- **68-01:** Ollama via Docker profile ("embedding") -- keeps default docker compose up unchanged
-- **68-01:** text placeholder in schema.drizzle.ts -- drizzle-kit CJS bundler cannot resolve customType
-- **68-02:** Voyage AI SDK timeoutInSeconds=10 via RequestOptions (SDK-native timeout, no AbortSignal needed)
-- **68-02:** Ollama embedBatch uses Promise.all with sequential embed calls (no native batch support)
-- **68-03:** cosineDistance from drizzle-orm for pgvector similarity queries (1 - cosineDistance = similarity score)
-- **68-03:** Scope visibility as SQL condition (not application-level filtering) for row-level security
-- **68-03:** EmbeddingConfig.voyage.apiKey changed from optional property to explicit string|undefined for exactOptionalPropertyTypes compatibility
-- **68-04:** setInterval over pg-boss cron for cleanup (TimeoutScheduler doesn't expose boss instance, single-process deployment)
-- **68-04:** Cleanup as first shutdown step (stop generating new work before draining existing)
-- **69-01:** Agent entries use definition ID as PK; directoryEntry ID generator for future human entries only
-- **69-01:** Unconstrained vector for capabilities_embedding (matches knowledge_entries pattern, supports 768/1024)
-- **69-01:** HNSW index m=16, ef_construction=64 matches knowledge_entries for consistent pgvector configuration
-- **69-02:** ne() for self-exclusion in directory:find (consistent drizzle-orm operator usage)
-- **69-02:** directory_get does not take ToolContext (no ctx.agentId needed, unlike find)
-- **69-03:** Knowledge tools added alongside directory tools to orchestrators for Phase 70+ delegation workflows
-- **69-03:** Sorted array JSON comparison for order-independent capability change detection in seed script
-- **70-01:** Late-bound executor reference for worker loop DelegationDeps (avoids circular construction)
-- **70-01:** Depth stored in both DB column (indexed queries) and JSONB metadata (delegation context)
-- **70-01:** task:delegate returns wait_for guidance with task_handshake type and 30s timeout
-- **70-03:** Delegation guidance as prompt section (agent-first principle -- behavior via prompts, not executor code)
-- **70-03:** Spawn vs delegate heuristic: subAgents list = spawn (internal specialist), directory lookup = delegate (cross-domain)
-- [Phase 70]: Worker loop populates delegationDeps for both task:delegate AND task:respond (target agent needs executor.signal())
-- [Phase 70]: Orphan case still transitions task to active if accepted (completion signaling delivers results)
-- **71-01:** WaitForState.waitType -> waitTypes (always array) for uniform multi-type handling
-- **71-01:** Backward compat: signalMatchesPendingWait normalizes old { type } and new { types } formats
-- **71-01:** wait_for_task is a separate tool (not a mode of wait_for) for safety-by-design
-- **71-01:** Synthetic pendingWait for worker-loop post-execution queued signal matching
-- **71-03:** db added to DelegationDeps for direct conversation row access (active_delegations writes)
-- **71-03:** Non-fatal delegation tracking -- write failure never fails the delegation itself
-- **71-03:** Three signal injection points for delegation context: pre-loop, executor.signal(), post-loop re-enqueue
-- **71-03:** computeUpdatedDelegations as pure function for testable delegation state transitions
-- [Phase 71]: Late-bind setDispatcher() on TaskService (same pattern as DelegationDeps executor reference)
-- [Phase 71]: Direct db.update for completion_result bypasses TaskService to avoid infinite recursion
-- [Phase 71]: Dispatcher failures are non-fatal: logged but never thrown (at-most-once delivery)
-- **70-04:** timeoutSignalType fallback chain: explicit type > first waitType > unknown (safe for both wait_for and wait_for_task)
-- **70-04:** Regular wait_for gets timeoutSignalType: null (falls back to first/only waitType, preserving existing behavior)
-- **72-01:** Flat node array with parentId (not nested tree) -- client builds hierarchy, simpler SQL
-- **72-01:** Raw SQL for recursive CTE -- Drizzle ORM lacks native WITH RECURSIVE support
-- **72-01:** Task statuses added to shared StatusBadge config -- avoids duplicating badge component
-- **72-01:** Batch health via Promise.all per root -- simpler than complex batched SQL
-- **72-02:** Module-level nodeTypes/edgeTypes constants outside component -- referential equality prevents React Flow re-mounts
-- **72-02:** Fresh dagre.graphlib.Graph() per layout call -- mutable state reuse causes layout bugs
-- **72-02:** SVG animateMotion for active edge animation -- GPU-accelerated per research recommendation
-- **72-02:** Edge state derived from child task status + orphaned/timeout events -- single source of truth
-- **72-02:** onPaneClick via React Flow prop (not wrapper div onClick) -- avoids biome a11y lint error
-- **72-03:** forwardRef with HTMLButtonElement for timeline rows -- semantic button avoids a11y lint vs role=button div
-- **72-03:** highlightedNodeId separate from selectedNodeId -- 2s pulse effect independent from panel selection
-- **72-03:** getRootTaskId for conversation cross-link -- navigates to root task regardless of depth
-- **72-04:** Extracted pure functions to graph-utils.ts -- React Flow DOM dependency prevents testing in node environment
-- **72-04:** mergeTreeState filters stale nodes defensively (handles cancelled tasks removed from CTE)
-- **72-04:** vi.mock('@/lib/db') pattern for dashboard tests -- prevents pg.Pool creation at module load
-- **73-01:** QA agent uses Haiku model (thin checks, near-deterministic tool calls, cost-efficient)
-- **73-01:** 16 tools covering codebase, delegation, knowledge, communication -- no subAgents
-- **73-01:** No triggers -- QA started exclusively via task:delegate (delegated-only agent pattern)
-- **73-01:** MAX_DELEGATION_DEPTH raised from 3 to 5 for product->dev->QA->dev-fix chain + safety margin
-- **73-02:** Delegation guidance as domain_knowledge sections (not constraints) -- advisory not mandatory
-- **73-02:** Examples show full delegation flow including directory:find, task:delegate, wait_for_task
-- **73-03:** console.log/console.error for CLI output (not pino -- script, not service)
-- **73-03:** Global fetch (Node 18+) -- no additional HTTP dependencies needed
-- **73-03:** Optional --poll flag as convenience (primary observation path is dashboard)
+*v2.7 decisions archived to milestones/v2.7-ROADMAP.md*
 
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
 2. **Run dev-agent container as non-root** (infrastructure)
 3. **11 tests skipped pending infrastructure** (testing)
+4. **Linear OAuth token migration** — deadline April 1, 2026 (LSDK-02 shipped)
 
 ### Blockers/Concerns
 
-- Linear Agent SDK is developer preview -- feature flag (LINEAR_AGENT_SDK_ENABLED) needed for fallback
-- Linear OAuth token migration deadline: April 1, 2026 (LSDK-02 must ship before)
-- pgvector Docker image swap shipped in 68-01 (pgvector/pgvector:pg15 replaces postgres:15-alpine) -- existing volumes compatible
+- Linear Agent SDK is developer preview — feature flag (LINEAR_AGENT_SDK_ENABLED) may be needed for fallback
+- Linear OAuth token migration deadline: April 1, 2026
 
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: v2.7 milestone validated and approved
+Stopped at: v2.7 milestone archived
 Resume file: None
-Next action: Archive v2.7 milestone, begin v2.8 planning
+Next action: `/gsd:new-milestone` for next version
 
 ---
-*Updated: 2026-02-13 -- v2.7 Agent Collaboration shipped: 7 phases, 30 plans, 5 e2e issues fixed*
+*Updated: 2026-02-13 — v2.7 Agent Collaboration archived*
