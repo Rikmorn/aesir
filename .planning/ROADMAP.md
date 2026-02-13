@@ -10,7 +10,7 @@
 - v2.4 Operations Dashboard -- Phases 48-55 (shipped 2026-02-05)
 - v2.5 Agentic Conversations -- Phases 56-59 (shipped 2026-02-08)
 - v2.6 Unified Agent Communication -- Phases 60-66 (shipped 2026-02-09)
-- v2.7 Agent Collaboration -- Phases 67-73 (in progress)
+- v2.7 Agent Collaboration -- Phases 67-73 (shipped 2026-02-13)
 
 ## Completed Phases
 
@@ -70,7 +70,7 @@ See `.planning/milestones/v2.6-ROADMAP.md` for full details.
 
 </details>
 
-## v2.7 Agent Collaboration (In Progress)
+## v2.7 Agent Collaboration (Shipped 2026-02-13)
 
 **Milestone Goal:** Multi-agent collaboration -- agents delegate work to each other through tasks, backed by shared memory, an entity directory, and first-class Linear agent identity.
 
@@ -82,7 +82,7 @@ See `.planning/milestones/v2.6-ROADMAP.md` for full details.
 - [x] **Phase 70: Task Delegation** - Agents delegate work to other agents through tasks with negotiation handshake (completed 2026-02-10)
 - [x] **Phase 71: Completion Signaling** - Delegating agents receive reliable notification when delegated work completes or fails (completed 2026-02-10)
 - [x] **Phase 72: Delegation Graph Observability** - Operators see delegation hierarchies, signal flows, and health indicators in the dashboard (completed 2026-02-11)
-- [ ] **Phase 73: QA Agent + Validation Workflow** - Triangular product-dev-QA workflow validates the entire collaboration system end-to-end
+- [x] **Phase 73: QA Agent + Validation Workflow** - Triangular product-dev-QA workflow validates the entire collaboration system end-to-end (completed 2026-02-13)
 
 ### Phase Details
 
@@ -202,9 +202,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 73-01-PLAN.md -- QA agent definition (YAML + prompt.md, capabilities, Haiku model) and MAX_DELEGATION_DEPTH raise to 5
-- [ ] 73-02-PLAN.md -- Triangular workflow prompt wiring (product-agent implementation delegation + dev-agent QA verification delegation)
-- [ ] 73-03-PLAN.md -- Validation script (synthetic event trigger, health check, dashboard observation checklist)
+- [x] 73-01-PLAN.md -- QA agent definition (YAML + prompt.md, capabilities, Haiku model) and MAX_DELEGATION_DEPTH raise to 5
+- [x] 73-02-PLAN.md -- Triangular workflow prompt wiring (product-agent implementation delegation + dev-agent QA verification delegation)
+- [x] 73-03-PLAN.md -- Validation script (synthetic event trigger, health check, dashboard observation checklist)
 
 ## Progress
 
@@ -227,10 +227,10 @@ Phases 67+68 execute in parallel, then 69 -> 70 -> 71 -> 72 -> 73 sequentially.
 | 70. Task Delegation | v2.7 | 3/3 | Complete | 2026-02-10 |
 | 71. Completion Signaling | v2.7 | 4/4 | Complete | 2026-02-10 |
 | 72. Delegation Graph Observability | v2.7 | 4/4 | Complete | 2026-02-11 |
-| 73. QA Agent + Validation | v2.7 | 0/~3 | Not started | - |
+| 73. QA Agent + Validation | v2.7 | 3/3 | Complete | 2026-02-13 |
 
-**Total: 8 milestones shipped (69 phases, 301 plans) + v2.7 in progress (6/7 phases complete, 23/~26 plans)**
+**Total: 9 milestones shipped (73 phases, 331 plans)**
 
 ---
 
-_Last updated: 2026-02-11_
+_Last updated: 2026-02-13_
