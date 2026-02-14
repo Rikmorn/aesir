@@ -4,8 +4,8 @@
  * LiveDetailPanels
  *
  * Client wrapper for the conversation detail page that adds real-time updates
- * via SSE. Renders the breadcrumb header, collapsible metadata bar, and
- * full-width event timeline.
+ * via SSE. Renders the breadcrumb header with inline metadata, error banner,
+ * relationship links, and full-width event timeline.
  *
  * Key behaviors:
  * - SSE connection only active when conversation status is "running" or "waiting"
@@ -15,17 +15,21 @@
  * - Gap detection triggers router.refresh() for full data reload
  */
 
-import { Check, Copy, GitBranch } from "lucide-react";
+import { Bot, Check, Copy, GitBranch, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { StatusBadge } from "@/components/conversations/status-badge";
+import {
+  StatusBadge,
+  statusConfig,
+} from "@/components/conversations/status-badge";
 import { Button } from "@/components/ui/button";
 import { ConnectionStatusIndicator } from "@/components/ui/connection-status";
 import { useEventStream } from "@/hooks/use-event-stream";
 import { formatDuration, formatTokenCount } from "@/lib/format";
 import type { SseEvent } from "@/lib/sse-types";
+import { cn } from "@/lib/utils";
 import type {
   ChildConversation,
   ConversationDetail,
@@ -33,7 +37,6 @@ import type {
 } from "@/services/conversations";
 
 import { EventTimeline } from "./event-timeline";
-import { MetadataBar } from "./metadata-bar";
 import { ReopenDialog } from "./reopen-dialog";
 
 // ─── Serialized Types ──────────────────────────────────────────────────────
@@ -320,17 +323,24 @@ export function LiveDetailPanels({
     setTimeout(() => setCopied(false), 1500);
   }, [serverConversation.id]);
 
-  // ─── Token display ──────────────────────────────────────────────
+  // ─── Derived display values ───────────────────────────────────────
 
   const tokenTotal = tokenInput + tokenOutput;
   const hasTokens = tokenTotal > 0;
+  const hasError =
+    conversationMeta.status === "failed" && !!conversationMeta.errorMessage;
+  const hasParent = !!conversationMeta.parentConversationId;
+  const hasChildren = serverChildren.length > 0;
+  const hasArtifacts =
+    conversationMeta.artifacts &&
+    Object.keys(conversationMeta.artifacts).length > 0;
 
   // ─── Render ───────────────────────────────────────────────────────
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Page header */}
-      <div className="mb-4 shrink-0">
+      <div className="shrink-0">
         {/* Row 1: breadcrumb + identity + actions */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-1.5">
@@ -338,16 +348,22 @@ export function LiveDetailPanels({
               href="/conversations"
               className="shrink-0 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
-              &larr; Conversations
+              Conversations
             </Link>
             <span className="text-sm text-muted-foreground">/</span>
-            <h1 className="truncate text-sm font-semibold tracking-tight">
+            <span className="truncate text-sm font-semibold tracking-tight">
               {conversationMeta.agentDefinitionId}
-            </h1>
+            </span>
             <StatusBadge status={conversationMeta.status} />
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
+            <Button variant="ghost" size="xs" asChild>
+              <Link href={`/agents/${conversationMeta.agentDefinitionId}`}>
+                <Bot className="h-3 w-3" />
+                Agent
+              </Link>
+            </Button>
             {rootTaskId && (
               <Button variant="ghost" size="xs" asChild>
                 <Link href={`/tasks/${rootTaskId}`}>
@@ -369,7 +385,7 @@ export function LiveDetailPanels({
           </div>
         </div>
 
-        {/* Row 2: metadata */}
+        {/* Row 2: metadata strip */}
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 pl-[1px] text-muted-foreground">
           <button
             type="button"
@@ -399,14 +415,94 @@ export function LiveDetailPanels({
               </span>
             </>
           )}
+          {conversationMeta.reopenCount > 0 && (
+            <>
+              <span className="text-xs">&middot;</span>
+              <span className="inline-flex items-center gap-1 text-xs">
+                <RotateCcw className="h-3 w-3" />
+                {conversationMeta.reopenCount}
+              </span>
+            </>
+          )}
+          {conversationMeta.retryCount > 0 && (
+            <>
+              <span className="text-xs">&middot;</span>
+              <span className="font-mono text-xs tabular-nums">
+                {conversationMeta.retryCount} retries
+              </span>
+            </>
+          )}
         </div>
-      </div>
 
-      {/* Metadata bar — shrink-0 so it never compresses */}
-      <MetadataBar
-        conversation={conversationMeta}
-        childConversations={serverChildren}
-      />
+        {/* Error banner (always visible when failed) */}
+        {hasError && (
+          <div className="mt-2 max-h-[120px] overflow-auto rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2">
+            <p className="whitespace-pre-wrap text-sm text-red-700 dark:text-red-400">
+              {conversationMeta.errorMessage}
+            </p>
+          </div>
+        )}
+
+        {/* Relationships: parent + children */}
+        {(hasParent || hasChildren) && (
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            {hasParent && (
+              <span className="inline-flex items-center gap-1">
+                &larr;
+                <Link
+                  href={`/conversations/${conversationMeta.parentConversationId}`}
+                  className="font-mono text-primary underline-offset-4 hover:underline"
+                >
+                  {truncateId(conversationMeta.parentConversationId ?? "")}
+                </Link>
+              </span>
+            )}
+            {hasChildren &&
+              serverChildren.map((child) => {
+                const cfg = statusConfig[child.status];
+                return (
+                  <Link
+                    key={child.id}
+                    href={`/conversations/${child.id}`}
+                    className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
+                  >
+                    <span className="text-border">&rarr;</span>
+                    <span
+                      className={cn(
+                        "h-1.5 w-1.5 shrink-0 rounded-full",
+                        cfg?.dotClassName ?? "bg-muted-foreground",
+                      )}
+                    />
+                    {child.agentDefinitionId}
+                  </Link>
+                );
+              })}
+          </div>
+        )}
+
+        {/* Artifacts (only when they exist) */}
+        {hasArtifacts && (
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            {Object.entries(conversationMeta.artifacts).map(([key, value]) => (
+              <span key={key} className="inline-flex items-center gap-1">
+                <span className="font-medium">{key}:</span>
+                {isUrl(value) ? (
+                  <a
+                    href={value}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline-offset-4 hover:underline"
+                  >
+                    {value}
+                  </a>
+                ) : (
+                  <span>{value}</span>
+                )}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Event timeline — fills remaining viewport height */}
       <div className="mt-4 flex min-h-0 flex-1 flex-col rounded-lg border bg-card">
@@ -495,7 +591,7 @@ function deserializeChild(s: SerializedChildConversation): ChildConversation {
   };
 }
 
-// ─── SSE to ConversationEvent Mapping ────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function truncateId(id: string): string {
   if (id.length <= 12) return id;
@@ -517,4 +613,8 @@ function sseEventToConversationEvent(sse: SseEvent): ConversationEvent {
     tokenCountOutput: sse.tokenCountOutput,
     durationMs: sse.durationMs,
   };
+}
+
+function isUrl(value: string): boolean {
+  return value.startsWith("http://") || value.startsWith("https://");
 }

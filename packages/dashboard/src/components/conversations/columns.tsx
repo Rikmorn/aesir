@@ -28,29 +28,42 @@ function formatTriggerEventType(eventType: string): string {
 
 export const columns: ColumnDef<ConversationListItem>[] = [
   {
-    accessorKey: "agentDefinitionId",
-    header: "Agent",
-    cell: ({ row }) => (
-      <span className="font-medium">{row.original.agentDefinitionId}</span>
-    ),
-  },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => <StatusBadge status={row.original.status} />,
-  },
-  {
-    id: "triggerEventType",
-    header: "Trigger",
+    id: "identity",
+    header: "Conversation",
     cell: ({ row }) => {
-      const eventType = row.original.triggerEventType;
-      if (!eventType) {
-        return <span className="text-sm text-muted-foreground">-</span>;
-      }
+      const {
+        agentDefinitionId,
+        status,
+        triggerEventType,
+        errorMessage,
+        reopenCount,
+      } = row.original;
+
       return (
-        <span className="text-sm text-muted-foreground">
-          {formatTriggerEventType(eventType)}
-        </span>
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{agentDefinitionId}</span>
+            <StatusBadge status={status} />
+            {reopenCount > 0 && (
+              <span
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+                title={`Reopened ${reopenCount} time${reopenCount > 1 ? "s" : ""}`}
+              >
+                <RotateCcw className="h-3 w-3" />
+                {reopenCount}
+              </span>
+            )}
+          </div>
+          {status === "failed" && errorMessage ? (
+            <span className="max-w-[400px] truncate text-xs text-destructive">
+              {errorMessage}
+            </span>
+          ) : triggerEventType ? (
+            <span className="text-xs text-muted-foreground">
+              {formatTriggerEventType(triggerEventType)}
+            </span>
+          ) : null}
+        </div>
       );
     },
   },
@@ -89,42 +102,5 @@ export const columns: ColumnDef<ConversationListItem>[] = [
         {formatRelativeTime(row.original.lastActivity)}
       </span>
     ),
-  },
-  {
-    id: "reopenCount",
-    header: "",
-    size: 40,
-    cell: ({ row }) => {
-      if (row.original.reopenCount > 0) {
-        return (
-          <span
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground"
-            title={`Reopened ${row.original.reopenCount} time${row.original.reopenCount > 1 ? "s" : ""}`}
-          >
-            <RotateCcw className="h-3 w-3" />
-            {row.original.reopenCount}
-          </span>
-        );
-      }
-      return null;
-    },
-  },
-  {
-    id: "error",
-    header: "",
-    size: 200,
-    cell: ({ row }) => {
-      if (row.original.status === "failed" && row.original.errorMessage) {
-        return (
-          <span
-            className="max-w-[200px] truncate text-xs text-destructive"
-            title={row.original.errorMessage}
-          >
-            {row.original.errorMessage}
-          </span>
-        );
-      }
-      return null;
-    },
   },
 ];

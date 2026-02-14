@@ -4,11 +4,10 @@
  * LiveConversationsTable
  *
  * Client wrapper that layers SSE real-time updates over server-rendered
- * conversation data. Renders the page header with live status summary,
- * filter toolbar, and viewport-filling data table.
+ * conversation data. Renders the page header with connection indicator,
+ * filter toolbar with live status counts, and viewport-filling data table.
  *
- * - Header: title + total count + status pills + connection indicator
- * - Status pills update live as SSE events arrive
+ * - Status counts update live as SSE events arrive
  * - New conversations appear at the top with a highlight fade
  * - Status changes update rows without page refresh
  */
@@ -24,7 +23,6 @@ import type {
   ConversationStatusCount,
 } from "@/services/conversations";
 import { ConversationsTable } from "./data-table";
-import { statusConfig } from "./status-badge";
 
 // ─── Props ──────────────────────────────────────────────────────────────────
 
@@ -55,10 +53,6 @@ function mapEventTypeToStatus(
       return null;
   }
 }
-
-// ─── Status Summary ─────────────────────────────────────────────────────────
-
-const SUMMARY_STATUSES = ["running", "waiting", "failed"] as const;
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
@@ -232,38 +226,16 @@ export function LiveConversationsTable({
           </div>
           <ConnectionStatusIndicator status={sseStatus} />
         </div>
-
-        {/* Status summary pills */}
-        <div className="mt-1.5 flex items-center gap-2">
-          {SUMMARY_STATUSES.map((s) => {
-            const count = liveCounts[s] ?? 0;
-            if (count === 0) return null;
-            const config = statusConfig[s];
-            if (!config) return null;
-            return (
-              <span
-                key={s}
-                className="inline-flex items-center gap-1.5 text-xs"
-              >
-                <span
-                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${config.dotClassName}`}
-                />
-                <span className="font-mono tabular-nums text-muted-foreground">
-                  {count} {config.label.toLowerCase()}
-                </span>
-              </span>
-            );
-          })}
-        </div>
       </div>
 
-      {/* Table fills remaining space */}
+      {/* Table fills remaining space — status counts are in the toolbar now */}
       <ConversationsTable
         data={data}
         total={liveTotal}
         page={page}
         pageSize={pageSize}
         agentDefinitions={agentDefinitions}
+        statusCounts={liveCounts}
         highlightedIds={highlightedIds}
       />
     </div>

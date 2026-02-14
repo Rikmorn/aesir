@@ -34,13 +34,38 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
+// ─── Status pill config ─────────────────────────────────────────────────────
+
 const STATUS_OPTIONS = [
-  { value: "queued", label: "Queued" },
   { value: "running", label: "Running" },
   { value: "waiting", label: "Waiting" },
   { value: "completed", label: "Completed" },
   { value: "failed", label: "Failed" },
-];
+  { value: "queued", label: "Queued" },
+] as const;
+
+const STATUS_PILL_STYLES: Record<string, { active: string; dot: string }> = {
+  running: {
+    active: "bg-indigo-500/15 text-indigo-700 dark:text-indigo-400",
+    dot: "bg-indigo-500",
+  },
+  waiting: {
+    active: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+    dot: "bg-amber-500",
+  },
+  completed: {
+    active: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+    dot: "bg-emerald-500",
+  },
+  failed: {
+    active: "bg-red-500/15 text-red-700 dark:text-red-400",
+    dot: "bg-red-500",
+  },
+  queued: {
+    active: "bg-muted text-muted-foreground",
+    dot: "bg-muted-foreground",
+  },
+};
 
 const TIME_RANGE_OPTIONS = [
   { value: "1h", label: "Last hour" },
@@ -57,11 +82,17 @@ const parsers = {
   hasErrors: parseAsBoolean,
 };
 
+// ─── Component ──────────────────────────────────────────────────────────────
+
 interface DataTableToolbarProps {
   agentDefinitions: string[];
+  statusCounts: Record<string, number>;
 }
 
-export function DataTableToolbar({ agentDefinitions }: DataTableToolbarProps) {
+export function DataTableToolbar({
+  agentDefinitions,
+  statusCounts,
+}: DataTableToolbarProps) {
   const [filters, setFilters] = useQueryStates(parsers, { shallow: false });
 
   const statusValues = filters.status ?? [];
@@ -108,56 +139,44 @@ export function DataTableToolbar({ agentDefinitions }: DataTableToolbarProps) {
 
   return (
     <div className="flex items-center gap-2">
-      {/* Status filter */}
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="outline" size="sm" className="border-dashed">
-            Status
-            {statusValues.length > 0 && (
-              <>
-                <Separator orientation="vertical" className="mx-2 h-4" />
-                <Badge
-                  variant="secondary"
-                  className="rounded-sm px-1 font-normal"
-                >
-                  {statusValues.length}
-                </Badge>
-              </>
-            )}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-48 p-0" align="start">
-          <Command>
-            <CommandInput placeholder="Filter status..." />
-            <CommandList>
-              <CommandEmpty>No results.</CommandEmpty>
-              <CommandGroup>
-                {STATUS_OPTIONS.map((option) => {
-                  const isSelected = statusValues.includes(option.value);
-                  return (
-                    <CommandItem
-                      key={option.value}
-                      onSelect={() => toggleStatus(option.value)}
-                    >
-                      <div
-                        className={cn(
-                          "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                          isSelected
-                            ? "bg-primary text-primary-foreground"
-                            : "opacity-50 [&_svg]:invisible",
-                        )}
-                      >
-                        <CheckIcon className="h-3 w-3" />
-                      </div>
-                      {option.label}
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+      {/* Status toggle pills */}
+      <div className="flex gap-1">
+        {STATUS_OPTIONS.map((option) => {
+          const isSelected = statusValues.includes(option.value);
+          const count = statusCounts[option.value] ?? 0;
+          const styles = STATUS_PILL_STYLES[option.value];
+
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => toggleStatus(option.value)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                isSelected && styles
+                  ? styles.active
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                count === 0 && !isSelected && "opacity-40",
+              )}
+            >
+              {isSelected && styles && (
+                <span
+                  className={cn(
+                    "h-1.5 w-1.5 shrink-0 rounded-full",
+                    styles.dot,
+                  )}
+                />
+              )}
+              {option.label}
+              {count > 0 && (
+                <span className="font-mono tabular-nums">{count}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <Separator orientation="vertical" className="mx-1 h-5" />
 
       {/* Agent filter */}
       <Popover>

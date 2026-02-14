@@ -19,6 +19,7 @@ interface ConversationsTableProps {
   page: number;
   pageSize: number;
   agentDefinitions: string[];
+  statusCounts: Record<string, number>;
   /** IDs of recently-updated conversations for highlight animation */
   highlightedIds?: Set<string>;
 }
@@ -29,6 +30,7 @@ export function ConversationsTable({
   page,
   pageSize,
   agentDefinitions,
+  statusCounts,
   highlightedIds,
 }: ConversationsTableProps) {
   const router = useRouter();
@@ -43,7 +45,10 @@ export function ConversationsTable({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="shrink-0">
-        <DataTableToolbar agentDefinitions={agentDefinitions} />
+        <DataTableToolbar
+          agentDefinitions={agentDefinitions}
+          statusCounts={statusCounts}
+        />
       </div>
 
       {/* Table card — fills remaining space, scrolls internally */}
@@ -56,7 +61,7 @@ export function ConversationsTable({
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
-                      className="sticky top-0 z-10 h-9 bg-card px-2 text-left align-middle text-xs font-medium uppercase tracking-wider text-muted-foreground whitespace-nowrap"
+                      className="sticky top-0 z-10 h-9 bg-card px-3 text-left align-middle text-xs font-medium uppercase tracking-wider text-muted-foreground whitespace-nowrap"
                     >
                       {header.isPlaceholder
                         ? null
@@ -72,13 +77,19 @@ export function ConversationsTable({
             <tbody className="[&_tr:last-child]:border-0">
               {table.getRowModel().rows.length > 0 ? (
                 table.getRowModel().rows.map((row) => {
-                  const isFailed = row.original.status === "failed";
+                  const { status } = row.original;
+                  const isFailed = status === "failed";
+                  const isRunning = status === "running";
+                  const isWaiting = status === "waiting";
+
                   return (
                     <tr
                       key={row.id}
                       className={cn(
-                        "cursor-pointer border-b transition-colors hover:bg-muted/50",
-                        isFailed && "border-l-2 border-l-destructive",
+                        "cursor-pointer border-b border-l-2 border-l-transparent transition-colors hover:bg-muted/50",
+                        isFailed && "border-l-destructive",
+                        isRunning && "border-l-indigo-500",
+                        isWaiting && "border-l-amber-500",
                         highlightedIds?.has(row.original.id) &&
                           "bg-accent/30 transition-colors duration-[1500ms]",
                       )}
@@ -89,7 +100,7 @@ export function ConversationsTable({
                       {row.getVisibleCells().map((cell) => (
                         <td
                           key={cell.id}
-                          className="p-2 align-middle whitespace-nowrap"
+                          className="px-3 py-2.5 align-middle whitespace-nowrap"
                         >
                           {flexRender(
                             cell.column.columnDef.cell,

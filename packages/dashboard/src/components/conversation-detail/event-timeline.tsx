@@ -36,7 +36,7 @@ export function EventTimeline({ events }: EventTimelineProps) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="divide-y divide-border/50">
       {events.map((event) => (
         <EventItem
           key={event.id}
@@ -66,19 +66,16 @@ function EventItem({ event, isSubAgent }: EventItemProps) {
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <div
         className={cn(
-          "rounded-lg border transition-colors hover:bg-accent/50",
+          "transition-colors hover:bg-accent/50",
           isFailed && "border-l-2 border-l-destructive bg-destructive/5",
-          isSubAgent &&
-            !isFailed &&
-            "ml-6 border-l-2 border-l-muted-foreground/20",
-          isSubAgent && isFailed && "ml-6",
+          isSubAgent && !isFailed && "ml-6",
         )}
       >
-        <CollapsibleTrigger className="flex w-full items-center gap-2 px-3 py-2 text-left">
+        <CollapsibleTrigger className="flex w-full items-center gap-2 px-3 py-1.5 text-left">
           {isOpen ? (
-            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           ) : (
-            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           )}
 
           <EventIcon type={event.type} />
@@ -89,7 +86,7 @@ function EventItem({ event, isSubAgent }: EventItemProps) {
                 {formatEventType(event.type)}
               </span>
               {toolName && (
-                <span className="truncate text-xs text-muted-foreground">
+                <span className="truncate font-mono text-xs text-muted-foreground">
                   {toolName}
                 </span>
               )}
@@ -101,33 +98,30 @@ function EventItem({ event, isSubAgent }: EventItemProps) {
             )}
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-3 font-mono text-xs tabular-nums text-muted-foreground">
             {event.durationMs !== null && (
-              <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs tabular-nums text-muted-foreground">
-                {formatDurationMs(event.durationMs)}
-              </span>
+              <span>{formatDurationMs(event.durationMs)}</span>
             )}
             {(event.tokenCountInput !== null ||
               event.tokenCountOutput !== null) && (
-              <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs tabular-nums text-muted-foreground">
-                {formatTokenCount(event.tokenCountInput ?? 0)} in /{" "}
-                {formatTokenCount(event.tokenCountOutput ?? 0)} out
+              <span>
+                {formatTokenCount(event.tokenCountInput ?? 0)}/
+                {formatTokenCount(event.tokenCountOutput ?? 0)}
               </span>
             )}
-            <span className="text-xs text-muted-foreground">
+            <span className="font-sans">
               {formatRelativeTime(event.timestamp)}
             </span>
           </div>
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <div className="border-t px-3 pb-3 pt-2">
+          <div className="ml-10 border-l-2 border-border/50 pb-3 pl-3 pt-1">
             {event.type === "agent.started" &&
             typeof event.payload.systemPrompt === "string" ? (
               <AgentStartedContent payload={event.payload} />
             ) : event.type === "llm.response" ? (
               <>
-                {/* LLM Response: show content inline, with raw payload in details */}
                 <EventContentDisplay eventId={event.id} isExpanded={isOpen} />
                 <details className="mt-3">
                   <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
