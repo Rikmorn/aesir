@@ -3,7 +3,6 @@
 import { parseAsString, useQueryState } from "nuqs";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   type ChartConfig,
   ChartContainer,
@@ -61,12 +60,14 @@ export function TokenUsage({ data, defaultTimeRange }: TokenUsageProps) {
     TIME_RANGE_OPTIONS.find((o) => o.value === timeRange)?.label ?? timeRange;
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <div className="flex items-baseline gap-3">
-          <CardTitle>Token Usage</CardTitle>
+    <div className="flex h-full flex-col rounded-lg border bg-card">
+      <div className="flex shrink-0 items-center justify-between border-b px-4 py-2.5">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Token Usage
+          </span>
           {totalTokens > 0 && (
-            <span className="font-mono text-sm tabular-nums text-muted-foreground">
+            <span className="font-mono text-xs tabular-nums text-muted-foreground">
               {formatTokenCount(totalTokens)}
             </span>
           )}
@@ -83,19 +84,17 @@ export function TokenUsage({ data, defaultTimeRange }: TokenUsageProps) {
             ))}
           </SelectContent>
         </Select>
-      </CardHeader>
-      <CardContent className="flex-1">
+      </div>
+
+      <div className="min-h-0 flex-1 p-4">
         {data.length === 0 || totalTokens === 0 ? (
-          <div className="flex h-[120px] items-center justify-center">
+          <div className="flex h-full items-center justify-center">
             <p className="text-sm text-muted-foreground">
               No LLM calls in the {timeRangeLabel.toLowerCase()}
             </p>
           </div>
         ) : (
-          <ChartContainer
-            config={chartConfig}
-            className="aspect-auto min-h-[160px] w-full h-full"
-          >
+          <ChartContainer config={chartConfig} className="h-full w-full">
             <BarChart data={data} accessibilityLayer>
               <CartesianGrid vertical={false} />
               <XAxis
@@ -122,7 +121,7 @@ export function TokenUsage({ data, defaultTimeRange }: TokenUsageProps) {
             </BarChart>
           </ChartContainer>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

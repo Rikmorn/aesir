@@ -3,17 +3,13 @@
 /**
  * LiveOverview
  *
- * Client wrapper for the overview page that updates stat cards and
- * active conversations in real-time via SSE lifecycle events.
+ * Two-zone layout: compact metrics bar (stat cards + worker status) pinned
+ * at top, then a two-column live feed filling the remaining viewport.
  *
- * Worker status, recent errors, and token usage remain server-rendered
- * (passed through as props and rendered without live updates).
+ * Left column: Active Conversations (wider)
+ * Right column: Recent Errors (top) + Token Usage (bottom)
  *
- * SSE events processed:
- * - agent.started:   running += 1, prepend to active conversations
- * - agent.completed: running -= 1, completedLast24h += 1, remove from active
- * - agent.paused:    running -= 1, waiting += 1, update status in active
- * - agent.resumed:   waiting -= 1, running += 1, update status in active
+ * SSE events update stat cards and active conversations in real-time.
  */
 
 import { useRouter } from "next/navigation";
@@ -36,10 +32,6 @@ import type {
 
 // ─── Serialized Types ──────────────────────────────────────────────────────
 
-/**
- * ActiveConversation with Date fields serialized as ISO strings
- * for crossing the server/client component boundary.
- */
 export interface SerializedActiveConversation {
   id: string;
   agentDefinitionId: string;
@@ -48,9 +40,6 @@ export interface SerializedActiveConversation {
   lastEventType: string | null;
 }
 
-/**
- * RecentError with Date fields serialized as ISO strings.
- */
 export interface SerializedRecentError {
   id: string;
   conversationId: string;
@@ -73,7 +62,6 @@ interface LiveOverviewProps {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-/** Deserialize ISO string dates back to Date objects for ActiveConversation */
 function deserializeConversations(
   serialized: SerializedActiveConversation[],
 ): ActiveConversation[] {
@@ -83,7 +71,6 @@ function deserializeConversations(
   }));
 }
 
-/** Deserialize ISO string dates back to Date objects for RecentError */
 function deserializeErrors(serialized: SerializedRecentError[]): RecentError[] {
   return serialized.map((e) => ({
     ...e,
@@ -91,7 +78,7 @@ function deserializeErrors(serialized: SerializedRecentError[]): RecentError[] {
   }));
 }
 
-// ─── Stat count field keys matching StatusCounts ────────────────────────────
+// ─── Stat count field keys ─────────────────────────────────────────────────
 
 type StatField = keyof StatusCounts;
 
@@ -123,10 +110,8 @@ export function LiveOverview({
     new Set(),
   );
 
-  // Track conversation status for correct decrements
   const statusMapRef = useRef<Map<string, string>>(new Map());
 
-  // Initialize status map from initial active conversations
   useEffect(() => {
     const map = new Map<string, string>();
     for (const conv of initialActiveConversations) {
@@ -140,9 +125,7 @@ export function LiveOverview({
 
   const triggerHighlight = useCallback((fields: StatField[]) => {
     if (fields.length === 0) return;
-
     setHighlightedFields(new Set(fields));
-
     if (highlightTimerRef.current) {
       clearTimeout(highlightTimerRef.current);
     }
@@ -152,7 +135,6 @@ export function LiveOverview({
     }, 1500);
   }, []);
 
-  // Cleanup highlight timer on unmount
   useEffect(() => {
     return () => {
       if (highlightTimerRef.current) {
@@ -161,7 +143,7 @@ export function LiveOverview({
     };
   }, []);
 
-  // ── Track processed events to avoid re-processing ─────────────────────
+  // ── Track processed events ──────────────────────────────────────────────
   const processedCountRef = useRef(0);
 
   // ── Process SSE Events ──────────────────────────────────────────────────
@@ -195,35 +177,42 @@ export function LiveOverview({
     }
   }, [hasGap, router]);
 
-  // ── Deserialized data for presentational components ─────────────────────
+  // ── Deserialized data ───────────────────────────────────────────────────
   const conversations = deserializeConversations(activeConversations);
   const errors = deserializeErrors(recentErrors);
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <div className="px-6 py-6">
-      <div className="mb-5">
-        <h1 className="text-lg font-semibold tracking-tight">Overview</h1>
-        <p className="mt-0.5 text-[13px] text-muted-foreground">
-          Real-time system status
-        </p>
+    <div className="flex min-h-0 flex-1 flex-col">
+      {/* Zone 1: Metrics bar */}
+      <div className="mb-4 shrink-0 space-y-3">
+        <div className="flex items-center justify-between gap-4">
+          <StatCards
+            counts={statusCounts}
+            highlightedFields={highlightedFields}
+          />
+          <WorkerStatus status={workerStatus} />
+        </div>
       </div>
 
-      <div className="space-y-5">
-        <WorkerStatus status={workerStatus} />
-        <StatCards
-          counts={statusCounts}
-          highlightedFields={highlightedFields}
-        />
+      {/* Zone 2: Live feeds — fills remaining viewport */}
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[1fr_400px]">
+        {/* Left: Active Conversations */}
+        <div className="min-h-0">
+          <ActiveConversations conversations={conversations} />
+        </div>
 
-        <ActiveConversations conversations={conversations} />
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          <RecentErrors errors={errors} />
-          <TokenUsage
-            data={tokenUsage}
-            defaultTimeRange={defaultTokenTimeRange}
-          />
+        {/* Right: Errors + Token Usage stacked */}
+        <div className="flex min-h-0 flex-col gap-4">
+          <div className="min-h-0 flex-1">
+            <RecentErrors errors={errors} />
+          </div>
+          <div className="min-h-0 flex-1">
+            <TokenUsage
+              data={tokenUsage}
+              defaultTimeRange={defaultTokenTimeRange}
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -232,11 +221,6 @@ export function LiveOverview({
 
 // ─── Event Processing ───────────────────────────────────────────────────────
 
-/**
- * Process a single SSE lifecycle event, updating stat counts and active
- * conversations list. Mutates the changedFields set to track which stat
- * cards need highlighting.
- */
 function processEvent(
   event: SseEvent,
   statusMapRef: React.RefObject<Map<string, string>>,
@@ -250,19 +234,15 @@ function processEvent(
 
   switch (type) {
     case "agent.started": {
-      // Update counts: running += 1
       setStatusCounts((prev) => ({
         ...prev,
         running: prev.running + 1,
       }));
       changedFields.add("running");
 
-      // Track status
       statusMapRef.current.set(conversationId, "running");
 
-      // Prepend to active conversations
       setActiveConversations((prev) => {
-        // Avoid duplicates
         if (prev.some((c) => c.id === conversationId)) return prev;
         return [
           {
@@ -279,7 +259,6 @@ function processEvent(
     }
 
     case "agent.completed": {
-      // Get current status for correct decrement
       const currentStatus = statusMapRef.current.get(conversationId);
 
       setStatusCounts((prev) => {
@@ -295,10 +274,8 @@ function processEvent(
       });
       changedFields.add("completedLast24h");
 
-      // Remove from status map
       statusMapRef.current.delete(conversationId);
 
-      // Remove from active conversations
       setActiveConversations((prev) =>
         prev.filter((c) => c.id !== conversationId),
       );
@@ -306,7 +283,6 @@ function processEvent(
     }
 
     case "agent.paused": {
-      // running -= 1, waiting += 1
       setStatusCounts((prev) => ({
         ...prev,
         running: Math.max(0, prev.running - 1),
@@ -315,10 +291,8 @@ function processEvent(
       changedFields.add("running");
       changedFields.add("waiting");
 
-      // Track status
       statusMapRef.current.set(conversationId, "waiting");
 
-      // Update status in active conversations
       setActiveConversations((prev) =>
         prev.map((c) =>
           c.id === conversationId
@@ -330,7 +304,6 @@ function processEvent(
     }
 
     case "agent.resumed": {
-      // waiting -= 1, running += 1
       setStatusCounts((prev) => ({
         ...prev,
         waiting: Math.max(0, prev.waiting - 1),
@@ -339,10 +312,8 @@ function processEvent(
       changedFields.add("waiting");
       changedFields.add("running");
 
-      // Track status
       statusMapRef.current.set(conversationId, "running");
 
-      // Update status in active conversations
       setActiveConversations((prev) =>
         prev.map((c) =>
           c.id === conversationId

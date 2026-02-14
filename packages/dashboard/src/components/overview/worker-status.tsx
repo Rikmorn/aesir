@@ -13,7 +13,7 @@ interface WorkerStatusProps {
 export function WorkerStatus({ status }: WorkerStatusProps) {
   if (status === null) {
     return (
-      <div className="flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm text-muted-foreground">
+      <div className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground">
         <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
         <span className="font-medium text-foreground">Worker</span>
         <Separator />
@@ -25,7 +25,7 @@ export function WorkerStatus({ status }: WorkerStatusProps) {
   const isAtCapacity = status.activeClaims >= status.maxConcurrent;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border px-4 py-2.5 text-sm">
+    <div className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
       <span
         className={cn(
           "h-1.5 w-1.5 rounded-full",

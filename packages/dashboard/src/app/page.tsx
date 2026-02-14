@@ -48,13 +48,15 @@ export default async function OverviewPage({
   }));
 
   return (
-    <LiveOverview
-      initialStatusCounts={statusCounts}
-      initialActiveConversations={serializedConversations}
-      workerStatus={workerStatus}
-      recentErrors={serializedErrors}
-      tokenUsage={tokenUsage}
-      defaultTokenTimeRange={tokenTimeRange}
-    />
+    <div className="flex h-screen flex-col overflow-hidden px-6 pt-6 pb-3">
+      <LiveOverview
+        initialStatusCounts={statusCounts}
+        initialActiveConversations={serializedConversations}
+        workerStatus={workerStatus}
+        recentErrors={serializedErrors}
+        tokenUsage={tokenUsage}
+        defaultTokenTimeRange={tokenTimeRange}
+      />
+    </div>
   );
 }

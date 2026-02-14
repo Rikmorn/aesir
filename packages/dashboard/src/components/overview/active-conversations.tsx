@@ -1,21 +1,8 @@
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
+import { LiveDuration } from "@/components/conversations/live-duration";
 import { StatusBadge } from "@/components/conversations/status-badge";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { formatDuration, formatEventType } from "@/lib/format";
+import { formatEventType } from "@/lib/format";
 import type { ActiveConversation as ActiveConversationType } from "@/services/overview";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -24,99 +11,74 @@ interface ActiveConversationsProps {
   conversations: ActiveConversationType[];
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const ONE_HOUR_MS = 3_600_000;
-
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function ActiveConversations({
   conversations,
 }: ActiveConversationsProps) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Active Conversations</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {conversations.length === 0 ? (
-          <div className="flex h-[120px] items-center justify-center">
-            <p className="text-sm text-muted-foreground">All agents idle</p>
-          </div>
-        ) : (
-          <div className="relative">
-            <div className="max-h-[320px] overflow-auto overscroll-y-contain pb-6">
-              <table className="w-full caption-bottom text-sm">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="sticky top-0 z-10 bg-card">
-                      Agent
-                    </TableHead>
-                    <TableHead className="sticky top-0 z-10 bg-card">
-                      Status
-                    </TableHead>
-                    <TableHead className="sticky top-0 z-10 bg-card">
-                      Duration
-                    </TableHead>
-                    <TableHead className="sticky top-0 z-10 bg-card">
-                      Last Event
-                    </TableHead>
-                    <TableHead className="sticky top-0 z-10 bg-card" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {conversations.map((row) => {
-                    const now = new Date();
-                    const duration = formatDuration(row.createdAt, now);
-                    const isLongRunning =
-                      now.getTime() - row.createdAt.getTime() > ONE_HOUR_MS;
+  const router = useRouter();
 
-                    return (
-                      <TableRow key={row.id}>
-                        <TableCell className="text-sm font-medium">
-                          {row.agentDefinitionId}
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge status={row.status} />
-                        </TableCell>
-                        <TableCell
-                          className={`text-sm font-mono tabular-nums ${isLongRunning ? "text-amber-600 dark:text-amber-400" : ""}`}
-                        >
-                          {duration}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {row.lastEventType
-                            ? formatEventType(row.lastEventType)
-                            : "-"}
-                        </TableCell>
-                        <TableCell>
-                          <Link
-                            href={`/conversations/${row.id}`}
-                            className="text-sm text-muted-foreground hover:text-foreground hover:underline"
-                          >
-                            View
-                          </Link>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </table>
-            </div>
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-card to-transparent" />
-          </div>
-        )}
-      </CardContent>
-      {conversations.length >= 10 && (
-        <CardFooter>
-          <Link
-            href="/conversations?status=running,waiting"
-            className="text-sm text-muted-foreground hover:text-foreground hover:underline"
-          >
-            View all active conversations &rarr;
-          </Link>
-        </CardFooter>
+  return (
+    <div className="flex h-full flex-col rounded-lg border bg-card">
+      <div className="flex shrink-0 items-center justify-between border-b px-4 py-2.5">
+        <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          Active Conversations
+        </span>
+        <span className="font-mono text-xs tabular-nums text-muted-foreground">
+          {conversations.length}
+        </span>
+      </div>
+
+      {conversations.length === 0 ? (
+        <div className="flex flex-1 items-center justify-center">
+          <p className="text-sm text-muted-foreground">All agents idle</p>
+        </div>
+      ) : (
+        <div className="min-h-0 flex-1 overflow-auto overscroll-y-contain">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b">
+                <th className="sticky top-0 z-10 bg-card px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Agent
+                </th>
+                <th className="sticky top-0 z-10 bg-card px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Status
+                </th>
+                <th className="sticky top-0 z-10 bg-card px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Duration
+                </th>
+                <th className="sticky top-0 z-10 bg-card px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Last Event
+                </th>
+              </tr>
+            </thead>
+            <tbody className="[&_tr:last-child]:border-0">
+              {conversations.map((row) => (
+                <tr
+                  key={row.id}
+                  className="cursor-pointer border-b transition-colors hover:bg-muted/50"
+                  onClick={() => router.push(`/conversations/${row.id}`)}
+                >
+                  <td className="px-4 py-2 font-medium">
+                    {row.agentDefinitionId}
+                  </td>
+                  <td className="px-4 py-2">
+                    <StatusBadge status={row.status} />
+                  </td>
+                  <td className="px-4 py-2">
+                    <LiveDuration createdAt={row.createdAt} />
+                  </td>
+                  <td className="px-4 py-2 text-muted-foreground">
+                    {row.lastEventType
+                      ? formatEventType(row.lastEventType)
+                      : "-"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
-    </Card>
+    </div>
   );
 }
