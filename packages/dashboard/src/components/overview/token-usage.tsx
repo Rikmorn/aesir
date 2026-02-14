@@ -62,8 +62,15 @@ export function TokenUsage({ data, defaultTimeRange }: TokenUsageProps) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle>Token Usage</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <div className="flex items-baseline gap-3">
+          <CardTitle>Token Usage</CardTitle>
+          {totalTokens > 0 && (
+            <span className="font-mono text-sm tabular-nums text-muted-foreground">
+              {formatTokenCount(totalTokens)}
+            </span>
+          )}
+        </div>
         <Select value={timeRange} onValueChange={setTimeRange}>
           <SelectTrigger size="sm" className="w-auto">
             <SelectValue placeholder="Time range" />
@@ -77,7 +84,7 @@ export function TokenUsage({ data, defaultTimeRange }: TokenUsageProps) {
           </SelectContent>
         </Select>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1">
         {data.length === 0 || totalTokens === 0 ? (
           <div className="flex h-[120px] items-center justify-center">
             <p className="text-sm text-muted-foreground">
@@ -85,45 +92,35 @@ export function TokenUsage({ data, defaultTimeRange }: TokenUsageProps) {
             </p>
           </div>
         ) : (
-          <>
-            <div>
-              <p className="font-mono text-2xl font-semibold tabular-nums">
-                {formatTokenCount(totalTokens)}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Total tokens ({timeRangeLabel.toLowerCase()})
-              </p>
-            </div>
-            <ChartContainer
-              config={chartConfig}
-              className="mt-4 min-h-[200px] w-full"
-            >
-              <BarChart data={data} accessibilityLayer>
-                <CartesianGrid vertical={false} />
-                <XAxis
-                  dataKey="agentDefinitionId"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                />
-                <YAxis tickLine={false} axisLine={false} tickMargin={8} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <ChartLegend content={<ChartLegendContent />} />
-                <Bar
-                  dataKey="inputTokens"
-                  stackId="tokens"
-                  fill="var(--color-inputTokens)"
-                  radius={[0, 0, 0, 0]}
-                />
-                <Bar
-                  dataKey="outputTokens"
-                  stackId="tokens"
-                  fill="var(--color-outputTokens)"
-                  radius={[4, 4, 0, 0]}
-                />
-              </BarChart>
-            </ChartContainer>
-          </>
+          <ChartContainer
+            config={chartConfig}
+            className="aspect-auto min-h-[160px] w-full h-full"
+          >
+            <BarChart data={data} accessibilityLayer>
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="agentDefinitionId"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+              />
+              <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <ChartLegend content={<ChartLegendContent />} />
+              <Bar
+                dataKey="inputTokens"
+                stackId="tokens"
+                fill="var(--color-inputTokens)"
+                radius={[0, 0, 0, 0]}
+              />
+              <Bar
+                dataKey="outputTokens"
+                stackId="tokens"
+                fill="var(--color-outputTokens)"
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ChartContainer>
         )}
       </CardContent>
     </Card>

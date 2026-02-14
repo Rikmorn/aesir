@@ -201,35 +201,20 @@ export function LiveOverview({
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <div className="px-6 py-6">
-      {/* Header */}
-      <div className="mb-5">
-        <h1 className="text-lg font-semibold tracking-tight">Overview</h1>
-        <p className="mt-0.5 text-[13px] text-muted-foreground">
-          Agent activity and system health
-        </p>
-      </div>
+    <div className="space-y-5 px-6 py-6">
+      <StatCards counts={statusCounts} highlightedFields={highlightedFields} />
 
-      {/* Content */}
-      <div className="space-y-5">
-        <StatCards
-          counts={statusCounts}
-          highlightedFields={highlightedFields}
+      <ActiveConversations conversations={conversations} />
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <RecentErrors errors={errors} />
+        <TokenUsage
+          data={tokenUsage}
+          defaultTimeRange={defaultTokenTimeRange}
         />
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          <ActiveConversations conversations={conversations} />
-          <WorkerStatus status={workerStatus} />
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          <RecentErrors errors={errors} />
-          <TokenUsage
-            data={tokenUsage}
-            defaultTimeRange={defaultTokenTimeRange}
-          />
-        </div>
       </div>
+
+      <WorkerStatus status={workerStatus} />
     </div>
   );
 }

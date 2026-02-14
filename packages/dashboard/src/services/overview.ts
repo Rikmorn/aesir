@@ -226,7 +226,7 @@ export async function getRecentErrors(limit = 10): Promise<RecentError[]> {
     id: row.id,
     conversationId: row.id,
     agentDefinitionId: row.agent_definition_id,
-    errorMessage: truncate(row.error_message ?? "Unknown error", 120),
+    errorMessage: row.error_message ?? "Unknown error",
     timestamp: row.updated_at,
     type: "conversation" as const,
   }));
@@ -242,7 +242,7 @@ export async function getRecentErrors(limit = 10): Promise<RecentError[]> {
       id: row.id,
       conversationId: row.conversation_id,
       agentDefinitionId: row.agent_definition_id,
-      errorMessage: truncate(errorMessage, 120),
+      errorMessage,
       timestamp: row.timestamp,
       type: "tool" as const,
     };
@@ -288,14 +288,4 @@ export async function getTokenUsageByAgent(
     inputTokens: Number(row.total_input),
     outputTokens: Number(row.total_output),
   }));
-}
-
-// ─── Internal Helpers ───────────────────────────────────────────────────────
-
-/**
- * Truncate a string to the specified length, appending ellipsis if truncated.
- */
-function truncate(str: string, maxLength: number): string {
-  if (str.length <= maxLength) return str;
-  return `${str.slice(0, maxLength - 1)}…`;
 }

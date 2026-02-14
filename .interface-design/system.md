@@ -149,6 +149,31 @@ The delegation graph — task nodes represent autonomous agents with:
 - Active edges animate (indigo circle traveling the path)
 - Minimap uses matching status colors
 
+## Bounded Scroll Containers
+
+When a list or table inside a card can grow unbounded, cap it with a scroll container to prevent it from pushing page content down.
+
+**Structure:**
+```tsx
+<div className="relative">
+  <div className="max-h-[320px] overflow-auto overscroll-y-contain pb-6">
+    {/* scrollable content */}
+  </div>
+  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-card to-transparent" />
+</div>
+```
+
+**Rules:**
+- `overscroll-y-contain` — prevents scroll from leaking to the page when hitting the container boundary
+- `pb-6` on the scroll container matches the `h-6` fade gradient — last item is never obscured, fade covers padding only
+- Fade gradient uses `from-card` to match the card surface
+- `pointer-events-none` on the fade so it doesn't block clicks
+- Max one level of nested scroll (page > card). Never page > card > inner card.
+
+**Tables inside scroll containers:**
+- Use a raw `<table>` instead of the shadcn `Table` component (its wrapper `div` has `overflow-x-auto` which breaks sticky)
+- Sticky headers go on `<th>` elements, not `<thead>`: `sticky top-0 z-10 bg-card`
+
 ## Key Components
 
 ### Page Headers

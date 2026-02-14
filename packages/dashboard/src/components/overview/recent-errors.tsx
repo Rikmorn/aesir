@@ -1,6 +1,5 @@
 "use client";
 
-import { ChevronDown, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -29,10 +28,13 @@ export function RecentErrors({ errors }: RecentErrorsProps) {
             <p className="text-sm text-muted-foreground">No errors</p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {errors.map((error) => (
-              <ErrorItem key={error.id} error={error} />
-            ))}
+          <div className="relative">
+            <div className="max-h-[320px] space-y-2 overflow-y-auto overscroll-y-contain pb-6">
+              {errors.map((error) => (
+                <ErrorItem key={error.id} error={error} />
+              ))}
+            </div>
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-card to-transparent" />
           </div>
         )}
       </CardContent>
@@ -43,21 +45,11 @@ export function RecentErrors({ errors }: RecentErrorsProps) {
 // ─── ErrorItem ───────────────────────────────────────────────────────────────
 
 function ErrorItem({ error }: { error: RecentError }) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="rounded-md border text-sm">
-      {/* Header row - always visible */}
-      <button
-        type="button"
-        onClick={() => setIsExpanded((prev) => !prev)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-muted/50"
-      >
-        {isExpanded ? (
-          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
-        ) : (
-          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-        )}
+    <div className="rounded-md border px-3 py-2 text-sm">
+      <div className="flex items-center gap-2">
         <span className="font-medium">{error.agentDefinitionId}</span>
         <span className="text-xs text-muted-foreground">
           {formatRelativeTime(error.timestamp)}
@@ -66,29 +58,22 @@ function ErrorItem({ error }: { error: RecentError }) {
         {error.conversationId && (
           <Link
             href={`/conversations/${error.conversationId}`}
-            onClick={(e) => e.stopPropagation()}
             className="text-xs text-muted-foreground hover:text-foreground"
           >
-            View →
+            View &rarr;
           </Link>
         )}
-      </button>
-
-      {/* Error message - truncated or full */}
-      <div
+      </div>
+      <button
+        type="button"
+        onClick={() => setExpanded((prev) => !prev)}
         className={cn(
-          "border-t px-3 py-2 text-red-600 dark:text-red-400",
-          !isExpanded && "truncate",
+          "mt-1 cursor-pointer text-left text-[13px] leading-snug text-red-600 dark:text-red-400",
+          !expanded && "line-clamp-3",
         )}
       >
-        {isExpanded ? (
-          <pre className="whitespace-pre-wrap break-words font-sans">
-            {error.errorMessage}
-          </pre>
-        ) : (
-          error.errorMessage
-        )}
-      </div>
+        {error.errorMessage}
+      </button>
     </div>
   );
 }

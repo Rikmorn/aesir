@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { WorkerStatus as WorkerStatusType } from "@/lib/agent-service";
 import { formatDurationMs, formatRelativeTime } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -13,58 +13,56 @@ interface WorkerStatusProps {
 export function WorkerStatus({ status }: WorkerStatusProps) {
   if (status === null) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Worker Status</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex h-[120px] items-center justify-center">
-            <p className="text-sm text-muted-foreground">
-              Agent service unreachable
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm text-muted-foreground">
+        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+        <span className="font-medium text-foreground">Worker</span>
+        <Separator />
+        Unreachable
+      </div>
     );
   }
 
   const isAtCapacity = status.activeClaims >= status.maxConcurrent;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <span
-            role="img"
-            className={`h-1.5 w-1.5 rounded-full ${isAtCapacity ? "bg-amber-500" : "bg-emerald-500 animate-pulse-signal"}`}
-            aria-label={isAtCapacity ? "At capacity" : "Available"}
-          />
-          Worker Status
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-          <dt className="text-muted-foreground">Running</dt>
-          <dd>
-            {status.activeClaims} / {status.maxConcurrent}
-          </dd>
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border px-4 py-2.5 text-sm">
+      <span
+        className={cn(
+          "h-1.5 w-1.5 rounded-full",
+          isAtCapacity ? "bg-amber-500" : "bg-emerald-500 animate-pulse-signal",
+        )}
+      />
+      <span className="font-medium">Worker</span>
+      <Separator />
+      <span className="text-muted-foreground">Claims</span>
+      <span className="font-mono tabular-nums">
+        {status.activeClaims}/{status.maxConcurrent}
+      </span>
+      <Separator />
+      <span className="text-muted-foreground">Poll</span>
+      <span className="font-mono tabular-nums">
+        {formatDurationMs(status.pollIntervalMs)}
+      </span>
+      <Separator />
+      <span className="text-muted-foreground">Last</span>
+      <span>
+        {formatRelativeTime(
+          status.lastPollAt ? new Date(status.lastPollAt) : null,
+        )}
+      </span>
+      <Separator />
+      <span className="text-muted-foreground">Up</span>
+      <span className="font-mono tabular-nums">
+        {formatDurationMs(status.uptimeMs)}
+      </span>
+    </div>
+  );
+}
 
-          <dt className="text-muted-foreground">Poll Interval</dt>
-          <dd className="font-mono">
-            {formatDurationMs(status.pollIntervalMs)}
-          </dd>
-
-          <dt className="text-muted-foreground">Last Poll</dt>
-          <dd>
-            {formatRelativeTime(
-              status.lastPollAt ? new Date(status.lastPollAt) : null,
-            )}
-          </dd>
-
-          <dt className="text-muted-foreground">Uptime</dt>
-          <dd className="font-mono">{formatDurationMs(status.uptimeMs)}</dd>
-        </dl>
-      </CardContent>
-    </Card>
+function Separator() {
+  return (
+    <span className="text-border" aria-hidden="true">
+      &middot;
+    </span>
   );
 }
