@@ -1,6 +1,7 @@
 import { LiveConversationsTable } from "@/components/conversations/live-conversations-table";
 import { getTimeRangeDate } from "@/lib/format";
 import {
+  countConversationsByStatus,
   getDistinctAgentDefinitions,
   listConversations,
 } from "@/services/conversations";
@@ -34,7 +35,7 @@ export default async function ConversationsPage({
       ? { from: getTimeRangeDate(timeRange) }
       : undefined;
 
-  const [{ items, total }, agentDefinitions] = await Promise.all([
+  const [{ items, total }, agentDefinitions, statusCounts] = await Promise.all([
     listConversations({
       status,
       agentDefinitionId: agent,
@@ -44,22 +45,18 @@ export default async function ConversationsPage({
       offset: (page - 1) * pageSize,
     }),
     getDistinctAgentDefinitions(),
+    countConversationsByStatus(),
   ]);
 
   return (
-    <div className="px-6 py-6">
-      <div className="mb-5">
-        <h1 className="text-lg font-semibold tracking-tight">Conversations</h1>
-        <p className="mt-0.5 text-[13px] text-muted-foreground">
-          Agent conversation history
-        </p>
-      </div>
+    <div className="flex h-screen flex-col overflow-hidden px-6 pt-6 pb-3">
       <LiveConversationsTable
         initialData={items}
         total={total}
         page={page}
         pageSize={pageSize}
         agentDefinitions={agentDefinitions}
+        statusCounts={statusCounts}
       />
     </div>
   );

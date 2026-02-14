@@ -1,14 +1,16 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { AlertCircle, RotateCcw } from "lucide-react";
-import Link from "next/link";
+import { RotateCcw } from "lucide-react";
+
 import {
   formatDuration,
   formatRelativeTime,
   formatTokenCount,
 } from "@/lib/format";
 import type { ConversationListItem } from "@/services/conversations";
+
+import { LiveDuration } from "./live-duration";
 import { StatusBadge } from "./status-badge";
 
 /**
@@ -29,12 +31,7 @@ export const columns: ColumnDef<ConversationListItem>[] = [
     accessorKey: "agentDefinitionId",
     header: "Agent",
     cell: ({ row }) => (
-      <Link
-        href={`/conversations/${row.original.id}`}
-        className="font-medium hover:underline"
-      >
-        {row.original.agentDefinitionId}
-      </Link>
+      <span className="font-medium">{row.original.agentDefinitionId}</span>
     ),
   },
   {
@@ -61,16 +58,16 @@ export const columns: ColumnDef<ConversationListItem>[] = [
     id: "duration",
     header: "Duration",
     cell: ({ row }) => {
-      if (row.original.status === "running") {
-        return (
-          <span className="font-mono text-indigo-600 dark:text-indigo-400">
-            Running...
-          </span>
-        );
+      const { status, createdAt, updatedAt } = row.original;
+      const isActive = status === "running" || status === "waiting";
+
+      if (isActive) {
+        return <LiveDuration createdAt={createdAt} />;
       }
+
       return (
         <span className="font-mono tabular-nums">
-          {formatDuration(row.original.createdAt, row.original.updatedAt)}
+          {formatDuration(createdAt, updatedAt)}
         </span>
       );
     },
@@ -115,10 +112,17 @@ export const columns: ColumnDef<ConversationListItem>[] = [
   {
     id: "error",
     header: "",
-    size: 40,
+    size: 200,
     cell: ({ row }) => {
-      if (row.original.status === "failed") {
-        return <AlertCircle className="h-4 w-4 text-destructive" />;
+      if (row.original.status === "failed" && row.original.errorMessage) {
+        return (
+          <span
+            className="max-w-[200px] truncate text-xs text-destructive"
+            title={row.original.errorMessage}
+          >
+            {row.original.errorMessage}
+          </span>
+        );
       }
       return null;
     },
