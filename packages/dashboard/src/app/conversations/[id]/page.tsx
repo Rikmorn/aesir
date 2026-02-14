@@ -1,8 +1,5 @@
-import { GitBranch } from "lucide-react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LiveDetailPanels } from "@/components/conversation-detail/live-detail-panels";
-import { BackToConversations } from "@/components/navigation/back-link";
 import {
   getChildConversations,
   getConversationById,
@@ -39,30 +36,18 @@ export default async function ConversationDetailPage({
     ? await getRootTaskId(conversation.taskId)
     : null;
 
+  // Compute initial token totals (input/output) from events
+  const initialTokenInput = events.reduce(
+    (sum, e) => sum + (e.tokenCountInput ?? 0),
+    0,
+  );
+  const initialTokenOutput = events.reduce(
+    (sum, e) => sum + (e.tokenCountOutput ?? 0),
+    0,
+  );
+
   return (
     <div className="px-6 py-6">
-      <div className="mb-5">
-        <BackToConversations />
-        <h1 className="mt-2 text-lg font-semibold tracking-tight">
-          {conversation.agentDefinitionId}
-        </h1>
-        <div className="flex items-center gap-3">
-          <p className="font-mono text-xs text-muted-foreground">
-            {conversation.id}
-          </p>
-          {rootTaskId && (
-            <Link
-              href={`/tasks/${rootTaskId}`}
-              className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-            >
-              <GitBranch className="h-3.5 w-3.5" />
-              View task tree
-            </Link>
-          )}
-        </div>
-      </div>
-
-      {/* Live detail panels with SSE real-time updates */}
       <LiveDetailPanels
         conversation={{
           ...conversation,
@@ -77,7 +62,11 @@ export default async function ConversationDetailPage({
         childConversations={childConversations.map((c) => ({
           ...c,
           createdAt: c.createdAt.toISOString(),
+          updatedAt: c.updatedAt.toISOString(),
         }))}
+        rootTaskId={rootTaskId}
+        initialTokenInput={initialTokenInput}
+        initialTokenOutput={initialTokenOutput}
       />
     </div>
   );

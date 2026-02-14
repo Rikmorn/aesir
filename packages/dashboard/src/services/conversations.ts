@@ -96,6 +96,7 @@ export interface ChildConversation {
   agentDefinitionId: string;
   status: string;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 // ─── Queries ─────────────────────────────────────────────────────────────────
@@ -349,6 +350,7 @@ export async function getChildConversations(
       agent_definition_id: conversations.agent_definition_id,
       status: conversations.status,
       created_at: conversations.created_at,
+      updated_at: conversations.updated_at,
     })
     .from(conversations)
     .where(eq(conversations.parent_conversation_id, parentConversationId))
@@ -359,6 +361,7 @@ export async function getChildConversations(
     agentDefinitionId: row.agent_definition_id,
     status: row.status,
     createdAt: row.created_at,
+    updatedAt: row.updated_at,
   }));
 }
 

@@ -129,7 +129,7 @@ function ContentBlockRenderer({ block }: ContentBlockRendererProps) {
     return (
       <div
         className={cn(
-          "border-l-2 border-l-blue-500 pl-3",
+          "border-l-2 border-l-indigo-500 pl-3",
           "whitespace-pre-wrap break-words text-sm",
         )}
       >

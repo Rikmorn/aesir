@@ -26,16 +26,16 @@ const iconMap: Record<string, LucideIcon> = {
 };
 
 const colorMap: Record<string, string> = {
-  "agent.started": "text-blue-500",
-  "agent.completed": "text-green-500",
-  "agent.paused": "text-yellow-500",
-  "agent.resumed": "text-blue-500",
-  "agent.reopened": "text-cyan-500",
-  "tool.called": "text-purple-500",
-  "tool.succeeded": "text-green-500",
+  "agent.started": "text-indigo-500",
+  "agent.completed": "text-emerald-500",
+  "agent.paused": "text-amber-500",
+  "agent.resumed": "text-indigo-500",
+  "agent.reopened": "text-indigo-400",
+  "tool.called": "text-violet-500",
+  "tool.succeeded": "text-emerald-500",
   "tool.failed": "text-red-500",
-  "llm.response": "text-blue-400",
-  "signal.received": "text-orange-500",
+  "llm.response": "text-indigo-400",
+  "signal.received": "text-amber-500",
 };
 
 export function EventIcon({ type }: { type: string }) {

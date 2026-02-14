@@ -9,6 +9,8 @@ import { useCallback, useEffect, useState } from "react";
 interface BackLinkProps {
   /** Fallback URL when there's no browser history to go back to */
   fallbackHref: string;
+  /** Label shown after the arrow (e.g. "Conversations"). Defaults to "Back" */
+  label?: string;
 }
 
 /**
@@ -18,7 +20,7 @@ interface BackLinkProps {
  * to go back (preserving any URL state like filters).
  * Falls back to fallbackHref for direct navigation (no referrer).
  */
-export function BackLink({ fallbackHref }: BackLinkProps) {
+export function BackLink({ fallbackHref, label = "Back" }: BackLinkProps) {
   const router = useRouter();
   const [canGoBack, setCanGoBack] = useState(false);
 
@@ -48,7 +50,7 @@ export function BackLink({ fallbackHref }: BackLinkProps) {
       onClick={handleClick}
       className="text-sm text-muted-foreground hover:text-foreground"
     >
-      &larr; Back
+      &larr; {label}
     </Link>
   );
 }
@@ -56,13 +58,13 @@ export function BackLink({ fallbackHref }: BackLinkProps) {
 // ─── Convenience exports for common pages ─────────────────────────────────────
 
 export function BackToConversations() {
-  return <BackLink fallbackHref="/conversations" />;
+  return <BackLink fallbackHref="/conversations" label="Conversations" />;
 }
 
 export function BackToAgents() {
-  return <BackLink fallbackHref="/agents" />;
+  return <BackLink fallbackHref="/agents" label="Agents" />;
 }
 
 export function BackToTasks() {
-  return <BackLink fallbackHref="/tasks" />;
+  return <BackLink fallbackHref="/tasks" label="Tasks" />;
 }

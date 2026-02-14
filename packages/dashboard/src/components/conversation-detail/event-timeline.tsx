@@ -103,13 +103,13 @@ function EventItem({ event, isSubAgent }: EventItemProps) {
 
           <div className="flex shrink-0 items-center gap-2">
             {event.durationMs !== null && (
-              <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+              <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs tabular-nums text-muted-foreground">
                 {formatDurationMs(event.durationMs)}
               </span>
             )}
             {(event.tokenCountInput !== null ||
               event.tokenCountOutput !== null) && (
-              <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+              <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs tabular-nums text-muted-foreground">
                 {formatTokenCount(event.tokenCountInput ?? 0)} in /{" "}
                 {formatTokenCount(event.tokenCountOutput ?? 0)} out
               </span>
@@ -185,7 +185,7 @@ function AgentStartedContent({ payload }: AgentStartedContentProps) {
           <summary className="cursor-pointer text-xs font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground">
             System Prompt ({systemPrompt.length.toLocaleString()} chars)
           </summary>
-          <div className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap rounded border border-dashed border-muted-foreground/30 bg-muted/20 p-3 text-xs text-muted-foreground">
+          <div className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap rounded border bg-muted/20 p-3 text-xs text-muted-foreground">
             {systemPrompt}
           </div>
         </details>
