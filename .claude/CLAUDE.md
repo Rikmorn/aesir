@@ -69,6 +69,10 @@ Prompts are the primary control surface for agent behavior. These rules apply wh
 - LLMs are good at reasoning about intent, context, and appropriate responses. Encoding "if user says 'yes'/'looks good'/'go ahead' then proceed" is doing work the model already does natively.
 - Give the agent context about why something matters rather than rules about what to do. An agent that understands why will handle novel situations; an agent following rules will break on the first edge case.
 
+## Dashboard Design System
+
+When modifying or creating UI in `packages/dashboard/`, read and follow the design system in `.interface-design/system.md`. It defines the dashboard's visual identity: color tokens, typography, spacing, depth strategy, status indicators, and component patterns. Every UI decision should trace back to that file.
+
 ## Architecture
 
 ### Overview

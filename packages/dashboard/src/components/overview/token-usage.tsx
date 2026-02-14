@@ -79,7 +79,7 @@ export function TokenUsage({ data, defaultTimeRange }: TokenUsageProps) {
       </CardHeader>
       <CardContent>
         {data.length === 0 || totalTokens === 0 ? (
-          <div className="flex h-[200px] items-center justify-center rounded-lg border border-dashed">
+          <div className="flex h-[120px] items-center justify-center">
             <p className="text-sm text-muted-foreground">
               No LLM calls in the {timeRangeLabel.toLowerCase()}
             </p>
@@ -87,7 +87,7 @@ export function TokenUsage({ data, defaultTimeRange }: TokenUsageProps) {
         ) : (
           <>
             <div>
-              <p className="text-3xl font-bold">
+              <p className="font-mono text-2xl font-semibold tabular-nums">
                 {formatTokenCount(totalTokens)}
               </p>
               <p className="text-sm text-muted-foreground">

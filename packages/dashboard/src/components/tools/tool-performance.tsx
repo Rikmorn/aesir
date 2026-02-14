@@ -123,7 +123,7 @@ export function ToolPerformance({
 
       {/* Empty State */}
       {!hasTimeSeriesData && !hasMetricsData && (
-        <div className="flex h-[300px] items-center justify-center rounded-lg border border-dashed">
+        <div className="flex h-[200px] items-center justify-center">
           <p className="text-sm text-muted-foreground">
             No tool activity in this time range
           </p>

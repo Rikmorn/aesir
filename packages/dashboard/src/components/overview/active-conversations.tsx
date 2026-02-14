@@ -41,10 +41,8 @@ export function ActiveConversations({
       </CardHeader>
       <CardContent>
         {conversations.length === 0 ? (
-          <div className="flex h-[200px] items-center justify-center rounded-lg border border-dashed">
-            <p className="text-sm text-muted-foreground">
-              No active conversations
-            </p>
+          <div className="flex h-[120px] items-center justify-center">
+            <p className="text-sm text-muted-foreground">All agents idle</p>
           </div>
         ) : (
           <Table>

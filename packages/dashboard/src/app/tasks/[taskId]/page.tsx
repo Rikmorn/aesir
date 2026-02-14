@@ -32,14 +32,13 @@ export default async function TaskDetailPage({ params }: TaskDetailPageProps) {
   const health = computeTreeHealth(nodes, events);
 
   return (
-    <main className="container mx-auto flex flex-col h-[calc(100vh-4rem)] px-4 py-6">
-      {/* Header */}
+    <div className="flex flex-col h-[calc(100vh-3rem)] px-6 py-5">
       <div className="mb-4 shrink-0">
         <BackToTasks />
-        <h1 className="mt-2 text-2xl font-bold tracking-tight">
+        <h1 className="mt-2 text-lg font-semibold tracking-tight">
           {rootNode?.title ?? "Task Graph"}
         </h1>
-        <p className="font-mono text-sm text-muted-foreground">{taskId}</p>
+        <p className="font-mono text-xs text-muted-foreground">{taskId}</p>
       </div>
 
       {/* Graph area -- takes remaining vertical space */}
@@ -51,6 +50,6 @@ export default async function TaskDetailPage({ params }: TaskDetailPageProps) {
           initialHealth={health}
         />
       </div>
-    </main>
+    </div>
   );
 }

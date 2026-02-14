@@ -47,11 +47,11 @@ export default async function ConversationsPage({
   ]);
 
   return (
-    <main className="container mx-auto py-8 px-4">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Conversations</h1>
-        <p className="text-muted-foreground">
-          Monitor and browse agent conversation history
+    <div className="px-6 py-6">
+      <div className="mb-5">
+        <h1 className="text-lg font-semibold tracking-tight">Conversations</h1>
+        <p className="mt-0.5 text-[13px] text-muted-foreground">
+          Agent conversation history
         </p>
       </div>
       <LiveConversationsTable
@@ -61,6 +61,6 @@ export default async function ConversationsPage({
         pageSize={pageSize}
         agentDefinitions={agentDefinitions}
       />
-    </main>
+    </div>
   );
 }

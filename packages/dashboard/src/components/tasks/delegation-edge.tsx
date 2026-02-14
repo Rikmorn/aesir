@@ -46,13 +46,13 @@ export type DelegationEdge = Edge<DelegationEdgeData, "delegation">;
 // ─── Edge Styles ────────────────────────────────────────────────────────────
 
 const edgeStyles: Record<DelegationEdgeData["state"], React.CSSProperties> = {
-  pending: { stroke: "#9ca3af", strokeDasharray: "5,5" },
-  active: { stroke: "hsl(217, 91%, 60%)" },
-  completed: { stroke: "hsl(142, 71%, 45%)" },
-  failed: { stroke: "hsl(0, 84%, 60%)" },
-  timeout: { stroke: "hsl(45, 93%, 47%)" },
-  orphaned: { stroke: "hsl(45, 93%, 47%)", strokeDasharray: "5,5" },
-  rejected: { stroke: "#9ca3af", strokeDasharray: "3,3", opacity: 0.5 },
+  pending: { stroke: "#64748b", strokeDasharray: "5,5", opacity: 0.5 },
+  active: { stroke: "#6366f1" },
+  completed: { stroke: "#10b981" },
+  failed: { stroke: "#ef4444" },
+  timeout: { stroke: "#f59e0b" },
+  orphaned: { stroke: "#f59e0b", strokeDasharray: "5,5" },
+  rejected: { stroke: "#64748b", strokeDasharray: "3,3", opacity: 0.4 },
 };
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -104,7 +104,7 @@ function DelegationEdgeComponent({
 
       {/* Animated circle for active edges */}
       {state === "active" && (
-        <circle r="4" fill="hsl(217, 91%, 60%)">
+        <circle r="3" fill="#6366f1">
           <animateMotion dur="2s" repeatCount="indefinite" path={edgePath} />
         </circle>
       )}

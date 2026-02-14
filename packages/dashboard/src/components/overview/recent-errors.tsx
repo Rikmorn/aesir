@@ -25,8 +25,8 @@ export function RecentErrors({ errors }: RecentErrorsProps) {
       </CardHeader>
       <CardContent>
         {errors.length === 0 ? (
-          <div className="flex h-[200px] items-center justify-center rounded-lg border border-dashed">
-            <p className="text-sm text-muted-foreground">No recent errors</p>
+          <div className="flex h-[120px] items-center justify-center">
+            <p className="text-sm text-muted-foreground">No errors</p>
           </div>
         ) : (
           <div className="space-y-2">

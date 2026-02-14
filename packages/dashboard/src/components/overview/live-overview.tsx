@@ -24,7 +24,6 @@ import { RecentErrors } from "@/components/overview/recent-errors";
 import { StatCards } from "@/components/overview/stat-cards";
 import { TokenUsage } from "@/components/overview/token-usage";
 import { WorkerStatus } from "@/components/overview/worker-status";
-import { ConnectionStatusIndicator } from "@/components/ui/connection-status";
 import { useEventStream } from "@/hooks/use-event-stream";
 import type { WorkerStatus as WorkerStatusType } from "@/lib/agent-service";
 import { LIFECYCLE_EVENT_TYPES, type SseEvent } from "@/lib/sse-types";
@@ -109,11 +108,7 @@ export function LiveOverview({
   const router = useRouter();
 
   // ── SSE Connection ──────────────────────────────────────────────────────
-  const {
-    events,
-    status: connectionStatus,
-    hasGap,
-  } = useEventStream({
+  const { events, hasGap } = useEventStream({
     url: "/dashboard/api/sse/events",
     types: LIFECYCLE_EVENT_TYPES,
   });
@@ -206,33 +201,27 @@ export function LiveOverview({
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <main className="container mx-auto px-4 py-8">
-      {/* Header with connection status */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">System Overview</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Real-time pulse check on agent activity, health, and resource usage
-          </p>
-        </div>
-        <ConnectionStatusIndicator status={connectionStatus} />
+    <div className="px-6 py-6">
+      {/* Header */}
+      <div className="mb-5">
+        <h1 className="text-lg font-semibold tracking-tight">Overview</h1>
+        <p className="mt-0.5 text-[13px] text-muted-foreground">
+          Agent activity and system health
+        </p>
       </div>
 
       {/* Content */}
-      <div className="space-y-6">
-        {/* Status summary cards */}
+      <div className="space-y-5">
         <StatCards
           counts={statusCounts}
           highlightedFields={highlightedFields}
         />
 
-        {/* Active conversations + Worker status */}
         <div className="grid gap-4 lg:grid-cols-2">
           <ActiveConversations conversations={conversations} />
           <WorkerStatus status={workerStatus} />
         </div>
 
-        {/* Recent errors + Token usage */}
         <div className="grid gap-4 lg:grid-cols-2">
           <RecentErrors errors={errors} />
           <TokenUsage
@@ -241,7 +230,7 @@ export function LiveOverview({
           />
         </div>
       </div>
-    </main>
+    </div>
   );
 }
 

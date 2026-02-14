@@ -3,12 +3,10 @@
 /**
  * Custom React Flow Node for Task Delegation Graph
  *
- * Renders a ~220x80px card showing:
+ * Renders a compact card showing:
  * - Entity name + health badge icon
  * - Task summary (truncated)
  * - Status dot (color-coded) + elapsed time
- *
- * Defined OUTSIDE any component for referential equality (prevents React Flow re-mounts).
  */
 
 import { Handle, type Node, type NodeProps, Position } from "@xyflow/react";
@@ -42,12 +40,16 @@ const statusStyles: Record<
   TaskNodeData["status"],
   { border: string; dot: string; pulse?: boolean }
 > = {
-  completed: { border: "border-green-500", dot: "bg-green-500" },
-  failed: { border: "border-red-500", dot: "bg-red-500" },
-  running: { border: "border-blue-500", dot: "bg-blue-500", pulse: true },
-  waiting: { border: "border-amber-500", dot: "bg-amber-500" },
-  pending: { border: "border-gray-300", dot: "bg-gray-300" },
-  rejected: { border: "border-gray-300", dot: "bg-gray-300" },
+  completed: { border: "border-emerald-500/60", dot: "bg-emerald-500" },
+  failed: { border: "border-red-500/60", dot: "bg-red-500" },
+  running: {
+    border: "border-indigo-500/60",
+    dot: "bg-indigo-500",
+    pulse: true,
+  },
+  waiting: { border: "border-amber-500/60", dot: "bg-amber-500" },
+  pending: { border: "border-border", dot: "bg-muted-foreground/40" },
+  rejected: { border: "border-border", dot: "bg-muted-foreground/40" },
 };
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -58,31 +60,33 @@ function TaskNodeComponent({ data }: NodeProps<TaskNode>) {
   return (
     <div
       className={cn(
-        "flex flex-col justify-between rounded-md border-2 bg-background p-2 shadow-sm",
+        "flex flex-col justify-between rounded-md border-2 bg-card p-2.5",
         "w-[220px] h-[80px]",
         style.border,
-        data.isRejected && "opacity-70",
+        data.isRejected && "opacity-60",
       )}
     >
       <Handle
         type="target"
         position={Position.Left}
-        className="!bg-muted-foreground !w-2 !h-2"
+        className="!bg-muted-foreground !w-1.5 !h-1.5"
       />
       <Handle
         type="source"
         position={Position.Right}
-        className="!bg-muted-foreground !w-2 !h-2"
+        className="!bg-muted-foreground !w-1.5 !h-1.5"
       />
 
       {/* Top row: entity name + health badge */}
       <div className="flex items-center justify-between gap-1">
-        <span className="truncate text-sm font-medium">{data.entityName}</span>
+        <span className="truncate text-[13px] font-medium">
+          {data.entityName}
+        </span>
         {data.healthBadge === "timeout" && (
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+          <AlertTriangle className="h-3 w-3 shrink-0 text-amber-500" />
         )}
         {data.healthBadge === "orphan" && (
-          <Unlink className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+          <Unlink className="h-3 w-3 shrink-0 text-amber-500" />
         )}
       </div>
 
@@ -93,12 +97,12 @@ function TaskNodeComponent({ data }: NodeProps<TaskNode>) {
       <div className="flex items-center gap-1.5">
         <span
           className={cn(
-            "inline-block h-2 w-2 rounded-full",
+            "inline-block h-1.5 w-1.5 rounded-full",
             style.dot,
-            style.pulse && "animate-pulse",
+            style.pulse && "animate-pulse-signal",
           )}
         />
-        <span className="text-[10px] text-muted-foreground">
+        <span className="font-mono text-[10px] text-muted-foreground">
           {data.elapsedTime}
         </span>
       </div>

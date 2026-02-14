@@ -43,20 +43,21 @@ export default async function AgentDetailPage({
   const agentType = getAgentType(agent.triggers, agent.tools);
 
   return (
-    <main className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-6">
+    <div className="px-6 py-6">
+      <div className="mb-5">
         <BackToAgents />
         <div className="mt-2 flex items-center gap-3">
-          <h1 className="text-2xl font-bold tracking-tight">{agent.name}</h1>
+          <h1 className="text-lg font-semibold tracking-tight">{agent.name}</h1>
           <AgentTypeBadge type={agentType} />
-          <Badge variant="outline">v{agent.version}</Badge>
+          <Badge variant="outline" className="font-mono text-[11px]">
+            v{agent.version}
+          </Badge>
         </div>
-        <p className="mt-1 font-mono text-sm text-muted-foreground">
+        <p className="mt-1 font-mono text-xs text-muted-foreground">
           {agent.id}
         </p>
         {agent.description && (
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-1.5 text-[13px] text-muted-foreground">
             {agent.description}
           </p>
         )}
@@ -81,6 +82,6 @@ export default async function AgentDetailPage({
           />
         }
       />
-    </main>
+    </div>
   );
 }

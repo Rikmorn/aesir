@@ -18,9 +18,9 @@ export function WorkerStatus({ status }: WorkerStatusProps) {
           <CardTitle>Worker Status</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex h-[200px] items-center justify-center rounded-lg border border-dashed">
+          <div className="flex h-[120px] items-center justify-center">
             <p className="text-sm text-muted-foreground">
-              Agent service unavailable
+              Agent service unreachable
             </p>
           </div>
         </CardContent>
@@ -36,7 +36,7 @@ export function WorkerStatus({ status }: WorkerStatusProps) {
         <CardTitle className="flex items-center gap-2">
           <span
             role="img"
-            className={`h-2.5 w-2.5 rounded-full ${isAtCapacity ? "bg-amber-500" : "bg-emerald-500"}`}
+            className={`h-1.5 w-1.5 rounded-full ${isAtCapacity ? "bg-amber-500" : "bg-emerald-500 animate-pulse-signal"}`}
             aria-label={isAtCapacity ? "At capacity" : "Available"}
           />
           Worker Status

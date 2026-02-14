@@ -29,7 +29,7 @@ export function TaskHealthBadge({ health }: TaskHealthBadgeProps) {
         variant="outline"
         className={cn(
           "gap-1 font-medium",
-          "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
+          "border-transparent bg-red-500/10 text-red-700 dark:text-red-400",
         )}
       >
         <AlertCircle className="h-3 w-3" />
@@ -48,7 +48,7 @@ export function TaskHealthBadge({ health }: TaskHealthBadgeProps) {
       variant="outline"
       className={cn(
         "gap-1 font-medium",
-        "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
+        "border-transparent bg-amber-500/10 text-amber-700 dark:text-amber-400",
       )}
     >
       <AlertTriangle className="h-3 w-3" />

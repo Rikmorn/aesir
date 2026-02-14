@@ -38,7 +38,7 @@ export function IntegrationHealth({ integrations }: IntegrationHealthProps) {
                 {/* Status dot */}
                 <span
                   role="img"
-                  className={`h-2.5 w-2.5 rounded-full ${isHealthy ? "bg-emerald-500" : "bg-red-500"}`}
+                  className={`h-1.5 w-1.5 rounded-full ${isHealthy ? "bg-emerald-500 animate-pulse-signal" : "bg-red-500"}`}
                   aria-label={isHealthy ? "Healthy" : "Unhealthy"}
                 />
                 {capitalize(integration.name)}

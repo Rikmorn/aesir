@@ -40,15 +40,14 @@ export default async function ConversationDetailPage({
     : null;
 
   return (
-    <main className="container mx-auto px-4 py-8">
-      {/* Header with breadcrumb and title */}
-      <div className="mb-6">
+    <div className="px-6 py-6">
+      <div className="mb-5">
         <BackToConversations />
-        <h1 className="mt-2 text-2xl font-bold tracking-tight">
+        <h1 className="mt-2 text-lg font-semibold tracking-tight">
           {conversation.agentDefinitionId}
         </h1>
         <div className="flex items-center gap-3">
-          <p className="font-mono text-sm text-muted-foreground">
+          <p className="font-mono text-xs text-muted-foreground">
             {conversation.id}
           </p>
           {rootTaskId && (
@@ -80,6 +79,6 @@ export default async function ConversationDetailPage({
           createdAt: c.createdAt.toISOString(),
         }))}
       />
-    </main>
+    </div>
   );
 }

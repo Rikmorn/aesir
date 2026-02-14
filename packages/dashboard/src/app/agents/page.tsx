@@ -22,11 +22,11 @@ export default async function AgentsPage() {
   });
 
   return (
-    <main className="container mx-auto py-8 px-4">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Agents</h1>
-        <p className="text-muted-foreground">
-          Agent definitions loaded in the runtime
+    <div className="px-6 py-6">
+      <div className="mb-5">
+        <h1 className="text-lg font-semibold tracking-tight">Agents</h1>
+        <p className="mt-0.5 text-[13px] text-muted-foreground">
+          Definitions loaded in the runtime
         </p>
       </div>
 
@@ -44,6 +44,6 @@ export default async function AgentsPage() {
           </p>
         </div>
       )}
-    </main>
+    </div>
   );
 }

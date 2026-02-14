@@ -36,9 +36,9 @@ export function AgentCard({ agent }: { agent: AgentSummary }) {
   return (
     <Link
       href={`/agents/${agent.id}`}
-      className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <Card className="h-full transition-colors hover:border-foreground/20">
+      <Card className="h-full transition-colors hover:border-foreground/25">
         <CardHeader>
           <div className="flex items-center gap-2">
             <CardTitle className="text-base">{agent.name}</CardTitle>

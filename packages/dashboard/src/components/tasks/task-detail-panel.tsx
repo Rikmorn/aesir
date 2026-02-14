@@ -96,7 +96,7 @@ export function TaskDetailPanel({
     <div
       className={cn(
         "absolute right-0 top-0 z-10 h-full w-[320px]",
-        "bg-card border-l shadow-lg",
+        "bg-card border-l",
         "flex flex-col",
         "animate-in slide-in-from-right duration-200",
       )}
@@ -167,8 +167,8 @@ export function TaskDetailPanel({
               <div className="flex items-center gap-1.5">
                 <span
                   className={cn(
-                    "inline-block h-2 w-2 rounded-full",
-                    isRejected ? "bg-red-500" : "bg-green-500",
+                    "inline-block h-1.5 w-1.5 rounded-full",
+                    isRejected ? "bg-red-500" : "bg-emerald-500",
                   )}
                 />
                 <span>{isRejected ? "Rejected" : "Accepted"}</span>

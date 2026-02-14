@@ -122,7 +122,7 @@ export function RecentFailures({
   // Empty state
   if (failures.length === 0 && total === 0) {
     return (
-      <div className="flex h-[300px] items-center justify-center rounded-lg border border-dashed">
+      <div className="flex h-[200px] items-center justify-center">
         <p className="text-sm text-muted-foreground">
           No tool failures recorded
         </p>

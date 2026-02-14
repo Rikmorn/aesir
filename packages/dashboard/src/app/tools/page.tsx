@@ -81,12 +81,11 @@ export default async function ToolsPage({ searchParams }: ToolsPageProps) {
   ).length;
 
   return (
-    <main className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Tools</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          All registered tools, permissions, performance, and health
+    <div className="px-6 py-6">
+      <div className="mb-5">
+        <h1 className="text-lg font-semibold tracking-tight">Tools</h1>
+        <p className="mt-0.5 text-[13px] text-muted-foreground">
+          Registry, permissions, performance, and health
         </p>
       </div>
 
@@ -122,6 +121,6 @@ export default async function ToolsPage({ searchParams }: ToolsPageProps) {
         }
         healthContent={<IntegrationHealth integrations={integrations} />}
       />
-    </main>
+    </div>
   );
 }

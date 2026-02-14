@@ -62,7 +62,11 @@ export const columns: ColumnDef<ConversationListItem>[] = [
     header: "Duration",
     cell: ({ row }) => {
       if (row.original.status === "running") {
-        return <span className="text-blue-600">Running...</span>;
+        return (
+          <span className="font-mono text-indigo-600 dark:text-indigo-400">
+            Running...
+          </span>
+        );
       }
       return formatDuration(row.original.createdAt, row.original.updatedAt);
     },

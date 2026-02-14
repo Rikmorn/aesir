@@ -119,18 +119,18 @@ export function DelegationGraph({
       <MiniMap
         nodeColor={(node) => {
           const data = node.data as TaskNodeData | undefined;
-          if (!data) return "#9ca3af";
+          if (!data) return "#64748b";
           switch (data.status) {
             case "completed":
-              return "#22c55e";
+              return "#10b981";
             case "failed":
               return "#ef4444";
             case "running":
-              return "#3b82f6";
+              return "#6366f1";
             case "waiting":
               return "#f59e0b";
             default:
-              return "#9ca3af";
+              return "#64748b";
           }
         }}
         zoomable

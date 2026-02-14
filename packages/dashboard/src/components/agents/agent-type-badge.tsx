@@ -3,16 +3,19 @@ import { cn } from "@/lib/utils";
 
 type AgentType = "orchestrator" | "sub-agent";
 
-const typeConfig: Record<AgentType, { label: string; className: string }> = {
+const typeConfig: Record<
+  AgentType,
+  { label: string; dotClassName: string; className: string }
+> = {
   orchestrator: {
     label: "Orchestrator",
-    className:
-      "bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300",
+    dotClassName: "bg-indigo-500",
+    className: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400",
   },
   "sub-agent": {
     label: "Sub-agent",
-    className:
-      "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
+    dotClassName: "bg-muted-foreground/50",
+    className: "bg-muted text-muted-foreground",
   },
 };
 
@@ -38,7 +41,13 @@ export function AgentTypeBadge({ type }: { type: AgentType }) {
   const config = typeConfig[type];
 
   return (
-    <Badge variant="outline" className={cn("font-medium", config.className)}>
+    <Badge
+      variant="outline"
+      className={cn("gap-1.5 border-transparent font-medium", config.className)}
+    >
+      <span
+        className={cn("h-1.5 w-1.5 shrink-0 rounded-full", config.dotClassName)}
+      />
       {config.label}
     </Badge>
   );

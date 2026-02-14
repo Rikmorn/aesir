@@ -21,9 +21,9 @@ const CONFIG_ROW_KEYS = [
 
 export default function AgentDetailLoading() {
   return (
-    <main className="container mx-auto px-4 py-8">
+    <div className="px-6 py-6">
       {/* Breadcrumb */}
-      <div className="mb-6">
+      <div className="mb-5">
         <Skeleton className="h-4 w-28" />
 
         {/* Header: name + badges + ID */}
@@ -46,7 +46,7 @@ export default function AgentDetailLoading() {
       {/* Configuration tab content skeleton */}
       <div className="mt-6 space-y-6">
         {/* Config card */}
-        <div className="rounded-xl border py-6 shadow-sm">
+        <div className="rounded-lg border py-6">
           <div className="px-6 pb-4">
             <Skeleton className="h-5 w-28" />
           </div>
@@ -68,7 +68,7 @@ export default function AgentDetailLoading() {
         </div>
 
         {/* Tools card */}
-        <div className="rounded-xl border py-6 shadow-sm">
+        <div className="rounded-lg border py-6">
           <div className="px-6 pb-4">
             <Skeleton className="h-5 w-20" />
           </div>
@@ -79,6 +79,6 @@ export default function AgentDetailLoading() {
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
