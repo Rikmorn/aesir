@@ -132,18 +132,18 @@ export interface ToolFailure {
  * 2. Agent definitions (passed in) to determine which agents use each tool
  * 3. Usage metrics from agent_events for the specified time range
  *
- * @param since - Start of the time range for metrics aggregation
+ * @param since - Start of the time range for metrics aggregation (null to skip metrics)
  * @param agents - Agent definitions to cross-reference tool assignments
  * @returns Array of ToolRegistryItem sorted by namespace then name
  */
 export async function getToolRegistry(
-  since: Date,
+  since: Date | null,
   agents: AgentSummary[],
 ): Promise<ToolRegistryItem[]> {
-  // Fetch tool definitions and metrics in parallel
+  // Fetch tool definitions and optionally metrics in parallel
   const [registryEntries, metricsRows] = await Promise.all([
     fetchToolRegistry(),
-    getToolCallMetrics(since),
+    since ? getToolCallMetrics(since) : Promise.resolve([]),
   ]);
 
   // Build a lookup from tool_name -> metrics

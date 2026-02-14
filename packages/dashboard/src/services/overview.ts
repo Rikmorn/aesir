@@ -62,6 +62,18 @@ export interface TokenUsageByAgent {
   outputTokens: number;
 }
 
+/**
+ * Tool call activity in the last 24 hours.
+ */
+export interface ToolActivityItem {
+  /** Tool name as stored in events (e.g., "linear_get_issue", "create_task") */
+  toolName: string;
+  /** Total calls in the last 24h */
+  callCount: number;
+  /** Total failures in the last 24h */
+  failureCount: number;
+}
+
 // ─── Queries ─────────────────────────────────────────────────────────────────
 
 /**
@@ -288,4 +300,45 @@ export async function getTokenUsageByAgent(
     inputTokens: Number(row.total_input),
     outputTokens: Number(row.total_output),
   }));
+}
+
+/**
+ * Get tool call activity for the last 24 hours.
+ *
+ * Aggregates tool.called and tool.failed events by tool_name.
+ * Sorted by failure count DESC (surface broken tools first), then calls DESC.
+ *
+ * @param limit - Maximum tools to return (default 15)
+ * @returns Array of ToolActivityItem
+ */
+export async function getToolActivity(limit = 15): Promise<ToolActivityItem[]> {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  const rows = await db
+    .select({
+      tool_name: sql<string>`${agentEvents.payload}->>'tool_name'`,
+      calls: sql<number>`COUNT(*) FILTER (WHERE ${agentEvents.type} = 'tool.called')`,
+      failures: sql<number>`COUNT(*) FILTER (WHERE ${agentEvents.type} = 'tool.failed')`,
+    })
+    .from(agentEvents)
+    .where(
+      and(
+        inArray(agentEvents.type, ["tool.called", "tool.failed"]),
+        gte(agentEvents.timestamp, since),
+      ),
+    )
+    .groupBy(sql`${agentEvents.payload}->>'tool_name'`)
+    .orderBy(
+      sql`COUNT(*) FILTER (WHERE ${agentEvents.type} = 'tool.failed') DESC`,
+      sql`COUNT(*) FILTER (WHERE ${agentEvents.type} = 'tool.called') DESC`,
+    )
+    .limit(limit);
+
+  return rows
+    .filter((row) => row.tool_name !== null)
+    .map((row) => ({
+      toolName: row.tool_name,
+      callCount: Number(row.calls),
+      failureCount: Number(row.failures),
+    }));
 }

@@ -19,6 +19,10 @@ import { ActiveConversations } from "@/components/overview/active-conversations"
 import { RecentErrors } from "@/components/overview/recent-errors";
 import { StatCards } from "@/components/overview/stat-cards";
 import { TokenUsage } from "@/components/overview/token-usage";
+import {
+  type EnrichedToolActivity,
+  ToolActivity,
+} from "@/components/overview/tool-activity";
 import { WorkerStatus } from "@/components/overview/worker-status";
 import { useEventStream } from "@/hooks/use-event-stream";
 import type { WorkerStatus as WorkerStatusType } from "@/lib/agent-service";
@@ -58,6 +62,7 @@ interface LiveOverviewProps {
   recentErrors: SerializedRecentError[];
   tokenUsage: TokenUsageByAgent[];
   defaultTokenTimeRange: string;
+  toolActivity: EnrichedToolActivity[];
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -91,6 +96,7 @@ export function LiveOverview({
   recentErrors,
   tokenUsage,
   defaultTokenTimeRange,
+  toolActivity,
 }: LiveOverviewProps) {
   const router = useRouter();
 
@@ -202,8 +208,11 @@ export function LiveOverview({
           <ActiveConversations conversations={conversations} />
         </div>
 
-        {/* Right: Errors + Token Usage stacked */}
+        {/* Right: Tool Activity + Errors + Token Usage stacked */}
         <div className="flex min-h-0 flex-col gap-4">
+          <div className="max-h-[240px] min-h-0 shrink-0">
+            <ToolActivity tools={toolActivity} />
+          </div>
           <div className="min-h-0 flex-1">
             <RecentErrors errors={errors} />
           </div>
