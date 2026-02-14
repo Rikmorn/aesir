@@ -30,7 +30,7 @@ export function ThemeToggle({ collapsed = false }: ThemeToggleProps) {
   // Avoid hydration mismatch
   if (!mounted) {
     return (
-      <Button variant="ghost" size="icon" className="h-8 w-8" disabled>
+      <Button variant="ghost" size="icon-sm" disabled>
         <Sun className="h-4 w-4" />
         <span className="sr-only">Toggle theme</span>
       </Button>
@@ -41,12 +41,7 @@ export function ThemeToggle({ collapsed = false }: ThemeToggleProps) {
   const label = isDark ? "Switch to light mode" : "Switch to dark mode";
 
   const button = (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="h-8 w-8"
-      onClick={toggleTheme}
-    >
+    <Button variant="ghost" size="icon-sm" onClick={toggleTheme}>
       {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
       <span className="sr-only">{label}</span>
     </Button>

@@ -47,7 +47,7 @@ export default async function ConversationDetailPage({
   );
 
   return (
-    <div className="px-6 py-6">
+    <div className="flex h-screen flex-col overflow-hidden px-6 pt-6 pb-3">
       <LiveDetailPanels
         conversation={{
           ...conversation,

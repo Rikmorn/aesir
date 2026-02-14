@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { cn } from "@/lib/utils";
 import type { StatusCounts } from "@/services/overview";
 
@@ -10,6 +12,7 @@ const secondaryCards: Array<{
   key: string;
   label: string;
   field: keyof StatusCounts;
+  href: string;
   accentClass: string;
   dotClass: string;
 }> = [
@@ -17,6 +20,7 @@ const secondaryCards: Array<{
     key: "waiting",
     label: "Waiting",
     field: "waiting",
+    href: "/conversations?status=waiting",
     accentClass: "border-l-amber-500",
     dotClass: "bg-amber-500",
   },
@@ -24,6 +28,7 @@ const secondaryCards: Array<{
     key: "queued",
     label: "Queued",
     field: "queued",
+    href: "/conversations?status=queued",
     accentClass: "border-l-muted-foreground/30",
     dotClass: "bg-muted-foreground/50",
   },
@@ -31,6 +36,7 @@ const secondaryCards: Array<{
     key: "completed",
     label: "Completed (24h)",
     field: "completedLast24h",
+    href: "/conversations?status=completed&timeRange=24h",
     accentClass: "border-l-emerald-500",
     dotClass: "bg-emerald-500",
   },
@@ -38,6 +44,7 @@ const secondaryCards: Array<{
     key: "failed",
     label: "Failed (24h)",
     field: "failedLast24h",
+    href: "/conversations?status=failed&timeRange=24h",
     accentClass: "border-l-red-500",
     dotClass: "bg-red-500",
   },
@@ -49,9 +56,10 @@ export function StatCards({ counts, highlightedFields }: StatCardsProps) {
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
       {/* Running — the primary metric, visually dominant */}
-      <div
+      <Link
+        href="/conversations?status=running"
         className={cn(
-          "col-span-2 rounded-lg border border-l-2 border-l-indigo-500 bg-card px-4 py-4 transition-all duration-300 md:col-span-1",
+          "col-span-2 rounded-lg border border-l-2 border-l-indigo-500 bg-card px-4 py-4 transition-all duration-300 hover:border-foreground/20 md:col-span-1",
           runningHighlighted && "ring-1 ring-primary/30",
         )}
       >
@@ -64,7 +72,7 @@ export function StatCards({ counts, highlightedFields }: StatCardsProps) {
         <p className="mt-1.5 font-mono text-3xl font-semibold tabular-nums tracking-tight">
           {counts.running}
         </p>
-      </div>
+      </Link>
 
       {/* Secondary stats */}
       {secondaryCards.map((card) => {
@@ -72,10 +80,11 @@ export function StatCards({ counts, highlightedFields }: StatCardsProps) {
         const value = counts[card.field];
 
         return (
-          <div
+          <Link
             key={card.key}
+            href={card.href}
             className={cn(
-              "rounded-lg border border-l-2 bg-card px-4 py-3 transition-all duration-300",
+              "rounded-lg border border-l-2 bg-card px-4 py-3 transition-all duration-300 hover:border-foreground/20",
               card.accentClass,
               isHighlighted && "ring-1 ring-primary/30",
             )}
@@ -89,7 +98,7 @@ export function StatCards({ counts, highlightedFields }: StatCardsProps) {
             <p className="mt-1 font-mono text-2xl font-semibold tabular-nums">
               {value}
             </p>
-          </div>
+          </Link>
         );
       })}
     </div>

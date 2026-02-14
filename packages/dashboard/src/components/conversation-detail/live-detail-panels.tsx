@@ -4,8 +4,8 @@
  * LiveDetailPanels
  *
  * Client wrapper for the conversation detail page that adds real-time updates
- * via SSE. Renders the page header (with live status, token total, connection
- * indicator) and the two-panel detail layout.
+ * via SSE. Renders the breadcrumb header, collapsible metadata bar, and
+ * full-width event timeline.
  *
  * Key behaviors:
  * - SSE connection only active when conversation status is "running" or "waiting"
@@ -21,7 +21,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { StatusBadge } from "@/components/conversations/status-badge";
-import { BackToConversations } from "@/components/navigation/back-link";
+import { Button } from "@/components/ui/button";
 import { ConnectionStatusIndicator } from "@/components/ui/connection-status";
 import { useEventStream } from "@/hooks/use-event-stream";
 import { formatDuration, formatTokenCount } from "@/lib/format";
@@ -32,9 +32,8 @@ import type {
   ConversationEvent,
 } from "@/services/conversations";
 
-import { DetailLayout } from "./detail-layout";
 import { EventTimeline } from "./event-timeline";
-import { MetadataSidebar } from "./metadata-sidebar";
+import { MetadataBar } from "./metadata-bar";
 import { ReopenDialog } from "./reopen-dialog";
 
 // ─── Serialized Types ──────────────────────────────────────────────────────
@@ -326,80 +325,36 @@ export function LiveDetailPanels({
   const tokenTotal = tokenInput + tokenOutput;
   const hasTokens = tokenTotal > 0;
 
-  // ─── Error banner state ─────────────────────────────────────────
-
-  const [errorExpanded, setErrorExpanded] = useState(false);
-  const showErrorBanner =
-    conversationMeta.status === "failed" && !!conversationMeta.errorMessage;
-
   // ─── Render ───────────────────────────────────────────────────────
 
   return (
-    <div>
-      {/* Back link */}
-      <div className="mb-3">
-        <BackToConversations />
-      </div>
-
+    <div className="flex min-h-0 flex-1 flex-col">
       {/* Page header */}
-      <div className="mb-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-semibold tracking-tight">
-                {conversationMeta.agentDefinitionId}
-              </h1>
-              <StatusBadge status={conversationMeta.status} />
-            </div>
-            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-muted-foreground">
-              <button
-                type="button"
-                onClick={handleCopyId}
-                className="inline-flex items-center gap-1 font-mono text-xs transition-colors hover:text-foreground"
-                title={serverConversation.id}
-              >
-                {truncateId(serverConversation.id)}
-                {copied ? (
-                  <Check className="h-3 w-3 text-emerald-500" />
-                ) : (
-                  <Copy className="h-3 w-3" />
-                )}
-              </button>
-              <span className="text-xs">&middot;</span>
-              <span className="text-xs">
-                v{conversationMeta.agentDefinitionVersion}
-              </span>
-              <span className="text-xs">&middot;</span>
-              <span className="font-mono text-xs tabular-nums">
-                {elapsedLabel}
-              </span>
-              {hasTokens && (
-                <>
-                  <span className="text-xs">&middot;</span>
-                  <span className="font-mono text-xs tabular-nums">
-                    {formatTokenCount(tokenInput)} in &frasl;{" "}
-                    {formatTokenCount(tokenOutput)} out
-                  </span>
-                </>
-              )}
-              {rootTaskId && (
-                <>
-                  <span className="text-xs">&middot;</span>
-                  <Link
-                    href={`/tasks/${rootTaskId}`}
-                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                  >
-                    <GitBranch className="h-3 w-3" />
-                    View task tree
-                  </Link>
-                </>
-              )}
-            </div>
+      <div className="mb-4 shrink-0">
+        {/* Row 1: breadcrumb + identity + actions */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <Link
+              href="/conversations"
+              className="shrink-0 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              &larr; Conversations
+            </Link>
+            <span className="text-sm text-muted-foreground">/</span>
+            <h1 className="truncate text-sm font-semibold tracking-tight">
+              {conversationMeta.agentDefinitionId}
+            </h1>
+            <StatusBadge status={conversationMeta.status} />
           </div>
 
-          <div className="flex shrink-0 items-center gap-2 pt-0.5">
-            {isActive && (
-              <ConnectionStatusIndicator status={connectionStatus} />
+          <div className="flex shrink-0 items-center gap-2">
+            {rootTaskId && (
+              <Button variant="ghost" size="xs" asChild>
+                <Link href={`/tasks/${rootTaskId}`}>
+                  <GitBranch className="h-3 w-3" />
+                  Task tree
+                </Link>
+              </Button>
             )}
             {isTerminal && (
               <ReopenDialog
@@ -408,35 +363,55 @@ export function LiveDetailPanels({
                 onReopened={() => router.refresh()}
               />
             )}
+            {isActive && (
+              <ConnectionStatusIndicator status={connectionStatus} />
+            )}
           </div>
         </div>
 
-        {/* Error banner (failed conversations only) */}
-        {showErrorBanner && (
-          <div className="mt-3 rounded-md border border-red-500/20 bg-red-500/5 px-3 py-2">
-            <p
-              className={`text-sm text-red-700 dark:text-red-400 ${
-                !errorExpanded ? "line-clamp-2" : ""
-              }`}
-            >
-              {conversationMeta.errorMessage}
-            </p>
-            {(conversationMeta.errorMessage?.length ?? 0) > 150 && (
-              <button
-                type="button"
-                onClick={() => setErrorExpanded((prev) => !prev)}
-                className="mt-1 text-xs text-red-600 hover:text-red-500 dark:text-red-500 dark:hover:text-red-400"
-              >
-                {errorExpanded ? "Show less" : "Show more"}
-              </button>
+        {/* Row 2: metadata */}
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 pl-[1px] text-muted-foreground">
+          <button
+            type="button"
+            onClick={handleCopyId}
+            className="inline-flex items-center gap-1 font-mono text-xs transition-colors hover:text-foreground"
+            title={serverConversation.id}
+          >
+            {truncateId(serverConversation.id)}
+            {copied ? (
+              <Check className="h-3 w-3 text-emerald-500" />
+            ) : (
+              <Copy className="h-3 w-3" />
             )}
-          </div>
-        )}
+          </button>
+          <span className="text-xs">&middot;</span>
+          <span className="text-xs">
+            v{conversationMeta.agentDefinitionVersion}
+          </span>
+          <span className="text-xs">&middot;</span>
+          <span className="font-mono text-xs tabular-nums">{elapsedLabel}</span>
+          {hasTokens && (
+            <>
+              <span className="text-xs">&middot;</span>
+              <span className="font-mono text-xs tabular-nums">
+                {formatTokenCount(tokenInput)} in &frasl;{" "}
+                {formatTokenCount(tokenOutput)} out
+              </span>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Two-panel layout */}
-      <DetailLayout
-        timelineHeader={
+      {/* Metadata bar — shrink-0 so it never compresses */}
+      <MetadataBar
+        conversation={conversationMeta}
+        childConversations={serverChildren}
+      />
+
+      {/* Event timeline — fills remaining viewport height */}
+      <div className="mt-4 flex min-h-0 flex-1 flex-col rounded-lg border bg-card">
+        {/* Header — pinned outside scroll */}
+        <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
           <div className="flex items-baseline gap-2">
             <span className="text-sm font-semibold tracking-tight">
               Event Timeline
@@ -450,50 +425,44 @@ export function LiveDetailPanels({
               )}
             </span>
           </div>
-        }
-        timelinePanel={
-          <div className="relative h-full">
-            <div
-              ref={timelineRef}
-              onScroll={handleScroll}
-              className="h-full overflow-auto overscroll-y-contain p-3 pb-6"
-            >
-              {/* Truncation banner */}
-              {truncatedCount > 0 && (
-                <div className="mb-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-                  {truncatedCount} older events were dropped to maintain the{" "}
-                  {MAX_EVENTS}-event buffer limit. Refresh the page to see the
-                  full history.
-                </div>
-              )}
+        </div>
 
-              <EventTimeline events={events} />
-              <div ref={bottomRef} />
-            </div>
-
-            {/* Fade gradient */}
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-card to-transparent" />
-
-            {/* "New events" pill */}
-            {newEventsSinceScroll > 0 && (
-              <button
-                type="button"
-                onClick={scrollToBottom}
-                className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs text-primary-foreground shadow-md transition-opacity hover:opacity-90"
-              >
-                {newEventsSinceScroll} new event
-                {newEventsSinceScroll > 1 ? "s" : ""} &darr;
-              </button>
+        {/* Scrollable content area */}
+        <div className="relative min-h-0 flex-1">
+          <div
+            ref={timelineRef}
+            onScroll={handleScroll}
+            className="h-full overflow-auto overscroll-y-contain p-3 pb-6"
+          >
+            {/* Truncation banner */}
+            {truncatedCount > 0 && (
+              <div className="mb-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                {truncatedCount} older events were dropped to maintain the{" "}
+                {MAX_EVENTS}-event buffer limit. Refresh the page to see the
+                full history.
+              </div>
             )}
+
+            <EventTimeline events={events} />
+            <div ref={bottomRef} />
           </div>
-        }
-        sidebarPanel={
-          <MetadataSidebar
-            conversation={conversationMeta}
-            childConversations={serverChildren}
-          />
-        }
-      />
+
+          {/* Fade gradient */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-card to-transparent" />
+
+          {/* "New events" pill */}
+          {newEventsSinceScroll > 0 && (
+            <button
+              type="button"
+              onClick={scrollToBottom}
+              className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs text-primary-foreground shadow-md transition-opacity hover:opacity-90"
+            >
+              {newEventsSinceScroll} new event
+              {newEventsSinceScroll > 1 ? "s" : ""} &darr;
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

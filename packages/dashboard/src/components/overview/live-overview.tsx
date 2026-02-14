@@ -201,20 +201,31 @@ export function LiveOverview({
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-5 px-6 py-6">
-      <StatCards counts={statusCounts} highlightedFields={highlightedFields} />
-
-      <ActiveConversations conversations={conversations} />
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <RecentErrors errors={errors} />
-        <TokenUsage
-          data={tokenUsage}
-          defaultTimeRange={defaultTokenTimeRange}
-        />
+    <div className="px-6 py-6">
+      <div className="mb-5">
+        <h1 className="text-lg font-semibold tracking-tight">Overview</h1>
+        <p className="mt-0.5 text-[13px] text-muted-foreground">
+          Real-time system status
+        </p>
       </div>
 
-      <WorkerStatus status={workerStatus} />
+      <div className="space-y-5">
+        <WorkerStatus status={workerStatus} />
+        <StatCards
+          counts={statusCounts}
+          highlightedFields={highlightedFields}
+        />
+
+        <ActiveConversations conversations={conversations} />
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <RecentErrors errors={errors} />
+          <TokenUsage
+            data={tokenUsage}
+            defaultTimeRange={defaultTokenTimeRange}
+          />
+        </div>
+      </div>
     </div>
   );
 }

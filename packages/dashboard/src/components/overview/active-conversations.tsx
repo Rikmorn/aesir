@@ -80,7 +80,7 @@ export function ActiveConversations({
                           <StatusBadge status={row.status} />
                         </TableCell>
                         <TableCell
-                          className={`text-sm font-mono ${isLongRunning ? "text-amber-600 dark:text-amber-400" : ""}`}
+                          className={`text-sm font-mono tabular-nums ${isLongRunning ? "text-amber-600 dark:text-amber-400" : ""}`}
                         >
                           {duration}
                         </TableCell>
@@ -92,7 +92,7 @@ export function ActiveConversations({
                         <TableCell>
                           <Link
                             href={`/conversations/${row.id}`}
-                            className="text-sm text-muted-foreground hover:text-foreground"
+                            className="text-sm text-muted-foreground hover:text-foreground hover:underline"
                           >
                             View
                           </Link>
@@ -111,7 +111,7 @@ export function ActiveConversations({
         <CardFooter>
           <Link
             href="/conversations?status=running,waiting"
-            className="text-sm text-muted-foreground hover:text-foreground"
+            className="text-sm text-muted-foreground hover:text-foreground hover:underline"
           >
             View all active conversations &rarr;
           </Link>

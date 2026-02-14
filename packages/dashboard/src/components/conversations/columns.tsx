@@ -68,14 +68,18 @@ export const columns: ColumnDef<ConversationListItem>[] = [
           </span>
         );
       }
-      return formatDuration(row.original.createdAt, row.original.updatedAt);
+      return (
+        <span className="font-mono tabular-nums">
+          {formatDuration(row.original.createdAt, row.original.updatedAt)}
+        </span>
+      );
     },
   },
   {
     id: "tokenUsage",
     header: "Tokens",
     cell: ({ row }) => (
-      <span className="text-muted-foreground">
+      <span className="font-mono tabular-nums text-muted-foreground">
         {formatTokenCount(row.original.tokenInput + row.original.tokenOutput)}
       </span>
     ),

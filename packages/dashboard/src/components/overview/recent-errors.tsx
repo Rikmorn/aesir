@@ -48,7 +48,7 @@ function ErrorItem({ error }: { error: RecentError }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="rounded-md border px-3 py-2 text-sm">
+    <div className="rounded-md border px-3 py-2 text-sm transition-colors hover:border-foreground/20">
       <div className="flex items-center gap-2">
         <span className="font-medium">{error.agentDefinitionId}</span>
         <span className="text-xs text-muted-foreground">
