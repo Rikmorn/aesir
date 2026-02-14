@@ -4,7 +4,6 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Collapsible,
   CollapsibleContent,
@@ -46,19 +45,14 @@ export function AgentPromptViewer({ systemPrompt }: AgentPromptViewerProps) {
   );
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          System Prompt
-          <span className="text-sm font-normal text-muted-foreground">
-            ({systemPrompt.length.toLocaleString()} chars · ~
-            {formatTokenCount(tokenCount)} tokens)
-          </span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {/* View mode toggle */}
-        <div className="mb-3 flex gap-1">
+    <div>
+      {/* Header: stats + view toggle */}
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">
+          {systemPrompt.length.toLocaleString()} chars · ~
+          {formatTokenCount(tokenCount)} tokens
+        </span>
+        <div className="flex gap-1">
           <Button
             variant={viewMode === "formatted" ? "secondary" : "ghost"}
             size="sm"
@@ -74,32 +68,32 @@ export function AgentPromptViewer({ systemPrompt }: AgentPromptViewerProps) {
             Raw
           </Button>
         </div>
+      </div>
 
-        {viewMode === "raw" ? (
-          <div className="max-h-[600px] overflow-auto rounded-md border bg-muted/30 p-4">
-            <pre className="whitespace-pre-wrap break-words font-mono text-sm">
-              {systemPrompt}
-            </pre>
-          </div>
-        ) : hasSections ? (
-          <div className="space-y-2">
-            {sections.map((section, index) => (
-              <PromptSectionCard
-                key={section.name || index}
-                section={section}
-                defaultOpen={index === 0}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="max-h-[600px] overflow-auto rounded-md border bg-muted/30 p-4">
-            <pre className="whitespace-pre-wrap break-words font-mono text-sm">
-              {systemPrompt}
-            </pre>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      {viewMode === "raw" ? (
+        <div className="overflow-auto rounded-md border bg-muted/30 p-4">
+          <pre className="whitespace-pre-wrap break-words font-mono text-sm">
+            {systemPrompt}
+          </pre>
+        </div>
+      ) : hasSections ? (
+        <div className="space-y-2">
+          {sections.map((section, index) => (
+            <PromptSectionCard
+              key={section.name || index}
+              section={section}
+              defaultOpen={index === 0}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="overflow-auto rounded-md border bg-muted/30 p-4">
+          <pre className="whitespace-pre-wrap break-words font-mono text-sm">
+            {systemPrompt}
+          </pre>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -135,7 +129,7 @@ function PromptSectionCard({
           {title}
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <div className="max-h-80 overflow-auto bg-muted/20 p-3">
+          <div className="bg-muted/20 p-3">
             <pre className="whitespace-pre-wrap break-words font-mono text-sm">
               {section.content}
             </pre>

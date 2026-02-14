@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import Link from "next/link";
+
 import type { AgentDetail } from "@/services/agents";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -11,73 +11,81 @@ interface AgentConfigPanelProps {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function AgentConfigPanel({ agent }: AgentConfigPanelProps) {
+  const subAgentEntries = agent.subAgents
+    ? Object.entries(agent.subAgents)
+    : [];
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Configuration</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Model */}
-        <section>
-          <h3 className="mb-3 text-sm font-medium text-muted-foreground">
-            Model
+    <div className="space-y-6">
+      {/* Core config — stacked for narrow sidebar */}
+      <dl className="space-y-3">
+        <div>
+          <dt className="text-xs text-muted-foreground">Model</dt>
+          <dd className="font-mono text-sm">{agent.model}</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-muted-foreground">Temperature</dt>
+          <dd className="font-mono text-sm">
+            {agent.temperature !== undefined ? agent.temperature : "default"}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs text-muted-foreground">Token Budget</dt>
+          <dd className="font-mono text-sm tabular-nums">
+            {agent.tokenBudget.toLocaleString()}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs text-muted-foreground">Max Iterations</dt>
+          <dd className="font-mono text-sm tabular-nums">
+            {agent.maxIterations.toLocaleString()}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs text-muted-foreground">Prune Threshold</dt>
+          <dd className="font-mono text-sm tabular-nums">
+            {agent.history.pruneThreshold.toLocaleString()}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs text-muted-foreground">Protected Messages</dt>
+          <dd className="font-mono text-sm tabular-nums">
+            {agent.history.protectedMessages}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs text-muted-foreground">Summary Threshold</dt>
+          <dd className="font-mono text-sm tabular-nums">
+            {agent.history.summaryThreshold.toLocaleString()}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs text-muted-foreground">Summary Model</dt>
+          <dd className="font-mono text-sm">{agent.history.summaryModel}</dd>
+        </div>
+      </dl>
+
+      {/* Sub-agents */}
+      {subAgentEntries.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Sub-agents
           </h3>
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
-            <dt className="text-sm text-muted-foreground">Model</dt>
-            <dd className="text-sm font-mono">{agent.model}</dd>
-            <dt className="text-sm text-muted-foreground">Temperature</dt>
-            <dd className="text-sm font-mono">
-              {agent.temperature !== undefined ? agent.temperature : "default"}
-            </dd>
-          </dl>
-        </section>
-
-        <Separator />
-
-        {/* Execution Limits */}
-        <section>
-          <h3 className="mb-3 text-sm font-medium text-muted-foreground">
-            Execution Limits
-          </h3>
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
-            <dt className="text-sm text-muted-foreground">Max Iterations</dt>
-            <dd className="text-sm font-mono">
-              {agent.maxIterations.toLocaleString()}
-            </dd>
-            <dt className="text-sm text-muted-foreground">Token Budget</dt>
-            <dd className="text-sm font-mono">
-              {agent.tokenBudget.toLocaleString()}
-            </dd>
-          </dl>
-        </section>
-
-        <Separator />
-
-        {/* History Settings */}
-        <section>
-          <h3 className="mb-3 text-sm font-medium text-muted-foreground">
-            History
-          </h3>
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
-            <dt className="text-sm text-muted-foreground">Prune Threshold</dt>
-            <dd className="text-sm font-mono">
-              {agent.history.pruneThreshold.toLocaleString()}
-            </dd>
-            <dt className="text-sm text-muted-foreground">
-              Protected Messages
-            </dt>
-            <dd className="text-sm font-mono">
-              {agent.history.protectedMessages}
-            </dd>
-            <dt className="text-sm text-muted-foreground">Summary Threshold</dt>
-            <dd className="text-sm font-mono">
-              {agent.history.summaryThreshold.toLocaleString()}
-            </dd>
-            <dt className="text-sm text-muted-foreground">Summary Model</dt>
-            <dd className="text-sm font-mono">{agent.history.summaryModel}</dd>
-          </dl>
-        </section>
-      </CardContent>
-    </Card>
+          <div className="space-y-2">
+            {subAgentEntries.map(([role, agentId]) => (
+              <div key={role}>
+                <span className="text-xs text-muted-foreground">{role}</span>
+                <Link
+                  href={`/agents/${encodeURIComponent(agentId)}`}
+                  className="block font-mono text-sm text-foreground hover:text-primary"
+                >
+                  {agentId}
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
