@@ -12,6 +12,10 @@ Master document capturing Aesir's architectural thinking, design philosophy, and
 | v2.5 | [`2.5-agentic-conversations.md`](2.5-agentic-conversations.md) | Task primitives, conversation continuity, handoffs, prompt rewrites |
 | v2.6 | [`2.6-unified-agent-communication.md`](2.6-unified-agent-communication.md) | Symmetric normalization, outbound denormalizers, intent-based tools (reply/ask/notify) |
 | v2.7 | [`2.7-agent-collaboration.md`](2.7-agent-collaboration.md) | Multi-agent collaboration — shared memory, entity directory, task delegation, completion signaling, Linear Agent SDK |
+| v2.8 | [`2.8-agent-resilience.md`](2.8-agent-resilience.md) | Runtime resilience, dashboard observability, task tree unification — stabilize the platform |
+| v2.9 | [`2.9-platform-completion.md`](2.9-platform-completion.md) | Complete collaboration capabilities — negotiation, parallel delegation, scheduling, persistent identity |
+| v3.0 | [`3.0-domain-modeling.md`](3.0-domain-modeling.md) | Role-by-role domain analysis, agent architecture, specialized tools and sub-agents |
+| v3.1 | [`3.1-human-collaboration.md`](3.1-human-collaboration.md) | Formal human-agent collaboration protocols, bidirectional delegation with humans |
 
 ## Foundational Principles
 
@@ -68,6 +72,8 @@ External boundaries (webhook payloads, MCP tool inputs, API responses) use Zod s
 
 Spawning a sub-agent is not just delegation — it's a *context boundary*. Fresh context prevents contamination from the parent's long conversation history, reduces token usage, and allows different models per role (Haiku for research, Sonnet for coding, Opus for orchestration). The sub-agent returns a result; the parent integrates it into its own reasoning. *Established in [`2.2-spec-raw.md`](2.2-spec-raw.md).*
 
+As the sub-agent pool grows (v3.0 will introduce many specialized sub-agents per role), hardcoded YAML references won't scale. Sub-agent discovery extends this principle: orchestrators describe the capability they need, and a registry resolves to the best-matching sub-agent. This parallels the entity directory pattern for orchestrator-to-orchestrator delegation but stays internal to the spawning context. Explicit agent IDs remain supported for backward compatibility. *Extended in v2.9 planning discussions.*
+
 ### Pause/Resume Without Context Loss
 
 When a conversation pauses (wait_for), the full Anthropic message history is persisted — not a summary, not a snapshot, the actual messages. When it resumes, the agent has perfect memory of everything that happened. History compaction (pruning old tool results, summarizing long conversations) is a separate concern driven by token limits, not by the pause/resume mechanism. *Established in [`2.3-spec-raw.md`](2.3-spec-raw.md).*
@@ -114,11 +120,25 @@ Knowledge is classified by type (discovery, architecture decision, constraint, t
 
 Private memory (agent notepad) is working memory that persists across an agent's conversation turns but isn't shared. Shared knowledge is curated entries accessible by all agents. The distinction is important: agents need scratchpad space for unstructured thinking without polluting the shared pool. Scope and permissions are user-configurable — teams choose their preferred transparency level with documented tradeoffs. *Established in [`2.7-agent-collaboration.md`](2.7-agent-collaboration.md), extending the Agent-Managed Memory expansion path.*
 
+### Persistent Agent Identity
+
+Agents need more than scattered knowledge entries — they need a coherent, evolving understanding of their domain that persists across conversations. A product agent's understanding of the product isn't 50 individual facts; it's a structured mental model that grows and refines over time.
+
+Identity documents (product briefs, architectural models, stakeholder maps) are maintained by the agent across conversations, injected at conversation start, and updated as understanding deepens. This is distinct from shared knowledge (facts for the swarm) and from conversation history (ephemeral per-conversation context). Identity is the agent's persistent self — what it knows about its domain, its accumulated judgment, its learned preferences.
+
+Without persistent identity, agents rediscover context every conversation. They can query knowledge entries, but knowing 50 individual facts isn't the same as having a coherent mental model. The identity document is the difference between an experienced colleague and someone who read the wiki five minutes ago. *Established in v2.9 planning discussions.*
+
 ### Symmetric Normalization
 
 Inbound adapters normalize integration-specific webhooks into domain-language signals. Outbound denormalizers translate domain-language actions into integration-specific API calls. Agents operate entirely in the domain layer — they reason about intent (reply, ask, notify) while infrastructure handles channel translation in both directions.
 
 ReplyContext propagates through the pipeline as an opaque address: adapters attach it, signals carry it, the executor stores it, agents pass it through to communication tools, and the denormalizer dispatches based on it. Adding a new integration channel requires adapter + denormalizer changes — zero agent changes. *Established in [`2.6-unified-agent-communication.md`](2.6-unified-agent-communication.md).*
+
+### Platform Then Domain Intelligence
+
+Infrastructure and domain intelligence are built in distinct phases, not interleaved. Platform milestones (v2.2–v2.9) establish every mechanism agents could need: execution, communication, collaboration, observability, scheduling, identity. Domain milestones (v3.0+) build the actors: deep role analysis, specialized sub-agents, domain tools, and prompt engineering driven by real-world workflow understanding.
+
+This sequencing is deliberate — mixing platform and domain work creates competing feedback loops where you can't distinguish infrastructure failures from intelligence failures. When an agent makes a bad decision, you need to know whether the platform lacked a capability (missing tool, broken signal, no context) or the agent lacked intelligence (bad prompt, wrong reasoning, missing domain knowledge). Completing the platform first eliminates the infrastructure variable. *Established in v2.8/v2.9/v3.0 planning discussions.*
 
 ## Anti-Patterns
 
@@ -274,8 +294,8 @@ Current position: keep it as a stateless LLM call for ambiguous events. Revisit 
 ### Current State
 
 - Human → Agent: Fully implemented (event triggers conversation)
-- Agent → Agent: Partially implemented (spawn_agent, but no task continuity)
-- Agent → Human: Poorly modeled (request_human_input blocks and waits)
+- Agent → Agent: Implemented in v2.7 (directory discovery, task delegation, negotiation handshake, completion signaling)
+- Agent → Human: Deferred to v3.1 (currently modeled as "blocking on input" via request_human_input)
 
 ### Target State
 
@@ -288,21 +308,47 @@ Task delivery adapts to the recipient through the materialization layer (see fou
 For agents to delegate, they need to know who can help. The entity directory is service discovery for the agent swarm — a queryable registry of orchestrator agents and humans with declared capabilities and reachability information.
 
 - **Agents**: Seeded from definition.yaml. Capabilities declared as natural language descriptions of what the agent can do at an intent level (not tool lists). Re-seeded on deploy.
-- **Humans**: Configured via seed script or admin UI. Includes role, capabilities, and reachVia (channel type + target, e.g., Slack channel).
+- **Humans**: Configured via seed script or admin UI. Includes role, capabilities, and reachVia (channel type + target, e.g., Slack channel). *Deferred to v3.1.*
 
 Agents query the directory by capability ("who can implement code changes?") and receive matching entities ranked by relevance. The directory returns both agents and humans — the delegating agent chooses based on capability match, not entity type.
 
 ### Negotiation Handshake
 
-Delegation is not fire-and-forget. It's a handshake that gives the delegator agency:
+Work assignment starts with a handshake that gives the delegator agency (see also "Delegation vs Hand-Off" for when the delegator waits for a result vs moves on):
 
 1. Delegator creates a task with expectations (priority, estimated effort, context)
 2. Target responds: accept with estimate, reject with reason, or counter-propose
 3. Delegator decides: proceed, cancel, or try someone else
 
-This mirrors how humans collaborate — setting expectations, estimating honestly, and making informed decisions about whether to wait or pivot. The handshake protocol is a strategy that can be swapped: v1 is simple accept/reject with estimate. The interface supports richer strategies later (counter-propose, redirect, partial accept) as patterns emerge from real usage.
+This mirrors how humans collaborate — setting expectations, estimating honestly, and making informed decisions about whether to wait or pivot. The handshake protocol is a strategy that can be swapped: v1 is simple accept/reject with estimate. v2.9 adds counter-propose and bidirectional clarification. The interface supports richer strategies later as patterns emerge from real usage.
 
 The handshake is critical for managing token budgets and context staleness. If Agent B estimates 2 hours, Agent A knows it needs to plan accordingly — pause and wait, delegate to someone faster, or accept the timeline and move on. No magic timeouts needed.
+
+### Delegation vs Hand-Off
+
+There are two patterns for giving work to another entity, and the distinction matters:
+
+**Delegation** — the delegator retains ownership and expects a result. "Do this and tell me when you're done." The delegator calls `wait_for_task` after delegating and resumes when the completion signal arrives. Use this when the delegator can't continue without the result — dev-agent needs QA's verdict before merging, product-agent needs a cost estimate before confirming scope with the user.
+
+**Hand-off** — the assigner transfers ownership with no expectation of a return signal. "This is yours now." The assigner completes its own work and moves on. Use this for the majority of work assignment — product-agent creates a Linear issue and confirms with the user, dev-agent picks it up independently via trigger. No completion signal needed.
+
+Both patterns flow through the same infrastructure — `task:delegate` with a brief, directory lookup for discovery, handshake for acceptance. The only difference is whether the delegator calls `wait_for_task` afterward. This is a prompt-level decision, not a framework distinction. No framework code differentiates the two — the agent decides based on context whether it needs to wait for the result or can move on.
+
+Hand-off is the natural pattern for human collaboration (assign a ticket, move on) and for most agent-to-agent work. Delegation is the special case — needed when the delegator's own workflow depends on the outcome.
+
+### Completion Obligations
+
+The distinction above is about the *assigner*. The *acceptor* also has different completion obligations depending on how they received the work:
+
+**Triggered work** (event trigger, no delegator waiting): The agent decides how to signal completion — update a Linear issue, merge a PR, post to Slack, or simply end. No one is blocked on a `task:complete_task` call.
+
+**Delegated work** (someone called `task:delegate` and is waiting): The agent MUST call `task:complete_task` to unblock the delegator. Without it, the delegator is stuck permanently.
+
+**Delegated work with external side effects**: The agent needs to do both — update external tools (Linear, GitHub) AND signal completion to the delegator. The ordering matters: external updates should complete before `task:complete_task`, because completion resumes the delegator. If the delegator resumes and starts acting on the result (e.g., merging a PR, updating Linear status) while the delegatee is still performing its own external updates, you get race conditions on shared state.
+
+This ordering is a prompt-level concern, not framework-enforced. The agent understands that `task:complete_task` is the last thing it does — finish your work, then report that you're done. The framework doesn't need to sequence this because the agent controls its own tool call order.
+
+On the delegator side, the reconnaissance sub-agent pattern provides a second layer of protection: when a delegator resumes after receiving a completion signal, it spawns a lightweight recon check to gather the current state of external resources (Linear issue status, GitHub PRs, shared memory) before acting. If the delegatee's external updates are incomplete or produced unexpected results, the recon brief surfaces that — the delegator makes an informed decision rather than assuming the world matches the completion result.
 
 ### What This Enables
 
@@ -313,27 +359,37 @@ The handshake is critical for managing token budgets and context staleness. If A
 
 ### Implementation Timeline
 
-Bidirectional assignment was a design principle in v2.5 — the schema supports it (polymorphic creator/assignee), and prompt guidance encourages thinking about it. v2.7 delivers the implementation: entity directory for discovery, task delegation for assignment, negotiation handshake for agency, completion signaling for feedback, and materialization for channel-adaptive delivery. See [`2.7-agent-collaboration.md`](2.7-agent-collaboration.md) Phases 72–75.
+Bidirectional assignment was a design principle in v2.5 — the schema supports it (polymorphic creator/assignee), and prompt guidance encourages thinking about it. v2.7 delivered agent-to-agent collaboration: entity directory for discovery, task delegation for assignment, negotiation handshake for agency, completion signaling for feedback, and internal materialization. v2.9 completes the platform with richer negotiation (counter-propose, clarification), parallel delegation, transparent materialization, and tree-level budgets. v3.1 extends to human collaboration with formal protocols for agent-to-human delegation.
 
 ## Expansion Paths
 
-These are not planned — they're possibilities the architecture should support.
+These are not planned — they're possibilities the architecture should support. Items promoted to active milestones are noted.
 
-### Cross-Agent Collaboration → v2.7 Planned
+### Cross-Agent Collaboration → Shipped in v2.7
 
-**Promoted from expansion path to active work.** Agents discover each other via the entity directory, delegate tasks with a negotiation handshake, and receive completion signals when work finishes. Collaboration happens through shared state that agents access via tools (directory, delegation, knowledge), not through a central orchestrator.
+Agents discover each other via the entity directory, delegate tasks with a negotiation handshake, and receive completion signals when work finishes. Collaboration happens through shared state that agents access via tools (directory, delegation, knowledge), not through a central orchestrator. *Delivered in [`2.7-agent-collaboration.md`](2.7-agent-collaboration.md).*
 
-The mechanism preserves agent-first principles: the agent decides when to delegate, who to delegate to, and whether to wait or pivot. Infrastructure provides the directory, materialization, and signaling. *See [`2.7-agent-collaboration.md`](2.7-agent-collaboration.md) Phases 72–75.*
+### Shared Memory → Shipped in v2.7
 
-### Shared Memory → v2.7 Planned
+Agents store classified knowledge (`knowledge:store`) and query it (`knowledge:query`). Knowledge is typed (discovery, architecture decision, constraint), scoped (private notepad vs shared), and governed by lifecycle policies (confidence, expiry). *Delivered in [`2.7-agent-collaboration.md`](2.7-agent-collaboration.md).*
 
-**Promoted from expansion path to active work.** Agents store classified knowledge (`knowledge:store`) and query it (`knowledge:query`). Knowledge is typed (discovery, architecture decision, constraint), scoped (private notepad vs shared), and governed by lifecycle policies (confidence, expiry). Private memory gives agents scratchpad space; shared knowledge enables context accumulation across the swarm.
+### Domain Modeling → v3.0 Planned
 
-Extends the original "Agent-Managed Memory" concept with classification, scope permissions, and multi-backend storage abstraction. *See [`2.7-agent-collaboration.md`](2.7-agent-collaboration.md) Phase 71.*
+**Promoted from expansion path to active milestone.** Transform agents from generic task processors into domain-expert professionals. Deep role analysis drives agent architecture: what does a world-class Product Owner actually do? What sub-agents, tools, and domain knowledge does a senior developer need? Each agent role gets a full workflow analysis, specialized sub-agents, domain-specific tools, and prompt engineering driven by real-world understanding of the profession.
+
+This is the shift from building infrastructure to building intelligence. *See [`3.0-domain-modeling.md`](3.0-domain-modeling.md).*
+
+### Human Collaboration → v3.1 Planned
+
+**Promoted from expansion path to active milestone.** Formal protocols for agent-to-human delegation, human response parsing, async handshake handling, escalation strategies, and mid-work signal handling. Deliberately sequenced after domain modeling — humans should interact with competent agents, not half-baked ones. The current semi-automatic workflow (human tweaks ticket, assigns to agent) works well as a bridge.
+
+The hard problems are protocol design, not infrastructure: unstructured response parsing, no-response escalation, context staleness during long human waits, and channel interaction semantics (Slack threading, reactions, edits). *See [`3.1-human-collaboration.md`](3.1-human-collaboration.md).*
 
 ### Cross-Session Learning
 
 Aggregating patterns across completed tasks to improve agent performance. "Dev-agent tasks in this area of the codebase tend to need more research." Requires: task analytics + feedback loop into prompt context.
+
+Persistent agent identity (v2.9) provides the storage foundation — identity documents can accumulate learned preferences and strategies. The feedback loop itself (recording outcomes, surfacing patterns, updating identity) is a v3.0 concern that emerges naturally as agents handle real tasks. *See [`2.9-platform-completion.md`](2.9-platform-completion.md) Phase 7 and [`3.0-domain-modeling.md`](3.0-domain-modeling.md).*
 
 ### Event Log as Multi-Consumer Stream
 
@@ -350,7 +406,7 @@ Each consumer is a projection — derived from the same ground-truth events. *Se
 
 Agents that identify work without being triggered by events. A monitoring agent that notices degrading performance and creates a task before anyone complains. A product-agent that synthesizes user feedback patterns into feature suggestions.
 
-Requires: a scheduling mechanism for agents to periodically review their domain + prompt guidance for proactive behavior.
+Scheduled agent execution (v2.9) provides the trigger mechanism — agents can run periodically to review their domain. The proactive behavior itself is prompt-level: the agent's schedule trigger starts a conversation where it reasons about whether action is needed. *See [`2.9-platform-completion.md`](2.9-platform-completion.md) Phase 5.*
 
 ### Agent Definition Marketplace
 
@@ -383,7 +439,7 @@ Today, agents use integration-specific action tools directly: `linear:create_iss
 
 The denormalizer pattern (dispatch by context) could generalize: `work:create_item` dispatches to Linear or Jira based on workspace configuration, `code:create_pr` dispatches to GitHub or GitLab based on repository context. The question is which action interfaces are genuinely isomorphic across integrations versus which have semantic differences that make abstraction lossy. Communication worked because the interface is simple (text + address). Action tools may have richer interfaces where forced unification loses important capabilities.
 
-Requires: analysis of integration-specific action tool interfaces, workspace-level integration configuration, and a dispatch mechanism analogous to the communication denormalizer.
+This is deliberately deferred to v3.0 — let role analysis and real usage reveal which actions genuinely unify before building abstractions. *See [`3.0-domain-modeling.md`](3.0-domain-modeling.md).* Requires: analysis of integration-specific action tool interfaces, workspace-level integration configuration, and a dispatch mechanism analogous to the communication denormalizer.
 
 ## Design Decisions Log
 
@@ -418,3 +474,11 @@ Requires: analysis of integration-specific action tool interfaces, workspace-lev
 | Entity directory seeded from YAML, queryable in DB | Agent definitions remain YAML (source of truth). Directory table in DB enables capability-based queries at runtime. Humans configured alongside agents. Same seed pattern as MCP permissions. | 2026-02-09 |
 | Knowledge classified by type, scoped by visibility | Private notepad for unstructured agent thinking. Shared knowledge for team-wide facts. Classification determines storage, access, and lifecycle. User-configurable scope policies. | 2026-02-09 |
 | `knowledge:` namespace, not `memory:` | Distinguishes shared knowledge (persists across agents, classified, curated) from private working memory (agent notepad). Avoids confusion with conversation history or history compaction. | 2026-02-09 |
+| Delegation vs hand-off as prompt-level decision | Both use the same infrastructure (task:delegate, directory, handshake). Delegation waits for a result (wait_for_task); hand-off moves on. The agent decides based on whether it needs the result to continue — no framework code distinguishes the two. | 2026-02-13 |
+| Completion obligations differ by work source | Triggered work: external tool updates only. Delegated work: task:complete_task required. Delegated + external: external updates first, task:complete_task last (ordering prevents races on shared state when delegator resumes). All prompt-level, not framework-enforced. | 2026-02-13 |
+| Platform then domain intelligence | Infrastructure and domain intelligence built in distinct phases. Completing the platform eliminates the infrastructure variable — when an agent fails, you know it's an intelligence problem. | 2026-02-15 |
+| Human collaboration deferred to post-3.0 | Humans should interact with competent agents. Current semi-automatic workflow works well. Formal agent-to-human protocols after agents are worth collaborating with. | 2026-02-15 |
+| Domain action primitives deferred to 3.0 discovery | Let role analysis reveal which actions are genuinely isomorphic. Communication unification worked (text + destination is universal). Action tools have richer, divergent interfaces — premature abstraction risks being lossy. | 2026-02-15 |
+| Persistent agent identity as structured documents | Knowledge entries are atoms; agents need maintained mental models. Identity documents versioned, agent-scoped, injected at conversation start. Different primitive from knowledge store. | 2026-02-15 |
+| Sub-agent discovery by capability | Hardcoded YAML sub-agent lists won't scale to 10+ types. Capability-based spawn parallels the directory pattern for orchestrators. Backward compatible with explicit IDs. | 2026-02-15 |
+| Scheduled execution via synthetic events | Periodic agent work fires synthetic events through existing EventRouter. Same trigger mechanism, different source. pg-boss handles scheduling. | 2026-02-15 |
