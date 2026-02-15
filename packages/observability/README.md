@@ -24,24 +24,21 @@ import { createExecutionTracker } from "@aesir/observability";
 const tracker = createExecutionTracker({ db, logger });
 
 // Start tracking an execution
-const executionId = await tracker.start({
+const result = await tracker.start({
   agentType: "dev-agent",
-  taskId: "TASK-123",
-  sessionId: "session_abc",
+  issueId: "ABC-123",
+  workspaceId: "ws_abc",
 });
+// result: ResultAsync<string, ExecutionTrackerError> — returns exec_xxx ID
 
-// Mark as completed
-await tracker.complete(executionId, {
-  result: "success",
-  metadata: { prNumber: 42 },
-});
+// Mark as completed (calculates duration_ms automatically)
+await tracker.complete(executionId);
 
-// Or mark as failed
-await tracker.fail(executionId, {
-  error: "Test failures exceeded max attempts",
-  metadata: { attempts: 5 },
-});
+// Or mark as failed with last known state for debugging
+await tracker.fail(executionId, "JSON state captured at failure point");
 ```
+
+All methods return `ResultAsync` (from `neverthrow`). `complete()` and `fail()` are defensive — they return ok even if the execution is not found (handles race conditions).
 
 ### Health Check
 
@@ -56,25 +53,35 @@ The package uses its own PostgreSQL schema namespace: `observability.*`
 
 ```sql
 CREATE TABLE observability.agent_executions (
-  id TEXT PRIMARY KEY,
-  agent_type TEXT NOT NULL,
-  task_id TEXT,
-  session_id TEXT,
-  status TEXT NOT NULL,  -- 'running' | 'completed' | 'failed'
-  result JSONB,
-  error TEXT,
-  metadata JSONB,
+  id TEXT PRIMARY KEY,              -- exec_xxx format
+  workspace_id TEXT NOT NULL,       -- multi-tenant filtering
+  agent_type TEXT NOT NULL,         -- 'dev-agent' | 'product-agent'
+  issue_id TEXT NOT NULL,           -- Linear issue ID
+  status TEXT NOT NULL,             -- 'started' | 'completed' | 'failed'
   started_at TIMESTAMPTZ NOT NULL,
-  completed_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  ended_at TIMESTAMPTZ,            -- set on complete/fail
+  duration_ms INTEGER,             -- calculated from started_at to ended_at
+  last_known_state TEXT,           -- JSON state captured on failure
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
+
+Indexes: `(status, started_at)` for status queries, `(workspace_id)` for tenant filtering.
 
 Run migrations:
 
 ```bash
-pnpm db:migrate:observability
+pnpm --filter @aesir/observability db:migrate
 ```
+
+## Error Codes
+
+| Code | When |
+|------|------|
+| `OBS_TRACKER_START` | Failed to insert execution row |
+| `OBS_TRACKER_COMPLETE` | Failed to mark execution completed |
+| `OBS_TRACKER_FAIL` | Failed to record execution failure |
+| `OBS_TRACKER_QUERY` | Failed to query executions |
 
 ## Architecture
 

@@ -117,11 +117,14 @@ The service uses its own PostgreSQL schema (`github.*`) for data isolation:
 
 - `github.credentials` - Encrypted OAuth tokens
 - `github.webhook_deliveries` - Webhook idempotency tracking
+- `github.mcp_tool_permissions` - Agent MCP tool access control
+- `github.task_correlations` - Maps external resources (repos, PRs, branches) to task IDs
 
-Run migrations:
+Run migrations and seed permissions:
 
 ```bash
-pnpm --filter @aesir/integration-github migrate
+pnpm --filter @aesir/integration-github db:migrate
+pnpm --filter @aesir/integration-github seed:permissions
 ```
 
 ## Development

@@ -9,8 +9,9 @@ Single service with declarative agent definitions and a Postgres-backed conversa
 ```
 packages/agents/
 ├── definitions/     # Agent YAML + prompt.md files
-│   ├── dev-agent/   # Development automation agent
-│   ├── product-agent/ # Product conversation agent
+│   ├── dev-agent/   # Development workflow orchestrator
+│   ├── product-agent/ # Product conversation orchestrator
+│   ├── qa-agent/    # QA verification (delegation-activated)
 │   ├── coder/       # Code generation sub-agent
 │   ├── researcher/  # Codebase research sub-agent
 │   └── tester/      # Test execution sub-agent
@@ -20,6 +21,14 @@ packages/agents/
 │   ├── router/      # Event routing pipeline
 │   ├── service/     # Unified HTTP entry point
 │   └── shared/      # MCP client, agent loop, tools, config
+│       └── tools/   # Agent tool factories by namespace
+│           ├── codebase/      # read_file, search_codebase, list_directory, write_file, run_command
+│           ├── communication/ # reply, ask, notify (agent-to-human)
+│           ├── coordination/  # spawn_agent, wait_for, request_human_input
+│           ├── directory/     # search_directory, get_agent_profile
+│           ├── integration/   # linear, github, slack MCP wrappers
+│           ├── knowledge/     # store_knowledge, search_knowledge
+│           └── task/          # create_task, complete_task, delegate_task, handoff_task, list_tasks
 ```
 
 ### Agent Definitions
@@ -59,6 +68,76 @@ Agent → callMcpTool() → HTTP POST → Integration MCP Server → SDK Call
 ```
 
 Agents do NOT import integration SDKs directly.
+
+### MCP Endpoints
+
+Each integration exposes an MCP server. Agents call tools via `callMcpTool` from `shared/mcp/`.
+
+**Endpoint pattern:** `POST /mcp/tools/:name`
+
+**Required headers:**
+- `X-Agent-ID` -- identifies the calling agent (used for permission checks)
+- `X-Correlation-ID` -- optional, propagated to logs
+
+**Rate limit:** 100 requests/minute per agent (by X-Agent-ID).
+
+**Ports:**
+- Linear: `http://linear-integration:3001/mcp/*` (Docker) / `http://localhost:3001/mcp/*` (local)
+- GitHub: `http://github-integration:3002/mcp/*` / `http://localhost:3002/mcp/*`
+- Slack: `http://slack-integration:3003/mcp/*` / `http://localhost:3003/mcp/*`
+
+### Available MCP Tools
+
+**Linear (9 tools):**
+- `get_issue` -- retrieve issue details
+- `create_issue` -- create new issue
+- `update_issue_status` -- change issue workflow state
+- `list_teams` -- list all teams
+- `list_labels` -- list labels (optionally by team)
+- `search_issues` -- search issues by text query
+- `create_comment` -- create comment on an issue
+- `create_agent_activity` -- emit typed activity (thought, action, response, error, elicitation)
+- `update_session_state` -- update Linear agent session status
+
+**GitHub (10 tools):**
+- `get_repository` -- get repository info
+- `create_branch` -- create a new branch
+- `create_commit` -- create a commit with files
+- `create_pull_request` -- open a PR
+- `get_pull_request` -- get PR details
+- `list_pull_requests` -- list PRs
+- `merge_pull_request` -- merge a PR
+- `create_pr_comment` -- comment on a PR
+- `get_file_contents` -- read file content
+- `list_files` -- list directory contents
+
+**Slack (7 tools):**
+- `send_message` -- send a message
+- `send_approval_request` -- send approval buttons
+- `send_escalation_request` -- send escalation with retry/abort buttons
+- `get_message` -- retrieve a message
+- `reply_to_thread` -- reply in a thread
+- `update_message` -- update existing message
+- `list_channels` -- list channels
+
+### callMcpTool Usage
+
+```typescript
+import { callMcpTool } from "@aesir/agents";
+
+const issue = await callMcpTool<{ title: string; status: string }>({
+  integration: "linear",
+  tool: "get_issue",
+  params: { issueId: "ABC-123" },
+  agentId: "dev-agent",
+  correlationId: taskId,
+});
+```
+
+Tool permissions are database-backed (allow-list). Seed defaults with:
+```bash
+pnpm --filter @aesir/integration-{linear,github,slack} seed:permissions
+```
 
 ## Usage
 

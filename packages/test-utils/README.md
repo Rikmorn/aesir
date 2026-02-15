@@ -90,13 +90,29 @@ it("should process credential", () => {
 });
 ```
 
+### Database Transaction Isolation
+
+For tests that need rollback isolation without full container setup:
+
+```typescript
+import { withTestTransaction } from "@aesir/test-utils";
+
+it("should rollback changes", async () => {
+  await withTestTransaction(db, async (tx) => {
+    await tx.insert(myTable).values({ ... });
+    // assertions here
+  }); // automatically rolled back
+});
+```
+
 ### Available Migrations
 
 | Export | Schema | Tables |
 |--------|--------|--------|
-| `linearMigrationSql` | `linear.*` | credentials, webhook_deliveries, mcp_tool_permissions |
-| `githubMigrationSql` | `github.*` | credentials, webhook_deliveries, mcp_tool_permissions |
-| `slackMigrationSql` | `slack.*` | installations, event_deliveries, mcp_tool_permissions |
+| `agentsMigrationSql` | `agents.*` | conversations, tasks, handoffs, events, etc. |
+| `linearMigrationSql` | `linear.*` | credentials, webhook_deliveries, mcp_tool_permissions, task_correlations |
+| `githubMigrationSql` | `github.*` | credentials, webhook_deliveries, mcp_tool_permissions, task_correlations |
+| `slackMigrationSql` | `slack.*` | installations, event_deliveries, mcp_tool_permissions, task_correlations |
 
 ## File Naming Convention
 

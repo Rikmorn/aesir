@@ -69,7 +69,7 @@ cp .env.example .env
 # Edit .env with your Slack app credentials
 
 # Run migrations
-pnpm --filter @aesir/integration-slack migrate
+pnpm --filter @aesir/integration-slack db:migrate
 
 # Build and run
 pnpm --filter @aesir/integration-slack build
@@ -127,6 +127,9 @@ When running as a service in HTTP mode:
 |----------|--------|-------------|
 | /health | GET | Health check |
 | /events | POST | Slack Events API receiver |
+| /slack/interactions | POST | Block actions handler (approval/rejection buttons) |
+| /mcp/tools | GET | List available MCP tools |
+| /mcp/tools/:name | POST | Invoke an MCP tool |
 | /oauth/authorize | GET | Start OAuth flow |
 | /oauth/callback | GET | OAuth callback handler |
 
@@ -134,13 +137,16 @@ When running as a service in HTTP mode:
 
 The service uses its own PostgreSQL schema (`slack.*`) for data isolation:
 
-- `slack.credentials` - Encrypted OAuth tokens (Bolt installations)
+- `slack.installations` - Bolt OAuth installations (tokens, team info)
 - `slack.event_deliveries` - Event idempotency tracking
+- `slack.mcp_tool_permissions` - Agent MCP tool access control
+- `slack.task_correlations` - Maps external resources (channels, messages, threads) to task IDs
 
-Run migrations:
+Run migrations and seed permissions:
 
 ```bash
-pnpm --filter @aesir/integration-slack migrate
+pnpm --filter @aesir/integration-slack db:migrate
+pnpm --filter @aesir/integration-slack seed:permissions
 ```
 
 ## Event Handling

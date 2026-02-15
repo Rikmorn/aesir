@@ -24,15 +24,18 @@ This package contains all infrastructure implementations that upper layers depen
 
 ```typescript
 import {
-  // Logging
-  createPinoLogger,
-  createChildLogger,
-  generateCorrelationId,
-  type PinoLogger,
+  // Config
+  loadEnvFromRoot,         // Load .env from monorepo root (for scripts)
+  getMonorepoRoot,         // Resolve monorepo root path
 
-  // Database
-  db,
-  createDatabaseConnection,
+  // Logging
+  createPinoLogger,        // Create structured logger
+  createChildLogger,       // Create scoped child logger
+  createHttpLogger,        // Express HTTP request logging middleware
+  createTraceStore,        // Workflow trace recording
+  generateCorrelationId,   // Unique correlation ID for request tracing
+  createRedactionConfig,   // PII redaction for logs
+  type PinoLogger,
 
   // Sandbox
   createDevContainerManager,
@@ -41,6 +44,12 @@ import {
 
   // Services
   createWebhookIdempotencyService,
+  createCleanupService,
+
+  // Testing (for unit tests in other packages)
+  MockChatModel,           // Deterministic LLM mock
+  createLogCapture,        // Capture and assert on log output
+  LogCapture,
 
   // Errors
   DatabaseError,

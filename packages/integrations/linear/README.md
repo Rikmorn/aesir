@@ -33,7 +33,7 @@ Linear integration service for the Aesir platform. Provides OAuth authentication
 | DB_USER | aesir | PostgreSQL user |
 | DB_PASSWORD | aesir | PostgreSQL password |
 | DB_NAME | aesir | PostgreSQL database |
-| OAUTH_CALLBACK_URL | - | OAuth callback URL |
+| LINEAR_OAUTH_CALLBACK_URL | - | OAuth callback URL |
 
 ## Usage
 
@@ -74,7 +74,10 @@ await emitThought(client, sessionId, 'Processing task...');
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
+| /health | GET | Health check |
 | /webhook | POST | Linear webhook receiver |
+| /mcp/tools | GET | List available MCP tools |
+| /mcp/tools/:name | POST | Invoke an MCP tool |
 | /oauth/authorize | GET | Start OAuth flow |
 | /oauth/callback | GET | OAuth callback handler |
 
@@ -85,6 +88,7 @@ The service uses its own PostgreSQL schema (`linear.*`) for data isolation:
 - `linear.credentials` - Encrypted OAuth tokens
 - `linear.webhook_deliveries` - Webhook idempotency tracking
 - `linear.mcp_tool_permissions` - Agent MCP tool access control
+- `linear.task_correlations` - Maps external resources (issues, comments) to task IDs
 
 ## Database Setup
 
