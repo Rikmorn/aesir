@@ -35,11 +35,11 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${inter.variable} ${jetbrainsMono.variable}`}
     >
-      <body className="min-h-screen bg-background font-sans antialiased">
+      <body className="h-screen overflow-hidden bg-background font-sans antialiased">
         <ThemeProvider>
           <NuqsAdapter>
             <ConnectionProvider>
-              <div className="flex min-h-screen">
+              <div className="flex h-screen">
                 <Sidebar />
                 <main className="flex-1 overflow-y-auto">{children}</main>
               </div>

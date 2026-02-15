@@ -5,6 +5,67 @@
  * Used across all dashboard views for consistent display.
  */
 
+// ─── Resolution Config ──────────────────────────────────────────────────────
+
+interface ResolutionOption {
+  value: string;
+  label: string;
+}
+
+interface ResolutionConfig {
+  options: ResolutionOption[];
+  default: string;
+}
+
+const RESOLUTION_BY_RANGE: Record<string, ResolutionConfig> = {
+  "24h": {
+    options: [
+      { value: "1m", label: "1 min" },
+      { value: "10m", label: "10 min" },
+      { value: "1h", label: "1 hour" },
+    ],
+    default: "1h",
+  },
+  "7d": {
+    options: [
+      { value: "1h", label: "1 hour" },
+      { value: "6h", label: "6 hours" },
+    ],
+    default: "6h",
+  },
+  "30d": {
+    options: [
+      { value: "6h", label: "6 hours" },
+      { value: "1d", label: "1 day" },
+    ],
+    default: "1d",
+  },
+};
+
+/**
+ * Get available resolution options for a given time range.
+ */
+export function getResolutionOptions(timeRange: string): ResolutionOption[] {
+  const config = RESOLUTION_BY_RANGE[timeRange];
+  if (config) return config.options;
+  return [
+    { value: "1m", label: "1 min" },
+    { value: "10m", label: "10 min" },
+    { value: "1h", label: "1 hour" },
+  ];
+}
+
+/**
+ * Get the default resolution for a given time range.
+ */
+export function getDefaultResolution(timeRange: string): string {
+  const config = RESOLUTION_BY_RANGE[timeRange];
+  if (config) return config.default;
+  return "1h";
+}
+
+// ─── Duration / Token / Time Formatters ─────────────────────────────────────
+
 /**
  * Format the duration between two dates as a human-readable string.
  *
@@ -69,6 +130,8 @@ export function getTimeRangeDate(range: string): Date {
       return new Date(now.getTime() - 24 * 60 * 60 * 1000);
     case "7d":
       return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    case "30d":
+      return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     default:
       return new Date(now.getTime() - 24 * 60 * 60 * 1000);
   }

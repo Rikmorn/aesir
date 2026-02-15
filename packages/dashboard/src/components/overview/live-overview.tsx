@@ -3,35 +3,46 @@
 /**
  * LiveOverview
  *
- * Two-zone layout: compact metrics bar (stat cards + worker status) pinned
- * at top, then a two-column live feed filling the remaining viewport.
- *
- * Left column: Active Conversations (wider)
- * Right column: Recent Errors (top) + Token Usage (bottom)
+ * Scrollable landing page layout:
+ * 1. Page header with agent service status
+ * 2. Stat cards (conversation counts with filter links)
+ * 3. Two-column grid: Active Conversations + Recent Errors
+ * 4. Two-column grid: Token Usage (hourly) + Integration Health (error rates)
  *
  * SSE events update stat cards and active conversations in real-time.
+ * Charts are point-in-time snapshots refreshed via time range selector.
  */
 
 import { useRouter } from "next/navigation";
+import { parseAsString, useQueryState } from "nuqs";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ActiveConversations } from "@/components/overview/active-conversations";
+import { IntegrationHealth } from "@/components/overview/integration-health";
 import { RecentErrors } from "@/components/overview/recent-errors";
 import { StatCards } from "@/components/overview/stat-cards";
 import { TokenUsage } from "@/components/overview/token-usage";
-import {
-  type EnrichedToolActivity,
-  ToolActivity,
-} from "@/components/overview/tool-activity";
 import { WorkerStatus } from "@/components/overview/worker-status";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useEventStream } from "@/hooks/use-event-stream";
-import type { WorkerStatus as WorkerStatusType } from "@/lib/agent-service";
+import type {
+  IntegrationHealth as IntegrationHealthType,
+  WorkerStatus as WorkerStatusType,
+} from "@/lib/agent-service";
+import { getDefaultResolution, getResolutionOptions } from "@/lib/format";
 import { LIFECYCLE_EVENT_TYPES, type SseEvent } from "@/lib/sse-types";
 import type {
   ActiveConversation,
+  IntegrationErrorRates,
   RecentError,
   StatusCounts,
-  TokenUsageByAgent,
+  TokenUsageBucket,
 } from "@/services/overview";
 
 // ─── Serialized Types ──────────────────────────────────────────────────────
@@ -53,6 +64,14 @@ export interface SerializedRecentError {
   type: "conversation" | "tool";
 }
 
+// ─── Time Range Options ────────────────────────────────────────────────────
+
+const TIME_RANGE_OPTIONS = [
+  { value: "24h", label: "24h" },
+  { value: "7d", label: "7 days" },
+  { value: "30d", label: "30 days" },
+];
+
 // ─── Props ──────────────────────────────────────────────────────────────────
 
 interface LiveOverviewProps {
@@ -60,9 +79,11 @@ interface LiveOverviewProps {
   initialActiveConversations: SerializedActiveConversation[];
   workerStatus: WorkerStatusType | null;
   recentErrors: SerializedRecentError[];
-  tokenUsage: TokenUsageByAgent[];
-  defaultTokenTimeRange: string;
-  toolActivity: EnrichedToolActivity[];
+  tokenUsageBuckets: TokenUsageBucket[];
+  integrationErrorRates: IntegrationErrorRates;
+  integrationHealth: IntegrationHealthType[];
+  defaultTimeRange: string;
+  defaultResolution: string;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -94,11 +115,37 @@ export function LiveOverview({
   initialActiveConversations,
   workerStatus,
   recentErrors,
-  tokenUsage,
-  defaultTokenTimeRange,
-  toolActivity,
+  tokenUsageBuckets,
+  integrationErrorRates,
+  integrationHealth,
+  defaultTimeRange,
+  defaultResolution,
 }: LiveOverviewProps) {
   const router = useRouter();
+
+  // ── Time Range + Resolution ───────────────────────────────────────────
+  const [timeRange, setTimeRange] = useQueryState(
+    "timeRange",
+    parseAsString.withDefault(defaultTimeRange).withOptions({ shallow: false }),
+  );
+
+  const [resolution, setResolution] = useQueryState(
+    "resolution",
+    parseAsString
+      .withDefault(defaultResolution)
+      .withOptions({ shallow: false }),
+  );
+
+  const resolutionOptions = getResolutionOptions(timeRange);
+
+  // Reset resolution to default when time range changes
+  const prevTimeRangeRef = useRef(timeRange);
+  useEffect(() => {
+    if (prevTimeRangeRef.current !== timeRange) {
+      prevTimeRangeRef.current = timeRange;
+      setResolution(getDefaultResolution(timeRange));
+    }
+  }, [timeRange, setResolution]);
 
   // ── SSE Connection ──────────────────────────────────────────────────────
   const { events, hasGap } = useEventStream({
@@ -187,42 +234,83 @@ export function LiveOverview({
   const conversations = deserializeConversations(activeConversations);
   const errors = deserializeErrors(recentErrors);
 
+  const timeRangeLabel =
+    TIME_RANGE_OPTIONS.find((o) => o.value === timeRange)?.label ?? timeRange;
+
   // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      {/* Zone 1: Metrics bar */}
-      <div className="mb-4 shrink-0 space-y-3">
-        <div className="flex items-center justify-between gap-4">
-          <StatCards
-            counts={statusCounts}
-            highlightedFields={highlightedFields}
-          />
-          <WorkerStatus status={workerStatus} />
+    <div className="space-y-5">
+      {/* Page header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">Overview</h1>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">
+            System monitoring and agent health
+          </p>
+        </div>
+        <WorkerStatus status={workerStatus} />
+      </div>
+
+      {/* Stat cards */}
+      <StatCards counts={statusCounts} highlightedFields={highlightedFields} />
+
+      {/* Main content: Active Conversations + Recent Errors */}
+      <div className="grid h-[400px] gap-4 lg:grid-cols-[3fr_2fr]">
+        <ActiveConversations conversations={conversations} />
+        <RecentErrors errors={errors} />
+      </div>
+
+      {/* Charts section header with time range + resolution */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          Trends
+        </span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-muted-foreground">Range</span>
+            <Select value={timeRange} onValueChange={setTimeRange}>
+              <SelectTrigger size="sm" className="w-auto">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper" side="bottom" align="end">
+                {TIME_RANGE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-muted-foreground">Interval</span>
+            <Select value={resolution} onValueChange={setResolution}>
+              <SelectTrigger size="sm" className="w-auto">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper" side="bottom" align="end">
+                {resolutionOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
-      {/* Zone 2: Live feeds — fills remaining viewport */}
-      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[1fr_400px]">
-        {/* Left: Active Conversations */}
-        <div className="min-h-0">
-          <ActiveConversations conversations={conversations} />
-        </div>
-
-        {/* Right: Tool Activity + Errors + Token Usage stacked */}
-        <div className="flex min-h-0 flex-col gap-4">
-          <div className="max-h-[240px] min-h-0 shrink-0">
-            <ToolActivity tools={toolActivity} />
-          </div>
-          <div className="min-h-0 flex-1">
-            <RecentErrors errors={errors} />
-          </div>
-          <div className="min-h-0 flex-1">
-            <TokenUsage
-              data={tokenUsage}
-              defaultTimeRange={defaultTokenTimeRange}
-            />
-          </div>
-        </div>
+      {/* Charts: Token Usage + Integration Health */}
+      <div className="grid h-[280px] gap-4 lg:grid-cols-[3fr_2fr]">
+        <TokenUsage
+          data={tokenUsageBuckets}
+          timeRangeLabel={timeRangeLabel}
+          resolution={resolution}
+        />
+        <IntegrationHealth
+          errorRates={integrationErrorRates}
+          health={integrationHealth}
+          timeRangeLabel={timeRangeLabel}
+        />
       </div>
     </div>
   );

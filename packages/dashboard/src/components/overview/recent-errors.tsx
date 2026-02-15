@@ -34,10 +34,13 @@ export function RecentErrors({ errors }: RecentErrorsProps) {
           <p className="text-sm text-muted-foreground">No errors</p>
         </div>
       ) : (
-        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-y-contain p-3">
-          {errors.map((error) => (
-            <ErrorItem key={error.id} error={error} />
-          ))}
+        <div className="relative min-h-0 flex-1">
+          <div className="h-full space-y-2 overflow-y-auto overscroll-y-contain p-3 pb-6">
+            {errors.map((error) => (
+              <ErrorItem key={error.id} error={error} />
+            ))}
+          </div>
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-card to-transparent" />
         </div>
       )}
     </div>
@@ -70,7 +73,7 @@ function ErrorItem({ error }: { error: RecentError }) {
         type="button"
         onClick={() => setExpanded((prev) => !prev)}
         className={cn(
-          "mt-1 cursor-pointer text-left text-[13px] leading-snug text-red-600 dark:text-red-400",
+          "mt-1 cursor-pointer text-left text-[13px] leading-snug text-red-600 decoration-red-400/40 hover:underline dark:text-red-400",
           !expanded && "line-clamp-3",
         )}
       >

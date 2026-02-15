@@ -342,3 +342,154 @@ export async function getToolActivity(limit = 15): Promise<ToolActivityItem[]> {
       failureCount: Number(row.failures),
     }));
 }
+
+// ─── Token Usage Buckets ─────────────────────────────────────────────────────
+
+/**
+ * Token usage aggregated into a time bucket for charting.
+ */
+export interface TokenUsageBucket {
+  /** ISO-ish timestamp from Postgres (e.g., "2026-02-15 10:00:00+00") */
+  bucket: string;
+  /** Input tokens in this bucket */
+  inputTokens: number;
+  /** Output tokens in this bucket */
+  outputTokens: number;
+}
+
+/**
+ * Build a SQL expression for the time bucket based on resolution.
+ *
+ * - 1m, 1h, 1d use date_trunc (native Postgres)
+ * - 10m, 6h use epoch-based floor rounding
+ */
+function getBucketExpression(resolution: string) {
+  switch (resolution) {
+    case "1m":
+      return sql`date_trunc('minute', ${agentEvents.timestamp})`;
+    case "10m":
+      return sql`to_timestamp(floor(extract(epoch from ${agentEvents.timestamp}) / 600) * 600)`;
+    case "6h":
+      return sql`to_timestamp(floor(extract(epoch from ${agentEvents.timestamp}) / 21600) * 21600)`;
+    case "1d":
+      return sql`date_trunc('day', ${agentEvents.timestamp})`;
+    default:
+      return sql`date_trunc('hour', ${agentEvents.timestamp})`;
+  }
+}
+
+/**
+ * Get token usage grouped by time bucket with input/output split.
+ *
+ * Groups llm.response events into configurable time buckets.
+ * Returns only buckets that have data (no zero-fill).
+ *
+ * @param since - Start of the time range
+ * @param resolution - Bucket size: "1m", "10m", "1h", "6h", "1d" (default "1h")
+ * @returns Array of TokenUsageBucket sorted chronologically
+ */
+export async function getTokenUsageBuckets(
+  since: Date,
+  resolution = "1h",
+): Promise<TokenUsageBucket[]> {
+  const bucket = getBucketExpression(resolution);
+
+  const rows = await db
+    .select({
+      bucket: sql<string>`${bucket}::text`,
+      inputTokens: sql<number>`coalesce(sum(${agentEvents.token_count_input}), 0)`,
+      outputTokens: sql<number>`coalesce(sum(${agentEvents.token_count_output}), 0)`,
+    })
+    .from(agentEvents)
+    .where(
+      and(
+        eq(agentEvents.type, "llm.response"),
+        gte(agentEvents.timestamp, since),
+      ),
+    )
+    .groupBy(bucket)
+    .orderBy(bucket);
+
+  return rows.map((row) => ({
+    bucket: row.bucket,
+    inputTokens: Number(row.inputTokens),
+    outputTokens: Number(row.outputTokens),
+  }));
+}
+
+// ─── Integration Error Rates ────────────────────────────────────────────────
+
+/**
+ * Hourly call and failure counts for a single integration.
+ */
+export interface IntegrationHourlyRate {
+  hour: string;
+  calls: number;
+  failures: number;
+}
+
+/**
+ * Error rates grouped by integration (GitHub, Linear, Slack).
+ */
+export interface IntegrationErrorRates {
+  github: IntegrationHourlyRate[];
+  linear: IntegrationHourlyRate[];
+  slack: IntegrationHourlyRate[];
+}
+
+/**
+ * Get tool call and failure counts by hour for each integration.
+ *
+ * Groups tool.called and tool.failed events by hour and integration prefix
+ * (github_, linear_, slack_). Used for integration health trend charts.
+ *
+ * @param since - Start of the time range
+ * @returns IntegrationErrorRates with hourly data per integration
+ */
+export async function getIntegrationErrorRates(
+  since: Date,
+): Promise<IntegrationErrorRates> {
+  const integrationCase = sql`CASE
+    WHEN ${agentEvents.payload}->>'tool_name' LIKE 'github_%' THEN 'github'
+    WHEN ${agentEvents.payload}->>'tool_name' LIKE 'linear_%' THEN 'linear'
+    WHEN ${agentEvents.payload}->>'tool_name' LIKE 'slack_%' THEN 'slack'
+  END`;
+
+  const rows = await db
+    .select({
+      hour: sql<string>`date_trunc('hour', ${agentEvents.timestamp})::text`,
+      integration: sql<string>`${integrationCase}`,
+      calls: sql<number>`COUNT(*) FILTER (WHERE ${agentEvents.type} = 'tool.called')`,
+      failures: sql<number>`COUNT(*) FILTER (WHERE ${agentEvents.type} = 'tool.failed')`,
+    })
+    .from(agentEvents)
+    .where(
+      and(
+        inArray(agentEvents.type, ["tool.called", "tool.failed"]),
+        gte(agentEvents.timestamp, since),
+        sql`${agentEvents.payload}->>'tool_name' ~ '^(github|linear|slack)_'`,
+      ),
+    )
+    .groupBy(sql`date_trunc('hour', ${agentEvents.timestamp})`, integrationCase)
+    .orderBy(sql`date_trunc('hour', ${agentEvents.timestamp})`);
+
+  const result: IntegrationErrorRates = {
+    github: [],
+    linear: [],
+    slack: [],
+  };
+
+  for (const row of rows) {
+    if (!row.integration) continue;
+    const key = row.integration as keyof IntegrationErrorRates;
+    if (key in result) {
+      result[key].push({
+        hour: row.hour,
+        calls: Number(row.calls),
+        failures: Number(row.failures),
+      });
+    }
+  }
+
+  return result;
+}

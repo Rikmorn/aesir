@@ -1,6 +1,5 @@
 "use client";
 
-import { parseAsString, useQueryState } from "nuqs";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import {
@@ -11,30 +10,16 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { formatTokenCount } from "@/lib/format";
-import type { TokenUsageByAgent } from "@/services/overview";
+import type { TokenUsageBucket } from "@/services/overview";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface TokenUsageProps {
-  data: TokenUsageByAgent[];
-  defaultTimeRange: string;
+  data: TokenUsageBucket[];
+  timeRangeLabel: string;
+  resolution: string;
 }
-
-// ─── Time Range Options ─────────────────────────────────────────────────────
-
-const TIME_RANGE_OPTIONS = [
-  { value: "1h", label: "Last hour" },
-  { value: "24h", label: "Last 24 hours" },
-  { value: "7d", label: "Last 7 days" },
-];
 
 // ─── Chart Config ────────────────────────────────────────────────────────────
 
@@ -43,21 +28,46 @@ const chartConfig = {
   outputTokens: { label: "Output", color: "var(--chart-2)" },
 } satisfies ChartConfig;
 
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function formatBucketTick(value: string, resolution: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  const hours = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+
+  if (resolution === "1d") {
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }
+  if (resolution === "6h") {
+    const month = date.toLocaleDateString("en-US", { month: "short" });
+    return `${month} ${date.getDate()}, ${hours}:${minutes}`;
+  }
+  return `${hours}:${minutes}`;
+}
+
+function formatTooltipLabel(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function TokenUsage({ data, defaultTimeRange }: TokenUsageProps) {
-  const [timeRange, setTimeRange] = useQueryState(
-    "tokenTimeRange",
-    parseAsString.withDefault(defaultTimeRange).withOptions({ shallow: false }),
-  );
-
-  const totalTokens = data.reduce(
-    (sum, d) => sum + d.inputTokens + d.outputTokens,
-    0,
-  );
-
-  const timeRangeLabel =
-    TIME_RANGE_OPTIONS.find((o) => o.value === timeRange)?.label ?? timeRange;
+export function TokenUsage({
+  data,
+  timeRangeLabel,
+  resolution,
+}: TokenUsageProps) {
+  const totalInput = data.reduce((sum, d) => sum + d.inputTokens, 0);
+  const totalOutput = data.reduce((sum, d) => sum + d.outputTokens, 0);
+  const totalTokens = totalInput + totalOutput;
 
   return (
     <div className="flex h-full flex-col rounded-lg border bg-card">
@@ -72,21 +82,9 @@ export function TokenUsage({ data, defaultTimeRange }: TokenUsageProps) {
             </span>
           )}
         </div>
-        <Select value={timeRange} onValueChange={setTimeRange}>
-          <SelectTrigger size="sm" className="w-auto">
-            <SelectValue placeholder="Time range" />
-          </SelectTrigger>
-          <SelectContent>
-            {TIME_RANGE_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
-      <div className="min-h-0 flex-1 p-4">
+      <div className="min-h-0 flex-1 p-4 pb-0">
         {data.length === 0 || totalTokens === 0 ? (
           <div className="flex h-full items-center justify-center">
             <p className="text-sm text-muted-foreground">
@@ -94,17 +92,41 @@ export function TokenUsage({ data, defaultTimeRange }: TokenUsageProps) {
             </p>
           </div>
         ) : (
-          <ChartContainer config={chartConfig} className="h-full w-full">
+          <ChartContainer
+            config={chartConfig}
+            className="aspect-auto h-full w-full"
+          >
             <BarChart data={data} accessibilityLayer>
-              <CartesianGrid vertical={false} />
+              <CartesianGrid
+                vertical={false}
+                strokeDasharray="3 3"
+                className="stroke-border/50"
+              />
               <XAxis
-                dataKey="agentDefinitionId"
+                dataKey="bucket"
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
+                tickFormatter={(value) => formatBucketTick(value, resolution)}
+                interval="preserveStartEnd"
+                className="text-[10px] fill-muted-foreground"
               />
-              <YAxis tickLine={false} axisLine={false} tickMargin={8} />
-              <ChartTooltip content={<ChartTooltipContent />} />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                tickFormatter={formatTokenCount}
+                width={50}
+                className="text-[10px] fill-muted-foreground"
+              />
+              <ChartTooltip
+                content={
+                  <ChartTooltipContent
+                    labelFormatter={formatTooltipLabel}
+                    formatter={(value) => formatTokenCount(Number(value))}
+                  />
+                }
+              />
               <ChartLegend content={<ChartLegendContent />} />
               <Bar
                 dataKey="inputTokens"
@@ -116,7 +138,7 @@ export function TokenUsage({ data, defaultTimeRange }: TokenUsageProps) {
                 dataKey="outputTokens"
                 stackId="tokens"
                 fill="var(--color-outputTokens)"
-                radius={[4, 4, 0, 0]}
+                radius={[2, 2, 0, 0]}
               />
             </BarChart>
           </ChartContainer>
