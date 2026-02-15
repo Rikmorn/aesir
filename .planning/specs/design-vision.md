@@ -283,11 +283,17 @@ The reasoning path is effectively a lightweight orchestrator, but it only fires 
 
 The routing evolution above addresses the *inbound* question: how events find the right conversation. The *outbound* question — how agents reply to the right channel — is addressed by the v2.6 Unified Agent Communication spec (`2.6-unified-agent-communication.md`). The integration correlation layer enriches inbound events with `replyContext`, which propagates through the signal pipeline so agents can reply to the originating channel without knowing which channel it was.
 
-### Future: Global Orchestrator?
+### Future: Unified External Identity
 
-An open question: should the reasoning path evolve into a persistent orchestrator agent that maintains awareness of all active tasks and can make sophisticated routing decisions? Arguments for: better coordination, proactive work identification. Arguments against: bottleneck, single point of failure, cost.
+An open question: should Aesir present as a single external identity rather than exposing internal agent specialization? Claude, ChatGPT, Lovable — all present as one entity. Users talk to "Aesir," not "dev-agent" or "product-agent." Internal routing is invisible.
 
-Current position: keep it as a stateless LLM call for ambiguous events. Revisit if the task graph becomes complex enough that stateless routing can't make good decisions.
+The architecture already converges toward this. The EventRouter classifies events and routes to the right agent — that's functionally identical to a unified entry point. The delegation chain is already invisible to users (product-agent delegating to dev-agent looks like "Aesir is working on your issue"). The gap is only at the top level: separate bot identities per integration, separate trigger rules per agent.
+
+A unified identity means: one bot in Linear, one app in Slack, one installation in GitHub. All events enter through a single dispatcher that routes internally — deterministic fast-path for obvious cases, slow-path LLM for ambiguous ones. This is the existing EventRouter pattern, just formalized as the primary flow instead of a fallback.
+
+The shift is smaller than it appears: the internal agent architecture (orchestrators, sub-agents, delegation chains) stays unchanged. What changes is the external presentation and the entry point. Work correlation (v2.8) and sub-agent discovery (v2.9) make the eventual transition straightforward.
+
+Current position: target for v3.0 as part of domain modeling ("how does the agent team present to the outside world?"). In the meantime, v2.8/v2.9 should not deepen per-agent external identities — no new per-agent bot users, no agent-specific integration configurations, no UI that teaches users to address specific agents.
 
 ## Bidirectional Task Assignment
 
@@ -482,3 +488,4 @@ This is deliberately deferred to v3.0 — let role analysis and real usage revea
 | Persistent agent identity as structured documents | Knowledge entries are atoms; agents need maintained mental models. Identity documents versioned, agent-scoped, injected at conversation start. Different primitive from knowledge store. | 2026-02-15 |
 | Sub-agent discovery by capability | Hardcoded YAML sub-agent lists won't scale to 10+ types. Capability-based spawn parallels the directory pattern for orchestrators. Backward compatible with explicit IDs. | 2026-02-15 |
 | Scheduled execution via synthetic events | Periodic agent work fires synthetic events through existing EventRouter. Same trigger mechanism, different source. pg-boss handles scheduling. | 2026-02-15 |
+| Unified external identity as v3.0 target | Users should interact with "Aesir," not individual agents. Internal routing is already converging toward this (EventRouter, delegation chains). v2.8/v2.9 must not deepen per-agent external identities — no new per-agent bot users or agent-specific integration configs. | 2026-02-15 |
