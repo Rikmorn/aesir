@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.8 Resilience and Observability -- Phase 75 (Echo Elimination)
+**Current focus:** v2.8 Resilience and Observability -- Phase 75 complete, ready for Phase 76
 
 ## Current Position
 
-Phase: 75 of 78 (Echo Elimination)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-16 -- Plan 75-02 complete (thread actor metadata)
+Phase: 75 of 78 (Echo Elimination) -- COMPLETE
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-16 -- Plan 75-03 complete (pipeline wiring)
 
-Progress: [===.......] 33%
+Progress: [====......] 43%
 
 ## Milestone History
 
@@ -35,7 +35,7 @@ Progress: [===.......] 33%
 **Cumulative:**
 - Total milestones shipped: 9
 - Total phases completed: 73
-- Total plans completed: 327
+- Total plans completed: 330
 
 *v2.8 metrics will be tracked as plans complete*
 
@@ -46,6 +46,7 @@ Progress: [===.......] 33%
 | 74 | 01 | 4min | 2 | 4 |
 | 75 | 01 | 3min | 2 | 6 |
 | 75 | 02 | 3min | 2 | 3 |
+| 75 | 03 | 6min | 2 | 13 |
 
 ## Accumulated Context
 
@@ -60,6 +61,9 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 75]: DB errors in dedup throw (fail-loud) rather than silently accepting
 - [Phase 75]: Linear normalizer changes pre-completed in Plan 01 -- no duplicate commit for Plan 02
 - [Phase 75]: GitHub sender extracted from raw JSON.parse, not Zod schema -- passthrough only
+- [Phase 75]: Block action events excluded from Slack actorInfo -- user-initiated by definition
+- [Phase 75]: pg-boss schedule:true enables cron for dedup cleanup while keeping send+startAfter for timeouts
+- [Phase 75]: getBoss() returns undefined before start() to prevent premature job scheduling
 
 ### Pending Todos
 
@@ -72,16 +76,16 @@ See PROJECT.md Key Decisions table for full history.
 
 - Linear Agent SDK is developer preview -- feature flag (LINEAR_AGENT_SDK_ENABLED) may be needed for fallback
 - Linear OAuth token migration deadline: April 1, 2026
-- Echo suppression approach: decided on actor identity (actorInfo.isBot) -- implemented in Phase 75 Plan 01
+- Echo suppression: fully operational (Phase 75 complete) -- dedup + echo filter wired into routeEvent pipeline
 - Recovery context + history compaction boundary coordination needs design during Phase 76 planning
 - Work correlation routing precedence vs. SIGNAL_AGENT_MAP needs decision during Phase 78 planning
 
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 75-02-PLAN.md
-Resume file: .planning/phases/75-echo-elimination/75-02-SUMMARY.md
-Next action: Execute Plan 75-03
+Stopped at: Completed 75-03-PLAN.md (Phase 75 complete)
+Resume file: .planning/phases/75-echo-elimination/75-03-SUMMARY.md
+Next action: Plan Phase 76
 
 ---
-*Updated: 2026-02-16 -- Plan 75-02 complete (thread actor metadata through normalizers)*
+*Updated: 2026-02-16 -- Phase 75 complete (echo elimination -- 3 plans, pipeline fully wired)*
