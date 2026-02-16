@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 75 of 78 (Echo Elimination)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-16 -- Plan 75-01 complete (webhook filter foundation)
+Last activity: 2026-02-16 -- Plan 75-02 complete (thread actor metadata)
 
 Progress: [===.......] 33%
 
@@ -45,6 +45,7 @@ Progress: [===.......] 33%
 | 74 | 03 | 2min | 1 | 1 |
 | 74 | 01 | 4min | 2 | 4 |
 | 75 | 01 | 3min | 2 | 6 |
+| 75 | 02 | 3min | 2 | 3 |
 
 ## Accumulated Context
 
@@ -57,6 +58,8 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 75]: Source prefix extraction uses first segment before colon for dedup namespacing
 - [Phase 75]: Dedup layer checked before echo layer -- duplicates rejected regardless of actor
 - [Phase 75]: DB errors in dedup throw (fail-loud) rather than silently accepting
+- [Phase 75]: Linear normalizer changes pre-completed in Plan 01 -- no duplicate commit for Plan 02
+- [Phase 75]: GitHub sender extracted from raw JSON.parse, not Zod schema -- passthrough only
 
 ### Pending Todos
 
@@ -76,9 +79,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 75-01-PLAN.md
-Resume file: .planning/phases/75-echo-elimination/75-01-SUMMARY.md
-Next action: Execute Plan 75-02
+Stopped at: Completed 75-02-PLAN.md
+Resume file: .planning/phases/75-echo-elimination/75-02-SUMMARY.md
+Next action: Execute Plan 75-03
 
 ---
-*Updated: 2026-02-16 -- Plan 75-01 complete (webhook filter foundation)*
+*Updated: 2026-02-16 -- Plan 75-02 complete (thread actor metadata through normalizers)*
