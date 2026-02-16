@@ -129,7 +129,12 @@ See `.planning/milestones/v2.7-ROADMAP.md` for full details.
   3. Permanent MCP errors (4xx) return structured context to the agent immediately; transient MCP errors (429, 5xx) are retried transparently and the agent sees an error only when retries are exhausted
   4. When a conversation resumes after a crash, the agent receives a `<recovery_context>` block describing work completed since its last checkpoint (sub-agent completions, successful tool calls, received signals)
   5. Worker drains in-progress conversations on SIGTERM before exiting -- stops claiming new work and lets active conversations finish within a deadline
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 76-01-PLAN.md -- MCP error classification + schema foundation (RESIL-04, RESIL-05, RESIL-06, RESIL-07)
+- [ ] 76-02-PLAN.md -- Failure notifications at all failure paths + graceful shutdown drain (RESIL-01, RESIL-02, RESIL-03, RESIL-10)
+- [ ] 76-03-PLAN.md -- Recovery context injection on crash resume (RESIL-08, RESIL-09)
 
 ### Phase 77: Dashboard Observability
 **Goal**: The conversation timeline renders every lifecycle event, groups tool calls into expandable cards, and attributes sub-agent work visually
@@ -169,7 +174,7 @@ Phases 74 through 78. Phase 78 is independent of 76/77 and can execute in parall
 |-------|----------------|--------|-----------|
 | 74. Quick Fixes | 0/3 | Complete    | 2026-02-16 |
 | 75. Echo Elimination | 0/3 | Complete    | 2026-02-16 |
-| 76. Runtime Resilience | 0/TBD | Not started | - |
+| 76. Runtime Resilience | 0/3 | Not started | - |
 | 77. Dashboard Observability | 0/TBD | Not started | - |
 | 78. Work Correlation | 0/TBD | Not started | - |
 
