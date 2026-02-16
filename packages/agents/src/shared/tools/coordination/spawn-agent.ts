@@ -26,8 +26,11 @@ import type { ToolDefinition, ToolResult } from "../../agent-loop/types.js";
 
 const SpawnAgentInputSchema = z.object({
   agentType: z
-    .enum(["researcher", "coder", "tester"])
-    .describe("Type of sub-agent to spawn"),
+    .string()
+    .min(1)
+    .describe(
+      "Role of sub-agent to spawn (must match a key in the agent's subAgents mapping)",
+    ),
   task: z.string().describe("Task description for the sub-agent to execute"),
   context: z
     .string()
@@ -55,10 +58,8 @@ export function createSpawnAgentTool(ctx: ToolContext): ToolDefinition {
   return {
     name: "spawn_agent",
     description:
-      "Spawn a focused sub-agent to perform a specific task. Available agent types: " +
-      "'researcher' (explores codebase, reads files, searches code), " +
-      "'coder' (implements changes, writes files, runs builds), " +
-      "'tester' (runs tests, diagnoses failures, reads code). " +
+      "Spawn a focused sub-agent to perform a specific task. " +
+      "The agent type must match a role defined in this agent's subAgents mapping. " +
       "Each sub-agent shares the token budget with the orchestrator.",
     inputSchema: SpawnAgentInputSchema,
     async execute(input: unknown): Promise<ToolResult> {

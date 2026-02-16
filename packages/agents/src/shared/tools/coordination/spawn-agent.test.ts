@@ -221,6 +221,29 @@ describe("createSpawnAgentTool", () => {
     expect(result.content).toContain("Available: researcher");
   });
 
+  it("accepts custom agentType matching subAgents mapping", async () => {
+    const childDef = createMockDefinition({
+      id: "test-subagent-child",
+      name: "Test SubAgent Child",
+    });
+    const deps = createMockSpawnDeps({
+      parentDefinition: createMockParentDefinition({
+        subAgents: { worker: "test-subagent-child" },
+      }),
+    });
+    (deps.agentRegistry.get as Mock).mockResolvedValue(childDef);
+    const ctx = createMockToolContext({ spawnDeps: deps });
+    const tool = createSpawnAgentTool(ctx);
+
+    const result = await tool.execute({
+      agentType: "worker",
+      task: "perform test work",
+    });
+
+    expect(result.isError).toBe(false);
+    expect(deps.agentRegistry.get).toHaveBeenCalledWith("test-subagent-child");
+  });
+
   it("returns error when sub-agent definition not found in registry", async () => {
     const deps = createMockSpawnDeps();
     (deps.agentRegistry.get as Mock).mockResolvedValue(null);
