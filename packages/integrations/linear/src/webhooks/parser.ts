@@ -48,6 +48,12 @@ export const AgentSessionSchema = z.object({
   prompt: z.string().optional(),
   /** Linear-generated formatted context (prompted events only) */
   promptContext: z.string().optional(),
+  /** Actor who triggered the event (optional — for echo detection) */
+  actor: z
+    .object({
+      type: z.string().optional(),
+    })
+    .optional(),
 });
 
 /**
@@ -147,6 +153,7 @@ export const CommentPayloadSchema = z.object({
       id: z.string(),
       name: z.string(),
       email: z.string().optional(),
+      type: z.string().optional(), // 'OauthClient', 'user', etc. — for echo detection
     })
     .optional(),
   /** Timestamp when webhook was created (milliseconds since epoch) */

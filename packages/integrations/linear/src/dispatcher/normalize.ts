@@ -36,6 +36,10 @@ export function normalizeAgentSessionEvent(
       ...(payload.promptContext !== undefined && {
         promptContext: payload.promptContext,
       }),
+      // Actor type for echo detection (e.g., 'OauthClient' = bot)
+      ...(payload.actor?.type !== undefined && {
+        actorType: payload.actor.type,
+      }),
     },
   };
 }
@@ -68,6 +72,10 @@ export function normalizeCommentCreatedEvent(
       actorName: payload.actor?.name ?? "Unknown",
       actorEmail: payload.actor?.email,
       createdAt: payload.data.createdAt,
+      // Actor type for echo detection (e.g., 'OauthClient' = bot)
+      ...(payload.actor?.type !== undefined && {
+        actorType: payload.actor.type,
+      }),
     },
   };
 }

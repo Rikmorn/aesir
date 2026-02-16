@@ -61,6 +61,10 @@ export interface AgentSessionPayload
   prompt?: string;
   /** Linear-generated formatted context (prompted events only) */
   promptContext?: string;
+  /** Actor who triggered the event (optional — for echo detection) */
+  actor?: {
+    type?: string;
+  };
 }
 
 /**

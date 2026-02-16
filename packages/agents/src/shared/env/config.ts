@@ -84,6 +84,10 @@ const agentEnvSchema = z.object({
   // Product agent config
   PRODUCT_AGENT_ALLOWED_CHANNELS: z.string().optional(),
 
+  // Echo suppression (optional -- only needed for bot-echo detection)
+  GITHUB_APP_LOGIN: z.string().optional(),
+  SLACK_APP_ID: z.string().optional(),
+
   // Embedding provider (optional -- only required when knowledge tools are used)
   EMBEDDING_PROVIDER: z.enum(["ollama", "voyage"]).default("ollama"),
   EMBEDDING_DIMENSIONS: z.coerce.number().int().positive().default(768),
@@ -172,6 +176,11 @@ export const config = {
 
   router: {
     alertsChannel: env.ROUTER_ALERTS_CHANNEL,
+  },
+
+  echo: {
+    githubAppLogin: env.GITHUB_APP_LOGIN,
+    slackAppId: env.SLACK_APP_ID,
   },
 
   embedding: {

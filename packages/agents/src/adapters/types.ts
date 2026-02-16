@@ -38,6 +38,15 @@ export const IncomingEventSchema = z.object({
   taskId: z.string().optional(),
   /** Reply context for routing agent responses back to the originating channel */
   replyContext: ReplyContextSchema.optional(),
+  /** Actor information for echo suppression (populated by adapters) */
+  actorInfo: z
+    .object({
+      /** Whether the actor is a bot (used by webhook filter Layer 2) */
+      isBot: z.boolean(),
+      /** Actor identifier for logging/debugging (e.g., bot login, app ID) */
+      identifier: z.string().optional(),
+    })
+    .optional(),
 });
 
 /** Validated IncomingEvent type inferred from the Zod schema */
