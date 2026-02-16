@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.8 Resilience and Observability -- Phase 74 (Quick Fixes)
+**Current focus:** v2.8 Resilience and Observability -- Phase 75 (Echo Elimination)
 
 ## Current Position
 
-Phase: 74 of 78 (Quick Fixes)
-Plan: 3 of 3 in current phase (all complete)
-Status: Phase complete
-Last activity: 2026-02-16 -- Plan 74-01 complete (tool Zod/return fixes)
+Phase: 75 of 78 (Echo Elimination)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-16 -- Plan 75-01 complete (webhook filter foundation)
 
-Progress: [===.......] 30%
+Progress: [===.......] 33%
 
 ## Milestone History
 
@@ -44,6 +44,7 @@ Progress: [===.......] 30%
 | 74 | 02 | 3min | 2 | 9 |
 | 74 | 03 | 2min | 1 | 1 |
 | 74 | 01 | 4min | 2 | 4 |
+| 75 | 01 | 3min | 2 | 6 |
 
 ## Accumulated Context
 
@@ -53,6 +54,9 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 74]: Removed communication:notify from all test agents -- aligns with v2.7 anti-pattern lesson
 - [Phase 74]: Return informational content (not isError) for empty tool state -- lets agents reason naturally
 - [Phase 74]: Use z.string().min(1) for agentType validation -- subAgents mapping already validates role
+- [Phase 75]: Source prefix extraction uses first segment before colon for dedup namespacing
+- [Phase 75]: Dedup layer checked before echo layer -- duplicates rejected regardless of actor
+- [Phase 75]: DB errors in dedup throw (fail-loud) rather than silently accepting
 
 ### Pending Todos
 
@@ -65,16 +69,16 @@ See PROJECT.md Key Decisions table for full history.
 
 - Linear Agent SDK is developer preview -- feature flag (LINEAR_AGENT_SDK_ENABLED) may be needed for fallback
 - Linear OAuth token migration deadline: April 1, 2026
-- Echo suppression approach (actor identity vs. tool-call correlation) needs design decision during Phase 75 planning
+- Echo suppression approach: decided on actor identity (actorInfo.isBot) -- implemented in Phase 75 Plan 01
 - Recovery context + history compaction boundary coordination needs design during Phase 76 planning
 - Work correlation routing precedence vs. SIGNAL_AGENT_MAP needs decision during Phase 78 planning
 
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 74-01-PLAN.md (all Phase 74 plans complete)
-Resume file: .planning/phases/74-quick-fixes/74-01-SUMMARY.md
-Next action: Transition to Phase 75
+Stopped at: Completed 75-01-PLAN.md
+Resume file: .planning/phases/75-echo-elimination/75-01-SUMMARY.md
+Next action: Execute Plan 75-02
 
 ---
-*Updated: 2026-02-16 -- Plan 74-01 complete, Phase 74 fully done*
+*Updated: 2026-02-16 -- Plan 75-01 complete (webhook filter foundation)*
