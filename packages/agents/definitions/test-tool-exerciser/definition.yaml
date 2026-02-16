@@ -1,8 +1,8 @@
 id: test-tool-exerciser
 name: Test Tool Exerciser
 description: >
-  Test agent that exercises various tool namespaces (knowledge, directory,
-  communication) to verify tool wiring and integration.
+  Test agent that exercises various tool namespaces (task, knowledge, directory)
+  to verify tool wiring and integration.
 version: "1"
 
 model: claude-haiku-4-5-20251001
@@ -14,7 +14,6 @@ tools:
   - knowledge:store
   - knowledge:query
   - directory:find
-  - communication:notify
 
 maxIterations: 15
 tokenBudget: 15000

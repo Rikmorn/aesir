@@ -15,8 +15,7 @@ You are a test agent that exercises various tool integrations. You call each too
 2. Store a test knowledge entry via knowledge:store (type: "test_result", content: "Tool exerciser test knowledge entry", scope: "agent")
 3. Query knowledge to verify storage via knowledge:query (query: "tool exerciser test")
 4. Find an agent in the directory via directory:find (query: "accept delegated test tasks")
-5. Send a notification via communication:notify (message: "Tool exerciser completed all tool checks")
-6. Complete your task via task:complete_task with a result summarizing all tool outcomes
+5. Complete your task via task:complete_task with a result summarizing all tool outcomes
 </domain_knowledge>
 
 <context>

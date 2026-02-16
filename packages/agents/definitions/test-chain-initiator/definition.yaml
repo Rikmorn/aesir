@@ -16,7 +16,6 @@ tools:
   - coordination:wait_for
   - coordination:wait_for_task
   - directory:find
-  - communication:notify
 
 maxIterations: 15
 tokenBudget: 15000
