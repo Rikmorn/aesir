@@ -50,6 +50,10 @@ const agentEventTypeValues = [
   "agent.reopened",
   "signal.received",
   "signal.orphaned",
+  "mcp.error",
+  "mcp.rate_limited",
+  "mcp.retries_exhausted",
+  "notification.failed",
 ] as const;
 
 const sessionStatusValues = [
@@ -141,6 +145,8 @@ export const conversations = agentsSchema.table(
     retry_count: integer("retry_count").notNull().default(0),
     max_retries: integer("max_retries").notNull().default(2),
     error_message: text("error_message"),
+    // Recovery context: event log sequence at last message persistence (Phase 76)
+    last_persisted_sequence: integer("last_persisted_sequence").default(0),
     reopen_count: integer("reopen_count").notNull().default(0),
     delivered_signal_ids: jsonb("delivered_signal_ids").notNull().default([]),
     parent_conversation_id: text("parent_conversation_id"),

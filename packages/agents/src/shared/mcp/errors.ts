@@ -2,19 +2,43 @@
  * MCP Client Error Handling
  *
  * Structured error class for MCP tool failures.
- * Provides LLM-friendly error formatting.
+ * Provides LLM-friendly error formatting with HTTP status classification.
  */
 
-import type { McpErrorResponse } from "./types.js";
+import type { McpErrorClassification, McpErrorResponse } from "./types.js";
 
 /**
  * Error thrown when MCP tool call fails
  * Contains structured error data for LLM consumption
+ *
+ * Extended in Phase 76 with HTTP status classification and retry metadata
+ * for error-aware retry logic in the MCP client.
  */
 export class McpError extends Error {
-  constructor(public readonly errorData: McpErrorResponse) {
+  /** HTTP status code from the integration response (undefined for network errors) */
+  readonly httpStatus: number | undefined;
+  /** Classification: permanent (4xx), transient_exhausted (5xx/429 retries done), network */
+  readonly classification: McpErrorClassification;
+  /** Number of attempts made (1 = no retries, 3 = initial + 2 retries) */
+  readonly retryAttempts: number;
+  /** Total time spent in retry delays (ms), 0 if no retries */
+  readonly totalRetryMs: number;
+
+  constructor(
+    public readonly errorData: McpErrorResponse,
+    options?: {
+      httpStatus?: number;
+      classification?: McpErrorClassification;
+      retryAttempts?: number;
+      totalRetryMs?: number;
+    },
+  ) {
     super(errorData.error);
     this.name = "McpError";
+    this.httpStatus = options?.httpStatus;
+    this.classification = options?.classification ?? "permanent";
+    this.retryAttempts = options?.retryAttempts ?? 1;
+    this.totalRetryMs = options?.totalRetryMs ?? 0;
   }
 
   /**

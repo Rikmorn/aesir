@@ -96,6 +96,8 @@ export const conversations = agentsSchema.table(
     retry_count: integer("retry_count").notNull().default(0),
     max_retries: integer("max_retries").notNull().default(2),
     error_message: text("error_message"),
+    // Recovery context: event log sequence at last message persistence (Phase 76)
+    last_persisted_sequence: integer("last_persisted_sequence").default(0),
     // Reopen tracking (Phase 57 -- manual conversation reopening)
     reopen_count: integer("reopen_count").notNull().default(0),
     // Signal deduplication: tracks which signal IDs have already been delivered
@@ -149,6 +151,10 @@ export const agentEventTypeValues = [
   "agent.reopened",
   "signal.received",
   "signal.orphaned",
+  "mcp.error",
+  "mcp.rate_limited",
+  "mcp.retries_exhausted",
+  "notification.failed",
 ] as const;
 export type AgentEventType = (typeof agentEventTypeValues)[number];
 

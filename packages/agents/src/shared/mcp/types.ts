@@ -15,6 +15,17 @@
 export type McpIntegration = "linear" | "github" | "slack";
 
 /**
+ * MCP error classification for retry logic
+ * - permanent: 4xx errors (except 429) -- do not retry
+ * - transient_exhausted: 5xx/429 retries exhausted
+ * - network: fetch/DNS/timeout failures
+ */
+export type McpErrorClassification =
+  | "permanent"
+  | "transient_exhausted"
+  | "network";
+
+/**
  * Options for calling an MCP tool
  */
 export interface McpCallOptions {
@@ -30,6 +41,38 @@ export interface McpCallOptions {
   correlationId: string;
   /** Task ID from conversation's associated task (v2.5 task primitive) */
   taskId?: string | undefined;
+  /** Callback for MCP observability events (mcp.error, mcp.rate_limited, etc.) */
+  onMcpEvent?: (event: {
+    type: string;
+    payload: Record<string, unknown>;
+  }) => void;
+  /** Whether this call can be retried on transient errors (default: true) */
+  retryable?: boolean;
+}
+
+/**
+ * Structured error result for permanent MCP errors returned to agents.
+ * Gives the agent actionable context: which tool failed, why, and key params.
+ */
+export interface McpPermanentErrorResult {
+  error: true;
+  status: number;
+  tool: string;
+  message: string;
+  params: Record<string, unknown>;
+}
+
+/**
+ * Structured error result for transient MCP errors after retry exhaustion.
+ * Tells the agent all retries were attempted and how long was spent waiting.
+ */
+export interface McpTransientExhaustedResult {
+  error: true;
+  status: number | undefined;
+  tool: string;
+  message: string;
+  attempts: number;
+  totalRetryMs: number;
 }
 
 /**
