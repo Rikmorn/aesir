@@ -1056,6 +1056,7 @@ describe("timeout cancellation", () => {
       schedule: vi.fn().mockResolvedValue("timeout-job-123"),
       cancel: vi.fn().mockResolvedValue(undefined),
       close: vi.fn().mockResolvedValue(undefined),
+      getBoss: vi.fn().mockReturnValue(undefined),
     };
   }
 

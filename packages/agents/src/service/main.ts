@@ -43,6 +43,7 @@ import {
 import type { ArtifactExtractionConfig } from "../framework/types.js";
 import { routeEvent } from "../router/router.js";
 import type { RouteEventDeps } from "../router/types.js";
+import { createWebhookFilter } from "../router/webhook-filter.js";
 import * as schema from "../shared/db/schema.js";
 import { createEmbeddingService } from "../shared/embedding/index.js";
 import { config } from "../shared/env/config.js";
@@ -152,6 +153,9 @@ async function bootstrap(): Promise<void> {
   // 7. TimeoutScheduler -- pg-boss delayed signal delivery
   const timeoutScheduler = createTimeoutScheduler({ pool, logger });
 
+  // 7c. Webhook filter -- dedup and echo suppression (Phase 75)
+  const webhookFilter = createWebhookFilter({ pool, logger });
+
   // 7b. SandboxManager -- Docker-backed dev containers (swap for Fargate/Lambda in prod)
   const sandboxManager = createDevContainerManager({ db: platformDb, logger });
 
@@ -251,6 +255,7 @@ async function bootstrap(): Promise<void> {
     },
     taskService, // Phase 58.4: task-aware routing
     db, // Phase 58.4: advisory lock transactions
+    webhookFilter, // Phase 75: dedup and echo suppression
   };
 
   // GET /health -- liveness check
@@ -350,6 +355,27 @@ async function bootstrap(): Promise<void> {
 
   // 12. Start worker loop (AFTER server is listening)
   executor.startWorker();
+
+  // 12b. Webhook dedup cleanup -- hourly, 24h TTL (Phase 75)
+  // TimeoutScheduler's pg-boss is available after executor.startWorker() calls start()
+  const boss = timeoutScheduler.getBoss();
+  if (boss) {
+    const DEDUP_CLEANUP_QUEUE = "webhook-dedup-cleanup";
+    await boss.createQueue(DEDUP_CLEANUP_QUEUE);
+    await boss.schedule(DEDUP_CLEANUP_QUEUE, "0 * * * *", {});
+    await boss.work(DEDUP_CLEANUP_QUEUE, async () => {
+      const result = await pool.query(
+        "DELETE FROM agents.processed_webhook_events WHERE received_at < now() - interval '24 hours'",
+      );
+      if (result.rowCount && result.rowCount > 0) {
+        logger.info(
+          { deletedCount: result.rowCount },
+          "Webhook dedup cleanup completed",
+        );
+      }
+    });
+    logger.info("Webhook dedup cleanup scheduled (hourly, 24h TTL)");
+  }
 
   // 13. Graceful shutdown
   let isShuttingDown = false;

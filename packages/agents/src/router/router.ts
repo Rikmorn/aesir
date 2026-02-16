@@ -194,6 +194,22 @@ export async function routeEvent(
     "Event adapted",
   );
 
+  // 1.25. Webhook filter: dedup + echo suppression (Phase 75)
+  if (deps.webhookFilter) {
+    const filterResult = await deps.webhookFilter(incomingEvent);
+    if (filterResult.action === "suppress") {
+      eventLogger.debug(
+        { reason: filterResult.reason },
+        "Event suppressed by webhook filter",
+      );
+      return {
+        received: true,
+        action:
+          filterResult.reason === "duplicate" ? "deduplicated" : "ignored",
+      };
+    }
+  }
+
   // 1.5. Task routing branch (early exit)
   // Per CONTEXT.md: all events with taskId go through task routing regardless of origin
   if (incomingEvent.taskId && deps.taskService && deps.db) {

@@ -8,10 +8,12 @@
 
 import type { PinoLogger } from "@aesir/platform";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import type { IncomingEvent } from "../adapters/types.js";
 import type { ConversationExecutor, EventRouter } from "../framework/types.js";
 import type { ReplyContext } from "../shared/communication/types.js";
 import type * as agentsSchemaModule from "../shared/db/schema.js";
 import type { TaskService } from "../shared/services/task-service.js";
+import type { WebhookFilterResult } from "./webhook-filter.js";
 
 // ---------------------------------------------------------------------------
 // Route Result
@@ -92,6 +94,8 @@ export interface RouteEventDeps {
   taskService?: TaskService | undefined;
   /** Database client for advisory lock transactions (Phase 58.4) */
   db?: NodePgDatabase<typeof agentsSchemaModule> | undefined;
+  /** Webhook filter for dedup and echo suppression (Phase 75) */
+  webhookFilter?: (event: IncomingEvent) => Promise<WebhookFilterResult>;
 }
 
 /**

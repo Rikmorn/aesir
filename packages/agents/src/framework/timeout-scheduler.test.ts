@@ -166,7 +166,7 @@ describe("createTimeoutScheduler", () => {
   });
 
   describe("factory", () => {
-    it("creates PgBoss with correct options (db adapter, schema, schedule: false, migrate: true)", () => {
+    it("creates PgBoss with correct options (db adapter, schema, schedule: true, migrate: true)", () => {
       createTimeoutScheduler(
         createSchedulerOptions({ schema: "custom_schema" }),
       );
@@ -175,7 +175,7 @@ describe("createTimeoutScheduler", () => {
         expect.objectContaining({
           db: expect.any(Object),
           schema: "custom_schema",
-          schedule: false,
+          schedule: true,
           migrate: true,
         }),
       );

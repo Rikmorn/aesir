@@ -70,6 +70,12 @@ export interface TimeoutScheduler {
   cancel(jobId: string): Promise<void>;
 
   /**
+   * Get the pg-boss instance for shared job scheduling (e.g., dedup cleanup).
+   * Returns undefined if start() has not been called yet.
+   */
+  getBoss(): PgBoss | undefined;
+
+  /**
    * Graceful shutdown: stop pg-boss.
    */
   close(): Promise<void>;
@@ -164,8 +170,8 @@ export function createTimeoutScheduler(
   const boss = new PgBoss({
     db: dbAdapter,
     schema,
-    // Cron scheduling not needed (we use send() with startAfter, not cron)
-    schedule: false,
+    // Cron scheduling enabled for pg-boss schedule() (dedup cleanup job, Phase 75)
+    schedule: true,
     // Auto-create and migrate pg-boss schema on start()
     migrate: true,
   });
@@ -176,9 +182,16 @@ export function createTimeoutScheduler(
     logger.error({ err: error }, "pg-boss error");
   });
 
+  let started = false;
+
   return {
+    getBoss(): PgBoss | undefined {
+      return started ? boss : undefined;
+    },
+
     async start(executor: ConversationExecutor): Promise<void> {
       await boss.start();
+      started = true;
 
       // Ensure the queue exists (pg-boss v10+ requires explicit queue creation)
       await boss.createQueue(TIMEOUT_QUEUE);
