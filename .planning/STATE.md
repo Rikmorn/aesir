@@ -83,9 +83,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 75-03-PLAN.md (Phase 75 complete)
-Resume file: .planning/phases/75-echo-elimination/75-03-SUMMARY.md
+Stopped at: Phase 76 context gathered
+Resume file: .planning/phases/76-runtime-resilience/76-CONTEXT.md
 Next action: Plan Phase 76
 
 ---
-*Updated: 2026-02-16 -- Phase 75 complete (echo elimination -- 3 plans, pipeline fully wired)*
+*Updated: 2026-02-16 -- Phase 76 context gathered (runtime resilience -- failure notifications, MCP errors, recovery context, graceful shutdown)*
