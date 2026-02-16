@@ -8,9 +8,20 @@ An agentic development platform that automates software development workflows --
 
 End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
+## Current Milestone: v2.8 Resilience and Observability
+
+**Goal:** Stabilize the platform before domain modeling begins. Close gaps discovered during v2.7 live testing — every failure visible and notified, the dashboard tells the complete story, agents know what work exists before starting their own.
+
+**Target features:**
+- Quick fixes for v2.7 E2E issues (ISS-003, ISS-007, ISS-022, ISS-023)
+- Echo elimination (event ID dedup + actor-based echo suppression across all integrations)
+- Runtime resilience (failure notifications on all channels, MCP error classification, recovery context injection)
+- Dashboard observability (new event types, lifecycle event rendering, tool call grouping, sub-agent attribution)
+- Work correlation (correlation registry, work:register/query tools, disposition vocabulary, router integration)
+
 ## Current State
 
-**Version:** v2.7 Agent Collaboration shipped (2026-02-13)
+**Version:** v2.8 Resilience and Observability (in progress)
 
 **Tech Stack:**
 - TypeScript/Node.js monorepo (pnpm workspaces)
@@ -313,4 +324,4 @@ Lessons learned during development that guide future phases.
 | Hard constraints for critical agent behaviors | QA agent ended without completing tasks until a hard MUST constraint was added. For safety-critical tool calls (task:complete_task before end), strong directives earn their place. |
 
 ---
-*Last updated: 2026-02-13 after v2.7 milestone*
+*Last updated: 2026-02-16 after v2.8 milestone start*

@@ -5,13 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-13)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.7 Agent Collaboration shipped — planning next milestone
+**Current focus:** v2.8 Resilience and Observability
 
 ## Current Position
 
-Phase: 73 of 73
-Status: v2.7 milestone ARCHIVED — ready for next milestone
-Last activity: 2026-02-13 — Milestone archived, PROJECT.md evolved
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-16 — Milestone v2.8 started
 
 ## Milestone History
 
@@ -58,10 +59,10 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-02-13
-Stopped at: v2.7 milestone archived
+Last session: 2026-02-16
+Stopped at: Milestone v2.8 initialization
 Resume file: None
-Next action: `/gsd:new-milestone` for next version
+Next action: Define requirements and create roadmap
 
 ---
-*Updated: 2026-02-13 — v2.7 Agent Collaboration archived*
+*Updated: 2026-02-16 — v2.8 Resilience and Observability started*
