@@ -114,7 +114,10 @@ See `.planning/milestones/v2.7-ROADMAP.md` for full details.
   1. A webhook delivered twice (same event ID) is processed only once -- the second delivery is rejected at the adapter level
   2. Agent-caused webhooks (Linear app actions, GitHub bot commits, Slack bot messages) are detected and suppressed before reaching the router
   3. Suppressed events (both duplicate and echo) are logged with the suppression reason for debugging transparency
-**Plans**: TBD
+**Plans:** 3 plans
+- [ ] 75-01-PLAN.md -- Foundation: dedup table migration, IncomingEvent actorInfo type, env config, webhook filter function (ECHO-01, ECHO-03)
+- [ ] 75-02-PLAN.md -- Integration normalizers: thread actor data through Linear, GitHub, Slack normalizers (ECHO-02)
+- [ ] 75-03-PLAN.md -- Wiring: adapter actorInfo extraction, router pipeline integration, pg-boss cleanup, bootstrap (ECHO-01, ECHO-02, ECHO-03)
 
 ### Phase 76: Runtime Resilience
 **Goal**: When a conversation fails, the system notifies all channels, classifies MCP errors for agent decision-making, and injects recovery context on crash resume
@@ -165,7 +168,7 @@ Phases 74 through 78. Phase 78 is independent of 76/77 and can execute in parall
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 74. Quick Fixes | 0/3 | Complete    | 2026-02-16 |
-| 75. Echo Elimination | 0/TBD | Not started | - |
+| 75. Echo Elimination | 0/3 | Not started | - |
 | 76. Runtime Resilience | 0/TBD | Not started | - |
 | 77. Dashboard Observability | 0/TBD | Not started | - |
 | 78. Work Correlation | 0/TBD | Not started | - |
