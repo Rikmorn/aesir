@@ -150,8 +150,17 @@ export function createWebhookRouter(deps: WebhookRouterDeps): Router {
           await onPRReview(payload, deliveryId);
         }
 
+        // Extract sender from raw payload for echo detection
+        const rawReviewPayload = JSON.parse(rawBody) as {
+          sender?: { login: string; type?: string };
+        };
+
         // Normalize and dispatch event (fire-and-forget)
-        const normalizedEvent = normalizePRReviewEvent(payload, deliveryId);
+        const normalizedEvent = normalizePRReviewEvent(
+          payload,
+          deliveryId,
+          rawReviewPayload.sender,
+        );
 
         // Look up task correlation for the PR
         const prRef = `${payload.repository.owner.login}/${payload.repository.name}#${payload.pull_request.number}`;
@@ -206,10 +215,16 @@ export function createWebhookRouter(deps: WebhookRouterDeps): Router {
                 await onPRClosed(prPayload, deliveryId);
               }
 
+              // Extract sender from raw payload for echo detection
+              const rawClosedPayload = payload as {
+                sender?: { login: string; type?: string };
+              };
+
               // Normalize and dispatch event (fire-and-forget)
               const normalizedEvent = normalizePRClosedEvent(
                 prPayload,
                 deliveryId,
+                rawClosedPayload.sender,
               );
 
               // Look up task correlation for the PR

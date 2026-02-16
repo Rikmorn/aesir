@@ -49,6 +49,9 @@ export function normalizeMessageEvent(
       threadTs: payload.threadTs,
       ts: payload.ts,
       teamId: payload.teamId,
+      // App ID for echo detection (identifies which Slack app sent the event)
+      ...("api_app_id" in payload.raw &&
+        payload.raw.api_app_id && { apiAppId: payload.raw.api_app_id }),
     },
   };
 }
@@ -76,6 +79,9 @@ export function normalizeAppMentionEvent(
       threadTs: payload.threadTs,
       ts: payload.ts,
       teamId: payload.teamId,
+      // App ID for echo detection (identifies which Slack app sent the event)
+      ...("api_app_id" in payload.raw &&
+        payload.raw.api_app_id && { apiAppId: payload.raw.api_app_id }),
     },
   };
 }

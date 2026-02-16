@@ -23,6 +23,7 @@ import type { PRClosedPayload, PRReviewPayload } from "../webhooks/parser.js";
 export function normalizePRReviewEvent(
   payload: PRReviewPayload,
   deliveryId: string,
+  sender?: { login: string; type?: string },
 ): NormalizedEvent {
   return {
     id: createId.event(),
@@ -44,6 +45,8 @@ export function normalizePRReviewEvent(
         name: payload.repository.name,
         fullName: payload.repository.full_name,
       },
+      // Sender for echo detection (e.g., type='Bot' = GitHub App)
+      ...(sender && { sender }),
     },
   };
 }
@@ -60,6 +63,7 @@ export function normalizePRMergedEvent(
   prUrl: string,
   repository: { owner: string; name: string; fullName: string },
   deliveryId: string,
+  sender?: { login: string; type?: string },
 ): NormalizedEvent {
   return {
     id: createId.event(),
@@ -72,6 +76,8 @@ export function normalizePRMergedEvent(
       prTitle,
       prUrl,
       repository,
+      // Sender for echo detection (e.g., type='Bot' = GitHub App)
+      ...(sender && { sender }),
     },
   };
 }
@@ -90,6 +96,7 @@ export function normalizePRMergedEvent(
 export function normalizePRClosedEvent(
   payload: PRClosedPayload,
   deliveryId: string,
+  sender?: { login: string; type?: string },
 ): NormalizedEvent {
   const isMerged = payload.pull_request.merged === true;
 
@@ -113,6 +120,8 @@ export function normalizePRClosedEvent(
         name: payload.repository.name,
         fullName: payload.repository.full_name,
       },
+      // Sender for echo detection (e.g., type='Bot' = GitHub App)
+      ...(sender && { sender }),
     },
   };
 }
