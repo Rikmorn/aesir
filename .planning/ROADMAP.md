@@ -84,7 +84,7 @@ See `.planning/milestones/v2.7-ROADMAP.md` for full details.
 
 ## Phases
 
-- [ ] **Phase 74: Quick Fixes** - Address self-contained v2.7 E2E issues that clear noise before infrastructure work
+- [x] **Phase 74: Quick Fixes** - Address self-contained v2.7 E2E issues that clear noise before infrastructure work (completed 2026-02-16)
 - [ ] **Phase 75: Echo Elimination** - Suppress duplicate and agent-caused events at the infrastructure level before they reach the router
 - [ ] **Phase 76: Runtime Resilience** - Close the loop between failure observation and recovery -- notify, classify, and adapt on every failure path
 - [ ] **Phase 77: Dashboard Observability** - Make the dashboard tell the full story of every conversation with lifecycle events, tool grouping, and sub-agent attribution
@@ -101,7 +101,7 @@ See `.planning/milestones/v2.7-ROADMAP.md` for full details.
   2. Dev-agent asks clarifying questions using `ask` + `wait_for` instead of `reply` (conversation pauses for user input)
   3. Test agents can spawn sub-agents without validation errors
   4. Test agents can use `communication:notify` without channel context failures
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 - [ ] 74-01-PLAN.md — Fix get_task_context graceful return and spawn_agent dynamic validation (QF-01, QF-03)
 - [ ] 74-02-PLAN.md — Remove notify from test agents and add structural validation test (QF-04)
 - [ ] 74-03-PLAN.md — Dev-agent prompt communication judgment criteria (QF-02)
@@ -164,7 +164,7 @@ Phases 74 through 78. Phase 78 is independent of 76/77 and can execute in parall
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 74. Quick Fixes | 0/3 | Planned | - |
+| 74. Quick Fixes | 0/3 | Complete    | 2026-02-16 |
 | 75. Echo Elimination | 0/TBD | Not started | - |
 | 76. Runtime Resilience | 0/TBD | Not started | - |
 | 77. Dashboard Observability | 0/TBD | Not started | - |
