@@ -41,6 +41,7 @@ Progress: [===.......] 30%
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
+| 74 | 02 | 3min | 2 | 9 |
 | 74 | 03 | 2min | 1 | 1 |
 
 ## Accumulated Context
@@ -48,6 +49,7 @@ Progress: [===.......] 30%
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
+- [Phase 74]: Removed communication:notify from all test agents -- aligns with v2.7 anti-pattern lesson
 
 ### Pending Todos
 
