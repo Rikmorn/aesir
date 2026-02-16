@@ -2,17 +2,19 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-13)
+See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.8 Resilience and Observability
+**Current focus:** v2.8 Resilience and Observability -- Phase 74 (Quick Fixes)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-16 — Milestone v2.8 started
+Phase: 74 of 78 (Quick Fixes)
+Plan: 0 of TBD in current phase
+Status: Ready to plan
+Last activity: 2026-02-16 -- Roadmap created for v2.8
+
+Progress: [..........] 0%
 
 ## Milestone History
 
@@ -35,7 +37,7 @@ Last activity: 2026-02-16 — Milestone v2.8 started
 - Total phases completed: 73
 - Total plans completed: 327
 
-*Performance metrics for v2.7 archived in .planning/milestones/v2.7-ROADMAP.md*
+*v2.8 metrics will be tracked as plans complete*
 
 ## Accumulated Context
 
@@ -43,26 +45,27 @@ Last activity: 2026-02-16 — Milestone v2.8 started
 
 See PROJECT.md Key Decisions table for full history.
 
-*v2.7 decisions archived to milestones/v2.7-ROADMAP.md*
-
 ### Pending Todos
 
 1. **Fix 4 pre-existing test failures** (code quality)
 2. **Run dev-agent container as non-root** (infrastructure)
 3. **11 tests skipped pending infrastructure** (testing)
-4. **Linear OAuth token migration** — deadline April 1, 2026 (LSDK-02 shipped)
+4. **Linear OAuth token migration** -- deadline April 1, 2026 (LSDK-02 shipped)
 
 ### Blockers/Concerns
 
-- Linear Agent SDK is developer preview — feature flag (LINEAR_AGENT_SDK_ENABLED) may be needed for fallback
+- Linear Agent SDK is developer preview -- feature flag (LINEAR_AGENT_SDK_ENABLED) may be needed for fallback
 - Linear OAuth token migration deadline: April 1, 2026
+- Echo suppression approach (actor identity vs. tool-call correlation) needs design decision during Phase 75 planning
+- Recovery context + history compaction boundary coordination needs design during Phase 76 planning
+- Work correlation routing precedence vs. SIGNAL_AGENT_MAP needs decision during Phase 78 planning
 
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Milestone v2.8 initialization
+Stopped at: Roadmap created for v2.8 Resilience and Observability
 Resume file: None
-Next action: Define requirements and create roadmap
+Next action: Plan Phase 74 (Quick Fixes)
 
 ---
-*Updated: 2026-02-16 — v2.8 Resilience and Observability started*
+*Updated: 2026-02-16 -- v2.8 roadmap created*
