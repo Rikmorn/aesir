@@ -43,9 +43,7 @@ export function createGetTaskContextTool(
       const taskId = parsed.data.taskId ?? ctx.taskId;
       if (!taskId) {
         return {
-          content:
-            "No task ID provided and no task associated with this conversation.",
-          isError: true,
+          content: "No active tasks found for this conversation.",
         };
       }
 
