@@ -1,7 +1,16 @@
 import type { NormalizedEvent } from "@aesir/types";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { adaptGitHubEvent } from "./github.js";
 import { IncomingEventSchema } from "./types.js";
+
+// Mock the config module for controlling echo.githubAppLogin
+vi.mock("../shared/env/config.js", () => ({
+  config: {
+    echo: {
+      githubAppLogin: "aesir-app[bot]",
+    },
+  },
+}));
 
 // ---------------------------------------------------------------------------
 // Helper
@@ -378,6 +387,92 @@ describe("adaptGitHubEvent", () => {
       expect(result?.message).toBe("PR #80 review (dismissed): Stale review");
 
       expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+  });
+
+  // --- Actor Info (Echo Suppression) ---
+
+  describe("actorInfo extraction", () => {
+    it("sets actorInfo.isBot = true when sender.login matches GITHUB_APP_LOGIN", () => {
+      const event = makeEvent({
+        type: "github.pull_request.merged",
+        payload: {
+          branchName: "feature/ABC-123",
+          prNumber: 42,
+          sender: { login: "aesir-app[bot]", type: "Bot" },
+        },
+      });
+
+      const result = adaptGitHubEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.actorInfo).toEqual({
+        isBot: true,
+        identifier: "aesir-app[bot]",
+      });
+      expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+
+    it("sets actorInfo.isBot = false when sender.login does not match", () => {
+      const event = makeEvent({
+        type: "github.pull_request.merged",
+        payload: {
+          branchName: "feature/ABC-123",
+          prNumber: 42,
+          sender: { login: "human-dev", type: "User" },
+        },
+      });
+
+      const result = adaptGitHubEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.actorInfo).toEqual({
+        isBot: false,
+        identifier: "human-dev",
+      });
+    });
+
+    it("leaves actorInfo undefined when sender is absent", () => {
+      const event = makeEvent({
+        type: "github.pull_request.merged",
+        payload: {
+          branchName: "feature/ABC-123",
+          prNumber: 42,
+        },
+      });
+
+      const result = adaptGitHubEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.actorInfo).toBeUndefined();
+    });
+
+    it("leaves actorInfo undefined when GITHUB_APP_LOGIN is not configured", async () => {
+      // Temporarily override the mock to simulate missing config
+      const configModule = await import("../shared/env/config.js");
+      const originalLogin = configModule.config.echo.githubAppLogin;
+      (
+        configModule.config as { echo: { githubAppLogin: string | undefined } }
+      ).echo.githubAppLogin = undefined;
+
+      const event = makeEvent({
+        type: "github.pull_request.merged",
+        payload: {
+          branchName: "feature/ABC-123",
+          prNumber: 42,
+          sender: { login: "aesir-app[bot]", type: "Bot" },
+        },
+      });
+
+      const result = adaptGitHubEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.actorInfo).toBeUndefined();
+
+      // Restore
+      (
+        configModule.config as { echo: { githubAppLogin: string | undefined } }
+      ).echo.githubAppLogin = originalLogin;
     });
   });
 });

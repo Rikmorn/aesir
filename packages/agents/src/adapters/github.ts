@@ -18,6 +18,7 @@
  */
 
 import type { NormalizedEvent } from "@aesir/types";
+import { config } from "../shared/env/config.js";
 import type { IncomingEvent } from "./types.js";
 
 /**
@@ -37,6 +38,15 @@ export function adaptGitHubEvent(event: NormalizedEvent): IncomingEvent | null {
   const payload = event.payload as Record<string, unknown>;
   const taskId = payload.taskId as string | undefined;
 
+  // Extract actor info for echo suppression (Phase 75)
+  // GitHub uses sender.login compared to the configured GITHUB_APP_LOGIN
+  const sender = payload.sender as { login: string; type?: string } | undefined;
+  const githubAppLogin = config.echo.githubAppLogin;
+  const actorInfo =
+    sender && githubAppLogin
+      ? { isBot: sender.login === githubAppLogin, identifier: sender.login }
+      : undefined;
+
   switch (event.type) {
     case "github.pull_request.merged": {
       const branchName = payload.branchName as string;
@@ -54,6 +64,7 @@ export function adaptGitHubEvent(event: NormalizedEvent): IncomingEvent | null {
         deduplicationId: event.correlationId,
         message: `PR #${prNumber} (${branchName}) was merged into main.`,
         ...(taskId !== undefined && { taskId }),
+        ...(actorInfo && { actorInfo }),
         ...(repository?.owner &&
           repository?.name &&
           prNumber && {
@@ -83,6 +94,7 @@ export function adaptGitHubEvent(event: NormalizedEvent): IncomingEvent | null {
         deduplicationId: event.correlationId,
         message: `PR #${prNumber} (${branchName}) was closed without merging.`,
         ...(taskId !== undefined && { taskId }),
+        ...(actorInfo && { actorInfo }),
         ...(repository?.owner &&
           repository?.name &&
           prNumber && {
@@ -118,6 +130,7 @@ export function adaptGitHubEvent(event: NormalizedEvent): IncomingEvent | null {
         deduplicationId: event.correlationId,
         message: `PR #${prNumber} review (${payload.reviewState}): ${(payload.reviewBody as string) || "(no comment)"}`,
         ...(taskId !== undefined && { taskId }),
+        ...(actorInfo && { actorInfo }),
         ...(repository?.owner &&
           repository?.name &&
           prNumber && {

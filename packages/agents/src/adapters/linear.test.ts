@@ -197,6 +197,77 @@ describe("adaptLinearEvent", () => {
     });
   });
 
+  // --- Actor Info (Echo Suppression) ---
+
+  describe("actorInfo extraction", () => {
+    it('sets actorInfo.isBot = true when actorType is "OauthClient"', () => {
+      const event = makeEvent({
+        type: "linear.comment.created",
+        payload: {
+          body: "Bot comment",
+          userId: "bot_1",
+          issueId: "PROJ-10",
+          actorType: "OauthClient",
+        },
+      });
+
+      const result = adaptLinearEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.actorInfo).toEqual({ isBot: true });
+      expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+
+    it('sets actorInfo.isBot = true when actorType is "application"', () => {
+      const event = makeEvent({
+        type: "linear.agent_session.created",
+        payload: {
+          issueId: "PROJ-11",
+          sessionId: "sess_1",
+          actorType: "application",
+        },
+      });
+
+      const result = adaptLinearEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.actorInfo).toEqual({ isBot: true });
+    });
+
+    it('sets actorInfo.isBot = false when actorType is "user"', () => {
+      const event = makeEvent({
+        type: "linear.comment.created",
+        payload: {
+          body: "Human comment",
+          userId: "user_1",
+          issueId: "PROJ-12",
+          actorType: "user",
+        },
+      });
+
+      const result = adaptLinearEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.actorInfo).toEqual({ isBot: false });
+    });
+
+    it("leaves actorInfo undefined when actorType is absent", () => {
+      const event = makeEvent({
+        type: "linear.comment.created",
+        payload: {
+          body: "No actor type",
+          userId: "user_2",
+          issueId: "PROJ-13",
+        },
+      });
+
+      const result = adaptLinearEvent(event);
+
+      expect(result).not.toBeNull();
+      expect(result?.actorInfo).toBeUndefined();
+    });
+  });
+
   // --- Agent Session Prompted ---
 
   describe("agent_session.prompted", () => {

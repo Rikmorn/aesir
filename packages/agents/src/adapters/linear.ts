@@ -27,6 +27,13 @@ export function adaptLinearEvent(event: NormalizedEvent): IncomingEvent | null {
   const payload = event.payload as Record<string, unknown>;
   const taskId = payload.taskId as string | undefined;
 
+  // Extract actor info for echo suppression (Phase 75)
+  // Linear uses actorType: 'OauthClient' or 'application' for bots, 'user' for humans
+  const actorType = payload.actorType as string | undefined;
+  const actorInfo = actorType
+    ? { isBot: actorType === "OauthClient" || actorType === "application" }
+    : undefined;
+
   switch (event.type) {
     case "linear.agent_session.created": {
       const issueId = payload.issueId as string;
@@ -39,6 +46,7 @@ export function adaptLinearEvent(event: NormalizedEvent): IncomingEvent | null {
         deduplicationId: event.correlationId,
         message: `New agent session created for issue ${issueId}`,
         ...(taskId !== undefined && { taskId }),
+        ...(actorInfo && { actorInfo }),
         replyContext: {
           channel: "linear" as const,
           issueId,
@@ -53,6 +61,7 @@ export function adaptLinearEvent(event: NormalizedEvent): IncomingEvent | null {
         data: payload,
         source: "linear:webhook",
         deduplicationId: event.correlationId,
+        ...(actorInfo && { actorInfo }),
         // No correlationKey -- this is an ignore event
       };
 
@@ -62,6 +71,7 @@ export function adaptLinearEvent(event: NormalizedEvent): IncomingEvent | null {
         data: payload,
         source: "linear:webhook",
         deduplicationId: event.correlationId,
+        ...(actorInfo && { actorInfo }),
         // No correlationKey -- this is an ignore event
       };
 
@@ -79,6 +89,7 @@ export function adaptLinearEvent(event: NormalizedEvent): IncomingEvent | null {
         deduplicationId: event.correlationId,
         message: payload.body as string,
         ...(taskId !== undefined && { taskId }),
+        ...(actorInfo && { actorInfo }),
         replyContext: { channel: "linear" as const, issueId },
       };
     }
@@ -98,6 +109,7 @@ export function adaptLinearEvent(event: NormalizedEvent): IncomingEvent | null {
         deduplicationId: event.correlationId,
         message: (payload.prompt ?? payload.body) as string,
         ...(taskId !== undefined && { taskId }),
+        ...(actorInfo && { actorInfo }),
         replyContext: {
           channel: "linear" as const,
           issueId,

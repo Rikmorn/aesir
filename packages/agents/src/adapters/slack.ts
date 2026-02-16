@@ -19,6 +19,7 @@
  */
 
 import type { NormalizedEvent } from "@aesir/types";
+import { config } from "../shared/env/config.js";
 import type { AdapterIgnore, IncomingEvent } from "./types.js";
 
 /**
@@ -33,6 +34,16 @@ export function adaptSlackEvent(
 
   const payload = event.payload as Record<string, unknown>;
   const correlatedTaskId = payload.taskId as string | undefined;
+
+  // Extract actor info for echo suppression (Phase 75)
+  // Slack uses apiAppId compared to the configured SLACK_APP_ID
+  // Only populated for Events API events (app_mention, message), not block actions
+  const apiAppId = payload.apiAppId as string | undefined;
+  const slackAppId = config.echo.slackAppId;
+  const actorInfo =
+    apiAppId && slackAppId
+      ? { isBot: apiAppId === slackAppId, identifier: apiAppId }
+      : undefined;
 
   switch (event.type) {
     case "slack.block_actions.approved": {
@@ -158,6 +169,7 @@ export function adaptSlackEvent(
         deduplicationId: event.correlationId,
         message: payload.text as string,
         ...(correlatedTaskId && { taskId: correlatedTaskId }),
+        ...(actorInfo && { actorInfo }),
         ...(teamId &&
           channelId && {
             replyContext: {
@@ -200,6 +212,7 @@ export function adaptSlackEvent(
         deduplicationId: event.correlationId,
         message: payload.text as string,
         ...(correlatedTaskId && { taskId: correlatedTaskId }),
+        ...(actorInfo && { actorInfo }),
         ...(teamId &&
           channelId && {
             replyContext: {

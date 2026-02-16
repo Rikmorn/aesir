@@ -1,11 +1,20 @@
 import type { NormalizedEvent } from "@aesir/types";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { adaptSlackEvent } from "./slack.js";
 import {
   type IncomingEvent,
   IncomingEventSchema,
   isAdapterIgnore,
 } from "./types.js";
+
+// Mock the config module for controlling echo.slackAppId
+vi.mock("../shared/env/config.js", () => ({
+  config: {
+    echo: {
+      slackAppId: "A123BOTAPP",
+    },
+  },
+}));
 
 /** Narrow adapter result to IncomingEvent for test assertions. */
 function asIncoming(
@@ -387,6 +396,118 @@ describe("adaptSlackEvent", () => {
         action: "ignore",
         reason: expect.stringContaining("app_mention"),
       });
+    });
+  });
+
+  // --- Actor Info (Echo Suppression) ---
+
+  describe("actorInfo extraction", () => {
+    it("sets actorInfo.isBot = true when apiAppId matches SLACK_APP_ID", () => {
+      const event = makeEvent({
+        type: "slack.app_mention.created",
+        payload: {
+          channel: "C123",
+          user: "U456",
+          text: "Hello",
+          ts: "1234567890.123456",
+          teamId: "T789",
+          apiAppId: "A123BOTAPP",
+        },
+      });
+
+      const result = asIncoming(adaptSlackEvent(event));
+
+      expect(result).not.toBeNull();
+      expect(result?.actorInfo).toEqual({
+        isBot: true,
+        identifier: "A123BOTAPP",
+      });
+      expect(IncomingEventSchema.safeParse(result).success).toBe(true);
+    });
+
+    it("sets actorInfo.isBot = false when apiAppId does not match", () => {
+      const event = makeEvent({
+        type: "slack.message.created",
+        payload: {
+          text: "Thread reply",
+          user: "U456",
+          channel: "C123",
+          threadTs: "1234567890.000000",
+          apiAppId: "A999OTHER",
+        },
+      });
+
+      const result = asIncoming(adaptSlackEvent(event));
+
+      expect(result).not.toBeNull();
+      expect(result?.actorInfo).toEqual({
+        isBot: false,
+        identifier: "A999OTHER",
+      });
+    });
+
+    it("leaves actorInfo undefined when apiAppId is absent", () => {
+      const event = makeEvent({
+        type: "slack.app_mention.created",
+        payload: {
+          channel: "C123",
+          user: "U456",
+          text: "Hello",
+          ts: "1234567890.123456",
+          teamId: "T789",
+        },
+      });
+
+      const result = asIncoming(adaptSlackEvent(event));
+
+      expect(result).not.toBeNull();
+      expect(result?.actorInfo).toBeUndefined();
+    });
+
+    it("does not add actorInfo to block_actions events regardless of apiAppId", () => {
+      const event = makeEvent({
+        type: "slack.block_actions.approved",
+        payload: {
+          taskIdentifier: "ABC-123",
+          apiAppId: "A123BOTAPP",
+        },
+      });
+
+      const result = asIncoming(adaptSlackEvent(event));
+
+      expect(result).not.toBeNull();
+      expect(result?.actorInfo).toBeUndefined();
+    });
+
+    it("leaves actorInfo undefined when SLACK_APP_ID is not configured", async () => {
+      // Temporarily override the mock to simulate missing config
+      const configModule = await import("../shared/env/config.js");
+      const originalAppId = configModule.config.echo.slackAppId;
+      (
+        configModule.config as { echo: { slackAppId: string | undefined } }
+      ).echo.slackAppId = undefined;
+
+      const event = makeEvent({
+        type: "slack.app_mention.created",
+        payload: {
+          channel: "C123",
+          user: "U456",
+          text: "Hello",
+          ts: "1234567890.123456",
+          teamId: "T789",
+          apiAppId: "A123BOTAPP",
+        },
+      });
+
+      const result = asIncoming(adaptSlackEvent(event));
+
+      expect(result).not.toBeNull();
+      expect(result?.actorInfo).toBeUndefined();
+
+      // Restore
+      (
+        configModule.config as { echo: { slackAppId: string | undefined } }
+      ).echo.slackAppId = originalAppId;
     });
   });
 });
