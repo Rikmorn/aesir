@@ -88,7 +88,7 @@ See `.planning/milestones/v2.7-ROADMAP.md` for full details.
 - [x] **Phase 75: Echo Elimination** - Suppress duplicate and agent-caused events at the infrastructure level before they reach the router (completed 2026-02-16)
 - [x] **Phase 76: Runtime Resilience** - Close the loop between failure observation and recovery -- notify, classify, and adapt on every failure path (completed 2026-02-17)
 - [x] **Phase 77: Dashboard Observability** - Make the dashboard tell the full story of every conversation with lifecycle events, tool grouping, and sub-agent attribution (completed 2026-02-17)
-- [ ] **Phase 78: Work Correlation** - Give the platform a formal concept of "what work exists for entity X" with registry, tools, and disposition vocabulary
+- [x] **Phase 78: Work Correlation** - Give the platform a formal concept of "what work exists for entity X" with registry, tools, and disposition vocabulary (completed 2026-02-17)
 
 ## Phase Details
 
@@ -167,7 +167,7 @@ Plans:
   4. The router uses a formal disposition vocabulary (new, signal, retry, supersede, duplicate) for routing decisions. Disposition vocabulary is router-only -- agents use `work:query` for data and reason naturally.
   5. Knowledge queries support metadata-based exact match mode alongside semantic search -- agents can query structured data (issue IDs, PR numbers) without relying on embedding similarity
   6. The router emits `event.routed` events with disposition, routing method, entity, and target -- routing decisions are visible on the dashboard
-**Plans:** 6 plans
+**Plans:** 6/6 plans complete
 
 Plans:
 - [ ] 78-01-PLAN.md -- Schema foundation: work_correlations table, knowledge metadata, event.routed type, entityRef on IncomingEvent (CORR-01, CORR-02, CORR-07, CORR-08)
@@ -193,7 +193,7 @@ Phases 74 through 78. Phase 78 is independent of 76/77 and can execute in parall
 | 75. Echo Elimination | 0/3 | Complete    | 2026-02-16 |
 | 76. Runtime Resilience | 0/3 | Complete    | 2026-02-17 |
 | 77. Dashboard Observability | 0/5 | Complete    | 2026-02-17 |
-| 78. Work Correlation | 0/6 | Not started | - |
+| 78. Work Correlation | 0/6 | Complete    | 2026-02-17 |
 
 ## Milestone Progress
 
