@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 78 of 78 (Work Correlation)
-Plan: 4 of 6 in current phase
-Status: Plan 78-04 complete
-Last activity: 2026-02-17 -- Plan 78-04 complete (knowledge query modes with metadata filtering)
+Plan: 5 of 6 in current phase
+Status: Plan 78-05 complete
+Last activity: 2026-02-17 -- Plan 78-05 complete (executor and worker loop correlation wiring)
 
-Progress: [======>   ] 60%
+Progress: [========> ] 83%
 
 ## Milestone History
 
@@ -59,6 +59,7 @@ Progress: [======>   ] 60%
 | 78 | 02 | 5min | 2 | 4 |
 | 78 | 04 | 3min | 2 | 3 |
 | Phase 78 P03 | 5min | 2 tasks | 7 files |
+| 78 | 05 | 5min | 2 | 5 |
 
 ## Accumulated Context
 
@@ -107,6 +108,8 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 78]: Query results include metadata only when non-empty to reduce agent output noise
 - [Phase 78]: Conditional spread for metadata in store() to satisfy exactOptionalPropertyTypes
 - [Phase 78]: CorrelationStatus type used for updateStatus parameter instead of string -- type-safe status transitions
+- [Phase 78]: Fire-and-forget pattern (void + catch) for all correlation status propagation -- matches eventLog.append() pattern
+- [Phase 78]: correlationService added to RouteEventDeps proactively for Plan 06 correlation routing
 
 ### Pending Todos
 
@@ -126,9 +129,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 78-04-PLAN.md
-Resume file: .planning/phases/78-work-correlation/78-04-SUMMARY.md
-Next action: Execute 78-05-PLAN.md
+Stopped at: Completed 78-05-PLAN.md
+Resume file: .planning/phases/78-work-correlation/78-05-SUMMARY.md
+Next action: Execute 78-06-PLAN.md
 
 ---
-*Updated: 2026-02-17 -- Plan 78-04 complete (knowledge query modes with metadata filtering).*
+*Updated: 2026-02-17 -- Plan 78-05 complete (executor and worker loop correlation wiring).*
