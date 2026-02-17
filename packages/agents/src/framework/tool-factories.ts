@@ -59,10 +59,6 @@ import {
   createKnowledgeUpdateTool,
 } from "../shared/tools/knowledge/index.js";
 import {
-  createWorkQueryTool,
-  createWorkRegisterTool,
-} from "../shared/tools/work/index.js";
-import {
   createCompleteTaskTool,
   createCreateTaskTool,
   createDelegateTaskTool,
@@ -73,6 +69,10 @@ import {
   createRespondTaskTool,
 } from "../shared/tools/task/index.js";
 import type { CodebaseToolDeps } from "../shared/tools/types.js";
+import {
+  createWorkQueryTool,
+  createWorkRegisterTool,
+} from "../shared/tools/work/index.js";
 import type { AgentRegistry, ToolContext, ToolRegistry } from "./types.js";
 import { createWaitForTaskTool } from "./wait-for-task-tool.js";
 import {
@@ -373,9 +373,7 @@ export function registerAllTools(options: RegisterAllToolsOptions): void {
   // ── Work correlation tools (2) ──────────────────────────────────────
 
   const cs = options.correlationService;
-  registry.register("work:register", (ctx) =>
-    createWorkRegisterTool(cs, ctx),
-  );
+  registry.register("work:register", (ctx) => createWorkRegisterTool(cs, ctx));
   registry.register("work:query", (ctx) => createWorkQueryTool(cs, ctx));
 
   // ── Directory tools (2) ──────────────────────────────────────────────

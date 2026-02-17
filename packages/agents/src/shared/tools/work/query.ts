@@ -18,15 +18,12 @@ const WorkQueryInputSchema = z.object({
   entityType: z
     .enum(["linear_issue", "github_pr", "slack_thread"])
     .describe("Type of external entity"),
-  entityId: z
-    .string()
-    .min(1)
-    .describe("External entity identifier"),
+  entityId: z.string().min(1).describe("External entity identifier"),
 });
 
 export function createWorkQueryTool(
   correlationService: CorrelationService,
-  ctx: ToolContext,
+  _ctx: ToolContext,
 ): ToolDefinition {
   return {
     name: "work_query",
@@ -66,8 +63,7 @@ export function createWorkQueryTool(
           .join("\n\n");
 
         return {
-          content:
-            `Found ${results.length} work correlation(s) for ${parsed.data.entityType} ${parsed.data.entityId}:\n\n${formatted}`,
+          content: `Found ${results.length} work correlation(s) for ${parsed.data.entityType} ${parsed.data.entityId}:\n\n${formatted}`,
         };
       } catch (error) {
         const message =
