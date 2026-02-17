@@ -129,11 +129,15 @@ function mcpAdapter(
   displayName: string,
 ): (ctx: ToolContext) => ToolDefinition {
   return (ctx: ToolContext) => {
-    const allTools = createFn({
+    const deps: McpToolDeps = {
       agentId: ctx.agentId,
       correlationId: ctx.correlationId,
       taskId: ctx.taskId,
-    });
+    };
+    if (ctx.onMcpEvent) {
+      deps.onMcpEvent = ctx.onMcpEvent;
+    }
+    const allTools = createFn(deps);
     const tool = allTools.find((t) => t.name === displayName);
     if (!tool) {
       throw new Error(

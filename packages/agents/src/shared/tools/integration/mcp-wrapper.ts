@@ -26,6 +26,13 @@ export interface McpToolDeps {
   correlationId: string;
   /** Task ID from conversation's associated task (v2.5 task primitive) */
   taskId?: string | undefined;
+  /** Callback for MCP observability events. Set per-call by worker loop. */
+  onMcpEvent?: (event: {
+    type: string;
+    payload: Record<string, unknown>;
+  }) => void;
+  /** Current Anthropic tool_use ID. Set per-call by worker loop. */
+  toolCallId?: string;
 }
 
 /**
@@ -73,14 +80,21 @@ export function createMcpToolWrapper(
       }
 
       try {
-        const result = await callMcpTool({
+        const callOptions: Parameters<typeof callMcpTool>[0] = {
           integration: config.integration,
           tool: config.toolName,
           params: parsed.data as Record<string, unknown>,
           agentId: deps.agentId,
           correlationId: deps.correlationId,
           taskId: deps.taskId,
-        });
+        };
+        if (deps.onMcpEvent) {
+          callOptions.onMcpEvent = deps.onMcpEvent;
+        }
+        if (deps.toolCallId) {
+          callOptions.toolCallId = deps.toolCallId;
+        }
+        const result = await callMcpTool(callOptions);
         return { content: JSON.stringify(result, null, 2) };
       } catch (error) {
         if (error instanceof McpError) {

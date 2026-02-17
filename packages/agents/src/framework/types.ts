@@ -343,6 +343,11 @@ export interface ToolContext {
   spawnDeps?: SpawnAgentDeps | undefined;
   /** Delegation dependencies for cross-agent task delegation (populated by worker loop when agent has task:delegate) */
   delegationDeps?: DelegationDeps | undefined;
+  /** Callback for MCP observability events (mcp.error, mcp.rate_limited, etc.). Set by worker loop. */
+  onMcpEvent?: (event: {
+    type: string;
+    payload: Record<string, unknown>;
+  }) => void;
 }
 
 // ─── Spawn Agent Dependencies ───────────────────────────────────────────────

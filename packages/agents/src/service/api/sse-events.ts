@@ -95,6 +95,8 @@ function buildEventPayload(event: {
   id: string;
   conversation_id: string;
   agent_definition_id: string;
+  agent_instance_id: string;
+  parent_instance_id: string | null;
   type: string;
   payload: Record<string, unknown>;
   sequence: number;
@@ -107,6 +109,8 @@ function buildEventPayload(event: {
     id: event.id,
     conversationId: event.conversation_id,
     agentDefinitionId: event.agent_definition_id,
+    agentInstanceId: event.agent_instance_id,
+    parentInstanceId: event.parent_instance_id,
     type: event.type,
     payload: event.payload,
     sequence: event.sequence,

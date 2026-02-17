@@ -46,6 +46,8 @@ export interface McpCallOptions {
     type: string;
     payload: Record<string, unknown>;
   }) => void;
+  /** Anthropic tool_use ID for correlating MCP events with tool cards */
+  toolCallId?: string;
   /** Whether this call can be retried on transient errors (default: true) */
   retryable?: boolean;
 }

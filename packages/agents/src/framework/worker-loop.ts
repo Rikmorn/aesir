@@ -38,6 +38,7 @@ import { createHistoryManager } from "./history-manager.js";
 import { signalMatchesPendingWait } from "./signal-matching.js";
 import type { TimeoutScheduler } from "./timeout-scheduler.js";
 import type {
+  AgentEventType,
   AgentRegistry,
   ConversationExecutor,
   EventLog,
@@ -1153,11 +1154,36 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         ? createTokenBudget(definition.tokenBudget)
         : undefined;
 
+      // 5b. Track current tool call ID for MCP event correlation
+      // Updated by onToolCall callback before each tool execution.
+      // Used by onMcpEvent closure to inject toolCallId into emitted events.
+      let currentToolCallId: string | undefined;
+
       const toolContext: ToolContext = {
         agentId: conv.agent_definition_id,
         correlationId: conv.id,
         taskId: conv.task_id ?? undefined,
         logger: childLogger,
+        onMcpEvent: (event) => {
+          try {
+            eventLog.append({
+              conversationId: conv.id,
+              agentDefinitionId: conv.agent_definition_id,
+              agentDefinitionVersion: conv.agent_definition_version,
+              agentInstanceId: instanceId,
+              type: event.type as AgentEventType,
+              payload: {
+                ...event.payload,
+                toolCallId: currentToolCallId,
+              },
+            });
+          } catch (err) {
+            childLogger.warn(
+              { err, eventType: event.type },
+              "Failed to emit MCP event (non-fatal)",
+            );
+          }
+        },
         ...(needsSandbox &&
           sandboxManager && {
             containerManager: sandboxManager,
@@ -1363,6 +1389,8 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         input: unknown;
         id: string;
       }) => {
+        // Track current tool call ID for MCP event correlation
+        currentToolCallId = call.id;
         childLogger.info(
           { tool: call.name, toolCallId: call.id },
           "Tool called",

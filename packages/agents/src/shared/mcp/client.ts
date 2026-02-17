@@ -123,6 +123,7 @@ export async function callMcpTool<T = unknown>(
     correlationId,
     taskId,
     onMcpEvent,
+    toolCallId,
     retryable = true,
   } = options;
 
@@ -167,6 +168,7 @@ export async function callMcpTool<T = unknown>(
         payload: {
           tool,
           integration,
+          toolCallId,
           attempts: attempt,
           totalRetryMs,
           finalError: networkMessage,
@@ -208,6 +210,7 @@ export async function callMcpTool<T = unknown>(
         payload: {
           tool,
           integration,
+          toolCallId,
           status: response.status,
           message: errorData.error,
         },
@@ -231,6 +234,7 @@ export async function callMcpTool<T = unknown>(
         payload: {
           tool,
           integration,
+          toolCallId,
           attempt,
           retryAfterMs: delay > 0 ? delay : undefined,
         },
@@ -258,6 +262,7 @@ export async function callMcpTool<T = unknown>(
             payload: {
               tool,
               integration,
+              toolCallId,
               attempts: attempt,
               totalRetryMs,
               finalStatus: 429,
@@ -304,6 +309,7 @@ export async function callMcpTool<T = unknown>(
         payload: {
           tool,
           integration,
+          toolCallId,
           attempts: attempt,
           totalRetryMs,
           finalStatus: response.status,
