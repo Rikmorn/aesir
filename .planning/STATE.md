@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.8 Resilience and Observability -- Phase 77 in progress
+**Current focus:** v2.8 Resilience and Observability -- Phase 78 in progress
 
 ## Current Position
 
-Phase: 77 of 78 (Dashboard Observability)
-Plan: 5 of 5 in current phase
-Status: Phase 77 complete
-Last activity: 2026-02-17 -- Plan 77-05 complete (filter chips, metrics bar, full renderer integration)
+Phase: 78 of 78 (Work Correlation)
+Plan: 1 of 6 in current phase
+Status: Plan 78-01 complete
+Last activity: 2026-02-17 -- Plan 78-01 complete (schema foundations: work_correlations, knowledge metadata, event.routed, entityRef, entity_update)
 
-Progress: [==========] 100%
+Progress: [======>   ] 60%
 
 ## Milestone History
 
@@ -55,6 +55,7 @@ Progress: [==========] 100%
 | 77 | 03 | 4min | 2 | 2 |
 | 77 | 04 | 2min | 2 | 3 |
 | 77 | 05 | 5min | 2 | 4 |
+| 78 | 01 | 3min | 2 | 9 |
 
 ## Accumulated Context
 
@@ -93,6 +94,9 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 77]: Static AGENT_DOT_COLORS array parallel to AGENT_PILL_COLORS for Tailwind build-time class scanning
 - [Phase 77]: Failures filter is additive -- failed items show regardless of category filter when Failures chip is on
 - [Phase 77]: LlmResponseRow extracted from EventItem; all other event kinds use specialized renderers
+- [Phase 78]: Drizzle unique constraint mirrors SQL composite PK -- Drizzle ORM lacks composite PK support
+- [Phase 78]: JSONB default uses {} object not '{}' string -- Drizzle types require matching TS type for defaults
+- [Phase 78]: KNOWN_SIGNAL_TYPES as const array for discoverability without constraining signal type validation
 
 ### Pending Todos
 
@@ -112,9 +116,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Phase 78 context gathered
-Resume file: .planning/phases/78-work-correlation/78-CONTEXT.md
-Next action: Plan Phase 78
+Stopped at: Completed 78-01-PLAN.md
+Resume file: .planning/phases/78-work-correlation/78-01-SUMMARY.md
+Next action: Execute 78-02-PLAN.md
 
 ---
-*Updated: 2026-02-17 -- Phase 78 context gathered (registration, routing, multi-correlation, disposition decisions captured).*
+*Updated: 2026-02-17 -- Plan 78-01 complete (schema foundations for work correlation).*
