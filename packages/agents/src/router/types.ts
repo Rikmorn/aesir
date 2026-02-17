@@ -12,6 +12,7 @@ import type { IncomingEvent } from "../adapters/types.js";
 import type { ConversationExecutor, EventRouter } from "../framework/types.js";
 import type { ReplyContext } from "../shared/communication/types.js";
 import type * as agentsSchemaModule from "../shared/db/schema.js";
+import type { CorrelationService } from "../shared/services/correlation-service.js";
 import type { TaskService } from "../shared/services/task-service.js";
 import type { WebhookFilterResult } from "./webhook-filter.js";
 
@@ -96,6 +97,8 @@ export interface RouteEventDeps {
   db?: NodePgDatabase<typeof agentsSchemaModule> | undefined;
   /** Webhook filter for dedup and echo suppression (Phase 75) */
   webhookFilter?: (event: IncomingEvent) => Promise<WebhookFilterResult>;
+  /** CorrelationService for work correlation routing (Phase 78) */
+  correlationService?: CorrelationService | undefined;
 }
 
 /**

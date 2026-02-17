@@ -173,6 +173,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
     sandboxSetup,
     taskService,
     directoryService,
+    correlationService,
   } = options;
 
   // executor is accessed via options.executor (late-bound reference)
@@ -1003,6 +1004,16 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
       // 2. Initialize event log sequence
       await eventLog.initSequence(conv.id);
 
+      // 2b. Update correlation status to active (Phase 78)
+      if (correlationService) {
+        void correlationService.updateStatus(conv.id, "active").catch((err) => {
+          childLogger.warn(
+            { err },
+            "Failed to update correlation status to active (non-fatal)",
+          );
+        });
+      }
+
       // 3. Determine if this is a fresh start or resume
       const existingMessages = (conv.messages ??
         []) as Anthropic.MessageParam[];
@@ -1700,6 +1711,18 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
           });
           await eventLog.flush();
 
+          // Update correlation status to waiting (Phase 78)
+          if (correlationService) {
+            void correlationService
+              .updateStatus(conv.id, "waiting")
+              .catch((err) => {
+                childLogger.warn(
+                  { err },
+                  "Failed to update correlation status to waiting (non-fatal)",
+                );
+              });
+          }
+
           childLogger.info(
             { waitTypes: waitForState.waitTypes },
             "Conversation paused, waiting for signal",
@@ -1736,6 +1759,18 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
           payload: { output: result.output.slice(0, 500) },
         });
         await eventLog.flush();
+
+        // Update correlation status to completed (Phase 78)
+        if (correlationService) {
+          void correlationService
+            .updateStatus(conv.id, "completed")
+            .catch((err) => {
+              childLogger.warn(
+                { err },
+                "Failed to update correlation status to completed (non-fatal)",
+              );
+            });
+        }
 
         childLogger.info("Conversation completed");
       } else if (
@@ -1794,6 +1829,18 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
             eventLog,
             instanceId,
           });
+
+          // Update correlation status to failed (Phase 78)
+          if (correlationService) {
+            void correlationService
+              .updateStatus(conv.id, "failed")
+              .catch((err) => {
+                childLogger.warn(
+                  { err },
+                  "Failed to update correlation status to failed (non-fatal)",
+                );
+              });
+          }
 
           childLogger.error(
             { status: result.status },
@@ -1943,6 +1990,18 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
             eventLog,
             instanceId,
           });
+
+          // Update correlation status to failed (Phase 78)
+          if (correlationService) {
+            void correlationService
+              .updateStatus(conv.id, "failed")
+              .catch((corrErr) => {
+                childLogger.warn(
+                  { err: corrErr },
+                  "Failed to update correlation status to failed (non-fatal)",
+                );
+              });
+          }
         }
       } catch (persistError) {
         childLogger.error(

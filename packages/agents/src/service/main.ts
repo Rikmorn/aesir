@@ -187,6 +187,7 @@ async function bootstrap(): Promise<void> {
     concurrencyLimit: config.service.maxConcurrentConversations,
     taskService,
     directoryService,
+    correlationService,
   });
 
   // 8b. TaskSignalDispatcher -- fires completion/failure signals to delegating agents
@@ -261,6 +262,7 @@ async function bootstrap(): Promise<void> {
     taskService, // Phase 58.4: task-aware routing
     db, // Phase 58.4: advisory lock transactions
     webhookFilter, // Phase 75: dedup and echo suppression
+    correlationService, // Phase 78: work correlation routing
   };
 
   // Shutdown flag -- declared early so the health endpoint closure can capture it
