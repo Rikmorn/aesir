@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import {
   Collapsible,
@@ -18,7 +18,142 @@ import type { ConversationEvent } from "@/services/conversations";
 
 import { EventContentDisplay } from "./event-content";
 import { EventIcon } from "./event-icon";
+import { ToolCallCard } from "./event-renderers/tool-call-card";
 import { JsonPayload } from "./json-payload";
+
+// ─── Timeline Item Types ─────────────────────────────────────────────────────
+
+export type TimelineItem =
+  | {
+      kind: "tool_card";
+      called: ConversationEvent;
+      result: ConversationEvent | null;
+      mcpErrors: ConversationEvent[];
+    }
+  | { kind: "lifecycle_banner"; event: ConversationEvent }
+  | { kind: "llm_response"; event: ConversationEvent }
+  | { kind: "signal"; event: ConversationEvent }
+  | { kind: "sub_agent_lifecycle"; event: ConversationEvent }
+  | { kind: "generic"; event: ConversationEvent };
+
+// ─── Event Grouping Pipeline ─────────────────────────────────────────────────
+
+/**
+ * Transform a flat array of conversation events into grouped timeline items.
+ *
+ * Tool events (called + succeeded/failed + MCP errors) are grouped by toolCallId
+ * into single tool_card items. Non-tool events pass through as their typed kind.
+ */
+export function groupTimelineEvents(
+  events: ConversationEvent[],
+): TimelineItem[] {
+  // 1. Build lookup maps by tool_call_id
+  const toolCalledMap = new Map<string, ConversationEvent>();
+  const toolResultMap = new Map<string, ConversationEvent>();
+  const mcpErrorMap = new Map<string, ConversationEvent[]>();
+
+  // 2. First pass: classify and index tool-related events
+  const consumedEventIds = new Set<string>();
+
+  for (const event of events) {
+    const toolCallId = (event.payload.tool_call_id ??
+      event.payload.toolCallId) as string | undefined;
+
+    if (event.type === "tool.called" && toolCallId) {
+      toolCalledMap.set(toolCallId, event);
+      consumedEventIds.add(event.id);
+    } else if (
+      (event.type === "tool.succeeded" || event.type === "tool.failed") &&
+      toolCallId
+    ) {
+      toolResultMap.set(toolCallId, event);
+      consumedEventIds.add(event.id);
+    } else if (
+      (event.type === "mcp.error" ||
+        event.type === "mcp.rate_limited" ||
+        event.type === "mcp.retries_exhausted") &&
+      toolCallId
+    ) {
+      if (!mcpErrorMap.has(toolCallId)) mcpErrorMap.set(toolCallId, []);
+      mcpErrorMap.get(toolCallId)!.push(event);
+      consumedEventIds.add(event.id);
+    }
+  }
+
+  // 3. Second pass: walk events in order, emit timeline items
+  const items: TimelineItem[] = [];
+  const emittedToolCallIds = new Set<string>();
+
+  for (const event of events) {
+    const toolCallId = (event.payload.tool_call_id ??
+      event.payload.toolCallId) as string | undefined;
+
+    // Tool events: emit card at the position of tool.called
+    if (
+      event.type === "tool.called" &&
+      toolCallId &&
+      !emittedToolCallIds.has(toolCallId)
+    ) {
+      emittedToolCallIds.add(toolCallId);
+      items.push({
+        kind: "tool_card",
+        called: event,
+        result: toolResultMap.get(toolCallId) ?? null,
+        mcpErrors: mcpErrorMap.get(toolCallId) ?? [],
+      });
+      continue;
+    }
+
+    // Skip consumed events (tool results, MCP errors already in cards)
+    if (consumedEventIds.has(event.id)) continue;
+
+    // MCP errors without toolCallId: render as standalone lifecycle banners
+    if (
+      event.type === "mcp.error" ||
+      event.type === "mcp.rate_limited" ||
+      event.type === "mcp.retries_exhausted"
+    ) {
+      items.push({ kind: "lifecycle_banner", event });
+      continue;
+    }
+
+    // LLM responses
+    if (event.type === "llm.response") {
+      items.push({ kind: "llm_response", event });
+      continue;
+    }
+
+    // Signals
+    if (event.type === "signal.received" || event.type === "signal.orphaned") {
+      items.push({ kind: "signal", event });
+      continue;
+    }
+
+    // Lifecycle events (including sub-agent lifecycle)
+    if (event.type.startsWith("agent.")) {
+      if (
+        event.parentInstanceId &&
+        (event.type === "agent.started" || event.type === "agent.completed")
+      ) {
+        items.push({ kind: "sub_agent_lifecycle", event });
+      } else {
+        items.push({ kind: "lifecycle_banner", event });
+      }
+      continue;
+    }
+
+    // notification.failed
+    if (event.type === "notification.failed") {
+      items.push({ kind: "lifecycle_banner", event });
+      continue;
+    }
+
+    // Everything else: generic fallback
+    items.push({ kind: "generic", event });
+  }
+
+  return items;
+}
 
 // ─── EventTimeline ──────────────────────────────────────────────────────────
 
@@ -27,7 +162,9 @@ interface EventTimelineProps {
 }
 
 export function EventTimeline({ events }: EventTimelineProps) {
-  if (events.length === 0) {
+  const items = useMemo(() => groupTimelineEvents(events), [events]);
+
+  if (items.length === 0) {
     return (
       <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
         No events recorded
@@ -37,13 +174,60 @@ export function EventTimeline({ events }: EventTimelineProps) {
 
   return (
     <div className="divide-y divide-border/50">
-      {events.map((event) => (
-        <EventItem
-          key={event.id}
-          event={event}
-          isSubAgent={event.parentInstanceId !== null}
-        />
-      ))}
+      {items.map((item) => {
+        switch (item.kind) {
+          case "tool_card":
+            return (
+              <ToolCallCard
+                key={item.called.id}
+                called={item.called}
+                result={item.result}
+                mcpErrors={item.mcpErrors}
+                isSubAgent={item.called.parentInstanceId !== null}
+              />
+            );
+          case "llm_response":
+            return (
+              <EventItem
+                key={item.event.id}
+                event={item.event}
+                isSubAgent={item.event.parentInstanceId !== null}
+              />
+            );
+          case "lifecycle_banner":
+            return (
+              <EventItem
+                key={item.event.id}
+                event={item.event}
+                isSubAgent={item.event.parentInstanceId !== null}
+              />
+            );
+          case "sub_agent_lifecycle":
+            return (
+              <EventItem
+                key={item.event.id}
+                event={item.event}
+                isSubAgent={true}
+              />
+            );
+          case "signal":
+            return (
+              <EventItem
+                key={item.event.id}
+                event={item.event}
+                isSubAgent={item.event.parentInstanceId !== null}
+              />
+            );
+          case "generic":
+            return (
+              <EventItem
+                key={item.event.id}
+                event={item.event}
+                isSubAgent={item.event.parentInstanceId !== null}
+              />
+            );
+        }
+      })}
     </div>
   );
 }
