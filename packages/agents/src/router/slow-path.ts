@@ -21,7 +21,11 @@ import { createReopenConversationTool } from "./tools/reopen-conversation.js";
 import { createSendMessageTool } from "./tools/send-message.js";
 import { createSignalConversationTool } from "./tools/signal-conversation.js";
 import { createStartConversationTool } from "./tools/start-conversation.js";
-import type { EventRouterDeps, RouteResult } from "./types.js";
+import type {
+  CorrelationContext,
+  EventRouterDeps,
+  RouteResult,
+} from "./types.js";
 
 // ---------------------------------------------------------------------------
 // Event Formatting
@@ -33,13 +37,20 @@ import type { EventRouterDeps, RouteResult } from "./types.js";
  * Produces a human-readable summary of the event with structured fields
  * and the full payload as JSON for the LLM to reason about.
  *
+ * When correlationContext is provided (Phase 78), appends existing work
+ * history for the entity to help the LLM make retry/supersede decisions.
+ *
  * Exported for testability.
  *
  * @param event - The normalized event to format
+ * @param correlationContext - Optional correlation context with terminal work history
  * @returns Formatted string for the LLM's initial message
  */
-export function formatEventForLLM(event: NormalizedEvent): string {
-  return `Route this event:
+export function formatEventForLLM(
+  event: NormalizedEvent,
+  correlationContext?: CorrelationContext,
+): string {
+  let formatted = `Route this event:
 
 Event ID: ${event.id}
 Type: ${event.type}
@@ -48,6 +59,20 @@ Timestamp: ${event.timestamp}
 
 Payload:
 ${JSON.stringify(event.payload, null, 2)}`;
+
+  if (
+    correlationContext &&
+    correlationContext.terminalCorrelations.length > 0
+  ) {
+    formatted += "\n\nExisting work for this entity:";
+    for (const corr of correlationContext.terminalCorrelations) {
+      formatted += `\n  - Conversation ${corr.conversationId} (${corr.agentId}), status: ${corr.status}, started ${corr.createdAt}`;
+    }
+    formatted +=
+      "\n\nConsider whether this event should retry the failed work, supersede the previous attempt, or start fresh.";
+  }
+
+  return formatted;
 }
 
 // ---------------------------------------------------------------------------
@@ -86,8 +111,8 @@ export async function routeViaAgentLoopV2(
     createSendMessageTool(deps),
   ];
 
-  // Format the event for the LLM
-  const formattedEvent = formatEventForLLM(event);
+  // Format the event for the LLM (with optional correlation context)
+  const formattedEvent = formatEventForLLM(event, deps.correlationContext);
 
   logger.info(
     { eventId: event.id, eventType: event.type },

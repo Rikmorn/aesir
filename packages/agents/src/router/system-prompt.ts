@@ -246,6 +246,13 @@ Action for product-agent: still forward as user_reply -- the product-agent handl
 5. Context matters -- consider the event source and type
 </intent_classification>
 
+<existing_work_context>
+When existing work history is shown for an entity:
+- If previous work failed and the event suggests retrying, signal the existing conversation or start a new one as appropriate.
+- If previous work completed but the event is a new request, start a new conversation.
+- Consider the status and recency of existing work when deciding.
+</existing_work_context>
+
 <constraints>
 - You MUST produce exactly ONE routing decision per event
 - You MUST NOT process event content beyond classification

@@ -381,8 +381,107 @@ export async function routeEvent(
       }
 
       case "slow_path": {
-        // Thread eventReplyContext from the incoming event into slow-path deps
-        // so router tools (signal_conversation, start_conversation) can auto-inject it
+        // Phase 78: Correlation fallback before slow-path LLM
+        if (routeDecision.event.entityRef && deps.correlationService) {
+          const entityRef = routeDecision.event.entityRef;
+
+          // 1. Check for active/waiting correlations
+          const activeCorrelations = await deps.correlationService.queryActive(
+            entityRef.entityType,
+            entityRef.entityId,
+          );
+
+          const firstActive = activeCorrelations[0];
+          if (firstActive) {
+            const primaryConversationId = firstActive.conversationId;
+
+            // Signal all active/waiting conversations (broadcast per CONTEXT.md)
+            for (const corr of activeCorrelations) {
+              const signal = {
+                type: "entity_update",
+                data: {
+                  originalEventType: routeDecision.event.type,
+                  ...routeDecision.event.data,
+                },
+                message: routeDecision.event.message,
+                source: routeDecision.event.source,
+                deduplicationId: routeDecision.event.deduplicationId,
+                ...(routeDecision.event.replyContext && {
+                  replyContext: routeDecision.event.replyContext,
+                }),
+              };
+
+              try {
+                await deps.executor.signal(corr.conversationId, signal);
+                eventLogger.info(
+                  {
+                    conversationId: corr.conversationId,
+                    entityType: entityRef.entityType,
+                    entityId: entityRef.entityId,
+                  },
+                  "Correlation fallback: signaled active conversation",
+                );
+              } catch (err) {
+                eventLogger.warn(
+                  { err, conversationId: corr.conversationId },
+                  "Correlation fallback: signal delivery failed (non-fatal)",
+                );
+              }
+            }
+
+            // Emit event.routed for correlation fallback
+            void emitRoutedEvent(deps, {
+              entity: entityRef,
+              disposition: "signal",
+              routingMethod: "correlation_fallback",
+              targetConversationId: primaryConversationId,
+            });
+
+            return {
+              received: true,
+              action: "signaled",
+              conversationId: primaryConversationId,
+            };
+          }
+
+          // 2. Check for terminal correlations (completed/failed) -- enrich slow-path
+          const terminalCorrelations =
+            await deps.correlationService.queryTerminal(
+              entityRef.entityType,
+              entityRef.entityId,
+            );
+
+          if (terminalCorrelations.length > 0) {
+            // Enrich slow-path context with correlation data
+            const enrichedDeps = {
+              ...deps,
+              correlationContext: {
+                entity: entityRef,
+                terminalCorrelations: terminalCorrelations.map((c) => ({
+                  conversationId: c.conversationId,
+                  agentId: c.agentId,
+                  status: c.status,
+                  createdAt: c.createdAt,
+                })),
+              },
+              ...(routeDecision.event.replyContext && {
+                eventReplyContext: routeDecision.event.replyContext,
+              }),
+            };
+
+            void routeViaAgentLoopV2(event, enrichedDeps).catch((error) => {
+              eventLogger.error(
+                { err: error },
+                "Background slow-path routing failed",
+              );
+              void sendRoutingAlertV2(event, deps);
+            });
+
+            return { received: true, action: "classifying" };
+          }
+        }
+
+        // No correlations or no entityRef -- existing slow-path behavior
         const slowPathDeps = {
           ...deps,
           ...(routeDecision.event.replyContext && {
