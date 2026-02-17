@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 77 of 78 (Dashboard Observability)
-Plan: 4 of 5 in current phase
-Status: Plan 77-04 complete
-Last activity: 2026-02-17 -- Plan 77-04 complete (lifecycle banners, sub-agent pills, generic fallback)
+Plan: 5 of 5 in current phase
+Status: Phase 77 complete
+Last activity: 2026-02-17 -- Plan 77-05 complete (filter chips, metrics bar, full renderer integration)
 
-Progress: [========..] 80%
+Progress: [==========] 100%
 
 ## Milestone History
 
@@ -54,6 +54,7 @@ Progress: [========..] 80%
 | 77 | 02 | 3min | 2 | 4 |
 | 77 | 03 | 4min | 2 | 2 |
 | 77 | 04 | 2min | 2 | 3 |
+| 77 | 05 | 5min | 2 | 4 |
 
 ## Accumulated Context
 
@@ -89,6 +90,9 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 77]: SubAgentPill color fallback via ?? AGENT_PILL_COLORS[0] for TypeScript noUncheckedIndexedAccess safety
 - [Phase 77]: Two-pass groupTimelineEvents pipeline: index by toolCallId first pass, emit TimelineItems in second pass
 - [Phase 77]: TimelineItem discriminated union with 6 kinds (tool_card, lifecycle_banner, llm_response, signal, sub_agent_lifecycle, generic)
+- [Phase 77]: Static AGENT_DOT_COLORS array parallel to AGENT_PILL_COLORS for Tailwind build-time class scanning
+- [Phase 77]: Failures filter is additive -- failed items show regardless of category filter when Failures chip is on
+- [Phase 77]: LlmResponseRow extracted from EventItem; all other event kinds use specialized renderers
 
 ### Pending Todos
 
@@ -108,9 +112,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 77-04-PLAN.md
-Resume file: .planning/phases/77-dashboard-observability/77-04-SUMMARY.md
-Next action: Execute 77-05-PLAN.md
+Stopped at: Completed 77-05-PLAN.md (Phase 77 complete)
+Resume file: .planning/phases/77-dashboard-observability/77-05-SUMMARY.md
+Next action: Begin Phase 78 planning
 
 ---
-*Updated: 2026-02-17 -- Plan 77-04 complete (lifecycle banners, sub-agent pills, generic fallback renderer)*
+*Updated: 2026-02-17 -- Plan 77-05 complete (filter chips, metrics bar, full renderer integration). Phase 77 complete.*
