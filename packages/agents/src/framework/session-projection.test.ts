@@ -63,6 +63,7 @@ function createMockEventLog() {
     flush: vi.fn(),
     close: vi.fn(),
     initSequence: vi.fn(),
+    getSequence: vi.fn().mockReturnValue(0),
   };
 }
 

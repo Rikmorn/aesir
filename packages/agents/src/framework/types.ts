@@ -158,6 +158,12 @@ export interface EventLog {
   flush(): Promise<void>;
 
   /**
+   * Get the current sequence counter for a conversation (in-memory, not queried from DB).
+   * Returns 0 if the sequence has not been initialized for this conversation.
+   */
+  getSequence(conversationId: string): number;
+
+  /**
    * Close the EventLog, flushing remaining events and clearing timers.
    * Call during graceful shutdown.
    */

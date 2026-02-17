@@ -130,6 +130,7 @@ function createMockSpawnDeps(
       initSequence: vi.fn(),
       flush: vi.fn(),
       close: vi.fn(),
+      getSequence: vi.fn().mockReturnValue(0),
     } as unknown as EventLog,
     parentDefinition: createMockParentDefinition(),
     parentInstanceId: "inst_parent12345",

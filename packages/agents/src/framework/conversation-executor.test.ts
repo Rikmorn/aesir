@@ -178,6 +178,7 @@ function createMockEventLog() {
     flush: vi.fn().mockResolvedValue(undefined),
     close: vi.fn().mockResolvedValue(undefined),
     initSequence: vi.fn().mockResolvedValue(undefined),
+    getSequence: vi.fn().mockReturnValue(0),
   };
 }
 

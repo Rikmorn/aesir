@@ -316,6 +316,10 @@ export function createEventLog(options: EventLogOptions): EventLog {
       };
     },
 
+    getSequence(conversationId: string): number {
+      return sequenceCounters.get(conversationId) ?? 0;
+    },
+
     async flush(): Promise<void> {
       await doFlush();
     },
