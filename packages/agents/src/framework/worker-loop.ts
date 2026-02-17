@@ -525,6 +525,135 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
     }
   }
 
+  // ─── Recovery Context ────────────────────────────────────────────────
+
+  /**
+   * Truncate a string output to a maximum length, appending "..." if truncated.
+   */
+  function truncateOutput(text: string | undefined, maxLen: number): string {
+    if (!text) return "(no output)";
+    return text.length > maxLen ? `${text.slice(0, maxLen)}...` : text;
+  }
+
+  /**
+   * Build a <recovery_context> block for injection when a conversation resumes
+   * after a crash. Queries the event log for events that occurred after the
+   * last persisted message boundary, giving the agent visibility into work
+   * that happened between its last checkpoint and the interruption.
+   *
+   * Returns null if no recovery events exist (nothing happened after checkpoint).
+   */
+  async function buildRecoveryContext(
+    conv: Conversation,
+    eventLogRef: EventLog,
+    childLogger: PinoLogger,
+  ): Promise<string | null> {
+    const afterSequence = conv.last_persisted_sequence ?? 0;
+
+    // Query events after last persistence point
+    const recoveryEvents = await eventLogRef.query(conv.id, {
+      types: [
+        "tool.succeeded",
+        "tool.failed",
+        "agent.completed",
+        "signal.received",
+      ],
+      afterSequence,
+    });
+
+    if (recoveryEvents.length === 0) return null;
+
+    childLogger.info(
+      { recoveryEvents: recoveryEvents.length, afterSequence },
+      "Building recovery context",
+    );
+
+    const lines: string[] = ["<recovery_context>"];
+
+    // Retry awareness
+    if (conv.retry_count > 0) {
+      const retryLabel =
+        conv.retry_count >= conv.max_retries
+          ? `retry ${conv.retry_count} of ${conv.max_retries} (final attempt)`
+          : `retry ${conv.retry_count} of ${conv.max_retries}`;
+      lines.push(
+        `This conversation was interrupted (${retryLabel}) and is being resumed.`,
+      );
+      if (conv.error_message) {
+        lines.push(`Previous interruption: ${conv.error_message}`);
+      }
+    } else {
+      lines.push("This conversation is being resumed after an interruption.");
+    }
+
+    lines.push("");
+    lines.push(
+      "Work completed since your last checkpoint (not in your message history):",
+    );
+    lines.push("");
+
+    for (const event of recoveryEvents) {
+      const payload = event.payload as Record<string, unknown>;
+
+      switch (event.type) {
+        case "agent.completed": {
+          // Sub-agent completions (most important -- re-spawning is expensive)
+          if (event.parent_instance_id) {
+            const role = (payload.role as string) ?? event.agent_definition_id;
+            const error = payload.error as string | undefined;
+            if (error) {
+              lines.push(
+                `- Sub-agent "${role}" failed: ${truncateOutput(error, 200)}`,
+              );
+            } else {
+              const output = truncateOutput(
+                payload.output as string | undefined,
+                300,
+              );
+              lines.push(`- Sub-agent "${role}" completed: ${output}`);
+            }
+          }
+          // Omit agent.completed events that are NOT sub-agents
+          break;
+        }
+        case "tool.succeeded": {
+          const toolName = (payload.tool_name as string) ?? "unknown";
+          const output = truncateOutput(
+            payload.output as string | undefined,
+            200,
+          );
+          lines.push(`- Tool "${toolName}" succeeded: ${output}`);
+          break;
+        }
+        case "tool.failed": {
+          const toolName = (payload.tool_name as string) ?? "unknown";
+          const error = truncateOutput(
+            (payload.error as string | undefined) ??
+              (payload.output as string | undefined),
+            200,
+          );
+          lines.push(`- Tool "${toolName}" failed: ${error}`);
+          break;
+        }
+        case "signal.received": {
+          const signalType =
+            (payload.signalType as string) ??
+            (payload.type as string) ??
+            "unknown";
+          const source = (payload.source as string) ?? "unknown";
+          lines.push(`- Signal received: ${signalType} from ${source}`);
+          break;
+        }
+      }
+    }
+
+    lines.push("");
+    lines.push("Continue from where you left off, accounting for the above.");
+    lines.push("</recovery_context>");
+
+    return lines.join("\n");
+  }
+
   // ─── Resume Activity Emission ─────────────────────────────────────────
 
   /**
@@ -918,6 +1047,33 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
           childLogger.error(
             { err: taskErr, taskId: conv.task_id },
             "Failed to inject task context (non-fatal)",
+          );
+        }
+      }
+
+      // 3c. Inject recovery context for resumed conversations (Phase 76)
+      // Recovery context tells the agent about work completed after its last
+      // persisted checkpoint but before the interruption. Ordering: task context
+      // first, active delegations second (in signal section), recovery context last.
+      if (isResumed) {
+        try {
+          const recoveryBlock = await buildRecoveryContext(
+            conv,
+            eventLog,
+            childLogger,
+          );
+          if (recoveryBlock) {
+            existingMessages.push({
+              role: "user" as const,
+              content: recoveryBlock,
+            });
+            childLogger.info("Recovery context injected into resume messages");
+          }
+        } catch (recoveryErr) {
+          // Non-fatal: log and continue without recovery context
+          childLogger.error(
+            { err: recoveryErr },
+            "Failed to build recovery context (non-fatal)",
           );
         }
       }
