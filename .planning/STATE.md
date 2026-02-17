@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.8 Resilience and Observability -- Phase 75 complete, ready for Phase 76
+**Current focus:** v2.8 Resilience and Observability -- Phase 76 in progress
 
 ## Current Position
 
-Phase: 75 of 78 (Echo Elimination) -- COMPLETE
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-02-16 -- Plan 75-03 complete (pipeline wiring)
+Phase: 76 of 78 (Runtime Resilience)
+Plan: 1 of 3 in current phase
+Status: Plan 76-01 complete
+Last activity: 2026-02-17 -- Plan 76-01 complete (MCP error classification)
 
-Progress: [====......] 43%
+Progress: [=====.....] 50%
 
 ## Milestone History
 
@@ -47,6 +47,7 @@ Progress: [====......] 43%
 | 75 | 01 | 3min | 2 | 6 |
 | 75 | 02 | 3min | 2 | 3 |
 | 75 | 03 | 6min | 2 | 13 |
+| 76 | 01 | 7min | 2 | 8 |
 
 ## Accumulated Context
 
@@ -64,6 +65,10 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 75]: Block action events excluded from Slack actorInfo -- user-initiated by definition
 - [Phase 75]: pg-boss schedule:true enables cron for dedup cleanup while keeping send+startAfter for timeouts
 - [Phase 75]: getBoss() returns undefined before start() to prevent premature job scheduling
+- [Phase 76]: Replaced fetch-retry-ts with custom retry loop -- library cannot classify permanent vs transient errors
+- [Phase 76]: Full jitter for retry delays (simpler, sufficient for 3-attempt budget)
+- [Phase 76]: 429 Retry-After > 10s returns error immediately to avoid blocking agents
+- [Phase 76]: Application-level errors (200 + isError) classified as permanent
 
 ### Pending Todos
 
@@ -82,10 +87,10 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-02-16
-Stopped at: Phase 76 context gathered
-Resume file: .planning/phases/76-runtime-resilience/76-CONTEXT.md
-Next action: Plan Phase 76
+Last session: 2026-02-17
+Stopped at: Completed 76-01-PLAN.md
+Resume file: .planning/phases/76-runtime-resilience/76-01-SUMMARY.md
+Next action: Execute Plan 76-02
 
 ---
-*Updated: 2026-02-16 -- Phase 76 context gathered (runtime resilience -- failure notifications, MCP errors, recovery context, graceful shutdown)*
+*Updated: 2026-02-17 -- Plan 76-01 complete (MCP error classification, retry loop, schema foundation)*
