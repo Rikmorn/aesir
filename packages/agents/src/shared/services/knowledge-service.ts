@@ -77,6 +77,7 @@ const StoreKnowledgeParamsSchema = z.object({
   author: z.string().min(1, "Author is required"),
   scope: z.enum(["shared", "private"]).optional(),
   tags: z.array(z.string()).optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 const QueryKnowledgeParamsSchema = z.object({
@@ -85,6 +86,11 @@ const QueryKnowledgeParamsSchema = z.object({
   type: z.enum(KNOWLEDGE_TYPES).optional(),
   topic: z.string().optional(),
   limit: z.number().int().min(1).max(MAX_QUERY_LIMIT).optional(),
+  mode: z
+    .enum(["semantic", "exact", "combined"])
+    .optional()
+    .default("semantic"),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 const SupersedeParamsSchema = z.object({
@@ -115,6 +121,7 @@ export interface KnowledgeQueryResult {
   content: string;
   author: string;
   createdAt: string;
+  metadata?: Record<string, unknown>;
 }
 
 // ─── Service Interface ──────────────────────────────────────────────────────
@@ -179,6 +186,7 @@ export function createKnowledgeService(
     tags: string[];
     embedding: number[] | null;
     expiresAt: Date;
+    metadata?: Record<string, unknown>;
   }): Promise<StoreKnowledgeResult> {
     const id = createId.knowledgeEntry();
 
@@ -192,6 +200,7 @@ export function createKnowledgeService(
       tags: params.tags,
       embedding: params.embedding,
       expires_at: params.expiresAt,
+      metadata: params.metadata ?? {},
     });
 
     return { id, topic: params.topic, type: params.type };
@@ -243,6 +252,9 @@ export function createKnowledgeService(
         tags: validated.tags ?? [],
         embedding,
         expiresAt,
+        ...(validated.metadata !== undefined
+          ? { metadata: validated.metadata }
+          : {}),
       });
 
       // If duplicate found, mark old entry as superseded
@@ -268,6 +280,7 @@ export function createKnowledgeService(
     async query(params) {
       const validated = QueryKnowledgeParamsSchema.parse(params);
       const limit = validated.limit ?? DEFAULT_QUERY_LIMIT;
+      const mode = validated.mode; // defaults to 'semantic' via schema
       const hasStructuredFilters =
         validated.type !== undefined || validated.topic !== undefined;
 
@@ -291,11 +304,114 @@ export function createKnowledgeService(
         );
       }
 
-      // Attempt to embed the query
+      // Metadata JSONB containment filter (applies to all modes when provided)
+      if (validated.metadata) {
+        baseConditions.push(
+          sql`${knowledgeEntries.metadata} @> ${JSON.stringify(validated.metadata)}::jsonb`,
+        );
+      }
+
+      // Helper: map DB rows to result format
+      function toResult(row: {
+        id: string;
+        type: string;
+        topic: string;
+        content: string;
+        author: string;
+        created_at: Date;
+        metadata: Record<string, unknown>;
+      }): KnowledgeQueryResult {
+        const result: KnowledgeQueryResult = {
+          id: row.id,
+          type: row.type,
+          topic: row.topic,
+          content: row.content,
+          author: row.author,
+          createdAt: row.created_at.toISOString(),
+        };
+        // Include metadata only when non-empty
+        if (
+          row.metadata &&
+          typeof row.metadata === "object" &&
+          Object.keys(row.metadata).length > 0
+        ) {
+          result.metadata = row.metadata;
+        }
+        return result;
+      }
+
+      // ── Exact mode: metadata/structured filters only, no embeddings ──
+      if (mode === "exact") {
+        const rows = await db
+          .select({
+            id: knowledgeEntries.id,
+            type: knowledgeEntries.type,
+            topic: knowledgeEntries.topic,
+            content: knowledgeEntries.content,
+            author: knowledgeEntries.author,
+            created_at: knowledgeEntries.created_at,
+            metadata: knowledgeEntries.metadata,
+          })
+          .from(knowledgeEntries)
+          .where(and(...baseConditions))
+          .orderBy(desc(knowledgeEntries.created_at))
+          .limit(limit);
+
+        return rows.map(toResult);
+      }
+
+      // ── Combined mode: metadata filter + semantic ranking ──
+      if (mode === "combined") {
+        const queryEmbedding = await generateEmbedding(validated.query);
+
+        if (queryEmbedding) {
+          const similarity = sql<number>`1 - (${cosineDistance(knowledgeEntries.embedding, queryEmbedding)})`;
+
+          const rows = await db
+            .select({
+              id: knowledgeEntries.id,
+              type: knowledgeEntries.type,
+              topic: knowledgeEntries.topic,
+              content: knowledgeEntries.content,
+              author: knowledgeEntries.author,
+              created_at: knowledgeEntries.created_at,
+              metadata: knowledgeEntries.metadata,
+              similarity,
+            })
+            .from(knowledgeEntries)
+            .where(and(...baseConditions, gt(similarity, SIMILARITY_THRESHOLD)))
+            .orderBy(desc(similarity))
+            .limit(limit);
+
+          return rows.map(toResult);
+        }
+
+        // Embedding failed -- fall back to metadata-only ordering
+        log.warn(
+          "Combined mode embedding failed, falling back to metadata-only ordering",
+        );
+        const rows = await db
+          .select({
+            id: knowledgeEntries.id,
+            type: knowledgeEntries.type,
+            topic: knowledgeEntries.topic,
+            content: knowledgeEntries.content,
+            author: knowledgeEntries.author,
+            created_at: knowledgeEntries.created_at,
+            metadata: knowledgeEntries.metadata,
+          })
+          .from(knowledgeEntries)
+          .where(and(...baseConditions))
+          .orderBy(desc(knowledgeEntries.created_at))
+          .limit(limit);
+
+        return rows.map(toResult);
+      }
+
+      // ── Semantic mode (default): embedding-based search ──
       const queryEmbedding = await generateEmbedding(validated.query);
 
       if (queryEmbedding) {
-        // Semantic search: cosine similarity ordering with threshold
         const similarity = sql<number>`1 - (${cosineDistance(knowledgeEntries.embedding, queryEmbedding)})`;
 
         const rows = await db
@@ -306,6 +422,7 @@ export function createKnowledgeService(
             content: knowledgeEntries.content,
             author: knowledgeEntries.author,
             created_at: knowledgeEntries.created_at,
+            metadata: knowledgeEntries.metadata,
             similarity,
           })
           .from(knowledgeEntries)
@@ -313,19 +430,11 @@ export function createKnowledgeService(
           .orderBy(desc(similarity))
           .limit(limit);
 
-        return rows.map((row) => ({
-          id: row.id,
-          type: row.type,
-          topic: row.topic,
-          content: row.content,
-          author: row.author,
-          createdAt: row.created_at.toISOString(),
-        }));
+        return rows.map(toResult);
       }
 
       // Embedding failed -- fallback behavior
-      if (hasStructuredFilters) {
-        // Fall back to structured-only query
+      if (hasStructuredFilters || validated.metadata) {
         const rows = await db
           .select({
             id: knowledgeEntries.id,
@@ -334,23 +443,17 @@ export function createKnowledgeService(
             content: knowledgeEntries.content,
             author: knowledgeEntries.author,
             created_at: knowledgeEntries.created_at,
+            metadata: knowledgeEntries.metadata,
           })
           .from(knowledgeEntries)
           .where(and(...baseConditions))
           .orderBy(desc(knowledgeEntries.created_at))
           .limit(limit);
 
-        return rows.map((row) => ({
-          id: row.id,
-          type: row.type,
-          topic: row.topic,
-          content: row.content,
-          author: row.author,
-          createdAt: row.created_at.toISOString(),
-        }));
+        return rows.map(toResult);
       }
 
-      // No embedding and no structured filters: return empty (MEM-08)
+      // No embedding and no structured/metadata filters: return empty (MEM-08)
       return [];
     },
 
