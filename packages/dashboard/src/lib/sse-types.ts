@@ -26,6 +26,8 @@ export interface SseEvent {
   id: string;
   conversationId: string;
   agentDefinitionId: string;
+  agentInstanceId: string;
+  parentInstanceId: string | null;
   type: string;
   payload: Record<string, unknown>;
   sequence: number;
@@ -68,5 +70,13 @@ export const ALL_EVENT_TYPES = [
   "agent.completed",
   "agent.paused",
   "agent.resumed",
+  "agent.reopened",
+  "agent.stale_recovered",
+  "agent.retry_scheduled",
   "signal.received",
+  "signal.orphaned",
+  "mcp.error",
+  "mcp.rate_limited",
+  "mcp.retries_exhausted",
+  "notification.failed",
 ] as const;

@@ -71,6 +71,12 @@ export const agentEventTypeValues = [
   "agent.reopened",
   "signal.received",
   "signal.orphaned",
+  "mcp.error",
+  "mcp.rate_limited",
+  "mcp.retries_exhausted",
+  "notification.failed",
+  "agent.stale_recovered",
+  "agent.retry_scheduled",
 ] as const;
 
 export type AgentEventType = (typeof agentEventTypeValues)[number];

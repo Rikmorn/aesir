@@ -229,6 +229,13 @@ export function LiveDetailPanels({
         }));
       }
 
+      if (sse.type === "agent.retry_scheduled") {
+        setConversationMeta((prev) => ({
+          ...prev,
+          retryCount: prev.retryCount + 1,
+        }));
+      }
+
       if (sse.type === "llm.response") {
         setConversationMeta((prev) => ({
           ...prev,
@@ -603,8 +610,8 @@ function sseEventToConversationEvent(sse: SseEvent): ConversationEvent {
     id: sse.id,
     conversationId: sse.conversationId,
     agentDefinitionId: sse.agentDefinitionId,
-    agentInstanceId: "",
-    parentInstanceId: null,
+    agentInstanceId: sse.agentInstanceId ?? "",
+    parentInstanceId: sse.parentInstanceId ?? null,
     sequence: sse.sequence,
     type: sse.type,
     payload: sse.payload,
