@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 76 of 78 (Runtime Resilience)
-Plan: 2 of 3 in current phase
-Status: Plan 76-02 complete
-Last activity: 2026-02-17 -- Plan 76-02 complete (failure notification, graceful shutdown)
+Plan: 3 of 3 in current phase
+Status: Phase 76 complete
+Last activity: 2026-02-17 -- Plan 76-03 complete (recovery context injection)
 
 Progress: [=====.....] 50%
 
@@ -49,6 +49,7 @@ Progress: [=====.....] 50%
 | 75 | 03 | 6min | 2 | 13 |
 | 76 | 01 | 7min | 2 | 8 |
 | 76 | 02 | 5min | 2 | 4 |
+| 76 | 03 | 5min | 2 | 10 |
 
 ## Accumulated Context
 
@@ -73,6 +74,9 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 76]: notifyFailure replaces emitErrorActivity entirely -- channel-agnostic via denormalizer
 - [Phase 76]: Drain timeout aborts via AbortController; aborted conversations re-enqueue naturally
 - [Phase 76]: pg-boss stopped before drain wait; health endpoint returns 503 during shutdown
+- [Phase 76]: getSequence() added to EventLog interface for in-memory sequence retrieval (no DB round-trip)
+- [Phase 76]: Recovery context injection non-fatal (try/catch) -- agent resumes without context rather than failing
+- [Phase 76]: 6 persistence boundaries for last_persisted_sequence (plan specified 5, queued-signal-at-pause also persists)
 
 ### Pending Todos
 
@@ -86,15 +90,15 @@ See PROJECT.md Key Decisions table for full history.
 - Linear Agent SDK is developer preview -- feature flag (LINEAR_AGENT_SDK_ENABLED) may be needed for fallback
 - Linear OAuth token migration deadline: April 1, 2026
 - Echo suppression: fully operational (Phase 75 complete) -- dedup + echo filter wired into routeEvent pipeline
-- Recovery context + history compaction boundary coordination needs design during Phase 76 planning
+- Recovery context + history compaction boundary coordination: last_persisted_sequence tracks checkpoint; recovery queries afterSequence
 - Work correlation routing precedence vs. SIGNAL_AGENT_MAP needs decision during Phase 78 planning
 
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 76-02-PLAN.md
-Resume file: .planning/phases/76-runtime-resilience/76-02-SUMMARY.md
-Next action: Execute Plan 76-03
+Stopped at: Completed 76-03-PLAN.md (Phase 76 complete)
+Resume file: .planning/phases/76-runtime-resilience/76-03-SUMMARY.md
+Next action: Begin Phase 77
 
 ---
-*Updated: 2026-02-17 -- Plan 76-02 complete (failure notification, graceful shutdown, drain timeout)*
+*Updated: 2026-02-17 -- Phase 76 complete (runtime resilience: MCP retry, failure notification, graceful shutdown, recovery context)*
