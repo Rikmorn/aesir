@@ -161,12 +161,21 @@ Plans:
 **Depends on**: Phase 74 (quick fixes clear noise; independent of Phases 76/77)
 **Requirements**: CORR-01, CORR-02, CORR-03, CORR-04, CORR-05, CORR-06, CORR-07, CORR-08
 **Success Criteria** (what must be TRUE):
-  1. An agent can register that it is working on an external entity (Linear issue, GitHub PR, Slack thread) via `work:register`, and another agent or the router can query that correlation via `work:query`
+  1. Trigger-started conversations auto-register their entity correlation at `start()`. Agents can register secondary entities via `work:register`. Another agent or the router can query correlations via `work:query`.
   2. When an event arrives about an entity with active work and no trigger match, the router signals the correlated conversation as a fallback (instead of dropping or slow-pathing the event)
-  3. Conversation status changes (completed, failed) automatically propagate to the correlation registry -- stale correlations do not persist
-  4. The router and agents share a formal disposition vocabulary (new, signal, retry, supersede, duplicate) for reasoning about events with existing work
+  3. Conversation status changes (completed, failed) automatically propagate to the correlation registry -- correlations are kept with terminal status (not deleted) to enable retry and supersede dispositions
+  4. The router uses a formal disposition vocabulary (new, signal, retry, supersede, duplicate) for routing decisions. Disposition vocabulary is router-only -- agents use `work:query` for data and reason naturally.
   5. Knowledge queries support metadata-based exact match mode alongside semantic search -- agents can query structured data (issue IDs, PR numbers) without relying on embedding similarity
-**Plans**: TBD
+  6. The router emits `event.routed` events with disposition, routing method, entity, and target -- routing decisions are visible on the dashboard
+**Plans:** 6 plans
+
+Plans:
+- [ ] 78-01-PLAN.md -- Schema foundation: work_correlations table, knowledge metadata, event.routed type, entityRef on IncomingEvent (CORR-01, CORR-02, CORR-07, CORR-08)
+- [ ] 78-02-PLAN.md -- Adapter entity extraction: Linear, GitHub, Slack entityRef (CORR-01)
+- [ ] 78-03-PLAN.md -- CorrelationService + work:register and work:query tools (CORR-03, CORR-04)
+- [ ] 78-04-PLAN.md -- Knowledge query metadata extension: exact/combined modes (CORR-08)
+- [ ] 78-05-PLAN.md -- Executor auto-registration + worker loop status propagation (CORR-02, CORR-05)
+- [ ] 78-06-PLAN.md -- Router correlation fallback + disposition vocabulary + event.routed emission (CORR-06, CORR-07)
 
 ## Progress
 
@@ -184,7 +193,7 @@ Phases 74 through 78. Phase 78 is independent of 76/77 and can execute in parall
 | 75. Echo Elimination | 0/3 | Complete    | 2026-02-16 |
 | 76. Runtime Resilience | 0/3 | Complete    | 2026-02-17 |
 | 77. Dashboard Observability | 0/5 | Complete    | 2026-02-17 |
-| 78. Work Correlation | 0/TBD | Not started | - |
+| 78. Work Correlation | 0/6 | Not started | - |
 
 ## Milestone Progress
 
