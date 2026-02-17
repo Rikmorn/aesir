@@ -50,6 +50,7 @@ Progress: [======....] 60%
 | 76 | 01 | 7min | 2 | 8 |
 | 76 | 02 | 5min | 2 | 4 |
 | 76 | 03 | 5min | 2 | 10 |
+| 77 | 01 | 7min | 2 | 9 |
 | 77 | 02 | 3min | 2 | 4 |
 
 ## Accumulated Context
@@ -78,6 +79,9 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 76]: getSequence() added to EventLog interface for in-memory sequence retrieval (no DB round-trip)
 - [Phase 76]: Recovery context injection non-fatal (try/catch) -- agent resumes without context rather than failing
 - [Phase 76]: 6 persistence boundaries for last_persisted_sequence (plan specified 5, queued-signal-at-pause also persists)
+- [Phase 77]: Migration 0013 needed: CHECK constraint from 0004 must be updated for new event types
+- [Phase 77]: onMcpEvent added to ToolContext so mcpAdapter can thread it from worker loop to callMcpTool
+- [Phase 77]: currentToolCallId tracked via closure in worker loop scope -- sequential tool calls within agent loop iteration
 - [Phase 77]: SSE field fallback pattern (sse.field ?? default) for backward compatibility during parallel plan execution
 - [Phase 77]: agent.retry_scheduled increments retryCount live via SSE handler for real-time metrics
 
