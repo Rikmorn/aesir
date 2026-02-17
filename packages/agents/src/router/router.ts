@@ -12,15 +12,67 @@
 
 import type { PinoLogger } from "@aesir/platform";
 import type { NormalizedEvent } from "@aesir/types";
+import { createId } from "@aesir/types";
 import { sql } from "drizzle-orm";
 import { ALL_ADAPTERS } from "../adapters/index.js";
 import { adaptPassThrough } from "../adapters/pass-through.js";
 import type { IncomingEvent } from "../adapters/types.js";
 import { isAdapterIgnore } from "../adapters/types.js";
+import { agentEvents } from "../shared/db/schema.js";
 import { callMcpTool } from "../shared/mcp/index.js";
 import { enrichInitialMessage } from "./enrichment.js";
 import { routeViaAgentLoopV2 } from "./slow-path.js";
-import type { RouteEventDeps, RouteEventResult } from "./types.js";
+import type {
+  Disposition,
+  RouteEventDeps,
+  RouteEventResult,
+  RoutingMethod,
+} from "./types.js";
+
+// ---------------------------------------------------------------------------
+// event.routed Emission (Phase 78 - CORR-06)
+// ---------------------------------------------------------------------------
+
+/**
+ * Emit an event.routed event via direct DB insert.
+ *
+ * Uses direct insert (NOT EventLog) because EventLog requires initSequence()
+ * per conversation_id which doesn't apply for synthetic router-scoped events.
+ *
+ * Non-fatal: failures are logged but never thrown.
+ */
+async function emitRoutedEvent(
+  deps: RouteEventDeps,
+  params: {
+    entity?: { entityType: string; entityId: string };
+    disposition: Disposition;
+    routingMethod: RoutingMethod;
+    targetConversationId?: string;
+    reasoning?: string;
+  },
+): Promise<void> {
+  if (!deps.db) return;
+  try {
+    await deps.db.insert(agentEvents).values({
+      id: createId.agentEvent(),
+      conversation_id: params.targetConversationId ?? "router",
+      agent_definition_id: "router",
+      agent_definition_version: "1.0",
+      agent_instance_id: "router",
+      sequence: 0,
+      type: "event.routed",
+      payload: {
+        entity: params.entity,
+        disposition: params.disposition,
+        routingMethod: params.routingMethod,
+        targetConversationId: params.targetConversationId,
+        ...(params.reasoning && { reasoning: params.reasoning }),
+      },
+    });
+  } catch (err) {
+    deps.logger.warn({ err }, "Failed to emit event.routed (non-fatal)");
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Task-Aware Routing (Phase 58.4)
@@ -253,6 +305,9 @@ export async function routeEvent(
           agentDefinitionId: routeDecision.agentDefinitionId,
           correlationKey: routeDecision.correlationKey,
           initialMessage,
+          ...(routeDecision.event.entityRef && {
+            entityRef: routeDecision.event.entityRef,
+          }),
           ...(routeDecision.event.replyContext && {
             replyContext: routeDecision.event.replyContext,
           }),
@@ -270,6 +325,16 @@ export async function routeEvent(
             "Conversation already exists (idempotent start)",
           );
         }
+
+        // Phase 78: emit event.routed for trigger_match starts
+        void emitRoutedEvent(deps, {
+          ...(routeDecision.event.entityRef && {
+            entity: routeDecision.event.entityRef,
+          }),
+          disposition: "new",
+          routingMethod: "trigger_match",
+          targetConversationId: conversationId,
+        });
 
         return { received: true, action: "started", conversationId };
       }
@@ -297,6 +362,16 @@ export async function routeEvent(
             "Signal delivered",
           );
         }
+
+        // Phase 78: emit event.routed for signal_match signals
+        void emitRoutedEvent(deps, {
+          ...(routeDecision.event.entityRef && {
+            entity: routeDecision.event.entityRef,
+          }),
+          disposition: "signal",
+          routingMethod: "signal_match",
+          targetConversationId: routeDecision.conversationId,
+        });
 
         return {
           received: true,

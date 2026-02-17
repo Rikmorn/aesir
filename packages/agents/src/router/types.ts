@@ -17,6 +17,44 @@ import type { TaskService } from "../shared/services/task-service.js";
 import type { WebhookFilterResult } from "./webhook-filter.js";
 
 // ---------------------------------------------------------------------------
+// Disposition & Routing Method (Phase 78 - CORR-07)
+// ---------------------------------------------------------------------------
+
+/** Routing disposition vocabulary -- classifies how an event was handled */
+export const dispositionValues = [
+  "new",
+  "signal",
+  "retry",
+  "supersede",
+  "duplicate",
+] as const;
+export type Disposition = (typeof dispositionValues)[number];
+
+/** Routing method tracking -- identifies which pipeline stage handled the event */
+export const routingMethodValues = [
+  "trigger_match",
+  "signal_match",
+  "correlation_fallback",
+  "slow_path",
+] as const;
+export type RoutingMethod = (typeof routingMethodValues)[number];
+
+// ---------------------------------------------------------------------------
+// Correlation Context (Phase 78)
+// ---------------------------------------------------------------------------
+
+/** Correlation context for slow-path enrichment (Phase 78) */
+export interface CorrelationContext {
+  entity: { entityType: string; entityId: string };
+  terminalCorrelations: Array<{
+    conversationId: string;
+    agentId: string;
+    status: string;
+    createdAt: string;
+  }>;
+}
+
+// ---------------------------------------------------------------------------
 // Route Result
 // ---------------------------------------------------------------------------
 
@@ -56,6 +94,8 @@ export interface EventRouterDeps {
   linearTeamId?: string | undefined;
   /** Reply context from the current incoming event, auto-injected into signal and start tool calls */
   eventReplyContext?: ReplyContext | undefined;
+  /** Correlation context for slow-path enrichment (Phase 78) */
+  correlationContext?: CorrelationContext | undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -99,6 +139,8 @@ export interface RouteEventDeps {
   webhookFilter?: (event: IncomingEvent) => Promise<WebhookFilterResult>;
   /** CorrelationService for work correlation routing (Phase 78) */
   correlationService?: CorrelationService | undefined;
+  /** Correlation context for slow-path enrichment (Phase 78) */
+  correlationContext?: CorrelationContext | undefined;
 }
 
 /**
