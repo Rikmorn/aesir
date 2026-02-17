@@ -96,9 +96,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 76-03-PLAN.md (Phase 76 complete)
-Resume file: .planning/phases/76-runtime-resilience/76-03-SUMMARY.md
-Next action: Begin Phase 77
+Stopped at: Phase 77 context gathered
+Resume file: .planning/phases/77-dashboard-observability/77-CONTEXT.md
+Next action: Plan Phase 77
 
 ---
-*Updated: 2026-02-17 -- Phase 76 complete (runtime resilience: MCP retry, failure notification, graceful shutdown, recovery context)*
+*Updated: 2026-02-17 -- Phase 77 context gathered (dashboard observability: tool cards, sub-agent hierarchy, lifecycle events, metrics)*
