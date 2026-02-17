@@ -144,9 +144,17 @@ Plans:
   1. Lifecycle events (started, paused, resumed, reopened, stale recovery, retry) render with distinct icons and colors in the conversation timeline -- visually distinguishable from tool call events
   2. Tool calls are grouped by `toolCallId` as expandable cards showing tool name, duration, and collapsible input/output
   3. Sub-agent work is visually attributed with agent name labels and indented/nested blocks -- the user can distinguish orchestrator work from sub-agent work at a glance
-  4. MCP error events (`mcp.error`, `mcp.rate_limited`, `mcp.retries_exhausted`) and `notification.failed` events are rendered in the timeline with appropriate severity styling
-  5. Conversation detail shows summary metrics: total tokens, cost estimate, wall-clock duration, tool call count/success rate, retry count
-**Plans**: TBD
+  4. MCP error events (`mcp.error`, `mcp.rate_limited`, `mcp.retries_exhausted`) render inside the associated tool card (correlated by `toolCallId`). `notification.failed` renders as a lifecycle banner with destructive styling.
+  5. Conversation detail shows summary metrics: total tokens (input/output), wall-clock duration, tool call count/success rate, retry count
+  6. Timeline filter chips allow filtering by category (Failures, Lifecycle, Tool calls, LLM) and by sub-agent name
+**Plans:** 5 plans
+
+Plans:
+- [ ] 77-01-PLAN.md -- Agent-service event gaps: new event types, emission, MCP onMcpEvent wiring, SSE payload expansion (DASH-01, DASH-02, DASH-06)
+- [ ] 77-02-PLAN.md -- Dashboard foundation: schema sync, SSE types, SseEvent interface, event icon/color extensions (DASH-03, DASH-05, DASH-07)
+- [ ] 77-03-PLAN.md -- Tool call card component and event grouping pipeline (DASH-04, DASH-06)
+- [ ] 77-04-PLAN.md -- Lifecycle banners, sub-agent pills, generic fallback renderer (DASH-03, DASH-05, DASH-07)
+- [ ] 77-05-PLAN.md -- Filter chips, metrics bar, full EventTimeline + LiveDetailPanels integration (DASH-08)
 
 ### Phase 78: Work Correlation
 **Goal**: The platform tracks which conversations are working on which external entities, enabling the router and agents to check existing work before starting duplicates
@@ -175,7 +183,7 @@ Phases 74 through 78. Phase 78 is independent of 76/77 and can execute in parall
 | 74. Quick Fixes | 0/3 | Complete    | 2026-02-16 |
 | 75. Echo Elimination | 0/3 | Complete    | 2026-02-16 |
 | 76. Runtime Resilience | 0/3 | Complete    | 2026-02-17 |
-| 77. Dashboard Observability | 0/TBD | Not started | - |
+| 77. Dashboard Observability | 0/5 | Not started | - |
 | 78. Work Correlation | 0/TBD | Not started | - |
 
 ## Milestone Progress
