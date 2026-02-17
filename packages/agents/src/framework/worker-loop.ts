@@ -25,6 +25,7 @@ import type {
   AgentLoopResult,
   LLMResponse,
 } from "../shared/agent-loop/types.js";
+import { denormalize } from "../shared/communication/denormalizer.js";
 import { appendReplyContextTag } from "../shared/communication/message-utils.js";
 import type { ReplyContext } from "../shared/communication/types.js";
 import type * as agentsSchemaModule from "../shared/db/schema.js";
@@ -429,46 +430,93 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
     return null;
   }
 
-  // ─── Error Activity Emission ─────────────────────────────────────────
+  // ─── Failure Notification ─────────────────────────────────────────────
 
   /**
-   * Emit a best-effort error activity to Linear when a conversation fails.
-   * Only fires when the conversation has a Linear agent session in its replyContext.
-   * Fire-and-forget: failures are logged but never mask the original error.
+   * Build a human-readable failure message for notification delivery.
+   * Includes agent name, classified failure reason, retry count, task context,
+   * and conversation ID for log correlation.
    */
-  async function emitErrorActivity(
-    replyContext: unknown,
-    errorMessage: string,
-    deps: { logger: PinoLogger; agentId: string; correlationId: string },
+  function buildFailureMessage(
+    conv: Conversation,
+    failureReason: string,
+  ): string {
+    const retryInfo =
+      conv.retry_count > 0
+        ? `Failed after ${conv.retry_count}/${conv.max_retries} retries`
+        : "Failed (non-retryable)";
+
+    const lines = [
+      `**${conv.agent_definition_id}** encountered an error and could not complete its work.`,
+      "",
+      `**Reason:** ${failureReason}`,
+      `**Status:** ${retryInfo}`,
+    ];
+
+    if (conv.task_id) {
+      lines.push(`**Task:** ${conv.task_id}`);
+    }
+    lines.push(`**Conversation:** ${conv.id}`);
+
+    return lines.join("\n");
+  }
+
+  /**
+   * Send a failure notification to the originating channel via the denormalizer.
+   * All channels (Slack, Linear, GitHub) receive the same notification.
+   *
+   * When no reply_context exists, the failure is logged and skipped
+   * (the dashboard is the backstop for these cases).
+   *
+   * When the notification itself fails to deliver, a notification.failed
+   * event is emitted to the event log for dashboard visibility.
+   */
+  async function notifyFailure(
+    conv: Conversation,
+    failureReason: string,
+    deps: { logger: PinoLogger; eventLog: EventLog; instanceId: string },
   ): Promise<void> {
-    try {
-      // Check if this conversation has a Linear agent session
-      const ctx = replyContext as Record<string, unknown> | undefined;
-      if (!ctx || ctx.channel !== "linear" || !ctx.agentSessionId) return;
-
-      const { callMcpTool } = await import("../shared/mcp/client.js");
-
-      await callMcpTool({
-        integration: "linear",
-        tool: "create_agent_activity",
-        params: {
-          agentSessionId: ctx.agentSessionId as string,
-          type: "error",
-          body: errorMessage,
-        },
-        agentId: deps.agentId,
-        correlationId: deps.correlationId,
-      });
-
+    const replyContext = conv.reply_context as ReplyContext | null;
+    if (!replyContext) {
       deps.logger.info(
-        { sessionId: ctx.agentSessionId },
-        "Error activity emitted to Linear",
+        { conversationId: conv.id },
+        "No reply_context, skipping failure notification (dashboard only)",
+      );
+      return;
+    }
+
+    const message = buildFailureMessage(conv, failureReason);
+
+    try {
+      await denormalize(
+        { replyContext, text: message },
+        {
+          agentId: conv.agent_definition_id,
+          correlationId: conv.id,
+          logger: deps.logger,
+        },
+      );
+      deps.logger.info(
+        { conversationId: conv.id, channel: replyContext.channel },
+        "Failure notification sent",
       );
     } catch (error) {
-      // Best-effort: don't let error activity emission failure mask the original error
+      // Backstop: emit notification.failed event for dashboard visibility
+      deps.eventLog.append({
+        conversationId: conv.id,
+        agentDefinitionId: conv.agent_definition_id,
+        agentDefinitionVersion: conv.agent_definition_version ?? "unknown",
+        agentInstanceId: deps.instanceId,
+        type: "notification.failed",
+        payload: {
+          channel: replyContext.channel,
+          error: error instanceof Error ? error.message : String(error),
+          originalReason: failureReason.slice(0, 500),
+        },
+      });
       deps.logger.warn(
-        { err: error },
-        "Failed to emit error activity to Linear (non-fatal)",
+        { err: error, conversationId: conv.id, channel: replyContext.channel },
+        "Failure notification delivery failed (dashboard backstop)",
       );
     }
   }
@@ -628,6 +676,13 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
             },
             "Failed stale conversation: exceeded max retries",
           );
+
+          // Notify originating channel of failure
+          await notifyFailure(row, "Stale heartbeat: exceeded max retries", {
+            logger,
+            eventLog,
+            instanceId: `notification-${row.id}`,
+          });
         }
       }
     } catch (error) {
@@ -707,6 +762,16 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
             updated_at: new Date(),
           })
           .where(eq(conversations.id, conv.id));
+
+        await notifyFailure(
+          conv,
+          `Agent definition not found: ${conv.agent_definition_id}`,
+          {
+            logger: childLogger,
+            eventLog,
+            instanceId,
+          },
+        );
         return;
       }
 
@@ -730,6 +795,16 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
                 updated_at: new Date(),
               })
               .where(eq(conversations.id, conv.id));
+
+            await notifyFailure(
+              conv,
+              `Sub-agent definition not found: ${agentId} (role: ${role})`,
+              {
+                logger: childLogger,
+                eventLog,
+                instanceId,
+              },
+            );
             return;
           }
         }
@@ -1428,20 +1503,16 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
           conv.retry_count >= conv.max_retries;
 
         if (isNonRetryable) {
-          // Emit error activity to Linear (best-effort, fire-and-forget)
-          const errorActivityMessage = result.output.includes(
-            "Token budget exhausted",
-          )
-            ? "I've run out of processing capacity for this request. Please try again or simplify the request."
+          // Classify failure reason for notification
+          const failureReason = result.output.includes("Token budget exhausted")
+            ? "Token budget exhausted"
             : result.output.includes("Agent aborted")
-              ? "I encountered an issue I couldn't recover from. Please try again."
-              : "Something went wrong. Please try again.";
-
-          await emitErrorActivity(conv.reply_context, errorActivityMessage, {
-            logger: childLogger,
-            agentId: conv.agent_definition_id,
-            correlationId: conv.id,
-          });
+              ? "Agent aborted"
+              : result.status === "max_iterations"
+                ? "Maximum iterations reached"
+                : result.status === "max_tokens"
+                  ? "Maximum tokens reached"
+                  : "Unrecoverable error";
 
           await db
             .update(conversations)
@@ -1468,6 +1539,13 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
             },
           });
           await eventLog.flush();
+
+          // Notify originating channel of failure
+          await notifyFailure(conv, failureReason, {
+            logger: childLogger,
+            eventLog,
+            instanceId,
+          });
 
           childLogger.error(
             { status: result.status },
@@ -1549,19 +1627,6 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
 
-        // Emit error activity to Linear on terminal failure (best-effort)
-        if (!isRetryable) {
-          await emitErrorActivity(
-            conv.reply_context,
-            "Something went wrong. Please try again.",
-            {
-              logger: childLogger,
-              agentId: conv.agent_definition_id,
-              correlationId: conv.id,
-            },
-          );
-        }
-
         await db
           .update(conversations)
           .set({
@@ -1574,6 +1639,15 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
             updated_at: new Date(),
           })
           .where(eq(conversations.id, conv.id));
+
+        // Notify originating channel on terminal failure
+        if (!isRetryable) {
+          await notifyFailure(conv, errorMessage, {
+            logger: childLogger,
+            eventLog,
+            instanceId,
+          });
+        }
       } catch (persistError) {
         childLogger.error(
           { err: persistError },
