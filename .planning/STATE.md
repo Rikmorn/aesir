@@ -58,6 +58,7 @@ Progress: [======>   ] 60%
 | 78 | 01 | 3min | 2 | 9 |
 | 78 | 02 | 5min | 2 | 4 |
 | 78 | 04 | 3min | 2 | 3 |
+| Phase 78 P03 | 5min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,7 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 78]: Metadata filter applies to all query modes (not just exact/combined) for consistent behavior
 - [Phase 78]: Query results include metadata only when non-empty to reduce agent output noise
 - [Phase 78]: Conditional spread for metadata in store() to satisfy exactOptionalPropertyTypes
+- [Phase 78]: CorrelationStatus type used for updateStatus parameter instead of string -- type-safe status transitions
 
 ### Pending Todos
 
