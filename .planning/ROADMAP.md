@@ -87,7 +87,7 @@ See `.planning/milestones/v2.7-ROADMAP.md` for full details.
 - [x] **Phase 74: Quick Fixes** - Address self-contained v2.7 E2E issues that clear noise before infrastructure work (completed 2026-02-16)
 - [x] **Phase 75: Echo Elimination** - Suppress duplicate and agent-caused events at the infrastructure level before they reach the router (completed 2026-02-16)
 - [x] **Phase 76: Runtime Resilience** - Close the loop between failure observation and recovery -- notify, classify, and adapt on every failure path (completed 2026-02-17)
-- [ ] **Phase 77: Dashboard Observability** - Make the dashboard tell the full story of every conversation with lifecycle events, tool grouping, and sub-agent attribution
+- [x] **Phase 77: Dashboard Observability** - Make the dashboard tell the full story of every conversation with lifecycle events, tool grouping, and sub-agent attribution (completed 2026-02-17)
 - [ ] **Phase 78: Work Correlation** - Give the platform a formal concept of "what work exists for entity X" with registry, tools, and disposition vocabulary
 
 ## Phase Details
@@ -147,7 +147,7 @@ Plans:
   4. MCP error events (`mcp.error`, `mcp.rate_limited`, `mcp.retries_exhausted`) render inside the associated tool card (correlated by `toolCallId`). `notification.failed` renders as a lifecycle banner with destructive styling.
   5. Conversation detail shows summary metrics: total tokens (input/output), wall-clock duration, tool call count/success rate, retry count
   6. Timeline filter chips allow filtering by category (Failures, Lifecycle, Tool calls, LLM) and by sub-agent name
-**Plans:** 5 plans
+**Plans:** 5/5 plans complete
 
 Plans:
 - [ ] 77-01-PLAN.md -- Agent-service event gaps: new event types, emission, MCP onMcpEvent wiring, SSE payload expansion (DASH-01, DASH-02, DASH-06)
@@ -183,7 +183,7 @@ Phases 74 through 78. Phase 78 is independent of 76/77 and can execute in parall
 | 74. Quick Fixes | 0/3 | Complete    | 2026-02-16 |
 | 75. Echo Elimination | 0/3 | Complete    | 2026-02-16 |
 | 76. Runtime Resilience | 0/3 | Complete    | 2026-02-17 |
-| 77. Dashboard Observability | 0/5 | Not started | - |
+| 77. Dashboard Observability | 0/5 | Complete    | 2026-02-17 |
 | 78. Work Correlation | 0/TBD | Not started | - |
 
 ## Milestone Progress
