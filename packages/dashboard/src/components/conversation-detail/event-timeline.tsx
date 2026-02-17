@@ -311,39 +311,71 @@ export function EventTimeline({ events, filters }: EventTimelineProps) {
 /**
  * Specialized renderer for sub-agent lifecycle events (started/completed).
  * Shows agent pill, event label, description excerpt, and timestamp.
- * Failed completions get destructive treatment.
+ * Expandable to show full output. Failed completions get destructive treatment
+ * and auto-expand.
  */
 function SubAgentLifecycleRow({ event }: { event: ConversationEvent }) {
   const isStarted = event.type === "agent.started";
   const isFailed =
     event.type === "agent.completed" && event.payload.status === "failed";
+  const [isOpen, setIsOpen] = useState(isFailed);
+
+  const fullDescription = getSubAgentFullDescription(event);
+  const hasExpandableContent = fullDescription.length > 0;
 
   return (
-    <div
-      className={cn(
-        "flex items-center gap-2 px-3 py-1.5 ml-6",
-        isFailed && "border-l-2 border-l-destructive bg-destructive/5",
-      )}
-    >
-      <SubAgentPill agentDefinitionId={event.agentDefinitionId} />
-      <EventIcon type={event.type} />
-      <span className="text-sm">
-        {isStarted
-          ? `Spawned ${event.agentDefinitionId}`
-          : `${event.agentDefinitionId} completed`}
-      </span>
-      <span className="flex-1 truncate text-xs text-muted-foreground">
-        {getSubAgentDescription(event)}
-      </span>
-      <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
-        {formatRelativeTime(event.timestamp)}
-      </span>
-    </div>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <div
+        className={cn(
+          "ml-6 transition-colors",
+          isFailed && "border-l-2 border-l-destructive bg-destructive/5",
+          hasExpandableContent && "hover:bg-accent/50",
+        )}
+      >
+        <CollapsibleTrigger
+          className="flex w-full items-center gap-2 px-3 py-1.5 text-left"
+          disabled={!hasExpandableContent}
+        >
+          {hasExpandableContent ? (
+            isOpen ? (
+              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            )
+          ) : (
+            <span className="h-3.5 w-3.5 shrink-0" />
+          )}
+          <SubAgentPill agentDefinitionId={event.agentDefinitionId} />
+          <EventIcon type={event.type} />
+          <span className="text-sm">
+            {isStarted
+              ? `Spawned ${event.agentDefinitionId}`
+              : `${event.agentDefinitionId} completed`}
+          </span>
+          <span className="flex-1 truncate text-xs text-muted-foreground">
+            {getSubAgentDescription(event)}
+          </span>
+          <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
+            {formatRelativeTime(event.timestamp)}
+          </span>
+        </CollapsibleTrigger>
+
+        {hasExpandableContent && (
+          <CollapsibleContent>
+            <div className="ml-10 border-l-2 border-border/50 pb-3 pl-3 pt-1">
+              <pre className="max-h-[300px] overflow-auto whitespace-pre-wrap text-xs text-muted-foreground">
+                {fullDescription}
+              </pre>
+            </div>
+          </CollapsibleContent>
+        )}
+      </div>
+    </Collapsible>
   );
 }
 
 /**
- * Extract a description string from a sub-agent lifecycle event payload.
+ * Extract a short description for the collapsed sub-agent lifecycle row.
  */
 function getSubAgentDescription(event: ConversationEvent): string {
   if (event.type === "agent.started") {
@@ -357,6 +389,23 @@ function getSubAgentDescription(event: ConversationEvent): string {
       return truncateLabel(`${status}: ${preview}`, 120);
     }
     return typeof status === "string" ? status : "";
+  }
+  return "";
+}
+
+/**
+ * Extract the full untruncated description for the expanded sub-agent lifecycle row.
+ */
+function getSubAgentFullDescription(event: ConversationEvent): string {
+  if (event.type === "agent.started") {
+    const task = event.payload.task;
+    const context = event.payload.initialContext;
+    if (typeof context === "string") return context;
+    return typeof task === "string" ? task : "";
+  }
+  if (event.type === "agent.completed") {
+    const preview = event.payload.outputPreview;
+    return typeof preview === "string" ? preview : "";
   }
   return "";
 }
