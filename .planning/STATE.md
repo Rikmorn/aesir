@@ -52,6 +52,7 @@ Progress: [========..] 80%
 | 76 | 03 | 5min | 2 | 10 |
 | 77 | 01 | 7min | 2 | 9 |
 | 77 | 02 | 3min | 2 | 4 |
+| 77 | 03 | 4min | 2 | 2 |
 | 77 | 04 | 2min | 2 | 3 |
 
 ## Accumulated Context
@@ -86,6 +87,8 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 77]: SSE field fallback pattern (sse.field ?? default) for backward compatibility during parallel plan execution
 - [Phase 77]: agent.retry_scheduled increments retryCount live via SSE handler for real-time metrics
 - [Phase 77]: SubAgentPill color fallback via ?? AGENT_PILL_COLORS[0] for TypeScript noUncheckedIndexedAccess safety
+- [Phase 77]: Two-pass groupTimelineEvents pipeline: index by toolCallId first pass, emit TimelineItems in second pass
+- [Phase 77]: TimelineItem discriminated union with 6 kinds (tool_card, lifecycle_banner, llm_response, signal, sub_agent_lifecycle, generic)
 
 ### Pending Todos
 
