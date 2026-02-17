@@ -78,6 +78,7 @@ export function createConversationExecutor(
     agentRegistry,
     toolRegistry,
     logger: parentLogger,
+    correlationService,
   } = options;
 
   // Validate required options
@@ -128,6 +129,8 @@ export function createConversationExecutor(
         loopOpts.taskService = options.taskService;
       if (options.directoryService !== undefined)
         loopOpts.directoryService = options.directoryService;
+      if (options.correlationService !== undefined)
+        loopOpts.correlationService = options.correlationService;
       // Late-bind executor reference so the worker loop can start delegated conversations
       loopOpts.executor = executor;
       workerLoop = createWorkerLoop(loopOpts);
@@ -275,6 +278,23 @@ export function createConversationExecutor(
               "Re-triggered conversation from terminal state",
             );
 
+            // Auto-register entity correlation for re-triggered conversation (Phase 78)
+            if (params.entityRef && correlationService) {
+              try {
+                await correlationService.register({
+                  entityType: params.entityRef.entityType,
+                  entityId: params.entityRef.entityId,
+                  conversationId: newId,
+                  agentId: params.agentDefinitionId,
+                });
+              } catch (err) {
+                logger.warn(
+                  { err, conversationId: newId },
+                  "Failed to register entity correlation (non-fatal)",
+                );
+              }
+            }
+
             return newId;
           }
         }
@@ -308,6 +328,23 @@ export function createConversationExecutor(
           },
           "Created new conversation",
         );
+
+        // Auto-register entity correlation (Phase 78)
+        if (params.entityRef && correlationService) {
+          try {
+            await correlationService.register({
+              entityType: params.entityRef.entityType,
+              entityId: params.entityRef.entityId,
+              conversationId: baseId,
+              agentId: params.agentDefinitionId,
+            });
+          } catch (err) {
+            logger.warn(
+              { err, conversationId: baseId },
+              "Failed to register entity correlation (non-fatal)",
+            );
+          }
+        }
 
         return baseId;
       });

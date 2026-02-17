@@ -24,6 +24,7 @@ import type {
   ConversationStatus,
   NewAgentEvent,
 } from "../shared/db/schema.js";
+import type { CorrelationService } from "../shared/services/correlation-service.js";
 import type { DirectoryService } from "../shared/services/directory-service.js";
 import type { TaskService } from "../shared/services/task-service.js";
 import type { TimeoutScheduler } from "./timeout-scheduler.js";
@@ -564,6 +565,8 @@ export interface StartConversationParams {
   taskId?: string;
   /** Reply context for routing agent responses back to the originating channel */
   replyContext?: ReplyContext;
+  /** Entity reference for auto-registration of work correlation (Phase 78) */
+  entityRef?: { entityType: string; entityId: string };
 }
 
 /**
@@ -720,6 +723,8 @@ export interface ConversationExecutorOptions {
   taskService?: TaskService | undefined;
   /** DirectoryService for delegation target validation in the worker loop (Phase 70) */
   directoryService?: DirectoryService | undefined;
+  /** CorrelationService for work correlation tracking (Phase 78) */
+  correlationService?: CorrelationService | undefined;
 }
 
 // ─── Non-Retryable Error Classes ────────────────────────────────────────────

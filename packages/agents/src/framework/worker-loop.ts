@@ -31,6 +31,7 @@ import type { ReplyContext } from "../shared/communication/types.js";
 import type * as agentsSchemaModule from "../shared/db/schema.js";
 import type { Conversation, TaskHandoff } from "../shared/db/schema.js";
 import { conversations } from "../shared/db/schema.js";
+import type { CorrelationService } from "../shared/services/correlation-service.js";
 import type { DirectoryService } from "../shared/services/directory-service.js";
 import type { TaskService } from "../shared/services/task-service.js";
 import { hasTextContent } from "./event-content.js";
@@ -101,6 +102,8 @@ export interface WorkerLoopOptions {
   directoryService?: DirectoryService | undefined;
   /** ConversationExecutor for starting delegated conversations (Phase 70, late-bound) */
   executor?: ConversationExecutor | undefined;
+  /** CorrelationService for work correlation status propagation (Phase 78) */
+  correlationService?: CorrelationService | undefined;
 }
 
 /**
