@@ -17,7 +17,11 @@ import { cn } from "@/lib/utils";
 import type { ConversationEvent } from "@/services/conversations";
 
 import { EventContentDisplay } from "./event-content";
+import type { FilterState } from "./event-filters";
 import { EventIcon } from "./event-icon";
+import { GenericEventRow } from "./event-renderers/generic-event-row";
+import { LifecycleBanner } from "./event-renderers/lifecycle-banner";
+import { SubAgentPill } from "./event-renderers/sub-agent-pill";
 import { ToolCallCard } from "./event-renderers/tool-call-card";
 import { JsonPayload } from "./json-payload";
 
@@ -75,7 +79,7 @@ export function groupTimelineEvents(
       toolCallId
     ) {
       if (!mcpErrorMap.has(toolCallId)) mcpErrorMap.set(toolCallId, []);
-      mcpErrorMap.get(toolCallId)!.push(event);
+      mcpErrorMap.get(toolCallId)?.push(event);
       consumedEventIds.add(event.id);
     }
   }
@@ -155,26 +159,98 @@ export function groupTimelineEvents(
   return items;
 }
 
+// ─── Filter Logic ────────────────────────────────────────────────────────────
+
+/**
+ * Determine if a timeline item represents a failure.
+ *
+ * Used by the "Failures" filter chip: when active, failed items always show
+ * regardless of their category filter state. This enables the "What went wrong?"
+ * workflow where a user turns off all category chips except Failures.
+ */
+function isFailureItem(item: TimelineItem): boolean {
+  if (item.kind === "tool_card") return item.result?.type === "tool.failed";
+  if (item.kind === "lifecycle_banner") {
+    return (
+      item.event.type === "notification.failed" ||
+      item.event.type === "agent.retry_scheduled" ||
+      (item.event.type === "agent.stale_recovered" &&
+        item.event.payload.exhausted === true)
+    );
+  }
+  if (item.kind === "sub_agent_lifecycle") {
+    return (
+      item.event.type === "agent.completed" &&
+      item.event.payload.status === "failed"
+    );
+  }
+  return false;
+}
+
+/**
+ * Determine if a timeline item should be visible given the current filter state.
+ *
+ * Filter behavior:
+ * - Each category chip (Lifecycle, Tool calls, LLM) toggles its category
+ * - Sub-agent chips toggle visibility of events from that specific agent
+ * - Failures chip is ADDITIVE: when on, failed items show regardless of category
+ * - Generic events always show (unknown types should never be hidden)
+ */
+function shouldShowItem(item: TimelineItem, filters: FilterState): boolean {
+  // Resolve the primary event for sub-agent visibility check
+  const event = item.kind === "tool_card" ? item.called : item.event;
+
+  // Sub-agent visibility check (independent of category filters)
+  if (event.parentInstanceId !== null) {
+    const agentId = event.agentDefinitionId;
+    if (filters.subAgents[agentId] === false) return false;
+  }
+
+  // Failures filter: when active, failed items always show
+  if (isFailureItem(item) && filters.failures) return true;
+
+  // Category visibility
+  switch (item.kind) {
+    case "tool_card":
+      return filters.toolCalls;
+    case "llm_response":
+      return filters.llm;
+    case "lifecycle_banner":
+    case "sub_agent_lifecycle":
+    case "signal":
+      return filters.lifecycle;
+    case "generic":
+      return true;
+  }
+}
+
 // ─── EventTimeline ──────────────────────────────────────────────────────────
 
 interface EventTimelineProps {
   events: ConversationEvent[];
+  filters: FilterState;
 }
 
-export function EventTimeline({ events }: EventTimelineProps) {
+export function EventTimeline({ events, filters }: EventTimelineProps) {
   const items = useMemo(() => groupTimelineEvents(events), [events]);
+  const filteredItems = useMemo(
+    () => items.filter((item) => shouldShowItem(item, filters)),
+    [items, filters],
+  );
 
-  if (items.length === 0) {
+  if (filteredItems.length === 0) {
     return (
       <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
-        No events recorded
+        {items.length === 0
+          ? "No events recorded"
+          : "No events match the current filters"}
       </div>
     );
   }
 
   return (
     <div className="divide-y divide-border/50">
-      {items.map((item) => {
+      {filteredItems.map((item) => {
         switch (item.kind) {
           case "tool_card":
             return (
@@ -188,7 +264,7 @@ export function EventTimeline({ events }: EventTimelineProps) {
             );
           case "llm_response":
             return (
-              <EventItem
+              <LlmResponseRow
                 key={item.event.id}
                 event={item.event}
                 isSubAgent={item.event.parentInstanceId !== null}
@@ -196,7 +272,7 @@ export function EventTimeline({ events }: EventTimelineProps) {
             );
           case "lifecycle_banner":
             return (
-              <EventItem
+              <LifecycleBanner
                 key={item.event.id}
                 event={item.event}
                 isSubAgent={item.event.parentInstanceId !== null}
@@ -204,15 +280,11 @@ export function EventTimeline({ events }: EventTimelineProps) {
             );
           case "sub_agent_lifecycle":
             return (
-              <EventItem
-                key={item.event.id}
-                event={item.event}
-                isSubAgent={true}
-              />
+              <SubAgentLifecycleRow key={item.event.id} event={item.event} />
             );
           case "signal":
             return (
-              <EventItem
+              <LifecycleBanner
                 key={item.event.id}
                 event={item.event}
                 isSubAgent={item.event.parentInstanceId !== null}
@@ -220,39 +292,96 @@ export function EventTimeline({ events }: EventTimelineProps) {
             );
           case "generic":
             return (
-              <EventItem
+              <GenericEventRow
                 key={item.event.id}
                 event={item.event}
                 isSubAgent={item.event.parentInstanceId !== null}
               />
             );
+          default:
+            return null;
         }
       })}
     </div>
   );
 }
 
-// ─── EventItem ──────────────────────────────────────────────────────────────
+// ─── SubAgentLifecycleRow ───────────────────────────────────────────────────
 
-interface EventItemProps {
-  event: ConversationEvent;
-  isSubAgent: boolean;
+/**
+ * Specialized renderer for sub-agent lifecycle events (started/completed).
+ * Shows agent pill, event label, description excerpt, and timestamp.
+ * Failed completions get destructive treatment.
+ */
+function SubAgentLifecycleRow({ event }: { event: ConversationEvent }) {
+  const isStarted = event.type === "agent.started";
+  const isFailed =
+    event.type === "agent.completed" && event.payload.status === "failed";
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2 px-3 py-1.5 ml-6",
+        isFailed && "border-l-2 border-l-destructive bg-destructive/5",
+      )}
+    >
+      <SubAgentPill agentDefinitionId={event.agentDefinitionId} />
+      <EventIcon type={event.type} />
+      <span className="text-sm">
+        {isStarted
+          ? `Spawned ${event.agentDefinitionId}`
+          : `${event.agentDefinitionId} completed`}
+      </span>
+      <span className="flex-1 truncate text-xs text-muted-foreground">
+        {getSubAgentDescription(event)}
+      </span>
+      <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
+        {formatRelativeTime(event.timestamp)}
+      </span>
+    </div>
+  );
 }
 
-function EventItem({ event, isSubAgent }: EventItemProps) {
-  const isFailed = event.type === "tool.failed";
-  const [isOpen, setIsOpen] = useState(isFailed);
+/**
+ * Extract a description string from a sub-agent lifecycle event payload.
+ */
+function getSubAgentDescription(event: ConversationEvent): string {
+  if (event.type === "agent.started") {
+    const task = event.payload.task;
+    return typeof task === "string" ? truncateLabel(task, 120) : "";
+  }
+  if (event.type === "agent.completed") {
+    const status = event.payload.status;
+    const preview = event.payload.outputPreview;
+    if (typeof status === "string" && typeof preview === "string") {
+      return truncateLabel(`${status}: ${preview}`, 120);
+    }
+    return typeof status === "string" ? status : "";
+  }
+  return "";
+}
 
-  const toolName = getToolName(event);
-  const subAgentLabel = getSubAgentLabel(event, isSubAgent);
+// ─── LlmResponseRow ─────────────────────────────────────────────────────────
+
+/**
+ * Renderer for LLM response events. Preserves the original EventItem behavior
+ * for llm.response: collapsible with EventContentDisplay and raw payload.
+ */
+function LlmResponseRow({
+  event,
+  isSubAgent,
+}: {
+  event: ConversationEvent;
+  isSubAgent: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <div
         className={cn(
           "transition-colors hover:bg-accent/50",
-          isFailed && "border-l-2 border-l-destructive bg-destructive/5",
-          isSubAgent && !isFailed && "ml-6",
+          isSubAgent && "ml-6",
         )}
       >
         <CollapsibleTrigger className="flex w-full items-center gap-2 px-3 py-1.5 text-left">
@@ -264,28 +393,13 @@ function EventItem({ event, isSubAgent }: EventItemProps) {
 
           <EventIcon type={event.type} />
 
-          <div className="flex min-w-0 flex-1 flex-col">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">
-                {formatEventType(event.type)}
-              </span>
-              {toolName && (
-                <span className="truncate font-mono text-xs text-muted-foreground">
-                  {toolName}
-                </span>
-              )}
-            </div>
-            {subAgentLabel && (
-              <span className="truncate text-xs text-muted-foreground">
-                {subAgentLabel}
-              </span>
-            )}
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <span className="text-sm font-medium">
+              {formatEventType(event.type)}
+            </span>
           </div>
 
           <div className="flex shrink-0 items-center gap-3 font-mono text-xs tabular-nums text-muted-foreground">
-            {event.durationMs !== null && (
-              <span>{formatDurationMs(event.durationMs)}</span>
-            )}
             {(event.tokenCountInput !== null ||
               event.tokenCountOutput !== null) && (
               <span>
@@ -301,24 +415,15 @@ function EventItem({ event, isSubAgent }: EventItemProps) {
 
         <CollapsibleContent>
           <div className="ml-10 border-l-2 border-border/50 pb-3 pl-3 pt-1">
-            {event.type === "agent.started" &&
-            typeof event.payload.systemPrompt === "string" ? (
-              <AgentStartedContent payload={event.payload} />
-            ) : event.type === "llm.response" ? (
-              <>
-                <EventContentDisplay eventId={event.id} isExpanded={isOpen} />
-                <details className="mt-3">
-                  <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
-                    Raw payload
-                  </summary>
-                  <div className="mt-2">
-                    <JsonPayload data={event.payload} />
-                  </div>
-                </details>
-              </>
-            ) : (
-              <JsonPayload data={event.payload} />
-            )}
+            <EventContentDisplay eventId={event.id} isExpanded={isOpen} />
+            <details className="mt-3">
+              <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                Raw payload
+              </summary>
+              <div className="mt-2">
+                <JsonPayload data={event.payload} />
+              </div>
+            </details>
           </div>
         </CollapsibleContent>
       </div>
@@ -326,97 +431,7 @@ function EventItem({ event, isSubAgent }: EventItemProps) {
   );
 }
 
-// ─── AgentStartedContent ─────────────────────────────────────────────────────
-
-interface AgentStartedContentProps {
-  payload: Record<string, unknown>;
-}
-
-/**
- * Renders the expanded content for an agent.started event.
- *
- * Shows:
- * 1. Initial context (the trigger/task that started the conversation)
- * 2. System prompt (collapsible, since it can be long)
- */
-function AgentStartedContent({ payload }: AgentStartedContentProps) {
-  const initialContext = payload.initialContext;
-  const systemPrompt = payload.systemPrompt;
-
-  return (
-    <div className="space-y-4">
-      {/* Initial Context / Task */}
-      {typeof initialContext === "string" && (
-        <div>
-          <div className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Initial Context
-          </div>
-          <div className="whitespace-pre-wrap rounded border bg-muted/30 p-3 text-sm">
-            {initialContext}
-          </div>
-        </div>
-      )}
-
-      {/* System Prompt (collapsible) */}
-      {typeof systemPrompt === "string" && (
-        <details>
-          <summary className="cursor-pointer text-xs font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground">
-            System Prompt ({systemPrompt.length.toLocaleString()} chars)
-          </summary>
-          <div className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap rounded border bg-muted/20 p-3 text-xs text-muted-foreground">
-            {systemPrompt}
-          </div>
-        </details>
-      )}
-    </div>
-  );
-}
-
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-/**
- * Extract the tool name from a tool.called event payload.
- */
-function getToolName(event: ConversationEvent): string | null {
-  if (event.type !== "tool.called") return null;
-  const name = event.payload.tool_name ?? event.payload.name;
-  return typeof name === "string" ? name : null;
-}
-
-/**
- * Build a secondary label for sub-agent lifecycle events.
- *
- * - agent.started: shows agent type and task excerpt
- * - agent.completed: shows status and output preview
- */
-function getSubAgentLabel(
-  event: ConversationEvent,
-  isSubAgent: boolean,
-): string | null {
-  if (!isSubAgent) return null;
-
-  if (event.type === "agent.started") {
-    const agentType = event.payload.agentType;
-    const task = event.payload.task;
-    if (typeof agentType === "string") {
-      const label =
-        typeof task === "string" ? `${agentType}: ${task}` : agentType;
-      return truncateLabel(label, 120);
-    }
-  }
-
-  if (event.type === "agent.completed") {
-    const status = event.payload.status;
-    const preview = event.payload.outputPreview;
-    if (typeof status === "string") {
-      const label =
-        typeof preview === "string" ? `${status}: ${preview}` : status;
-      return truncateLabel(label, 120);
-    }
-  }
-
-  return null;
-}
 
 /**
  * Truncate a label to maxLength characters, appending ellipsis if needed.
@@ -424,14 +439,4 @@ function getSubAgentLabel(
 function truncateLabel(label: string, maxLength: number): string {
   if (label.length <= maxLength) return label;
   return `${label.slice(0, maxLength)}...`;
-}
-
-/**
- * Format a duration in milliseconds for compact display.
- *
- * @returns "Xms" for <1000ms, "X.Xs" for >=1000ms
- */
-function formatDurationMs(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(1)}s`;
 }

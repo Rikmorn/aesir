@@ -36,6 +36,12 @@ import type {
   ConversationEvent,
 } from "@/services/conversations";
 
+import {
+  DEFAULT_FILTER_STATE,
+  EventFilters,
+  type FilterState,
+} from "./event-filters";
+import { EventMetricsBar } from "./event-metrics-bar";
 import { EventTimeline } from "./event-timeline";
 import { ReopenDialog } from "./reopen-dialog";
 
@@ -113,6 +119,7 @@ export function LiveDetailPanels({
   const [tokenInput, setTokenInput] = useState(initialTokenInput);
   const [tokenOutput, setTokenOutput] = useState(initialTokenOutput);
   const [copied, setCopied] = useState(false);
+  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTER_STATE);
 
   // Reset state when server data changes (e.g., after router.refresh())
   useEffect(() => {
@@ -322,6 +329,31 @@ export function LiveDetailPanels({
     conversationMeta.status,
   ]);
 
+  // ─── Derived sub-agent IDs and tool metrics ─────────────────────
+
+  const subAgentIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const event of events) {
+      if (event.parentInstanceId !== null) {
+        ids.add(event.agentDefinitionId);
+      }
+    }
+    return Array.from(ids).sort();
+  }, [events]);
+
+  const toolMetrics = useMemo(() => {
+    let toolSuccessCount = 0;
+    let toolFailCount = 0;
+    for (const event of events) {
+      if (event.type === "tool.succeeded") toolSuccessCount++;
+      if (event.type === "tool.failed") toolFailCount++;
+    }
+    return {
+      toolSuccessCount,
+      toolTotalCount: toolSuccessCount + toolFailCount,
+    };
+  }, [events]);
+
   // ─── Copy conversation ID ───────────────────────────────────────
 
   const handleCopyId = useCallback(() => {
@@ -514,19 +546,48 @@ export function LiveDetailPanels({
       {/* Event timeline — fills remaining viewport height */}
       <div className="mt-4 flex min-h-0 flex-1 flex-col rounded-lg border bg-card">
         {/* Header — pinned outside scroll */}
-        <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
-          <div className="flex items-baseline gap-2">
-            <span className="text-sm font-semibold tracking-tight">
-              Event Timeline
-            </span>
-            <span className="font-mono text-xs tabular-nums text-muted-foreground">
-              {events.length} events
-              {truncatedCount > 0 && (
-                <span className="ml-1 text-amber-600 dark:text-amber-400">
-                  ({truncatedCount} truncated)
-                </span>
-              )}
-            </span>
+        <div className="shrink-0 border-b">
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="flex items-baseline gap-2">
+              <span className="text-sm font-semibold tracking-tight">
+                Event Timeline
+              </span>
+              <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                {events.length} events
+                {truncatedCount > 0 && (
+                  <span className="ml-1 text-amber-600 dark:text-amber-400">
+                    ({truncatedCount} truncated)
+                  </span>
+                )}
+              </span>
+            </div>
+            {/* Jump to end button for completed conversations */}
+            {isTerminal && events.length > 20 && (
+              <Button variant="ghost" size="xs" onClick={scrollToBottom}>
+                Jump to end
+              </Button>
+            )}
+          </div>
+
+          {/* Metrics bar */}
+          <div className="border-t px-4 py-2">
+            <EventMetricsBar
+              wallClockDuration={elapsedLabel}
+              tokenInput={tokenInput}
+              tokenOutput={tokenOutput}
+              toolSuccessCount={toolMetrics.toolSuccessCount}
+              toolTotalCount={toolMetrics.toolTotalCount}
+              retryCount={conversationMeta.retryCount}
+            />
+          </div>
+
+          {/* Filter chips */}
+          <div className="border-t px-4 py-2">
+            <EventFilters
+              filters={filters}
+              onFiltersChange={setFilters}
+              subAgentIds={subAgentIds}
+            />
           </div>
         </div>
 
@@ -546,7 +607,7 @@ export function LiveDetailPanels({
               </div>
             )}
 
-            <EventTimeline events={events} />
+            <EventTimeline events={events} filters={filters} />
             <div ref={bottomRef} />
           </div>
 
