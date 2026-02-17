@@ -459,14 +459,49 @@ export interface AgentRegistry {
 // ─── Signal Schema ──────────────────────────────────────────────────────────
 
 /**
+ * Known signal types used across the system.
+ *
+ * Signal type is z.string().min(1) -- any string is valid. This list documents
+ * the canonical types for discoverability and grep-ability:
+ *
+ * - "approval"            -- User approves an agent's proposed plan
+ * - "pr_review"           -- PR review submitted (changes requested, approved, etc.)
+ * - "pr_merged"           -- Pull request merged
+ * - "pr_closed"           -- Pull request closed without merge
+ * - "escalation_resolved" -- Escalation resolved by human
+ * - "user_reply"          -- User replies to an agent message
+ * - "cancel"              -- Cancel a running/waiting conversation
+ * - "task_completion"     -- Delegated task completed by another agent
+ * - "task_failure"        -- Delegated task failed
+ * - "task_timeout"        -- Delegated task timed out
+ * - "entity_update"       -- Correlation-routed event for an entity this agent is working on (Phase 78)
+ */
+export const KNOWN_SIGNAL_TYPES = [
+  "approval",
+  "pr_review",
+  "pr_merged",
+  "pr_closed",
+  "escalation_resolved",
+  "user_reply",
+  "cancel",
+  "task_completion",
+  "task_failure",
+  "task_timeout",
+  "entity_update",
+] as const;
+
+/**
  * Zod schema for incoming signal payloads.
  *
  * Signals wake a paused conversation. The `type` field must match the
  * wait_for type the agent specified. The optional `deduplicationId` prevents
  * duplicate delivery (stored in conversations.delivered_signal_ids).
+ *
+ * Note: `type` is z.string().min(1), not an enum -- new signal types can be
+ * introduced without schema changes. See KNOWN_SIGNAL_TYPES for documented types.
  */
 export const SignalSchema = z.object({
-  /** Signal type (must match the wait_for type). E.g., "approval", "pr_review" */
+  /** Signal type (must match the wait_for type). E.g., "approval", "pr_review", "entity_update" */
   type: z.string().min(1),
   /** Arbitrary data payload delivered to the agent when it resumes */
   data: z.record(z.unknown()).optional(),
