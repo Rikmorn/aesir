@@ -614,8 +614,9 @@ export interface ConversationExecutor {
   /**
    * Stop the worker loop gracefully: stops accepting new work,
    * waits for running conversations to finish, and flushes resources.
+   * If timeoutMs is provided, aborts in-flight conversations after the deadline.
    */
-  stopWorker(): Promise<void>;
+  stopWorker(timeoutMs?: number): Promise<void>;
 
   /**
    * Get the current worker loop status snapshot.

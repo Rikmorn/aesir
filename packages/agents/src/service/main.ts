@@ -258,8 +258,20 @@ async function bootstrap(): Promise<void> {
     webhookFilter, // Phase 75: dedup and echo suppression
   };
 
-  // GET /health -- liveness check
+  // Shutdown flag -- declared early so the health endpoint closure can capture it
+  let isShuttingDown = false;
+
+  // GET /health -- liveness check (returns 503 during drain)
   app.get("/health", (_req, res) => {
+    if (isShuttingDown) {
+      const workerStatus = executor.getWorkerStatus();
+      res.status(503).json({
+        status: "draining",
+        service: "agent-service",
+        inFlight: workerStatus?.activeClaims ?? 0,
+      });
+      return;
+    }
     res.json({ status: "ok", service: "agent-service" });
   });
 
@@ -378,12 +390,18 @@ async function bootstrap(): Promise<void> {
   }
 
   // 13. Graceful shutdown
-  let isShuttingDown = false;
+  // Drain timeout is forceShutdownTimeout minus a buffer for post-drain cleanup
+  // (event log flush, pool close, etc.). Minimum 5s to avoid negative timeouts.
+  const CLEANUP_BUFFER_MS = 5000;
+  const drainTimeoutMs = Math.max(
+    config.service.forceShutdownTimeoutMs - CLEANUP_BUFFER_MS,
+    5000,
+  );
 
   const shutdown = async (signal: string): Promise<void> => {
     if (isShuttingDown) return;
     isShuttingDown = true;
-    logger.info({ signal }, "Graceful shutdown initiated");
+    logger.info({ signal, drainTimeoutMs }, "Graceful shutdown initiated");
 
     // 1. Stop knowledge cleanup timer
     clearInterval(knowledgeCleanupTimer);
@@ -394,19 +412,28 @@ async function bootstrap(): Promise<void> {
     // 3. Stop accepting HTTP connections
     server.close();
 
-    // 4. Stop worker + drain conversations + flush event log + stop pg-boss
-    await executor.stopWorker();
+    // 4. Stop pg-boss before drain (stop processing new timeout jobs)
+    if (timeoutScheduler) {
+      try {
+        await timeoutScheduler.close();
+      } catch (err) {
+        logger.warn({ err }, "Timeout scheduler close failed (non-fatal)");
+      }
+    }
 
-    // 5. Final event log flush (belt + suspenders)
+    // 5. Stop worker + drain conversations with timeout + flush event log
+    await executor.stopWorker(drainTimeoutMs);
+
+    // 6. Final event log flush (belt + suspenders)
     await eventLog.close();
 
-    // 6. Close session projection subscriptions
+    // 7. Close session projection subscriptions
     sessionProjection.close();
 
-    // 7. Close sandbox manager
+    // 8. Close sandbox manager
     await sandboxManager.close();
 
-    // 8. Close database pool
+    // 9. Close database pool
     await pool.end();
 
     logger.info("Graceful shutdown complete");

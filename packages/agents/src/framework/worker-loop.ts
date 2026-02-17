@@ -126,12 +126,16 @@ export interface WorkerLoopStatus {
 export interface WorkerLoop {
   /** Start the polling loop */
   start(): void;
-  /** Stop accepting new work and wait for running conversations to finish */
-  drain(): Promise<void>;
-  /** Drain and then flush/clean up resources */
-  close(): Promise<void>;
+  /** Stop accepting new work and wait for running conversations to finish.
+   *  If timeoutMs is provided, aborts in-flight conversations after the deadline. */
+  drain(timeoutMs?: number): Promise<void>;
+  /** Drain and then flush/clean up resources.
+   *  If timeoutMs is provided, limits drain wait to that duration. */
+  close(timeoutMs?: number): Promise<void>;
   /** Whether the loop is currently running (not draining) */
   isRunning(): boolean;
+  /** Whether the loop is currently draining (shutdown in progress) */
+  isDraining(): boolean;
   /** Number of currently executing conversations */
   getRunningCount(): number;
   /** Get a snapshot of current worker loop status */
@@ -1718,7 +1722,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
       void poll();
     },
 
-    async drain(): Promise<void> {
+    async drain(timeoutMs?: number): Promise<void> {
       draining = true;
 
       // Clear the poll timer
@@ -1728,20 +1732,51 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
       }
 
       logger.info(
-        { runningCount: running.size },
-        "Draining worker loop, waiting for running conversations",
+        {
+          runningCount: running.size,
+          conversationIds: [...running.keys()],
+          timeoutMs,
+        },
+        "Graceful shutdown initiated, draining",
       );
 
       // Wait for all running conversations to finish
-      while (running.size > 0) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
+      const waitForFinish = async () => {
+        while (running.size > 0) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+      };
+
+      if (timeoutMs) {
+        const deadline = new Promise<void>((resolve) => {
+          setTimeout(() => {
+            if (running.size > 0) {
+              // Log abandoned conversations at warn level
+              logger.warn(
+                {
+                  abandonedCount: running.size,
+                  conversationIds: [...running.keys()],
+                },
+                "Drain timeout reached, abandoning in-flight conversations",
+              );
+              // Abort in-flight conversations so they stop cleanly
+              for (const [, controller] of running) {
+                controller.abort();
+              }
+            }
+            resolve();
+          }, timeoutMs);
+        });
+        await Promise.race([waitForFinish(), deadline]);
+      } else {
+        await waitForFinish();
       }
 
-      logger.info("Worker loop drained, all conversations finished");
+      logger.info("Worker loop drained");
     },
 
-    async close(): Promise<void> {
-      await this.drain();
+    async close(timeoutMs?: number): Promise<void> {
+      await this.drain(timeoutMs);
       await eventLog.flush();
 
       started = false;
@@ -1750,6 +1785,10 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
 
     isRunning(): boolean {
       return started && !draining;
+    },
+
+    isDraining(): boolean {
+      return draining;
     },
 
     getRunningCount(): number {

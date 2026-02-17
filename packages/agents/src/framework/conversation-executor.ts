@@ -800,9 +800,9 @@ export function createConversationExecutor(
       }
     },
 
-    async stopWorker(): Promise<void> {
+    async stopWorker(timeoutMs?: number): Promise<void> {
       if (workerLoop) {
-        await workerLoop.close();
+        await workerLoop.close(timeoutMs);
         workerLoop = null;
       }
       if (options.timeoutScheduler) {
