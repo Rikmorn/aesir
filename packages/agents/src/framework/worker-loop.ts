@@ -779,6 +779,32 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
             })
             .where(eq(conversations.id, row.id));
 
+          // Emit stale_recovered event (non-fatal)
+          try {
+            eventLog.append({
+              conversationId: row.id,
+              agentDefinitionId: row.agent_definition_id,
+              agentDefinitionVersion: row.agent_definition_version,
+              agentInstanceId: `stale-recovery-${row.id}`,
+              parentInstanceId: row.parent_conversation_id
+                ? `parent-${row.parent_conversation_id}`
+                : null,
+              type: "agent.stale_recovered",
+              payload: {
+                workerId: workerId,
+                staleDurationMs:
+                  Date.now() - (row.last_heartbeat_at?.getTime() ?? Date.now()),
+                retryCount: row.retry_count + 1,
+                maxRetries: row.max_retries,
+              },
+            });
+          } catch (eventErr) {
+            logger.warn(
+              { err: eventErr, conversationId: row.id },
+              "Failed to emit agent.stale_recovered event (non-fatal)",
+            );
+          }
+
           logger.warn(
             {
               conversationId: row.id,
@@ -800,6 +826,33 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
               updated_at: new Date(),
             })
             .where(eq(conversations.id, row.id));
+
+          // Emit stale_recovered with exhausted flag (non-fatal)
+          try {
+            eventLog.append({
+              conversationId: row.id,
+              agentDefinitionId: row.agent_definition_id,
+              agentDefinitionVersion: row.agent_definition_version,
+              agentInstanceId: `stale-recovery-${row.id}`,
+              parentInstanceId: row.parent_conversation_id
+                ? `parent-${row.parent_conversation_id}`
+                : null,
+              type: "agent.stale_recovered",
+              payload: {
+                workerId: workerId,
+                staleDurationMs:
+                  Date.now() - (row.last_heartbeat_at?.getTime() ?? Date.now()),
+                retryCount: row.retry_count,
+                maxRetries: row.max_retries,
+                exhausted: true,
+              },
+            });
+          } catch (eventErr) {
+            logger.warn(
+              { err: eventErr, conversationId: row.id },
+              "Failed to emit agent.stale_recovered event (non-fatal)",
+            );
+          }
 
           logger.error(
             {
@@ -1732,6 +1785,28 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
             })
             .where(eq(conversations.id, conv.id));
 
+          // Emit retry_scheduled event (non-fatal)
+          try {
+            eventLog.append({
+              conversationId: conv.id,
+              agentDefinitionId: conv.agent_definition_id,
+              agentDefinitionVersion: conv.agent_definition_version,
+              agentInstanceId: instanceId,
+              type: "agent.retry_scheduled",
+              payload: {
+                retryCount: conv.retry_count + 1,
+                maxRetries: conv.max_retries,
+                errorContext: result.output.slice(0, 500),
+                reason: result.status,
+              },
+            });
+          } catch (eventErr) {
+            childLogger.warn(
+              { err: eventErr },
+              "Failed to emit agent.retry_scheduled event (non-fatal)",
+            );
+          }
+
           eventLog.append({
             conversationId: conv.id,
             agentDefinitionId: conv.agent_definition_id,
@@ -1805,6 +1880,30 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
             updated_at: new Date(),
           })
           .where(eq(conversations.id, conv.id));
+
+        // Emit retry_scheduled event when re-enqueuing (non-fatal)
+        if (isRetryable) {
+          try {
+            eventLog.append({
+              conversationId: conv.id,
+              agentDefinitionId: conv.agent_definition_id,
+              agentDefinitionVersion: conv.agent_definition_version,
+              agentInstanceId: instanceId,
+              type: "agent.retry_scheduled",
+              payload: {
+                retryCount: conv.retry_count + 1,
+                maxRetries: conv.max_retries,
+                errorContext: errorMessage.slice(0, 500),
+                reason: "unhandled_error",
+              },
+            });
+          } catch (eventErr) {
+            childLogger.warn(
+              { err: eventErr },
+              "Failed to emit agent.retry_scheduled event (non-fatal)",
+            );
+          }
+        }
 
         // Notify originating channel on terminal failure
         if (!isRetryable) {
