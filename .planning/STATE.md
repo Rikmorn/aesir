@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.8 Resilience and Observability -- Phase 76 in progress
+**Current focus:** v2.8 Resilience and Observability -- Phase 77 in progress
 
 ## Current Position
 
-Phase: 76 of 78 (Runtime Resilience)
-Plan: 3 of 3 in current phase
-Status: Phase 76 complete
-Last activity: 2026-02-17 -- Plan 76-03 complete (recovery context injection)
+Phase: 77 of 78 (Dashboard Observability)
+Plan: 2 of 5 in current phase
+Status: Plan 77-02 complete
+Last activity: 2026-02-17 -- Plan 77-02 complete (event type & SSE sync)
 
-Progress: [=====.....] 50%
+Progress: [======....] 60%
 
 ## Milestone History
 
@@ -50,6 +50,7 @@ Progress: [=====.....] 50%
 | 76 | 01 | 7min | 2 | 8 |
 | 76 | 02 | 5min | 2 | 4 |
 | 76 | 03 | 5min | 2 | 10 |
+| 77 | 02 | 3min | 2 | 4 |
 
 ## Accumulated Context
 
@@ -77,6 +78,8 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 76]: getSequence() added to EventLog interface for in-memory sequence retrieval (no DB round-trip)
 - [Phase 76]: Recovery context injection non-fatal (try/catch) -- agent resumes without context rather than failing
 - [Phase 76]: 6 persistence boundaries for last_persisted_sequence (plan specified 5, queued-signal-at-pause also persists)
+- [Phase 77]: SSE field fallback pattern (sse.field ?? default) for backward compatibility during parallel plan execution
+- [Phase 77]: agent.retry_scheduled increments retryCount live via SSE handler for real-time metrics
 
 ### Pending Todos
 
@@ -96,9 +99,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Phase 77 context gathered
-Resume file: .planning/phases/77-dashboard-observability/77-CONTEXT.md
-Next action: Plan Phase 77
+Stopped at: Completed 77-02-PLAN.md
+Resume file: .planning/phases/77-dashboard-observability/77-02-SUMMARY.md
+Next action: Execute 77-03-PLAN.md
 
 ---
-*Updated: 2026-02-17 -- Phase 77 context gathered (dashboard observability: tool cards, sub-agent hierarchy, lifecycle events, metrics)*
+*Updated: 2026-02-17 -- Plan 77-02 complete (event type & SSE sync: 17 event types, sub-agent identity fields, icon mappings)*
