@@ -112,9 +112,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 77-05-PLAN.md (Phase 77 complete)
-Resume file: .planning/phases/77-dashboard-observability/77-05-SUMMARY.md
-Next action: Begin Phase 78 planning
+Stopped at: Phase 78 context gathered
+Resume file: .planning/phases/78-work-correlation/78-CONTEXT.md
+Next action: Plan Phase 78
 
 ---
-*Updated: 2026-02-17 -- Plan 77-05 complete (filter chips, metrics bar, full renderer integration). Phase 77 complete.*
+*Updated: 2026-02-17 -- Phase 78 context gathered (registration, routing, multi-correlation, disposition decisions captured).*
