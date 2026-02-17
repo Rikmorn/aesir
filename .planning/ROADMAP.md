@@ -86,7 +86,7 @@ See `.planning/milestones/v2.7-ROADMAP.md` for full details.
 
 - [x] **Phase 74: Quick Fixes** - Address self-contained v2.7 E2E issues that clear noise before infrastructure work (completed 2026-02-16)
 - [x] **Phase 75: Echo Elimination** - Suppress duplicate and agent-caused events at the infrastructure level before they reach the router (completed 2026-02-16)
-- [ ] **Phase 76: Runtime Resilience** - Close the loop between failure observation and recovery -- notify, classify, and adapt on every failure path
+- [x] **Phase 76: Runtime Resilience** - Close the loop between failure observation and recovery -- notify, classify, and adapt on every failure path (completed 2026-02-17)
 - [ ] **Phase 77: Dashboard Observability** - Make the dashboard tell the full story of every conversation with lifecycle events, tool grouping, and sub-agent attribution
 - [ ] **Phase 78: Work Correlation** - Give the platform a formal concept of "what work exists for entity X" with registry, tools, and disposition vocabulary
 
@@ -129,7 +129,7 @@ See `.planning/milestones/v2.7-ROADMAP.md` for full details.
   3. Permanent MCP errors (4xx) return structured context to the agent immediately; transient MCP errors (429, 5xx) are retried transparently and the agent sees an error only when retries are exhausted
   4. When a conversation resumes after a crash, the agent receives a `<recovery_context>` block describing work completed since its last checkpoint (sub-agent completions, successful tool calls, received signals)
   5. Worker drains in-progress conversations on SIGTERM before exiting -- stops claiming new work and lets active conversations finish within a deadline
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 76-01-PLAN.md -- MCP error classification + schema foundation (RESIL-04, RESIL-05, RESIL-06, RESIL-07)
@@ -174,7 +174,7 @@ Phases 74 through 78. Phase 78 is independent of 76/77 and can execute in parall
 |-------|----------------|--------|-----------|
 | 74. Quick Fixes | 0/3 | Complete    | 2026-02-16 |
 | 75. Echo Elimination | 0/3 | Complete    | 2026-02-16 |
-| 76. Runtime Resilience | 0/3 | Not started | - |
+| 76. Runtime Resilience | 0/3 | Complete    | 2026-02-17 |
 | 77. Dashboard Observability | 0/TBD | Not started | - |
 | 78. Work Correlation | 0/TBD | Not started | - |
 
