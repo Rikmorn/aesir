@@ -68,6 +68,10 @@ export function adaptGitHubEvent(event: NormalizedEvent): IncomingEvent | null {
         ...(repository?.owner &&
           repository?.name &&
           prNumber && {
+            entityRef: {
+              entityType: "github_pr" as const,
+              entityId: `${repository.owner}/${repository.name}#${prNumber}`,
+            },
             replyContext: {
               channel: "github" as const,
               owner: repository.owner,
@@ -98,6 +102,10 @@ export function adaptGitHubEvent(event: NormalizedEvent): IncomingEvent | null {
         ...(repository?.owner &&
           repository?.name &&
           prNumber && {
+            entityRef: {
+              entityType: "github_pr" as const,
+              entityId: `${repository.owner}/${repository.name}#${prNumber}`,
+            },
             replyContext: {
               channel: "github" as const,
               owner: repository.owner,
@@ -134,6 +142,10 @@ export function adaptGitHubEvent(event: NormalizedEvent): IncomingEvent | null {
         ...(repository?.owner &&
           repository?.name &&
           prNumber && {
+            entityRef: {
+              entityType: "github_pr" as const,
+              entityId: `${repository.owner}/${repository.name}#${prNumber}`,
+            },
             replyContext: {
               channel: "github" as const,
               owner: repository.owner,

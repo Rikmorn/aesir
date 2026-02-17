@@ -59,6 +59,13 @@ export function adaptSlackEvent(
         deduplicationId: event.correlationId,
         message: "Plan approved via Slack button.",
         ...(correlatedTaskId && { taskId: correlatedTaskId }),
+        ...(channelId &&
+          threadTs && {
+            entityRef: {
+              entityType: "slack_thread" as const,
+              entityId: `${channelId}:${threadTs}`,
+            },
+          }),
         ...(teamId &&
           channelId && {
             replyContext: {
@@ -89,6 +96,13 @@ export function adaptSlackEvent(
         message:
           "Plan rejected via Slack button. Feedback: Rejected via Slack button",
         ...(correlatedTaskId && { taskId: correlatedTaskId }),
+        ...(channelId &&
+          threadTs && {
+            entityRef: {
+              entityType: "slack_thread" as const,
+              entityId: `${channelId}:${threadTs}`,
+            },
+          }),
         ...(teamId &&
           channelId && {
             replyContext: {
@@ -114,6 +128,13 @@ export function adaptSlackEvent(
         deduplicationId: event.correlationId,
         message: "Escalation resolved: retry.",
         ...(correlatedTaskId && { taskId: correlatedTaskId }),
+        ...(channelId &&
+          threadTs && {
+            entityRef: {
+              entityType: "slack_thread" as const,
+              entityId: `${channelId}:${threadTs}`,
+            },
+          }),
         ...(teamId &&
           channelId && {
             replyContext: {
@@ -139,6 +160,13 @@ export function adaptSlackEvent(
         deduplicationId: event.correlationId,
         message: "Escalation resolved: abort.",
         ...(correlatedTaskId && { taskId: correlatedTaskId }),
+        ...(channelId &&
+          threadTs && {
+            entityRef: {
+              entityType: "slack_thread" as const,
+              entityId: `${channelId}:${threadTs}`,
+            },
+          }),
         ...(teamId &&
           channelId && {
             replyContext: {
@@ -170,6 +198,13 @@ export function adaptSlackEvent(
         message: payload.text as string,
         ...(correlatedTaskId && { taskId: correlatedTaskId }),
         ...(actorInfo && { actorInfo }),
+        ...(channelId &&
+          threadTs && {
+            entityRef: {
+              entityType: "slack_thread" as const,
+              entityId: `${channelId}:${threadTs}`,
+            },
+          }),
         ...(teamId &&
           channelId && {
             replyContext: {
@@ -213,6 +248,13 @@ export function adaptSlackEvent(
         message: payload.text as string,
         ...(correlatedTaskId && { taskId: correlatedTaskId }),
         ...(actorInfo && { actorInfo }),
+        ...(channelId &&
+          threadTs && {
+            entityRef: {
+              entityType: "slack_thread" as const,
+              entityId: `${channelId}:${threadTs}`,
+            },
+          }),
         ...(teamId &&
           channelId && {
             replyContext: {
