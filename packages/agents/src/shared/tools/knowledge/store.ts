@@ -28,6 +28,12 @@ const KnowledgeStoreInputSchema = z.object({
     .optional()
     .describe("Override default visibility scope"),
   tags: z.array(z.string()).optional().describe("Optional filtering labels"),
+  metadata: z
+    .record(z.unknown())
+    .optional()
+    .describe(
+      "Structured metadata for exact-match queries (e.g., { issueId: 'LIN-456', prNumber: 42 })",
+    ),
 });
 
 export function createKnowledgeStoreTool(
@@ -37,7 +43,7 @@ export function createKnowledgeStoreTool(
   return {
     name: "knowledge_store",
     description:
-      "Store a knowledge entry that persists across conversations. Agents can later retrieve it via semantic search. " +
+      "Store a knowledge entry that persists across conversations. Optionally attach structured metadata for exact-match retrieval. " +
       "Types: discovery (24h, what you found), constraint (30d, limitations/rules), architecture_decision (7d, design choices), " +
       "thought (24h, private reasoning), preference (30d, project/user preferences), test_result (7d, test outcomes). " +
       "Duplicate topics with the same type are automatically updated.",

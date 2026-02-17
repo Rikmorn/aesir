@@ -26,6 +26,18 @@ const KnowledgeQueryInputSchema = z.object({
     .max(25)
     .optional()
     .describe("Max results (default 10)"),
+  mode: z
+    .enum(["semantic", "exact", "combined"])
+    .optional()
+    .describe(
+      "Search mode: 'semantic' (default) for embedding search, 'exact' for metadata match only, 'combined' for metadata filter + semantic ranking",
+    ),
+  metadata: z
+    .record(z.unknown())
+    .optional()
+    .describe(
+      "Metadata filter for exact/combined mode. Uses JSONB containment (@>). Example: { issueId: 'LIN-456' }",
+    ),
 });
 
 export function createKnowledgeQueryTool(
@@ -35,8 +47,9 @@ export function createKnowledgeQueryTool(
   return {
     name: "knowledge_query",
     description:
-      "Search shared knowledge stored by any agent. Returns entries matching the semantic query, " +
-      "filtered by optional type and topic. Results include shared entries from all agents and your own private entries.",
+      "Search shared knowledge stored by any agent. Supports three modes: 'semantic' (default) for embedding-based search, " +
+      "'exact' for metadata-only lookup (e.g., find entries tagged with a specific issue ID), and 'combined' for " +
+      "metadata-filtered semantic ranking. Results include shared entries from all agents and your own private entries.",
     inputSchema: KnowledgeQueryInputSchema,
     async execute(input: unknown): Promise<ToolResult> {
       const parsed = KnowledgeQueryInputSchema.safeParse(input);
@@ -59,12 +72,16 @@ export function createKnowledgeQueryTool(
 
         // Format results as structured text
         const formatted = results
-          .map(
-            (entry) =>
+          .map((entry) => {
+            let text =
               `[${entry.id}] ${entry.type} | ${entry.topic}\n` +
-              `  Author: ${entry.author} | Created: ${entry.createdAt}\n` +
-              `  ${entry.content}`,
-          )
+              `  Author: ${entry.author} | Created: ${entry.createdAt}`;
+            if (entry.metadata && Object.keys(entry.metadata).length > 0) {
+              text += `\n  Metadata: ${JSON.stringify(entry.metadata)}`;
+            }
+            text += `\n  ${entry.content}`;
+            return text;
+          })
           .join("\n\n");
 
         return {
