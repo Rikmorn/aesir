@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 78 of 78 (Work Correlation)
-Plan: 1 of 6 in current phase
-Status: Plan 78-01 complete
-Last activity: 2026-02-17 -- Plan 78-01 complete (schema foundations: work_correlations, knowledge metadata, event.routed, entityRef, entity_update)
+Plan: 2 of 6 in current phase
+Status: Plan 78-02 complete
+Last activity: 2026-02-17 -- Plan 78-02 complete (entityRef extraction in all three adapters)
 
 Progress: [======>   ] 60%
 
@@ -56,6 +56,7 @@ Progress: [======>   ] 60%
 | 77 | 04 | 2min | 2 | 3 |
 | 77 | 05 | 5min | 2 | 4 |
 | 78 | 01 | 3min | 2 | 9 |
+| 78 | 02 | 5min | 2 | 4 |
 
 ## Accumulated Context
 
@@ -97,6 +98,9 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 78]: Drizzle unique constraint mirrors SQL composite PK -- Drizzle ORM lacks composite PK support
 - [Phase 78]: JSONB default uses {} object not '{}' string -- Drizzle types require matching TS type for defaults
 - [Phase 78]: KNOWN_SIGNAL_TYPES as const array for discoverability without constraining signal type validation
+- [Phase 78]: Linear issue.created/updated use fallback (payload.issueId ?? payload.id) for varying payload shapes
+- [Phase 78]: GitHub entityRef uses owner/repo#number from payload repository, not config
+- [Phase 78]: Slack block actions include entityRef only when threadTs present (conditional spread)
 
 ### Pending Todos
 
@@ -116,9 +120,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 78-01-PLAN.md
-Resume file: .planning/phases/78-work-correlation/78-01-SUMMARY.md
-Next action: Execute 78-02-PLAN.md
+Stopped at: Completed 78-02-PLAN.md
+Resume file: .planning/phases/78-work-correlation/78-02-SUMMARY.md
+Next action: Execute 78-03-PLAN.md
 
 ---
-*Updated: 2026-02-17 -- Plan 78-01 complete (schema foundations for work correlation).*
+*Updated: 2026-02-17 -- Plan 78-02 complete (entityRef extraction in Linear, GitHub, Slack adapters).*
