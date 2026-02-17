@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 76 of 78 (Runtime Resilience)
-Plan: 1 of 3 in current phase
-Status: Plan 76-01 complete
-Last activity: 2026-02-17 -- Plan 76-01 complete (MCP error classification)
+Plan: 2 of 3 in current phase
+Status: Plan 76-02 complete
+Last activity: 2026-02-17 -- Plan 76-02 complete (failure notification, graceful shutdown)
 
 Progress: [=====.....] 50%
 
@@ -48,6 +48,7 @@ Progress: [=====.....] 50%
 | 75 | 02 | 3min | 2 | 3 |
 | 75 | 03 | 6min | 2 | 13 |
 | 76 | 01 | 7min | 2 | 8 |
+| 76 | 02 | 5min | 2 | 4 |
 
 ## Accumulated Context
 
@@ -69,6 +70,9 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 76]: Full jitter for retry delays (simpler, sufficient for 3-attempt budget)
 - [Phase 76]: 429 Retry-After > 10s returns error immediately to avoid blocking agents
 - [Phase 76]: Application-level errors (200 + isError) classified as permanent
+- [Phase 76]: notifyFailure replaces emitErrorActivity entirely -- channel-agnostic via denormalizer
+- [Phase 76]: Drain timeout aborts via AbortController; aborted conversations re-enqueue naturally
+- [Phase 76]: pg-boss stopped before drain wait; health endpoint returns 503 during shutdown
 
 ### Pending Todos
 
@@ -88,9 +92,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 76-01-PLAN.md
-Resume file: .planning/phases/76-runtime-resilience/76-01-SUMMARY.md
-Next action: Execute Plan 76-02
+Stopped at: Completed 76-02-PLAN.md
+Resume file: .planning/phases/76-runtime-resilience/76-02-SUMMARY.md
+Next action: Execute Plan 76-03
 
 ---
-*Updated: 2026-02-17 -- Plan 76-01 complete (MCP error classification, retry loop, schema foundation)*
+*Updated: 2026-02-17 -- Plan 76-02 complete (failure notification, graceful shutdown, drain timeout)*
