@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 77 of 78 (Dashboard Observability)
-Plan: 2 of 5 in current phase
-Status: Plan 77-02 complete
-Last activity: 2026-02-17 -- Plan 77-02 complete (event type & SSE sync)
+Plan: 4 of 5 in current phase
+Status: Plan 77-04 complete
+Last activity: 2026-02-17 -- Plan 77-04 complete (lifecycle banners, sub-agent pills, generic fallback)
 
-Progress: [======....] 60%
+Progress: [========..] 80%
 
 ## Milestone History
 
@@ -52,6 +52,7 @@ Progress: [======....] 60%
 | 76 | 03 | 5min | 2 | 10 |
 | 77 | 01 | 7min | 2 | 9 |
 | 77 | 02 | 3min | 2 | 4 |
+| 77 | 04 | 2min | 2 | 3 |
 
 ## Accumulated Context
 
@@ -84,6 +85,7 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 77]: currentToolCallId tracked via closure in worker loop scope -- sequential tool calls within agent loop iteration
 - [Phase 77]: SSE field fallback pattern (sse.field ?? default) for backward compatibility during parallel plan execution
 - [Phase 77]: agent.retry_scheduled increments retryCount live via SSE handler for real-time metrics
+- [Phase 77]: SubAgentPill color fallback via ?? AGENT_PILL_COLORS[0] for TypeScript noUncheckedIndexedAccess safety
 
 ### Pending Todos
 
@@ -103,9 +105,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 77-02-PLAN.md
-Resume file: .planning/phases/77-dashboard-observability/77-02-SUMMARY.md
-Next action: Execute 77-03-PLAN.md
+Stopped at: Completed 77-04-PLAN.md
+Resume file: .planning/phases/77-dashboard-observability/77-04-SUMMARY.md
+Next action: Execute 77-05-PLAN.md
 
 ---
-*Updated: 2026-02-17 -- Plan 77-02 complete (event type & SSE sync: 17 event types, sub-agent identity fields, icon mappings)*
+*Updated: 2026-02-17 -- Plan 77-04 complete (lifecycle banners, sub-agent pills, generic fallback renderer)*
