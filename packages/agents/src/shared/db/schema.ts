@@ -157,6 +157,7 @@ export const agentEventTypeValues = [
   "notification.failed",
   "agent.stale_recovered",
   "agent.retry_scheduled",
+  "event.routed",
 ] as const;
 export type AgentEventType = (typeof agentEventTypeValues)[number];
 
@@ -418,6 +419,10 @@ export const knowledgeEntries = agentsSchema.table(
     tags: jsonb("tags").$type<string[]>().notNull().default([]),
     embedding: vectorColumn("embedding"),
     superseded_by: text("superseded_by"),
+    metadata: jsonb("metadata")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
     invalidated: boolean("invalidated").notNull().default(false),
     invalidation_reason: text("invalidation_reason"),
     expires_at: timestamp("expires_at", { withTimezone: true }).notNull(),
@@ -489,6 +494,65 @@ export const entityDirectory = agentsSchema.table(
   ],
 );
 
+// ─── Work Correlations ──────────────────────────────────────────────────────
+
+/**
+ * Correlation status values (Phase 78 work correlation)
+ */
+export const correlationStatusValues = [
+  "active",
+  "waiting",
+  "completed",
+  "failed",
+  "superseded",
+] as const;
+export type CorrelationStatus = (typeof correlationStatusValues)[number];
+
+/**
+ * Work Correlations table
+ *
+ * Maps external work entities (Linear issues, GitHub PRs, Slack threads) to
+ * agent conversations. A single entity can have multiple correlated conversations
+ * (e.g., a Linear issue worked on by dev-agent and then qa-agent).
+ *
+ * Composite unique key: (entity_type, entity_id, conversation_id).
+ * The migration SQL uses a real composite PK; Drizzle uses a unique constraint.
+ */
+export const workCorrelations = agentsSchema.table(
+  "work_correlations",
+  {
+    entity_type: text("entity_type").notNull(),
+    entity_id: text("entity_id").notNull(),
+    conversation_id: text("conversation_id")
+      .notNull()
+      .references(() => conversations.id),
+    agent_id: text("agent_id").notNull(),
+    status: text("status", { enum: correlationStatusValues })
+      .notNull()
+      .default("active"),
+    created_at: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updated_at: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    unique("uq_correlations_entity_conversation").on(
+      table.entity_type,
+      table.entity_id,
+      table.conversation_id,
+    ),
+    index("idx_correlations_entity").on(table.entity_type, table.entity_id),
+    index("idx_correlations_conversation").on(table.conversation_id),
+    index("idx_correlations_status").on(
+      table.entity_type,
+      table.entity_id,
+      table.status,
+    ),
+  ],
+);
+
 // ─── Type Exports ────────────────────────────────────────────────────────────
 
 export type Conversation = typeof conversations.$inferSelect;
@@ -507,3 +571,5 @@ export type KnowledgeEntry = typeof knowledgeEntries.$inferSelect;
 export type NewKnowledgeEntry = typeof knowledgeEntries.$inferInsert;
 export type EntityDirectory = typeof entityDirectory.$inferSelect;
 export type NewEntityDirectory = typeof entityDirectory.$inferInsert;
+export type WorkCorrelation = typeof workCorrelations.$inferSelect;
+export type NewWorkCorrelation = typeof workCorrelations.$inferInsert;

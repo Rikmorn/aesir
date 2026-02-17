@@ -56,6 +56,7 @@ const agentEventTypeValues = [
   "notification.failed",
   "agent.stale_recovered",
   "agent.retry_scheduled",
+  "event.routed",
 ] as const;
 
 const sessionStatusValues = [
@@ -298,6 +299,7 @@ export const knowledgeEntries = agentsSchema.table(
     // Using text here because drizzle-kit CJS cannot resolve customType vector.
     embedding: text("embedding"),
     superseded_by: text("superseded_by"),
+    metadata: jsonb("metadata").notNull().default({}),
     invalidated: boolean("invalidated").notNull().default(false),
     invalidation_reason: text("invalidation_reason"),
     expires_at: timestamp("expires_at", { withTimezone: true }).notNull(),
@@ -351,5 +353,55 @@ export const entityDirectory = agentsSchema.table(
   (table) => [
     index("idx_directory_type_status").on(table.type, table.status),
     index("idx_directory_name").on(table.name),
+  ],
+);
+
+// ─── Work Correlations ──────────────────────────────────────────────────────
+
+const correlationStatusValues = [
+  "active",
+  "waiting",
+  "completed",
+  "failed",
+  "superseded",
+] as const;
+
+/**
+ * Work Correlations table (drizzle-kit mirror)
+ *
+ * Maps external work entities to agent conversations.
+ * Composite unique key: (entity_type, entity_id, conversation_id).
+ * The migration SQL uses a real composite PK.
+ */
+export const workCorrelations = agentsSchema.table(
+  "work_correlations",
+  {
+    entity_type: text("entity_type").notNull(),
+    entity_id: text("entity_id").notNull(),
+    conversation_id: text("conversation_id").notNull(),
+    agent_id: text("agent_id").notNull(),
+    status: text("status", { enum: correlationStatusValues })
+      .notNull()
+      .default("active"),
+    created_at: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updated_at: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    unique("uq_correlations_entity_conversation").on(
+      table.entity_type,
+      table.entity_id,
+      table.conversation_id,
+    ),
+    index("idx_correlations_entity").on(table.entity_type, table.entity_id),
+    index("idx_correlations_conversation").on(table.conversation_id),
+    index("idx_correlations_status").on(
+      table.entity_type,
+      table.entity_id,
+      table.status,
+    ),
   ],
 );

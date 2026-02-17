@@ -47,6 +47,10 @@ export function adaptLinearEvent(event: NormalizedEvent): IncomingEvent | null {
         message: `New agent session created for issue ${issueId}`,
         ...(taskId !== undefined && { taskId }),
         ...(actorInfo && { actorInfo }),
+        entityRef: {
+          entityType: "linear_issue" as const,
+          entityId: issueId,
+        },
         replyContext: {
           channel: "linear" as const,
           issueId,
@@ -55,25 +59,41 @@ export function adaptLinearEvent(event: NormalizedEvent): IncomingEvent | null {
       };
     }
 
-    case "linear.issue.created":
+    case "linear.issue.created": {
+      const issueId = (payload.issueId ?? payload.id) as string | undefined;
       return {
         type: "linear.issue.created",
         data: payload,
         source: "linear:webhook",
         deduplicationId: event.correlationId,
         ...(actorInfo && { actorInfo }),
+        ...(issueId && {
+          entityRef: {
+            entityType: "linear_issue" as const,
+            entityId: issueId,
+          },
+        }),
         // No correlationKey -- this is an ignore event
       };
+    }
 
-    case "linear.issue.updated":
+    case "linear.issue.updated": {
+      const issueId = (payload.issueId ?? payload.id) as string | undefined;
       return {
         type: "linear.issue.updated",
         data: payload,
         source: "linear:webhook",
         deduplicationId: event.correlationId,
         ...(actorInfo && { actorInfo }),
+        ...(issueId && {
+          entityRef: {
+            entityType: "linear_issue" as const,
+            entityId: issueId,
+          },
+        }),
         // No correlationKey -- this is an ignore event
       };
+    }
 
     case "linear.comment.created": {
       const issueId = payload.issueId as string;
@@ -90,6 +110,10 @@ export function adaptLinearEvent(event: NormalizedEvent): IncomingEvent | null {
         message: payload.body as string,
         ...(taskId !== undefined && { taskId }),
         ...(actorInfo && { actorInfo }),
+        entityRef: {
+          entityType: "linear_issue" as const,
+          entityId: issueId,
+        },
         replyContext: { channel: "linear" as const, issueId },
       };
     }
@@ -110,6 +134,10 @@ export function adaptLinearEvent(event: NormalizedEvent): IncomingEvent | null {
         message: (payload.prompt ?? payload.body) as string,
         ...(taskId !== undefined && { taskId }),
         ...(actorInfo && { actorInfo }),
+        entityRef: {
+          entityType: "linear_issue" as const,
+          entityId: issueId,
+        },
         replyContext: {
           channel: "linear" as const,
           issueId,

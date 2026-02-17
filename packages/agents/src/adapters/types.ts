@@ -15,6 +15,20 @@ import type { NormalizedEvent } from "@aesir/types";
 import { z } from "zod";
 import { ReplyContextSchema } from "../shared/communication/types.js";
 
+// ---- Entity Reference Schema -----------------------------------------------
+
+/**
+ * Typed entity reference extracted by adapters from event payloads.
+ * Used by the correlation router to look up existing work for an entity.
+ */
+export const EntityRefSchema = z.object({
+  entityType: z.enum(["linear_issue", "github_pr", "slack_thread"]),
+  entityId: z.string().min(1),
+});
+
+/** Typed entity reference for work correlation lookup */
+export type EntityRef = z.infer<typeof EntityRefSchema>;
+
 // ---- IncomingEvent Schema -------------------------------------------------
 
 /**
@@ -47,6 +61,8 @@ export const IncomingEventSchema = z.object({
       identifier: z.string().optional(),
     })
     .optional(),
+  /** Entity reference for work correlation lookup (populated by adapters when entity is unambiguous) */
+  entityRef: EntityRefSchema.optional(),
 });
 
 /** Validated IncomingEvent type inferred from the Zod schema */
