@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 78 of 78 (Work Correlation)
-Plan: 2 of 6 in current phase
-Status: Plan 78-02 complete
-Last activity: 2026-02-17 -- Plan 78-02 complete (entityRef extraction in all three adapters)
+Plan: 4 of 6 in current phase
+Status: Plan 78-04 complete
+Last activity: 2026-02-17 -- Plan 78-04 complete (knowledge query modes with metadata filtering)
 
 Progress: [======>   ] 60%
 
@@ -57,6 +57,7 @@ Progress: [======>   ] 60%
 | 77 | 05 | 5min | 2 | 4 |
 | 78 | 01 | 3min | 2 | 9 |
 | 78 | 02 | 5min | 2 | 4 |
+| 78 | 04 | 3min | 2 | 3 |
 
 ## Accumulated Context
 
@@ -101,6 +102,9 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 78]: Linear issue.created/updated use fallback (payload.issueId ?? payload.id) for varying payload shapes
 - [Phase 78]: GitHub entityRef uses owner/repo#number from payload repository, not config
 - [Phase 78]: Slack block actions include entityRef only when threadTs present (conditional spread)
+- [Phase 78]: Metadata filter applies to all query modes (not just exact/combined) for consistent behavior
+- [Phase 78]: Query results include metadata only when non-empty to reduce agent output noise
+- [Phase 78]: Conditional spread for metadata in store() to satisfy exactOptionalPropertyTypes
 
 ### Pending Todos
 
@@ -120,9 +124,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 78-02-PLAN.md
-Resume file: .planning/phases/78-work-correlation/78-02-SUMMARY.md
-Next action: Execute 78-03-PLAN.md
+Stopped at: Completed 78-04-PLAN.md
+Resume file: .planning/phases/78-work-correlation/78-04-SUMMARY.md
+Next action: Execute 78-05-PLAN.md
 
 ---
-*Updated: 2026-02-17 -- Plan 78-02 complete (entityRef extraction in Linear, GitHub, Slack adapters).*
+*Updated: 2026-02-17 -- Plan 78-04 complete (knowledge query modes with metadata filtering).*

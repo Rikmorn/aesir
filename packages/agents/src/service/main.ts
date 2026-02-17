@@ -47,6 +47,7 @@ import { createWebhookFilter } from "../router/webhook-filter.js";
 import * as schema from "../shared/db/schema.js";
 import { createEmbeddingService } from "../shared/embedding/index.js";
 import { config } from "../shared/env/config.js";
+import { createCorrelationService } from "../shared/services/correlation-service.js";
 import { createDirectoryService } from "../shared/services/directory-service.js";
 import { createKnowledgeService } from "../shared/services/knowledge-service.js";
 import { createTaskService } from "../shared/services/task-service.js";
@@ -120,11 +121,15 @@ async function bootstrap(): Promise<void> {
     logger,
   });
 
+  // 4f. CorrelationService -- work correlation tracking (Phase 78)
+  const correlationService = createCorrelationService({ db, logger });
+
   registerAllTools({
     registry: toolRegistry,
     agentRegistry,
     taskService,
     knowledgeService,
+    correlationService,
     directoryService,
     logger,
   });

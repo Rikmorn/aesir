@@ -1,7 +1,7 @@
 /**
  * Tool Factory Registration
  *
- * Registers all 47 tool factories in the ToolRegistry, bridging the v2.3
+ * Registers all 49 tool factories in the ToolRegistry, bridging the v2.3
  * ToolContext interface to the existing v2.2 tool factory signatures.
  *
  * Tool categories:
@@ -13,6 +13,7 @@
  * - Coordination (4): spawn_agent, request_human_input, wait_for, wait_for_task
  * - Task (8): create_task, complete_task, pause_task, handoff_task, list_tasks, get_task_context, delegate_task, respond_task
  * - Knowledge (3): knowledge_store, knowledge_query, knowledge_update
+ * - Work (2): work_register, work_query
  * - Directory (2): directory_find, directory_get
  * - Communication (3): reply, ask, notify
  *
@@ -26,6 +27,7 @@
 import type { DevContainerManager, PinoLogger } from "@aesir/platform";
 import type { ToolDefinition } from "../shared/agent-loop/types.js";
 import type { CommunicationToolDeps } from "../shared/communication/types.js";
+import type { CorrelationService } from "../shared/services/correlation-service.js";
 import type { DirectoryService } from "../shared/services/directory-service.js";
 import type { KnowledgeService } from "../shared/services/knowledge-service.js";
 import type { TaskService } from "../shared/services/task-service.js";
@@ -56,6 +58,10 @@ import {
   createKnowledgeStoreTool,
   createKnowledgeUpdateTool,
 } from "../shared/tools/knowledge/index.js";
+import {
+  createWorkQueryTool,
+  createWorkRegisterTool,
+} from "../shared/tools/work/index.js";
 import {
   createCompleteTaskTool,
   createCreateTaskTool,
@@ -88,6 +94,8 @@ export interface RegisterAllToolsOptions {
   taskService: TaskService;
   /** KnowledgeService for shared knowledge storage and semantic search (Phase 68) */
   knowledgeService: KnowledgeService;
+  /** CorrelationService for work correlation tracking (Phase 78) */
+  correlationService: CorrelationService;
   /** DirectoryService for entity discovery with semantic capability matching (Phase 69) */
   directoryService: DirectoryService;
   /** Logger for registration diagnostics */
@@ -170,7 +178,7 @@ function communicationAdapter(
 // ─── Registration ────────────────────────────────────────────────────────────
 
 /**
- * Register all 47 tool factories in the ToolRegistry.
+ * Register all 49 tool factories in the ToolRegistry.
  *
  * This bridges the v2.3 registry-based tool resolution to the existing v2.2
  * tool factory functions. After calling this, `registry.resolve(refs, context)`
@@ -361,6 +369,14 @@ export function registerAllTools(options: RegisterAllToolsOptions): void {
   registry.register("knowledge:update", (ctx) =>
     createKnowledgeUpdateTool(ks, ctx),
   );
+
+  // ── Work correlation tools (2) ──────────────────────────────────────
+
+  const cs = options.correlationService;
+  registry.register("work:register", (ctx) =>
+    createWorkRegisterTool(cs, ctx),
+  );
+  registry.register("work:query", (ctx) => createWorkQueryTool(cs, ctx));
 
   // ── Directory tools (2) ──────────────────────────────────────────────
 

@@ -8,6 +8,7 @@
 
 import type { DevContainerManager, PinoLogger } from "@aesir/platform";
 import { describe, expect, it, vi } from "vitest";
+import type { CorrelationService } from "../shared/services/correlation-service.js";
 import type { DirectoryService } from "../shared/services/directory-service.js";
 import type { KnowledgeService } from "../shared/services/knowledge-service.js";
 import type { TaskService } from "../shared/services/task-service.js";
@@ -69,6 +70,18 @@ function createMockKnowledgeService(): KnowledgeService {
   } as unknown as KnowledgeService;
 }
 
+function createMockCorrelationService(): CorrelationService {
+  return {
+    register: vi.fn(),
+    queryActive: vi.fn().mockResolvedValue([]),
+    queryTerminal: vi.fn().mockResolvedValue([]),
+    queryAll: vi.fn().mockResolvedValue([]),
+    updateStatus: vi.fn(),
+    health: vi.fn().mockResolvedValue({ healthy: true, latencyMs: 1 }),
+    close: vi.fn(),
+  } as unknown as CorrelationService;
+}
+
 function createMockDirectoryService(): DirectoryService {
   return {
     find: vi.fn().mockResolvedValue([]),
@@ -101,12 +114,14 @@ function setupRegistry() {
   const agentRegistry = createMockAgentRegistry();
   const taskService = createMockTaskService();
   const knowledgeService = createMockKnowledgeService();
+  const correlationService = createMockCorrelationService();
   const directoryService = createMockDirectoryService();
   registerAllTools({
     registry,
     agentRegistry,
     taskService,
     knowledgeService,
+    correlationService,
     directoryService,
     logger,
   });
@@ -116,6 +131,7 @@ function setupRegistry() {
     agentRegistry,
     taskService,
     knowledgeService,
+    correlationService,
     directoryService,
   };
 }
@@ -134,7 +150,7 @@ describe("registerAllTools", () => {
 
     it("should register exactly 47 tools", () => {
       const { registry } = setupRegistry();
-      expect(registry.listRegistered()).toHaveLength(47);
+      expect(registry.listRegistered()).toHaveLength(49);
     });
 
     it("should register all expected namespaces", () => {
@@ -151,6 +167,7 @@ describe("registerAllTools", () => {
           "coordination",
           "task",
           "knowledge",
+          "work",
           "directory",
           "communication",
         ]),
@@ -234,6 +251,13 @@ describe("registerAllTools", () => {
       expect(registry.has("knowledge:store")).toBe(true);
       expect(registry.has("knowledge:query")).toBe(true);
       expect(registry.has("knowledge:update")).toBe(true);
+    });
+
+    it("should register all work tools", () => {
+      const { registry } = setupRegistry();
+
+      expect(registry.has("work:register")).toBe(true);
+      expect(registry.has("work:query")).toBe(true);
     });
 
     it("should register all directory tools", () => {
@@ -378,7 +402,7 @@ describe("registerAllTools", () => {
       const { logger } = setupRegistry();
 
       expect(logger.info).toHaveBeenCalledWith(
-        { toolCount: 47 },
+        { toolCount: 49 },
         "All tool factories registered",
       );
     });
