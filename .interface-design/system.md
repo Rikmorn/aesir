@@ -12,23 +12,23 @@
 
 ## Color Palette
 
-OKLCH color space throughout. All surfaces share hue 265 (blue) at very low chroma for cohesive cool-toned feel.
+OKLCH color space throughout. Light mode uses hue 265 (blue-violet). Dark mode uses hue 235 (neutral blue) with reduced chroma for a more restful, GitHub-adjacent feel without the violet intensity.
 
 ### Dark Mode (Primary)
 
-Lifted floor (0.155 not near-black), softened foreground (0.88 not bright white). Reduces contrast for comfortable extended use.
+Neutral blue surfaces (hue 235), reduced chroma. Lifted floor (0.155 not near-black), softened foreground (0.88 not bright white). The hue shift from 265→235 eliminates violet tint that felt harsh over long sessions while retaining enough blue character to distinguish from pure gray.
 
 | Token | Value | Purpose |
 |-------|-------|---------|
-| background | `oklch(0.155 0.007 265)` | Lifted dark surface |
-| card | `oklch(0.185 0.007 265)` | Card/panel surface |
-| popover | `oklch(0.205 0.008 265)` | Floating elements |
-| border | `oklch(0.255 0.01 265)` | Subtle cool border |
-| foreground | `oklch(0.88 0.005 265)` | Primary text (soft white) |
-| muted-foreground | `oklch(0.52 0.015 265)` | Secondary text |
+| background | `oklch(0.155 0.006 235)` | Lifted dark surface |
+| card | `oklch(0.185 0.006 235)` | Card/panel surface |
+| popover | `oklch(0.205 0.007 235)` | Floating elements |
+| border | `oklch(0.255 0.008 235)` | Subtle cool border |
+| foreground | `oklch(0.88 0.005 235)` | Primary text (soft white) |
+| muted-foreground | `oklch(0.52 0.012 235)` | Secondary text |
 | primary | `oklch(0.60 0.16 250)` | Indigo accent — signal color |
 | destructive | `oklch(0.55 0.22 25)` | Error red |
-| sidebar | `oklch(0.14 0.007 265)` | Sidebar (slightly deeper) |
+| sidebar | `oklch(0.14 0.006 235)` | Sidebar (slightly deeper) |
 
 ### Light Mode
 

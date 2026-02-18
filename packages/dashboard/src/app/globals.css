@@ -85,37 +85,37 @@
   }
 
   .dark {
-    /* Dark — lifted floor, softer foreground, easier on the eyes */
-    --background: oklch(0.155 0.007 265);
-    --foreground: oklch(0.88 0.005 265);
-    --card: oklch(0.185 0.007 265);
-    --card-foreground: oklch(0.88 0.005 265);
-    --popover: oklch(0.205 0.008 265);
-    --popover-foreground: oklch(0.88 0.005 265);
+    /* Dark — neutral blue surfaces (hue 235), reduced chroma for comfort */
+    --background: oklch(0.155 0.006 235);
+    --foreground: oklch(0.88 0.005 235);
+    --card: oklch(0.185 0.006 235);
+    --card-foreground: oklch(0.88 0.005 235);
+    --popover: oklch(0.205 0.007 235);
+    --popover-foreground: oklch(0.88 0.005 235);
     --primary: oklch(0.60 0.16 250);
     --primary-foreground: oklch(0.98 0 0);
-    --secondary: oklch(0.22 0.008 265);
-    --secondary-foreground: oklch(0.88 0.005 265);
-    --muted: oklch(0.205 0.008 265);
-    --muted-foreground: oklch(0.52 0.015 265);
-    --accent: oklch(0.22 0.008 265);
-    --accent-foreground: oklch(0.88 0.005 265);
+    --secondary: oklch(0.22 0.007 235);
+    --secondary-foreground: oklch(0.88 0.005 235);
+    --muted: oklch(0.205 0.007 235);
+    --muted-foreground: oklch(0.52 0.012 235);
+    --accent: oklch(0.22 0.007 235);
+    --accent-foreground: oklch(0.88 0.005 235);
     --destructive: oklch(0.55 0.22 25);
-    --border: oklch(0.255 0.01 265);
-    --input: oklch(0.255 0.01 265);
+    --border: oklch(0.255 0.008 235);
+    --input: oklch(0.255 0.008 235);
     --ring: oklch(0.60 0.16 250);
     --chart-1: oklch(0.60 0.16 250);
     --chart-2: oklch(0.65 0.15 165);
     --chart-3: oklch(0.65 0.15 55);
     --chart-4: oklch(0.58 0.18 300);
     --chart-5: oklch(0.55 0.20 25);
-    --sidebar: oklch(0.14 0.007 265);
-    --sidebar-foreground: oklch(0.88 0.005 265);
+    --sidebar: oklch(0.14 0.006 235);
+    --sidebar-foreground: oklch(0.88 0.005 235);
     --sidebar-primary: oklch(0.60 0.16 250);
     --sidebar-primary-foreground: oklch(0.98 0 0);
-    --sidebar-accent: oklch(0.20 0.008 265);
-    --sidebar-accent-foreground: oklch(0.88 0.005 265);
-    --sidebar-border: oklch(0.255 0.01 265);
+    --sidebar-accent: oklch(0.20 0.007 235);
+    --sidebar-accent-foreground: oklch(0.88 0.005 235);
+    --sidebar-border: oklch(0.255 0.008 235);
     --sidebar-ring: oklch(0.60 0.16 250);
   }
 }
@@ -146,27 +146,27 @@
 
 /* React Flow — dark mode overrides for controls and minimap */
 .dark .react-flow__controls {
-  border: 1px solid oklch(0.255 0.01 265);
+  border: 1px solid oklch(0.255 0.008 235);
   box-shadow: none;
 }
 
 .dark .react-flow__controls-button {
-  background: oklch(0.185 0.007 265);
-  border-bottom-color: oklch(0.255 0.01 265);
-  fill: oklch(0.52 0.015 265);
+  background: oklch(0.185 0.006 235);
+  border-bottom-color: oklch(0.255 0.008 235);
+  fill: oklch(0.52 0.012 235);
 }
 
 .dark .react-flow__controls-button:hover {
-  background: oklch(0.22 0.008 265);
-  fill: oklch(0.88 0.005 265);
+  background: oklch(0.22 0.007 235);
+  fill: oklch(0.88 0.005 235);
 }
 
 .dark .react-flow__minimap {
-  background: oklch(0.185 0.007 265);
-  border: 1px solid oklch(0.255 0.01 265);
+  background: oklch(0.185 0.006 235);
+  border: 1px solid oklch(0.255 0.008 235);
 }
 
 .dark .react-flow__minimap-mask {
-  fill: oklch(0.155 0.007 265);
+  fill: oklch(0.155 0.006 235);
   opacity: 0.7;
 }
