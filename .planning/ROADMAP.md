@@ -186,7 +186,11 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. EventMetricsBar displays a cost estimate derived from token counts and model pricing alongside existing metrics (tokens, duration, tool success rate, retry count)
   2. `event.routed` events appear in the dashboard conversation timeline with a distinct icon and color -- schema, SSE types, and icon mapping all include the 18th event type
-**Plans:** TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 79-01-PLAN.md -- Cost estimation: model in llm.response payload, pricing utility, EventMetricsBar display (DASH-08)
+- [ ] 79-02-PLAN.md -- event.routed propagation: schema, SSE types, icon/color, timeline grouping, lifecycle banner (DASH-08)
 
 ## Progress
 
