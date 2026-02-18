@@ -152,6 +152,12 @@ export function groupTimelineEvents(
       continue;
     }
 
+    // Routing events
+    if (event.type === "event.routed") {
+      items.push({ kind: "lifecycle_banner", event });
+      continue;
+    }
+
     // Everything else: generic fallback
     items.push({ kind: "generic", event });
   }

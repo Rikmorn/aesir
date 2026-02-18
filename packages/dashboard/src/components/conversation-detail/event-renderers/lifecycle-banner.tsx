@@ -70,6 +70,17 @@ function getLifecycleDescription(event: ConversationEvent): string {
       const error = typeof p.error === "string" ? `: ${p.error}` : "";
       return `Failed to notify ${channel}${error}`;
     }
+    case "event.routed": {
+      const disposition =
+        typeof p.disposition === "string" ? p.disposition : "unknown";
+      const method =
+        typeof p.routingMethod === "string" ? p.routingMethod : "unknown";
+      const entity = p.entity as
+        | { entityType?: string; entityId?: string }
+        | undefined;
+      const entityLabel = entity?.entityId ? ` (${entity.entityId})` : "";
+      return `${method} \u2192 ${disposition}${entityLabel}`;
+    }
     default:
       return formatEventType(event.type);
   }
