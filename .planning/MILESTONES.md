@@ -1,5 +1,37 @@
 # Project Milestones: Aesir
 
+## v2.8 Resilience and Observability (Shipped: 2026-02-18)
+
+**Delivered:** Platform stabilization before domain modeling -- every failure visible and notified, the dashboard tells the complete story of every conversation, agents know what work exists before starting their own, and echo loops eliminated at the infrastructure level.
+
+**Phases completed:** 74-79 (6 phases, 22 plans total)
+
+**Key accomplishments:**
+- Echo elimination: webhook dedup table with pg-boss 24h TTL cleanup + actor-based echo suppression across all 3 integrations (Linear actor.type, GitHub sender.login, Slack bot_id/app_id)
+- MCP error classification: custom retry loop replacing fetch-retry-ts with permanent/transient HTTP classification, structured error context for agents, and 4 observability event types (mcp.error, mcp.rate_limited, mcp.retries_exhausted, notification.failed)
+- Channel-agnostic failure notifications at all 5 terminal failure paths via denormalizer, with notification.failed backstop visible in dashboard
+- Recovery context injection on crash resume: buildRecoveryContext() queries event log for work after last persistence point, injects as `<recovery_context>` XML block with retry count
+- Dashboard observability: 18 event types with distinct icons/colors, tool call cards grouped by toolCallId, sub-agent attribution pills, lifecycle banners, filter chips, metrics bar with cost estimate
+- Work correlation: entity correlation registry with auto-registration at executor.start(), correlation fallback routing, disposition vocabulary (new/signal/retry/supersede/duplicate), knowledge exact match mode
+- Graceful shutdown: worker drain on SIGTERM with abort signaling, health 503 during draining, re-enqueue of aborted conversations
+
+**Stats:**
+- 151 files created/modified (+18,946 / -643 lines)
+- ~118,000 lines of TypeScript total
+- 6 phases, 22 plans, 33 requirements (33/33 satisfied)
+- 2 days (2026-02-16 → 2026-02-18)
+
+**Git range:** `e53f01f` → `b6118ca`
+
+**Tech debt tracked:**
+- event.routed sequence=0 collision (moderate: observability only, routing works)
+- work:register and work:query tools registered but absent from agent definition YAML files (low: auto-registration works)
+- 12 human verification items pending across Phases 77-79 (visual/interactive/live-stack testing)
+
+**What's next:** Platform completion (counter-propose, parallel delegation, scheduled execution), domain modeling, human collaboration
+
+---
+
 ## v2.7 Agent Collaboration (Shipped: 2026-02-13)
 
 **Delivered:** Multi-agent collaboration -- agents discover each other by capability, delegate work through tasks with negotiation handshakes, signal completion reliably, and the entire chain is observable through the dashboard. Triangular product→dev→QA workflow validates all primitives end-to-end.
@@ -245,22 +277,4 @@
 
 ---
 
-## v2.6 Unified Agent Communication (Shipped: 2026-02-09)
-
-**Phases completed:** 78 phases, 300 plans, 52 tasks
-
-**Key accomplishments:**
-- (none recorded)
-
----
-
-
-## v2.7 Agent Collaboration (Shipped: 2026-02-13)
-
-**Phases completed:** 85 phases, 326 plans, 52 tasks
-
-**Key accomplishments:**
-- (none recorded)
-
----
 

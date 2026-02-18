@@ -2,17 +2,17 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-16)
+See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.8 Resilience and Observability -- Phase 79 complete
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 79 of 79 (Dashboard Gap Closure)
-Plan: 2 of 2 in current phase
-Status: Phase 79 complete
-Last activity: 2026-02-18 -- Plan 79-01 complete (cost estimation metrics bar)
+Phase: 79 of 79 (all phases complete)
+Plan: N/A
+Status: v2.8 milestone shipped
+Last activity: 2026-02-18 -- v2.8 Resilience and Observability archived
 
 Progress: [==========>] 100%
 
@@ -29,98 +29,20 @@ Progress: [==========>] 100%
 | v2.5 Agentic Conversations | 2026-02-08 | 7 | 17 |
 | v2.6 Unified Agent Communication | 2026-02-09 | 7 | 16 |
 | v2.7 Agent Collaboration | 2026-02-13 | 7 | 26 |
+| v2.8 Resilience and Observability | 2026-02-18 | 6 | 22 |
 
 ## Performance Metrics
 
 **Cumulative:**
-- Total milestones shipped: 9
-- Total phases completed: 73
-- Total plans completed: 330
-
-*v2.8 metrics will be tracked as plans complete*
-
-| Phase | Plan | Duration | Tasks | Files |
-|-------|------|----------|-------|-------|
-| 74 | 02 | 3min | 2 | 9 |
-| 74 | 03 | 2min | 1 | 1 |
-| 74 | 01 | 4min | 2 | 4 |
-| 75 | 01 | 3min | 2 | 6 |
-| 75 | 02 | 3min | 2 | 3 |
-| 75 | 03 | 6min | 2 | 13 |
-| 76 | 01 | 7min | 2 | 8 |
-| 76 | 02 | 5min | 2 | 4 |
-| 76 | 03 | 5min | 2 | 10 |
-| 77 | 01 | 7min | 2 | 9 |
-| 77 | 02 | 3min | 2 | 4 |
-| 77 | 03 | 4min | 2 | 2 |
-| 77 | 04 | 2min | 2 | 3 |
-| 77 | 05 | 5min | 2 | 4 |
-| 78 | 01 | 3min | 2 | 9 |
-| 78 | 02 | 5min | 2 | 4 |
-| 78 | 04 | 3min | 2 | 3 |
-| Phase 78 P03 | 5min | 2 tasks | 7 files |
-| 78 | 05 | 5min | 2 | 5 |
-| 78 | 06 | 4min | 2 | 4 |
-| 79 | 01 | 12min | 2 | 5 |
-| 79 | 02 | 5min | 2 | 5 |
+- Total milestones shipped: 10
+- Total phases completed: 79
+- Total plans completed: 349
 
 ## Accumulated Context
 
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
-- [Phase 74]: Removed communication:notify from all test agents -- aligns with v2.7 anti-pattern lesson
-- [Phase 74]: Return informational content (not isError) for empty tool state -- lets agents reason naturally
-- [Phase 74]: Use z.string().min(1) for agentType validation -- subAgents mapping already validates role
-- [Phase 75]: Source prefix extraction uses first segment before colon for dedup namespacing
-- [Phase 75]: Dedup layer checked before echo layer -- duplicates rejected regardless of actor
-- [Phase 75]: DB errors in dedup throw (fail-loud) rather than silently accepting
-- [Phase 75]: Linear normalizer changes pre-completed in Plan 01 -- no duplicate commit for Plan 02
-- [Phase 75]: GitHub sender extracted from raw JSON.parse, not Zod schema -- passthrough only
-- [Phase 75]: Block action events excluded from Slack actorInfo -- user-initiated by definition
-- [Phase 75]: pg-boss schedule:true enables cron for dedup cleanup while keeping send+startAfter for timeouts
-- [Phase 75]: getBoss() returns undefined before start() to prevent premature job scheduling
-- [Phase 76]: Replaced fetch-retry-ts with custom retry loop -- library cannot classify permanent vs transient errors
-- [Phase 76]: Full jitter for retry delays (simpler, sufficient for 3-attempt budget)
-- [Phase 76]: 429 Retry-After > 10s returns error immediately to avoid blocking agents
-- [Phase 76]: Application-level errors (200 + isError) classified as permanent
-- [Phase 76]: notifyFailure replaces emitErrorActivity entirely -- channel-agnostic via denormalizer
-- [Phase 76]: Drain timeout aborts via AbortController; aborted conversations re-enqueue naturally
-- [Phase 76]: pg-boss stopped before drain wait; health endpoint returns 503 during shutdown
-- [Phase 76]: getSequence() added to EventLog interface for in-memory sequence retrieval (no DB round-trip)
-- [Phase 76]: Recovery context injection non-fatal (try/catch) -- agent resumes without context rather than failing
-- [Phase 76]: 6 persistence boundaries for last_persisted_sequence (plan specified 5, queued-signal-at-pause also persists)
-- [Phase 77]: Migration 0013 needed: CHECK constraint from 0004 must be updated for new event types
-- [Phase 77]: onMcpEvent added to ToolContext so mcpAdapter can thread it from worker loop to callMcpTool
-- [Phase 77]: currentToolCallId tracked via closure in worker loop scope -- sequential tool calls within agent loop iteration
-- [Phase 77]: SSE field fallback pattern (sse.field ?? default) for backward compatibility during parallel plan execution
-- [Phase 77]: agent.retry_scheduled increments retryCount live via SSE handler for real-time metrics
-- [Phase 77]: SubAgentPill color fallback via ?? AGENT_PILL_COLORS[0] for TypeScript noUncheckedIndexedAccess safety
-- [Phase 77]: Two-pass groupTimelineEvents pipeline: index by toolCallId first pass, emit TimelineItems in second pass
-- [Phase 77]: TimelineItem discriminated union with 6 kinds (tool_card, lifecycle_banner, llm_response, signal, sub_agent_lifecycle, generic)
-- [Phase 77]: Static AGENT_DOT_COLORS array parallel to AGENT_PILL_COLORS for Tailwind build-time class scanning
-- [Phase 77]: Failures filter is additive -- failed items show regardless of category filter when Failures chip is on
-- [Phase 77]: LlmResponseRow extracted from EventItem; all other event kinds use specialized renderers
-- [Phase 78]: Drizzle unique constraint mirrors SQL composite PK -- Drizzle ORM lacks composite PK support
-- [Phase 78]: JSONB default uses {} object not '{}' string -- Drizzle types require matching TS type for defaults
-- [Phase 78]: KNOWN_SIGNAL_TYPES as const array for discoverability without constraining signal type validation
-- [Phase 78]: Linear issue.created/updated use fallback (payload.issueId ?? payload.id) for varying payload shapes
-- [Phase 78]: GitHub entityRef uses owner/repo#number from payload repository, not config
-- [Phase 78]: Slack block actions include entityRef only when threadTs present (conditional spread)
-- [Phase 78]: Metadata filter applies to all query modes (not just exact/combined) for consistent behavior
-- [Phase 78]: Query results include metadata only when non-empty to reduce agent output noise
-- [Phase 78]: Conditional spread for metadata in store() to satisfy exactOptionalPropertyTypes
-- [Phase 78]: CorrelationStatus type used for updateStatus parameter instead of string -- type-safe status transitions
-- [Phase 78]: Fire-and-forget pattern (void + catch) for all correlation status propagation -- matches eventLog.append() pattern
-- [Phase 78]: correlationService added to RouteEventDeps proactively for Plan 06 correlation routing
-- [Phase 78]: Conditional spread for entityRef/entity params to satisfy exactOptionalPropertyTypes
-- [Phase 78]: emitRoutedEvent uses direct DB insert (not EventLog) -- EventLog requires initSequence per conversation_id
-- [Phase 78]: Correlation fallback broadcasts entity_update to all active/waiting conversations
-- [Phase 79]: event.routed grouped as lifecycle_banner -- matches infrastructure/routing nature, filterable under Lifecycle chip
-- [Phase 79]: Navigation icon + indigo-400 color for event.routed -- matches agent.reopened/llm.response infrastructure palette
-- [Phase 79]: Defensive typeof checks with 'unknown' fallbacks for event.routed payload extraction
-- [Phase 79]: Sonnet pricing as default fallback for events without model field
-- [Phase 79]: Client-side cost estimation (no server-side aggregation needed)
 
 ### Pending Todos
 
@@ -128,21 +50,20 @@ See PROJECT.md Key Decisions table for full history.
 2. **Run dev-agent container as non-root** (infrastructure)
 3. **11 tests skipped pending infrastructure** (testing)
 4. **Linear OAuth token migration** -- deadline April 1, 2026 (LSDK-02 shipped)
+5. **event.routed sequence=0 collision** -- second routing event per conversation silently dropped (moderate)
+6. **work:register/query absent from agent definitions** -- add to dev-agent and product-agent YAML (low)
+7. **12 human verification items** -- visual/interactive testing across Phases 77-79
 
 ### Blockers/Concerns
 
 - Linear Agent SDK is developer preview -- feature flag (LINEAR_AGENT_SDK_ENABLED) may be needed for fallback
 - Linear OAuth token migration deadline: April 1, 2026
-- Echo suppression: fully operational (Phase 75 complete) -- dedup + echo filter wired into routeEvent pipeline
-- Recovery context + history compaction boundary coordination: last_persisted_sequence tracks checkpoint; recovery queries afterSequence
-- Work correlation routing precedence vs. SIGNAL_AGENT_MAP needs decision during Phase 78 planning
 
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed 79-01-PLAN.md (cost estimation metrics bar). Phase 79 complete.
-Resume file: .planning/phases/79-dashboard-gap-closure/79-01-SUMMARY.md
-Next action: Phase 79 complete -- ready for next phase or milestone wrap-up
+Stopped at: v2.8 milestone archived
+Next action: `/gsd:new-milestone` to start next milestone
 
 ---
-*Updated: 2026-02-18 -- Plan 79-01 complete (cost estimation metrics bar). Phase 79 complete.*
+*Updated: 2026-02-18 -- v2.8 Resilience and Observability shipped and archived.*

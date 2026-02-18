@@ -2,30 +2,19 @@
 
 ## What This Is
 
-An agentic development platform that automates software development workflows -- from feature request to shipped code. A Postgres-backed conversation executor with declarative agent definitions. Agents collaborate using existing business tools (Linear, GitHub, Slack) and operate like coworkers within those tools, not as a separate system to manage. Tasks provide multi-conversation continuity through structured handoffs, enabling agents to maintain context across interactions. Includes a real-time operations dashboard for monitoring agent execution, inspecting tool calls, auditing permissions, and viewing system health.
+An agentic development platform that automates software development workflows -- from feature request to shipped code. A Postgres-backed conversation executor with declarative agent definitions. Agents collaborate using existing business tools (Linear, GitHub, Slack) and operate like coworkers within those tools, not as a separate system to manage. Tasks provide multi-conversation continuity through structured handoffs, enabling agents to maintain context across interactions. The platform is resilient: failures notify all channels, MCP errors are classified for agent decision-making, crashed conversations resume with recovery context, and echo loops are eliminated at the infrastructure level. Includes a real-time operations dashboard with 18 event types, tool call grouping, sub-agent attribution, cost estimation, and work correlation tracking.
 
 ## Core Value
 
 End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
-## Current Milestone: v2.8 Resilience and Observability
-
-**Goal:** Stabilize the platform before domain modeling begins. Close gaps discovered during v2.7 live testing — every failure visible and notified, the dashboard tells the complete story, agents know what work exists before starting their own.
-
-**Target features:**
-- Quick fixes for v2.7 E2E issues (ISS-003, ISS-007, ISS-022, ISS-023)
-- Echo elimination (event ID dedup + actor-based echo suppression across all integrations)
-- Runtime resilience (failure notifications on all channels, MCP error classification, recovery context injection)
-- Dashboard observability (new event types, lifecycle event rendering, tool call grouping, sub-agent attribution)
-- Work correlation (correlation registry, work:register/query tools, disposition vocabulary, router integration)
-
 ## Current State
 
-**Version:** v2.8 Resilience and Observability (in progress)
+**Version:** v2.8 Resilience and Observability (shipped 2026-02-18)
 
 **Tech Stack:**
 - TypeScript/Node.js monorepo (pnpm workspaces)
-- ~85,000 lines across 8 packages
+- ~118,000 lines across 8 packages
 - @anthropic-ai/sdk for agentic tool-use loops
 - Postgres-backed ConversationExecutor with SKIP LOCKED claiming (no Temporal)
 - Declarative agent definitions (YAML + prompt.md) with AgentRegistry + ToolRegistry
@@ -80,6 +69,13 @@ Agent definitions (YAML + prompt.md, constitutional + few-shot style)
 - Domain-language communication: agents use reply/ask/notify instead of channel-specific tools, infrastructure denormalizes to Slack/Linear/GitHub
 - ReplyContext propagation: inbound adapters extract channel context, signals carry it, agents receive opaque context to pass through
 - Echo loop prevention: agent-authored comments filtered at adapter level before re-entering inbound pipeline
+- Webhook dedup: event ID dedup table with 24h TTL cleanup rejects duplicate deliveries at adapter level
+- MCP error classification: permanent (4xx) vs transient (429/5xx) with structured context and transparent retry
+- Failure notifications: channel-agnostic notification at all 5 terminal failure paths with notification.failed backstop
+- Recovery context: crashed conversations resume with XML block describing work since last persistence point
+- Graceful shutdown: worker drain on SIGTERM with abort signaling and health 503 during draining
+- Work correlation: entity tracking (work_correlations table), router correlation fallback, disposition vocabulary
+- Dashboard timeline: 18 event types with distinct icons/colors, tool call cards, sub-agent pills, lifecycle banners, filter chips, metrics bar with cost estimate
 
 ## Requirements
 
@@ -178,6 +174,16 @@ Agent definitions (YAML + prompt.md, constitutional + few-shot style)
 - ✓ Delegation Graph Observability: React Flow task tree, dagre layout, health badges, delegation timeline, conversation cross-links — v2.7
 - ✓ QA Agent: delegation-only agent validating triangular product→dev→QA workflow (48/49 requirements, LSDK-08 deferred) — v2.7
 
+**v2.8 Resilience and Observability (shipped 2026-02-18):**
+- ✓ Quick Fixes: get_task_context graceful null, dev-agent ask+wait_for, spawn_agent dynamic validation, test agent notify removal — v2.8
+- ✓ Echo Elimination: webhook dedup via event ID table, actor-based echo suppression (Linear/GitHub/Slack), suppressed event logging — v2.8
+- ✓ MCP Error Classification: permanent/transient HTTP classification, structured agent context, transparent retry with backoff, 4 observability event types — v2.8
+- ✓ Failure Notifications: channel-agnostic notification at all 5 terminal failure paths, notification.failed backstop for dashboard visibility — v2.8
+- ✓ Recovery Context: crash resume with `<recovery_context>` XML block, last_persisted_sequence tracking at 6 persistence boundaries — v2.8
+- ✓ Graceful Shutdown: worker drain on SIGTERM, abort signaling, health 503, re-enqueue of aborted conversations — v2.8
+- ✓ Dashboard Observability: 18 event types with distinct icons/colors, tool call cards, sub-agent attribution, lifecycle banners, filter chips, metrics bar with cost estimate — v2.8
+- ✓ Work Correlation: entity correlation registry, work:register/query tools, auto-registration at executor.start(), correlation fallback routing, disposition vocabulary, knowledge exact match mode — v2.8
+
 ### Active
 
 **Candidates for future milestones:**
@@ -227,7 +233,7 @@ Agent definitions (YAML + prompt.md, constitutional + few-shot style)
 - Prefer well-maintained external libraries over hand-rolling
 - Agent-first problem solving: fix agent behavior via prompts and tools, not deterministic overrides
 
-**Known Tech Debt (updated after v2.7):**
+**Known Tech Debt (updated after v2.8):**
 - Dispatcher route fallback defaults reference router:3006 instead of agent-service:3004 (22 occurrences; runtime correct via docker-compose)
 - Two signal types (user_reply, cancel) defined in SIGNAL_AGENT_MAP but no adapter produces them (reserved for future)
 - schema.drizzle.ts retains legacy table definitions (intentional, prevents destructive drizzle-kit migrations)
@@ -241,6 +247,9 @@ Agent definitions (YAML + prompt.md, constitutional + few-shot style)
 - Parallel delegation: sequential only; task groups with completion policies deferred
 - Markdown-to-Slack-mrkdwn format translation not yet implemented (FMT-01, deferred from v2.6)
 - Linear Agent SDK is developer preview — feature flag (LINEAR_AGENT_SDK_ENABLED) may be needed for fallback
+- event.routed sequence=0 collision: second event.routed per conversation silently dropped by unique constraint (observability only, routing unaffected)
+- work:register and work:query tools registered in ToolRegistry but absent from production agent definition YAML files (auto-registration at executor.start() works)
+- 12 human verification items pending across Phases 77-79 (visual/interactive/live-stack testing)
 
 ## Constraints
 
@@ -293,6 +302,14 @@ Agent definitions (YAML + prompt.md, constitutional + few-shot style)
 | wait_for_task as separate tool | Auto-registers for all task-lifecycle signals; safety-by-design vs manual wait_for | ✓ Good — agents cannot forget to listen for timeout/failure (v2.7) |
 | Knowledge classification taxonomy (6 types) | Fixed types with sensible defaults; avoids over-classification | ✓ Good — deduplication + expiry work well with fixed categories (v2.7) |
 | Delegation-only agent pattern | QA agent has no triggers, started exclusively via task:delegate | ✓ Good — clean separation of concerns, Haiku for cost efficiency (v2.7) |
+| Custom MCP retry loop over fetch-retry-ts | Library cannot classify permanent vs transient errors; custom loop enables HTTP status classification | ✓ Good — structured error context for agents (v2.8) |
+| Channel-agnostic failure notifications via denormalizer | Replaces Linear-only emitErrorActivity(); single notifyFailure() at all 5 terminal paths | ✓ Good — consistent notification across all channels (v2.8) |
+| Recovery context injection (non-fatal) | Agent resumes without context rather than failing; buildRecoveryContext() queries event log after last persistence point | ✓ Good — graceful degradation on crash (v2.8) |
+| Dedup before echo filter ordering | Duplicates rejected regardless of actor; prevents false-positive echo classification on retransmitted webhooks | ✓ Good — correct layering (v2.8) |
+| Client-side cost estimation | No server-side aggregation needed; pricing.ts utility with model-specific rates and Sonnet fallback | ✓ Good — simple, no new API (v2.8) |
+| Entity correlation with fire-and-forget status propagation | Matches eventLog.append() pattern; correlation updates never block conversation execution | ✓ Good — zero-impact on critical path (v2.8) |
+| Router disposition vocabulary (new/signal/retry/supersede/duplicate) | Formal routing decisions visible via event.routed; agents use work:query for data and reason naturally | ✓ Good — clear separation of router vs agent concerns (v2.8) |
+| TimelineItem discriminated union (6 kinds) | tool_card, lifecycle_banner, llm_response, signal, sub_agent_lifecycle, generic — exhaustive rendering | ✓ Good — type-safe event rendering (v2.8) |
 | Webhooks over polling | Cost/load savings; agents wake on events | ✓ Good |
 | Full containerization | Reproducible environments | ✓ Good |
 | PostgreSQL for persistence | Shared across all services | ✓ Good |
@@ -324,4 +341,4 @@ Lessons learned during development that guide future phases.
 | Hard constraints for critical agent behaviors | QA agent ended without completing tasks until a hard MUST constraint was added. For safety-critical tool calls (task:complete_task before end), strong directives earn their place. |
 
 ---
-*Last updated: 2026-02-16 after v2.8 milestone start*
+*Last updated: 2026-02-18 after v2.8 milestone completion*
