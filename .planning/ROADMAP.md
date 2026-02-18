@@ -89,7 +89,7 @@ See `.planning/milestones/v2.7-ROADMAP.md` for full details.
 - [x] **Phase 76: Runtime Resilience** - Close the loop between failure observation and recovery -- notify, classify, and adapt on every failure path (completed 2026-02-17)
 - [x] **Phase 77: Dashboard Observability** - Make the dashboard tell the full story of every conversation with lifecycle events, tool grouping, and sub-agent attribution (completed 2026-02-17)
 - [x] **Phase 78: Work Correlation** - Give the platform a formal concept of "what work exists for entity X" with registry, tools, and disposition vocabulary (completed 2026-02-17)
-- [ ] **Phase 79: Dashboard Gap Closure** - Close audit gaps: add cost estimate to metrics bar, sync event.routed to dashboard schema/SSE/icons
+- [x] **Phase 79: Dashboard Gap Closure** - Close audit gaps: add cost estimate to metrics bar, sync event.routed to dashboard schema/SSE/icons (completed 2026-02-18)
 
 ## Phase Details
 
@@ -186,7 +186,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. EventMetricsBar displays a cost estimate derived from token counts and model pricing alongside existing metrics (tokens, duration, tool success rate, retry count)
   2. `event.routed` events appear in the dashboard conversation timeline with a distinct icon and color -- schema, SSE types, and icon mapping all include the 18th event type
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 79-01-PLAN.md -- Cost estimation: model in llm.response payload, pricing utility, EventMetricsBar display (DASH-08)
@@ -212,7 +212,7 @@ Phases 74 through 79. Phase 78 is independent of 76/77. Phase 79 is a gap closur
 | 76. Runtime Resilience | 0/3 | Complete    | 2026-02-17 |
 | 77. Dashboard Observability | 0/5 | Complete    | 2026-02-17 |
 | 78. Work Correlation | 0/6 | Complete    | 2026-02-17 |
-| 79. Dashboard Gap Closure | 0/TBD | Pending | - |
+| 79. Dashboard Gap Closure | 0/TBD | Complete    | 2026-02-18 |
 
 ## Milestone Progress
 
