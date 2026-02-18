@@ -11,7 +11,7 @@
 - v2.5 Agentic Conversations -- Phases 56-59 (shipped 2026-02-08)
 - v2.6 Unified Agent Communication -- Phases 60-66 (shipped 2026-02-09)
 - v2.7 Agent Collaboration -- Phases 67-73 (shipped 2026-02-13)
-- v2.8 Resilience and Observability -- Phases 74-78 (in progress)
+- v2.8 Resilience and Observability -- Phases 74-79 (in progress)
 
 ## Completed Phases
 
@@ -89,6 +89,7 @@ See `.planning/milestones/v2.7-ROADMAP.md` for full details.
 - [x] **Phase 76: Runtime Resilience** - Close the loop between failure observation and recovery -- notify, classify, and adapt on every failure path (completed 2026-02-17)
 - [x] **Phase 77: Dashboard Observability** - Make the dashboard tell the full story of every conversation with lifecycle events, tool grouping, and sub-agent attribution (completed 2026-02-17)
 - [x] **Phase 78: Work Correlation** - Give the platform a formal concept of "what work exists for entity X" with registry, tools, and disposition vocabulary (completed 2026-02-17)
+- [ ] **Phase 79: Dashboard Gap Closure** - Close audit gaps: add cost estimate to metrics bar, sync event.routed to dashboard schema/SSE/icons
 
 ## Phase Details
 
@@ -177,14 +178,27 @@ Plans:
 - [ ] 78-05-PLAN.md -- Executor auto-registration + worker loop status propagation (CORR-02, CORR-05)
 - [ ] 78-06-PLAN.md -- Router correlation fallback + disposition vocabulary + event.routed emission (CORR-06, CORR-07)
 
+### Phase 79: Dashboard Gap Closure
+**Goal**: Close audit gaps -- DASH-08 cost estimate metric and event.routed dashboard visibility
+**Depends on**: Phase 77, Phase 78 (both complete -- this phase closes gaps found during milestone audit)
+**Requirements**: DASH-08 (gap closure)
+**Gap Closure:** Closes gaps from v2.8 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. EventMetricsBar displays a cost estimate derived from token counts and model pricing alongside existing metrics (tokens, duration, tool success rate, retry count)
+  2. `event.routed` events appear in the dashboard conversation timeline with a distinct icon and color -- schema, SSE types, and icon mapping all include the 18th event type
+**Plans:** TBD
+
 ## Progress
 
 **Execution Order:**
-Phases 74 through 78. Phase 78 is independent of 76/77 and can execute in parallel after Phase 74 completes.
+Phases 74 through 79. Phase 78 is independent of 76/77. Phase 79 is a gap closure phase that runs after all others.
 
 ```
-74 (Quick Fixes) --> 75 (Echo Elimination) --> 76 (Runtime Resilience) --> 77 (Dashboard Observability)
-74 (Quick Fixes) --> 78 (Work Correlation)  [parallel with 76/77]
+74 (Quick Fixes) --> 75 (Echo Elimination) --> 76 (Runtime Resilience) --> 77 (Dashboard Observability) --+
+74 (Quick Fixes) --> 78 (Work Correlation)  [parallel with 76/77] ---------------------------------+
+                                                                                                    |
+                                                                                                    v
+                                                                                           79 (Dashboard Gap Closure)
 ```
 
 | Phase | Plans Complete | Status | Completed |
@@ -194,6 +208,7 @@ Phases 74 through 78. Phase 78 is independent of 76/77 and can execute in parall
 | 76. Runtime Resilience | 0/3 | Complete    | 2026-02-17 |
 | 77. Dashboard Observability | 0/5 | Complete    | 2026-02-17 |
 | 78. Work Correlation | 0/6 | Complete    | 2026-02-17 |
+| 79. Dashboard Gap Closure | 0/TBD | Pending | - |
 
 ## Milestone Progress
 
@@ -208,10 +223,10 @@ Phases 74 through 78. Phase 78 is independent of 76/77 and can execute in parall
 | v2.5 Agentic Conversations | 56-59 | 17 | Complete | 2026-02-08 |
 | v2.6 Unified Agent Communication | 60-66 | 16 | Complete | 2026-02-09 |
 | v2.7 Agent Collaboration | 67-73 | 26 | Complete | 2026-02-13 |
-| v2.8 Resilience and Observability | 74-78 | TBD | In progress | - |
+| v2.8 Resilience and Observability | 74-79 | TBD | In progress | - |
 
-**Total: 9 milestones shipped (73 phases, 327 plans) + v2.8 in progress (5 phases)**
+**Total: 9 milestones shipped (73 phases, 327 plans) + v2.8 in progress (6 phases)**
 
 ---
 
-_Last updated: 2026-02-16_
+_Last updated: 2026-02-18_

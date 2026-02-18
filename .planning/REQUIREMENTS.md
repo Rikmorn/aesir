@@ -9,51 +9,51 @@ Requirements for v2.8 milestone. Each maps to roadmap phases.
 
 ### Quick Fixes
 
-- [ ] **QF-01**: `get_task_context` returns null gracefully on reopened conversations without tasks (ISS-003)
-- [ ] **QF-02**: Dev-agent uses `ask` + `wait_for` for questions instead of `reply` (ISS-007)
-- [ ] **QF-03**: `spawn_agent` works for test agents -- fix validation mismatch vs production sub-agents (ISS-022)
-- [ ] **QF-04**: `communication:notify` works for test agents -- either remove tool from test agents or add default broadcast channel config (ISS-023)
+- [x] **QF-01**: `get_task_context` returns null gracefully on reopened conversations without tasks (ISS-003)
+- [x] **QF-02**: Dev-agent uses `ask` + `wait_for` for questions instead of `reply` (ISS-007)
+- [x] **QF-03**: `spawn_agent` works for test agents -- fix validation mismatch vs production sub-agents (ISS-022)
+- [x] **QF-04**: `communication:notify` works for test agents -- either remove tool from test agents or add default broadcast channel config (ISS-023)
 
 ### Echo Elimination
 
-- [ ] **ECHO-01**: Duplicate webhook deliveries rejected at adapter level via event ID dedup table (implementation note: 24h TTL cleanup via pg-boss scheduled job)
-- [ ] **ECHO-02**: Agent-caused webhooks suppressed via per-integration actor detection -- Linear (`actor.type`), GitHub (`sender.type`/`sender.login`), Slack (`bot_id`/`app_id`)
-- [ ] **ECHO-03**: Suppressed events logged for debugging transparency (not forwarded to router)
+- [x] **ECHO-01**: Duplicate webhook deliveries rejected at adapter level via event ID dedup table (implementation note: 24h TTL cleanup via pg-boss scheduled job)
+- [x] **ECHO-02**: Agent-caused webhooks suppressed via per-integration actor detection -- Linear (`actor.type`), GitHub (`sender.type`/`sender.login`), Slack (`bot_id`/`app_id`)
+- [x] **ECHO-03**: Suppressed events logged for debugging transparency (not forwarded to router)
 
 ### Runtime Resilience
 
-- [ ] **RESIL-01**: All channels (Slack, Linear, GitHub) receive failure notification when a conversation reaches terminal `failed` status (ISS-001)
-- [ ] **RESIL-02**: All failure paths trigger notification -- retry-exhausted, non-retryable errors, max iterations (ISS-001)
-- [ ] **RESIL-03**: `notification.failed` event emitted when the failure notification itself fails -- dashboard is the visibility backstop (ISS-001)
-- [ ] **RESIL-04**: MCP errors classified as permanent (400, 401, 403, 404, 422) vs transient (429, 5xx) at the MCP client level (ISS-009)
-- [ ] **RESIL-05**: Permanent MCP errors return structured context to agent -- status code, error message, what was attempted (ISS-009)
-- [ ] **RESIL-06**: Transient MCP errors retried transparently with backoff; agent sees error only when retries are exhausted (ISS-009)
-- [ ] **RESIL-07**: MCP observability events emitted -- `mcp.error` (permanent), `mcp.rate_limited` (429), `mcp.retries_exhausted` (transient exhaustion) (ISS-009)
-- [ ] **RESIL-08**: Recovery context injected on crash resume -- query event log for work completed after last persistence point, format as `<recovery_context>` XML block (ISS-006)
-- [ ] **RESIL-09**: Retry count and recovery status included in recovery context for agent decision-making (ISS-006)
-- [ ] **RESIL-10**: Worker drains in-progress conversations on SIGTERM before exit -- stop claiming new work, let active conversations finish (with deadline), then exit cleanly
+- [x] **RESIL-01**: All channels (Slack, Linear, GitHub) receive failure notification when a conversation reaches terminal `failed` status (ISS-001)
+- [x] **RESIL-02**: All failure paths trigger notification -- retry-exhausted, non-retryable errors, max iterations (ISS-001)
+- [x] **RESIL-03**: `notification.failed` event emitted when the failure notification itself fails -- dashboard is the visibility backstop (ISS-001)
+- [x] **RESIL-04**: MCP errors classified as permanent (400, 401, 403, 404, 422) vs transient (429, 5xx) at the MCP client level (ISS-009)
+- [x] **RESIL-05**: Permanent MCP errors return structured context to agent -- status code, error message, what was attempted (ISS-009)
+- [x] **RESIL-06**: Transient MCP errors retried transparently with backoff; agent sees error only when retries are exhausted (ISS-009)
+- [x] **RESIL-07**: MCP observability events emitted -- `mcp.error` (permanent), `mcp.rate_limited` (429), `mcp.retries_exhausted` (transient exhaustion) (ISS-009)
+- [x] **RESIL-08**: Recovery context injected on crash resume -- query event log for work completed after last persistence point, format as `<recovery_context>` XML block (ISS-006)
+- [x] **RESIL-09**: Retry count and recovery status included in recovery context for agent decision-making (ISS-006)
+- [x] **RESIL-10**: Worker drains in-progress conversations on SIGTERM before exit -- stop claiming new work, let active conversations finish (with deadline), then exit cleanly
 
 ### Dashboard Observability
 
-- [ ] **DASH-01**: `agent.stale_recovered` event emitted on stale heartbeat recovery with worker ID, stale duration, and retry count
-- [ ] **DASH-02**: `agent.retry_scheduled` event emitted on retry decisions with error context and retry count
-- [ ] **DASH-03**: Lifecycle events (started, paused, resumed, reopened, stale recovery, retry) render with distinct icons and colors in timeline
-- [ ] **DASH-04**: Tool calls grouped by `toolCallId` as expandable cards showing tool name, duration, input (collapsed), output (collapsed)
-- [ ] **DASH-05**: Sub-agent work visually attributed with agent name labels and indented/nested blocks using existing `parent_instance_id`
-- [ ] **DASH-06**: MCP error events (`mcp.error`, `mcp.rate_limited`, `mcp.retries_exhausted`) rendered in timeline
-- [ ] **DASH-07**: `notification.failed` event rendered prominently in timeline
+- [x] **DASH-01**: `agent.stale_recovered` event emitted on stale heartbeat recovery with worker ID, stale duration, and retry count
+- [x] **DASH-02**: `agent.retry_scheduled` event emitted on retry decisions with error context and retry count
+- [x] **DASH-03**: Lifecycle events (started, paused, resumed, reopened, stale recovery, retry) render with distinct icons and colors in timeline
+- [x] **DASH-04**: Tool calls grouped by `toolCallId` as expandable cards showing tool name, duration, input (collapsed), output (collapsed)
+- [x] **DASH-05**: Sub-agent work visually attributed with agent name labels and indented/nested blocks using existing `parent_instance_id`
+- [x] **DASH-06**: MCP error events (`mcp.error`, `mcp.rate_limited`, `mcp.retries_exhausted`) rendered in timeline
+- [x] **DASH-07**: `notification.failed` event rendered prominently in timeline
 - [ ] **DASH-08**: Conversation detail shows summary metrics -- total tokens, cost estimate, wall-clock duration, tool call count/success rate, retry count
 
 ### Work Correlation
 
-- [ ] **CORR-01**: Entity reference `{entity_type, entity_id}` standardized on IncomingEvent -- Linear `('linear_issue', issueId)`, GitHub `('github_pr', 'owner/repo#number')`, Slack `('slack_thread', 'channelId:threadTs')`
-- [ ] **CORR-02**: `work_correlations` table with composite key `(entity_type, entity_id, conversation_id)` linking external entities to active conversations
-- [ ] **CORR-03**: `work:register` tool allows agents to register that they are working on an external entity
-- [ ] **CORR-04**: `work:query` tool allows agents and router to check existing work for an entity before starting new work
-- [ ] **CORR-05**: Conversation status changes (completed, failed) propagate to correlation registry automatically
-- [ ] **CORR-06**: Router uses correlation lookup as fallback for events with no trigger match -- active work found signals that conversation
-- [ ] **CORR-07**: Disposition vocabulary (new, signal, retry, supersede, duplicate) formalized for routing and agent decision-making
-- [ ] **CORR-08**: Knowledge query supports metadata-based exact match mode alongside semantic search -- `mode: 'semantic' | 'exact' | 'combined'`
+- [x] **CORR-01**: Entity reference `{entity_type, entity_id}` standardized on IncomingEvent -- Linear `('linear_issue', issueId)`, GitHub `('github_pr', 'owner/repo#number')`, Slack `('slack_thread', 'channelId:threadTs')`
+- [x] **CORR-02**: `work_correlations` table with composite key `(entity_type, entity_id, conversation_id)` linking external entities to active conversations
+- [x] **CORR-03**: `work:register` tool allows agents to register that they are working on an external entity
+- [x] **CORR-04**: `work:query` tool allows agents and router to check existing work for an entity before starting new work
+- [x] **CORR-05**: Conversation status changes (completed, failed) propagate to correlation registry automatically
+- [x] **CORR-06**: Router uses correlation lookup as fallback for events with no trigger match -- active work found signals that conversation
+- [x] **CORR-07**: Disposition vocabulary (new, signal, retry, supersede, duplicate) formalized for routing and agent decision-making
+- [x] **CORR-08**: Knowledge query supports metadata-based exact match mode alongside semantic search -- `mode: 'semantic' | 'exact' | 'combined'`
 
 ## Future Requirements
 
@@ -101,45 +101,46 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| QF-01 | Phase 74 | Pending |
-| QF-02 | Phase 74 | Pending |
-| QF-03 | Phase 74 | Pending |
-| QF-04 | Phase 74 | Pending |
-| ECHO-01 | Phase 75 | Pending |
-| ECHO-02 | Phase 75 | Pending |
-| ECHO-03 | Phase 75 | Pending |
-| RESIL-01 | Phase 76 | Pending |
-| RESIL-02 | Phase 76 | Pending |
-| RESIL-03 | Phase 76 | Pending |
-| RESIL-04 | Phase 76 | Pending |
-| RESIL-05 | Phase 76 | Pending |
-| RESIL-06 | Phase 76 | Pending |
-| RESIL-07 | Phase 76 | Pending |
-| RESIL-08 | Phase 76 | Pending |
-| RESIL-09 | Phase 76 | Pending |
-| RESIL-10 | Phase 76 | Pending |
-| DASH-01 | Phase 77 | Pending |
-| DASH-02 | Phase 77 | Pending |
-| DASH-03 | Phase 77 | Pending |
-| DASH-04 | Phase 77 | Pending |
-| DASH-05 | Phase 77 | Pending |
-| DASH-06 | Phase 77 | Pending |
-| DASH-07 | Phase 77 | Pending |
-| DASH-08 | Phase 77 | Pending |
-| CORR-01 | Phase 78 | Pending |
-| CORR-02 | Phase 78 | Pending |
-| CORR-03 | Phase 78 | Pending |
-| CORR-04 | Phase 78 | Pending |
-| CORR-05 | Phase 78 | Pending |
-| CORR-06 | Phase 78 | Pending |
-| CORR-07 | Phase 78 | Pending |
-| CORR-08 | Phase 78 | Pending |
+| QF-01 | Phase 74 | Satisfied |
+| QF-02 | Phase 74 | Satisfied |
+| QF-03 | Phase 74 | Satisfied |
+| QF-04 | Phase 74 | Satisfied |
+| ECHO-01 | Phase 75 | Satisfied |
+| ECHO-02 | Phase 75 | Satisfied |
+| ECHO-03 | Phase 75 | Satisfied |
+| RESIL-01 | Phase 76 | Satisfied |
+| RESIL-02 | Phase 76 | Satisfied |
+| RESIL-03 | Phase 76 | Satisfied |
+| RESIL-04 | Phase 76 | Satisfied |
+| RESIL-05 | Phase 76 | Satisfied |
+| RESIL-06 | Phase 76 | Satisfied |
+| RESIL-07 | Phase 76 | Satisfied |
+| RESIL-08 | Phase 76 | Satisfied |
+| RESIL-09 | Phase 76 | Satisfied |
+| RESIL-10 | Phase 76 | Satisfied |
+| DASH-01 | Phase 77 | Satisfied |
+| DASH-02 | Phase 77 | Satisfied |
+| DASH-03 | Phase 77 | Satisfied |
+| DASH-04 | Phase 77 | Satisfied |
+| DASH-05 | Phase 77 | Satisfied |
+| DASH-06 | Phase 77 | Satisfied |
+| DASH-07 | Phase 77 | Satisfied |
+| DASH-08 | Phase 77, 79 | Pending |
+| CORR-01 | Phase 78 | Satisfied |
+| CORR-02 | Phase 78 | Satisfied |
+| CORR-03 | Phase 78 | Satisfied |
+| CORR-04 | Phase 78 | Satisfied |
+| CORR-05 | Phase 78 | Satisfied |
+| CORR-06 | Phase 78 | Satisfied |
+| CORR-07 | Phase 78 | Satisfied |
+| CORR-08 | Phase 78 | Satisfied |
 
 **Coverage:**
 - v2.8 requirements: 33 total
-- Mapped to phases: 33
+- Satisfied: 32
+- Pending (gap closure): 1 (DASH-08 -- cost estimate, Phase 79)
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-16*
-*Last updated: 2026-02-16 after roadmap creation*
+*Last updated: 2026-02-18 after gap closure phase creation*
