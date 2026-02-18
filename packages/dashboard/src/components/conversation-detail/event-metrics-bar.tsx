@@ -1,6 +1,7 @@
 import { Clock } from "lucide-react";
 
 import { formatTokenCount } from "@/lib/format";
+import { formatCost } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -12,6 +13,7 @@ interface EventMetricsBarProps {
   toolSuccessCount: number;
   toolTotalCount: number;
   retryCount: number;
+  costEstimate: number;
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -23,6 +25,7 @@ export function EventMetricsBar({
   toolSuccessCount,
   toolTotalCount,
   retryCount,
+  costEstimate,
 }: EventMetricsBarProps) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -56,6 +59,14 @@ export function EventMetricsBar({
           <span className="text-border">|</span>
           <span className="font-mono tabular-nums text-amber-500">
             {retryCount} {retryCount === 1 ? "retry" : "retries"}
+          </span>
+        </>
+      )}
+      {costEstimate > 0 && (
+        <>
+          <span className="text-border">|</span>
+          <span className="font-mono tabular-nums">
+            ~{formatCost(costEstimate)}
           </span>
         </>
       )}

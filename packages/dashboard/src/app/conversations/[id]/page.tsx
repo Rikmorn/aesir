@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { LiveDetailPanels } from "@/components/conversation-detail/live-detail-panels";
+import { estimateCost } from "@/lib/pricing";
 import {
   getChildConversations,
   getConversationById,
@@ -46,6 +47,21 @@ export default async function ConversationDetailPage({
     0,
   );
 
+  // Compute initial cost estimate from llm.response events
+  const initialCostEstimate = events.reduce((sum, e) => {
+    if (e.type === "llm.response") {
+      const model =
+        typeof (e.payload as Record<string, unknown>).model === "string"
+          ? ((e.payload as Record<string, unknown>).model as string)
+          : undefined;
+      return (
+        sum +
+        estimateCost(e.tokenCountInput ?? 0, e.tokenCountOutput ?? 0, model)
+      );
+    }
+    return sum;
+  }, 0);
+
   return (
     <div className="flex h-screen flex-col overflow-hidden px-6 pt-6 pb-3">
       <LiveDetailPanels
@@ -67,6 +83,7 @@ export default async function ConversationDetailPage({
         rootTaskId={rootTaskId}
         initialTokenInput={initialTokenInput}
         initialTokenOutput={initialTokenOutput}
+        initialCostEstimate={initialCostEstimate}
       />
     </div>
   );

@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { ConnectionStatusIndicator } from "@/components/ui/connection-status";
 import { useEventStream } from "@/hooks/use-event-stream";
 import { formatDuration, formatTokenCount } from "@/lib/format";
+import { estimateCost } from "@/lib/pricing";
 import type { SseEvent } from "@/lib/sse-types";
 import { cn } from "@/lib/utils";
 import type {
@@ -73,6 +74,7 @@ export interface LiveDetailPanelsProps {
   rootTaskId: string | null;
   initialTokenInput: number;
   initialTokenOutput: number;
+  initialCostEstimate: number;
 }
 
 // ─── Constants ─────────────────────────────────────────────────────────────
@@ -89,6 +91,7 @@ export function LiveDetailPanels({
   rootTaskId,
   initialTokenInput,
   initialTokenOutput,
+  initialCostEstimate,
 }: LiveDetailPanelsProps) {
   const router = useRouter();
 
@@ -118,6 +121,7 @@ export function LiveDetailPanels({
   const [sseEventCount, setSseEventCount] = useState(0);
   const [tokenInput, setTokenInput] = useState(initialTokenInput);
   const [tokenOutput, setTokenOutput] = useState(initialTokenOutput);
+  const [costEstimate, setCostEstimate] = useState(initialCostEstimate);
   const [copied, setCopied] = useState(false);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTER_STATE);
 
@@ -135,6 +139,10 @@ export function LiveDetailPanels({
     setTokenInput(initialTokenInput);
     setTokenOutput(initialTokenOutput);
   }, [initialTokenInput, initialTokenOutput]);
+
+  useEffect(() => {
+    setCostEstimate(initialCostEstimate);
+  }, [initialCostEstimate]);
 
   // ─── SSE connection ───────────────────────────────────────────────
 
@@ -187,6 +195,22 @@ export function LiveDetailPanels({
       );
       if (newInput > 0) setTokenInput((prev) => prev + newInput);
       if (newOutput > 0) setTokenOutput((prev) => prev + newOutput);
+
+      // Accumulate cost from new llm.response events
+      const newCost = newEvents.reduce((sum, e) => {
+        if (e.type === "llm.response") {
+          const model =
+            typeof (e.payload as Record<string, unknown>).model === "string"
+              ? ((e.payload as Record<string, unknown>).model as string)
+              : undefined;
+          return (
+            sum +
+            estimateCost(e.tokenCountInput ?? 0, e.tokenCountOutput ?? 0, model)
+          );
+        }
+        return sum;
+      }, 0);
+      if (newCost > 0) setCostEstimate((prev) => prev + newCost);
 
       let merged = [...prev, ...newEvents];
 
@@ -578,6 +602,7 @@ export function LiveDetailPanels({
               toolSuccessCount={toolMetrics.toolSuccessCount}
               toolTotalCount={toolMetrics.toolTotalCount}
               retryCount={conversationMeta.retryCount}
+              costEstimate={costEstimate}
             />
           </div>
 
