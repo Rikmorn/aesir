@@ -1468,7 +1468,10 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         eventLog.append({
           ...eventBase,
           type: "llm.response",
-          payload: { stop_reason: response.stop_reason },
+          payload: {
+            stop_reason: response.stop_reason,
+            model: definition.model,
+          },
           tokenCountInput: response.usage.input_tokens,
           tokenCountOutput: response.usage.output_tokens,
           // Content is buffered alongside the event and flushed atomically

@@ -77,6 +77,7 @@ export const agentEventTypeValues = [
   "notification.failed",
   "agent.stale_recovered",
   "agent.retry_scheduled",
+  "event.routed",
 ] as const;
 
 export type AgentEventType = (typeof agentEventTypeValues)[number];

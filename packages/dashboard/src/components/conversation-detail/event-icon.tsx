@@ -8,6 +8,7 @@ import {
   HelpCircle,
   type LucideIcon,
   MessageCircle,
+  Navigation,
   PauseCircle,
   PlayCircle,
   RefreshCw,
@@ -37,6 +38,7 @@ const iconMap: Record<string, LucideIcon> = {
   "mcp.rate_limited": Clock,
   "mcp.retries_exhausted": XOctagon,
   "notification.failed": BellOff,
+  "event.routed": Navigation,
 };
 
 const colorMap: Record<string, string> = {
@@ -57,6 +59,7 @@ const colorMap: Record<string, string> = {
   "mcp.rate_limited": "text-amber-400",
   "mcp.retries_exhausted": "text-red-500",
   "notification.failed": "text-red-500",
+  "event.routed": "text-indigo-400",
 };
 
 export function EventIcon({ type }: { type: string }) {

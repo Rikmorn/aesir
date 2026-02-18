@@ -79,4 +79,5 @@ export const ALL_EVENT_TYPES = [
   "mcp.rate_limited",
   "mcp.retries_exhausted",
   "notification.failed",
+  "event.routed",
 ] as const;
