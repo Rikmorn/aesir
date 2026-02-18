@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.8 Resilience and Observability -- Phase 78 in progress
+**Current focus:** v2.8 Resilience and Observability -- Phase 79 in progress
 
 ## Current Position
 
-Phase: 78 of 78 (Work Correlation)
-Plan: 6 of 6 in current phase
-Status: Phase 78 complete
-Last activity: 2026-02-17 -- Plan 78-06 complete (correlation router integration)
+Phase: 79 of 79 (Dashboard Gap Closure)
+Plan: 2 of 2 in current phase
+Status: Plan 79-02 complete
+Last activity: 2026-02-18 -- Plan 79-02 complete (event.routed dashboard propagation)
 
 Progress: [==========>] 100%
 
@@ -61,6 +61,7 @@ Progress: [==========>] 100%
 | Phase 78 P03 | 5min | 2 tasks | 7 files |
 | 78 | 05 | 5min | 2 | 5 |
 | 78 | 06 | 4min | 2 | 4 |
+| 79 | 02 | 5min | 2 | 5 |
 
 ## Accumulated Context
 
@@ -114,6 +115,9 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 78]: Conditional spread for entityRef/entity params to satisfy exactOptionalPropertyTypes
 - [Phase 78]: emitRoutedEvent uses direct DB insert (not EventLog) -- EventLog requires initSequence per conversation_id
 - [Phase 78]: Correlation fallback broadcasts entity_update to all active/waiting conversations
+- [Phase 79]: event.routed grouped as lifecycle_banner -- matches infrastructure/routing nature, filterable under Lifecycle chip
+- [Phase 79]: Navigation icon + indigo-400 color for event.routed -- matches agent.reopened/llm.response infrastructure palette
+- [Phase 79]: Defensive typeof checks with 'unknown' fallbacks for event.routed payload extraction
 
 ### Pending Todos
 
@@ -132,10 +136,10 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-02-17
-Stopped at: Completed 78-06-PLAN.md (Phase 78 complete)
-Resume file: .planning/phases/78-work-correlation/78-06-SUMMARY.md
-Next action: Phase 78 complete -- ready for next phase or milestone wrap-up
+Last session: 2026-02-18
+Stopped at: Completed 79-02-PLAN.md (event.routed dashboard propagation)
+Resume file: .planning/phases/79-dashboard-gap-closure/79-02-SUMMARY.md
+Next action: Plan 79-01 (cost estimation) still pending -- execute to complete Phase 79
 
 ---
-*Updated: 2026-02-17 -- Plan 78-06 complete (correlation router integration). Phase 78 complete.*
+*Updated: 2026-02-18 -- Plan 79-02 complete (event.routed dashboard propagation).*
