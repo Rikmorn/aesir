@@ -135,7 +135,14 @@ Plans:
   3. The delegator can query aggregated group status (complete/pending/failed counts) and cancel all remaining tasks in a group
   4. When an all_required group has a task failure, the delegator receives immediate notification and can decide how to proceed (wait, cancel remaining, or accept partial)
   5. The group data model accommodates future tree budget distribution without schema changes
-**Plans**: TBD
+**Plans:** 6 plans
+Plans:
+- [ ] 81-01-PLAN.md -- Database schema (task_groups table, group_id FK) and GroupService
+- [ ] 81-02-PLAN.md -- delegate_group, group_status, cancel_group tools
+- [ ] 81-03-PLAN.md -- Group policy evaluation in TaskSignalDispatcher + signal matching
+- [ ] 81-04-PLAN.md -- wait_for_group tool + tool registration + worker loop wiring
+- [ ] 81-05-PLAN.md -- Cancellation pattern (pending_cancellation + one-cleanup-turn)
+- [ ] 81-06-PLAN.md -- Dashboard group node in delegation graph
 
 ### Phase 82: Transparent Materialization
 **Goal**: Delegated tasks can optionally create corresponding Linear tickets, giving human operators visibility into agent-to-agent work through their existing tools
