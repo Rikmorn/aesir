@@ -19,7 +19,11 @@ import { z } from "zod";
 import type { ToolContext } from "../../../framework/types.js";
 import type { ToolDefinition, ToolResult } from "../../agent-loop/types.js";
 import { conversations, tasks } from "../../db/schema.js";
-import { buildDelegationBlock } from "./delegate-task.js";
+import { MaterializationConfigSchema } from "../../services/materialization/types.js";
+import {
+  buildDelegationBlock,
+  resolveParentLinearIssueId,
+} from "./delegate-task.js";
 import { MAX_DELEGATION_DEPTH } from "./types.js";
 
 // ─── Input Schemas ──────────────────────────────────────────────────────────
@@ -58,6 +62,9 @@ const DelegateGroupInputSchema = z.object({
     .string()
     .optional()
     .describe("Group-level timeout (e.g., '2h'). Caps total wall time."),
+  materialization: MaterializationConfigSchema.optional().describe(
+    "Optional materialization config applied to ALL tasks in the group. Creates individual Linear issues per task.",
+  ),
 });
 
 // ─── Factory ────────────────────────────────────────────────────────────────
@@ -216,6 +223,18 @@ export function createDelegateGroupTool(ctx: ToolContext): ToolDefinition {
           title: string;
         }> = [];
 
+        // 4a. Resolve parent issue once for all tasks in the group
+        let parentIssueId: string | null = null;
+        if (
+          parsed.data.materialization?.type === "transparent" &&
+          deps.materializationAdapter
+        ) {
+          parentIssueId = await resolveParentLinearIssueId(deps, ctx);
+        }
+        const groupShortId = group.id.slice(-8);
+        let matSuccessCount = 0;
+        let matFailureCount = 0;
+
         try {
           for (const [i, taskInput] of taskInputs.entries()) {
             const entity = validatedEntities[i];
@@ -244,6 +263,49 @@ export function createDelegateGroupTool(ctx: ToolContext): ToolDefinition {
               .update(tasks)
               .set({ group_id: group.id, updated_at: new Date() })
               .where(eq(tasks.id, task.id));
+
+            // 4b. Materialize individual task if group-level materialization is set
+            if (
+              parsed.data.materialization?.type === "transparent" &&
+              deps.materializationAdapter
+            ) {
+              const groupLabels = [`group-${groupShortId}`];
+              const mergedLabels = [
+                ...(parsed.data.materialization.properties?.labels ?? []),
+                ...groupLabels,
+              ];
+
+              const matResult = await deps.materializationAdapter.create({
+                taskId: task.id,
+                conversationId: ctx.correlationId,
+                agentId: ctx.agentId,
+                description: taskInput.description,
+                properties: {
+                  ...parsed.data.materialization.properties,
+                  labels: mergedLabels,
+                },
+                ...(parentIssueId ? { parentIssueId } : {}),
+                correlationId: ctx.correlationId,
+              });
+
+              if (matResult) {
+                matSuccessCount++;
+                ctx.logger.info(
+                  {
+                    taskId: task.id,
+                    groupId: group.id,
+                    externalId: matResult.externalId,
+                  },
+                  "Group task materialized as Linear issue",
+                );
+              } else {
+                matFailureCount++;
+                ctx.logger.warn(
+                  { taskId: task.id, groupId: group.id },
+                  "Group task materialization failed (non-fatal)",
+                );
+              }
+            }
 
             // Build delegation XML block
             const delegationBlock = buildDelegationBlock({
@@ -371,19 +433,52 @@ export function createDelegateGroupTool(ctx: ToolContext): ToolDefinition {
             `  ${i + 1}. ${t.entityName} (${t.entityId}) -> task ${t.taskId}`,
         );
 
+        const responseLines = [
+          `Group delegation created successfully.`,
+          `Group ID: ${group.id}`,
+          `Policy: ${policyLabel}`,
+          `Tasks (${createdTasks.length}):`,
+          ...taskLines,
+        ];
+
+        if (timeout) {
+          responseLines.push(`Timeout: ${timeout}`);
+        }
+
+        // Materialization summary
+        if (
+          parsed.data.materialization?.type === "transparent" &&
+          deps.materializationAdapter
+        ) {
+          if (matFailureCount === 0) {
+            responseLines.push(
+              `Materialization: Linear issues created for ${matSuccessCount} group tasks (label: group-${groupShortId})`,
+            );
+          } else if (matSuccessCount === 0) {
+            responseLines.push(
+              "Materialization: all issues failed to create (tasks running as internal)",
+            );
+          } else {
+            responseLines.push(
+              `Materialization: ${matSuccessCount} issues created, ${matFailureCount} failed (tasks running as internal)`,
+            );
+          }
+        } else if (
+          parsed.data.materialization?.type === "transparent" &&
+          !deps.materializationAdapter
+        ) {
+          responseLines.push(
+            "Warning: materialization requested but adapter not configured. Tasks running as internal.",
+          );
+        }
+
+        responseLines.push(
+          ``,
+          `Next: call wait_for_group with groupId "${group.id}" to await the result.`,
+        );
+
         return {
-          content: [
-            `Group delegation created successfully.`,
-            `Group ID: ${group.id}`,
-            `Policy: ${policyLabel}`,
-            `Tasks (${createdTasks.length}):`,
-            ...taskLines,
-            timeout ? `Timeout: ${timeout}` : "",
-            ``,
-            `Next: call wait_for_group with groupId "${group.id}" to await the result.`,
-          ]
-            .filter(Boolean)
-            .join("\n"),
+          content: responseLines.join("\n"),
         };
       } catch (error) {
         const message =
