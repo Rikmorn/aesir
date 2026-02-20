@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.9 Platform Completion -- Phase 80 (Richer Negotiation)
+**Current focus:** v2.9 Platform Completion -- Phase 81 (Parallel Delegation)
 
 ## Current Position
 
-Phase: 80 of 87 (Richer Negotiation) -- COMPLETE
-Plan: 5 of 5 in current phase
-Status: Phase Complete
-Last activity: 2026-02-20 -- Completed 80-05 (gap closure: rejection signal + counter-proposal rejection)
+Phase: 81 of 87 (Parallel Delegation)
+Plan: 1 of 6 in current phase
+Status: Executing
+Last activity: 2026-02-20 -- Completed 81-01 (task groups schema and GroupService)
 
-Progress: [##########] 100%
+Progress: [#---------] 17%
 
 ## Milestone History
 
@@ -45,6 +45,7 @@ Progress: [##########] 100%
 | 80 | 03 | 2min | 2 | 6 |
 | 80 | 04 | 6min | 2 | 6 |
 | 80 | 05 | 2min | 2 | 2 |
+| 81 | 01 | 7min | 2 | 7 |
 
 ## Accumulated Context
 
@@ -64,6 +65,8 @@ See PROJECT.md Key Decisions table for full history.
 - **80-04**: Counter-proposed uses amber accent (matches waiting/paused) per design system status colors
 - **80-05**: Reject signal payload includes originalDescription only for reject type (not accept)
 - **80-05**: Counter-proposal rejection returns immediately without pausing -- delegator continues to re-delegate
+- **81-01**: FKs defined in migration SQL only to avoid circular Drizzle reference (taskGroups -> conversations -> tasks -> taskGroups)
+- **81-01**: Task 'failed' status absent from schema but tracked in GroupState counts for evaluatePolicy correctness
 
 ### Pending Todos
 
@@ -84,9 +87,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Phase 81 context gathered
-Resume file: .planning/phases/81-parallel-delegation/81-CONTEXT.md
-Next action: Plan Phase 81
+Stopped at: Completed 81-01-PLAN.md
+Resume file: .planning/phases/81-parallel-delegation/81-01-SUMMARY.md
+Next action: Execute 81-02-PLAN.md
 
 ---
-*Updated: 2026-02-20 -- Phase 81 context gathered (parallel delegation decisions captured).*
+*Updated: 2026-02-20 -- Completed 81-01 (task groups schema and GroupService).*
