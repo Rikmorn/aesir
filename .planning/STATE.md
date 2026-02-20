@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 81 of 87 (Parallel Delegation)
-Plan: 2 of 6 in current phase
+Plan: 4 of 6 in current phase
 Status: Executing
-Last activity: 2026-02-20 -- Completed 81-02 (group tools: delegate_group, group_status, cancel_group)
+Last activity: 2026-02-20 -- Completed 81-04 (tool integration and worker loop wiring)
 
-Progress: [###-------] 33%
+Progress: [######----] 66%
 
 ## Milestone History
 
@@ -47,6 +47,7 @@ Progress: [###-------] 33%
 | 80 | 05 | 2min | 2 | 2 |
 | 81 | 01 | 7min | 2 | 7 |
 | 81 | 02 | 10min | 2 | 5 |
+| 81 | 04 | 4min | 2 | 4 |
 
 ## Accumulated Context
 
@@ -71,6 +72,9 @@ See PROJECT.md Key Decisions table for full history.
 - **81-02**: Direct DB update for group_id on tasks (TaskService.create does not accept groupId)
 - **81-02**: Capability routing returns explicit error referencing Phase 85 (forward-compatible schema)
 - **81-02**: Group timeout scheduling is no-op when timeoutScheduler is undefined (Plan 04 wires it)
+- **81-04**: GroupService conditional on taskService in worker loop, unconditional in main.ts for dispatcher
+- **81-04**: Group timeout null in WaitForState (pg-boss handles via delegate_group, prevents double-scheduling)
+- **81-04**: DelegationDeps condition extended to detect group tool refs (delegate_group, group_status, cancel_group)
 
 ### Pending Todos
 
@@ -91,9 +95,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 81-02-PLAN.md
-Resume file: .planning/phases/81-parallel-delegation/81-02-SUMMARY.md
-Next action: Execute 81-03-PLAN.md
+Stopped at: Completed 81-04-PLAN.md
+Resume file: .planning/phases/81-parallel-delegation/81-04-SUMMARY.md
+Next action: Execute 81-05-PLAN.md
 
 ---
-*Updated: 2026-02-20 -- Completed 81-02 (group tools: delegate_group, group_status, cancel_group).*
+*Updated: 2026-02-20 -- Completed 81-04 (tool integration and worker loop wiring).*
