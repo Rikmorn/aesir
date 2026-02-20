@@ -8,6 +8,20 @@ An agentic development platform that automates software development workflows --
 
 End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
 
+## Current Milestone: v2.9 Platform Completion
+
+**Goal:** Complete every collaboration capability agents will need before domain modeling begins — richer negotiation, parallel delegation, transparent materialization, tree-level budgets, scheduled execution, sub-agent discovery, persistent identity, and knowledge retrieval enhancement.
+
+**Target features:**
+- Richer negotiation: counter-proposals and mid-task clarification in delegation handshake
+- Parallel delegation: fan-out with completion policies (all_required, any_sufficient, majority)
+- Transparent materialization: optional Linear ticket creation for delegated tasks
+- Tree-level token budgets: budget enforcement across entire delegation trees
+- Scheduled agent execution: cron-based triggers via pg-boss for periodic work
+- Sub-agent discovery: capability-based selection replacing hardcoded YAML references
+- Persistent agent identity: structured, versioned identity documents per agent role
+- Knowledge retrieval enhancement: pluggable pipeline + pre-compaction knowledge flush
+
 ## Current State
 
 **Version:** v2.8 Resilience and Observability (shipped 2026-02-18)
@@ -186,6 +200,16 @@ Agent definitions (YAML + prompt.md, constitutional + few-shot style)
 
 ### Active
 
+**v2.9 Platform Completion (in progress):**
+- [ ] Richer negotiation: counter-proposals and mid-task clarification in delegation handshake
+- [ ] Parallel delegation: fan-out with completion policies (all_required, any_sufficient, majority)
+- [ ] Transparent materialization: optional Linear ticket creation for delegated tasks
+- [ ] Tree-level token budgets: budget enforcement across entire delegation trees
+- [ ] Scheduled agent execution: cron-based triggers via pg-boss for periodic work
+- [ ] Sub-agent discovery: capability-based selection replacing hardcoded YAML references
+- [ ] Persistent agent identity: structured, versioned identity documents per agent role
+- [ ] Knowledge retrieval enhancement: pluggable pipeline + pre-compaction knowledge flush
+
 **Candidates for future milestones:**
 - [ ] Stale task cleanup: timeout signal mechanism for inactive tasks (TASK-26, deferred from v2.5)
 - [ ] Prompt evaluation tooling (promptfoo, shadow mode)
@@ -203,9 +227,6 @@ Agent definitions (YAML + prompt.md, constitutional + few-shot style)
 - [ ] Correlation miss rate monitoring
 - [ ] Agent → human task notification delivery (Slack DM, Linear assignment)
 - [ ] LSDK-08: Agent Plans checklist-style progress in Linear UI (deferred from v2.7)
-- [ ] Human directory entries: seeding + delegation for human entities (schema ready from v2.7)
-- [ ] Counter-propose in delegation handshake (strategy interface ready from v2.7)
-- [ ] Parallel delegation: task groups with completion policies (sequential only in v2.7)
 - [ ] Markdown-to-Slack-mrkdwn format translation (FMT-01, deferred from v2.6)
 - [ ] Linear OAuth token migration (deadline: April 1, 2026)
 
@@ -341,4 +362,4 @@ Lessons learned during development that guide future phases.
 | Hard constraints for critical agent behaviors | QA agent ended without completing tasks until a hard MUST constraint was added. For safety-critical tool calls (task:complete_task before end), strong directives earn their place. |
 
 ---
-*Last updated: 2026-02-18 after v2.8 milestone completion*
+*Last updated: 2026-02-20 after v2.9 milestone start*
