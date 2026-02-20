@@ -193,6 +193,10 @@ export const conversations = agentsSchema.table(
     task_id: text("task_id"),
     // Active delegations tracking (Phase 71 -- survives history compaction)
     active_delegations: jsonb("active_delegations").notNull().default([]),
+    // Cancellation lifecycle: one-cleanup-turn pattern (Phase 81)
+    pending_cancellation: boolean("pending_cancellation")
+      .notNull()
+      .default(false),
     // Communication context: last-received channel address for reply routing (v2.6)
     reply_context: jsonb("reply_context"),
     created_at: timestamp("created_at", { withTimezone: true })

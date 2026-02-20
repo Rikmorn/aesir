@@ -21,3 +21,6 @@ CREATE INDEX idx_task_groups_status ON agents.task_groups(status);
 -- Add group_id FK to tasks
 ALTER TABLE agents.tasks ADD COLUMN group_id TEXT REFERENCES agents.task_groups(id);
 CREATE INDEX idx_tasks_group ON agents.tasks(group_id);
+
+-- Add pending_cancellation to conversations for cleanup-turn pattern
+ALTER TABLE agents.conversations ADD COLUMN pending_cancellation BOOLEAN NOT NULL DEFAULT FALSE;
