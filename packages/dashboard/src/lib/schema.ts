@@ -121,6 +121,7 @@ export const taskStatusValues = [
   "paused",
   "completed",
   "cancelled",
+  "counter_proposed",
 ] as const;
 
 export type TaskStatus = (typeof taskStatusValues)[number];

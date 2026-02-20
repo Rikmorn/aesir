@@ -158,6 +158,15 @@ const DELEGATION_TOOL_NAMES = new Set([
   "task:delegate",
   "task:respond",
   "task:complete",
+  "task:clarify",
+  "task:answer",
+  "wait_for_task",
+  // Internal tool names (stored in event payload as tool_name)
+  "delegate_task",
+  "respond_task",
+  "complete_task",
+  "clarify_task",
+  "answer_task",
   "wait_for_task",
 ]);
 
@@ -212,7 +221,10 @@ export async function getTaskTimeline(
       // Keep all non-tool events
       if (!event.type.startsWith("tool.")) return true;
       // For tool events, only keep delegation-related tools
-      const toolName = event.payload.toolName as string | undefined;
+      // Event payload stores tool_name (snake_case) from the agent event log
+      const toolName =
+        (event.payload.tool_name as string | undefined) ??
+        (event.payload.toolName as string | undefined);
       return toolName ? DELEGATION_TOOL_NAMES.has(toolName) : false;
     });
 }
