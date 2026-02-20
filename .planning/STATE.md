@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 80 of 87 (Richer Negotiation)
-Plan: 1 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: Executing
-Last activity: 2026-02-20 -- Completed 80-01 (counter-propose foundation)
+Last activity: 2026-02-20 -- Completed 80-03 (agent negotiation definitions)
 
-Progress: [##        ] 25%
+Progress: [#######   ] 75%
 
 ## Milestone History
 
@@ -41,6 +41,7 @@ Progress: [##        ] 25%
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 80 | 01 | 6min | 2 | 8 |
+| 80 | 03 | 2min | 2 | 6 |
 
 ## Accumulated Context
 
@@ -51,6 +52,8 @@ See PROJECT.md Key Decisions table for full history.
 - **80-01**: Discriminated union on 'type' field for task:respond (accept/reject/counter_propose)
 - **80-01**: Counter-propose auto-enters wait_for on target side (30s timeout)
 - **80-01**: Auto-acceptance: wait_for_task on counter_proposed task sends acceptance implicitly
+- **80-03**: Same negotiation text for all three agents -- generic principles, no role-specific calibration
+- **80-03**: No MUST/ALWAYS/NEVER directives in negotiation guidance -- judgment-oriented per PROMPT_GUIDE.md
 
 ### Pending Todos
 
@@ -71,9 +74,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 80-01-PLAN.md
-Resume file: .planning/phases/80-richer-negotiation/80-01-SUMMARY.md
-Next action: Execute 80-02-PLAN.md
+Stopped at: Completed 80-03-PLAN.md
+Resume file: .planning/phases/80-richer-negotiation/80-03-SUMMARY.md
+Next action: Execute 80-04-PLAN.md
 
 ---
-*Updated: 2026-02-20 -- Completed 80-01 (counter-propose foundation).*
+*Updated: 2026-02-20 -- Completed 80-03 (agent negotiation definitions).*
