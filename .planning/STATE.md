@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 82 of 87 (Transparent Materialization)
-Plan: 4 of 5 in current phase
-Status: Executing Phase 82 plans
-Last activity: 2026-02-20 -- Completed 82-04 (delegation tool materialization integration)
+Plan: 5 of 5 in current phase (PHASE COMPLETE)
+Status: Phase 82 complete
+Last activity: 2026-02-20 -- Completed 82-05 (end-to-end materialization wiring)
 
-Progress: [########--] 80%
+Progress: [##########] 100%
 
 ## Milestone History
 
@@ -35,8 +35,8 @@ Progress: [########--] 80%
 
 **Cumulative:**
 - Total milestones shipped: 10
-- Total phases completed: 79
-- Total plans completed: 355
+- Total phases completed: 80
+- Total plans completed: 356
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -55,6 +55,7 @@ Progress: [########--] 80%
 | 82 | 02 | 1min | 1 | 2 |
 | 82 | 03 | 4min | 2 | 4 |
 | 82 | 04 | 5min | 2 | 3 |
+| 82 | 05 | 8min | 2 | 11 |
 
 ## Accumulated Context
 
@@ -104,6 +105,11 @@ See PROJECT.md Key Decisions table for full history.
 - **82-04**: Parent Linear issue resolved once per group (not per task) for efficiency
 - **82-04**: Group label uses last 8 chars of group UUID for readability (group-{shortId})
 - **82-04**: Materialization fires after task creation but before conversation start
+- **82-05**: Materialization routing placed after webhook filter but before task routing (step 1.4 in router pipeline)
+- **82-05**: Non-materialized linear.issue.updated events ignored in router (not in IGNORE_EVENT_TYPES) for cleaner flow
+- **82-05**: MaterializationAdapter created before executor in bootstrap to pass as constructor option (not late-bound)
+- **82-05**: Forward sync uses fire-and-forget pattern with catch for non-fatal failure tolerance
+- **82-05**: Composite dispatcher lambda wraps both signalDispatcher and forwardSyncListener
 
 ### Pending Todos
 
@@ -125,9 +131,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 82-04-PLAN.md
-Resume file: .planning/phases/82-transparent-materialization/82-04-SUMMARY.md
-Next action: Execute 82-05-PLAN.md
+Stopped at: Completed 82-05-PLAN.md (Phase 82 complete)
+Resume file: .planning/phases/82-transparent-materialization/82-05-SUMMARY.md
+Next action: Execute next phase (83, 84, 85, or 86 per wave ordering)
 
 ---
-*Updated: 2026-02-20 -- Completed 82-04 (delegation tool materialization integration).*
+*Updated: 2026-02-20 -- Completed 82-05 (end-to-end materialization wiring). Phase 82 complete.*

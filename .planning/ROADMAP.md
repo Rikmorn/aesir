@@ -99,7 +99,7 @@ See `.planning/milestones/v2.8-ROADMAP.md` for full details.
 
 - [x] **Phase 80: Richer Negotiation** - Counter-proposals and mid-task clarification in the delegation handshake (gaps found) (completed 2026-02-20)
 - [x] **Phase 81: Parallel Delegation** - Fan-out delegation with configurable completion policies (completed 2026-02-20)
-- [ ] **Phase 82: Transparent Materialization** - Optional Linear ticket creation for delegated tasks
+- [x] **Phase 82: Transparent Materialization** - Optional Linear ticket creation for delegated tasks (completed 2026-02-20)
 - [ ] **Phase 83: Tree-Level Token Budgets** - Budget enforcement across entire delegation trees
 - [ ] **Phase 84: Scheduled Execution** - Cron-based agent triggers via pg-boss for periodic work
 - [ ] **Phase 85: Sub-Agent Discovery** - Capability-based sub-agent selection replacing hardcoded YAML references
@@ -153,13 +153,13 @@ Plans:
   2. Task completion or failure updates the materialized Linear issue status, and Linear issue status changes sync back to the internal task
   3. Incoming webhooks from materialized Linear issues route correctly to the owning task via the correlation layer
   4. The materialization dispatch interface is extensible for future targets (GitHub issue, Slack thread) without changing the delegation tool
-**Plans:** 4/5 plans executed
+**Plans:** 5/5 plans complete
 Plans:
-- [ ] 82-01-PLAN.md -- Foundation: DB migration, types, MaterializationAdapter interface, Linear MCP extensions
-- [ ] 82-02-PLAN.md -- Prompt guidance for materialization decisions (dev-agent, product-agent)
-- [ ] 82-03-PLAN.md -- LinearMaterializationAdapter implementation + forward status sync
-- [ ] 82-04-PLAN.md -- delegate_task/delegate_group tool extensions with materialization parameter
-- [ ] 82-05-PLAN.md -- Reverse sync webhook pipeline, service wiring, label seed script
+- [x] 82-01-PLAN.md -- Foundation: DB migration, types, MaterializationAdapter interface, Linear MCP extensions
+- [x] 82-02-PLAN.md -- Prompt guidance for materialization decisions (dev-agent, product-agent)
+- [x] 82-03-PLAN.md -- LinearMaterializationAdapter implementation + forward status sync
+- [x] 82-04-PLAN.md -- delegate_task/delegate_group tool extensions with materialization parameter
+- [x] 82-05-PLAN.md -- Reverse sync webhook pipeline, service wiring, label seed script
 
 ### Phase 83: Tree-Level Token Budgets
 **Goal**: Token spending across an entire delegation tree is tracked and enforced as a single budget, preventing runaway costs from parallel or deep delegation chains
@@ -238,7 +238,7 @@ Wave 1 (parallel): 80, 82, 84, 85 -> Wave 2: 81, 86 -> Wave 3: 83, 87
 | 74-79 | v2.8 Resilience and Observability | 22 | Complete | 2026-02-18 |
 | 80. Richer Negotiation | 5/5 | Complete    | 2026-02-20 | - |
 | 81. Parallel Delegation | 6/6 | Complete    | 2026-02-20 | - |
-| 82. Transparent Materialization | 4/5 | In Progress|  | - |
+| 82. Transparent Materialization | 5/5 | Complete | 2026-02-20 | - |
 | 83. Tree-Level Token Budgets | v2.9 | 0/TBD | Not started | - |
 | 84. Scheduled Execution | v2.9 | 0/TBD | Not started | - |
 | 85. Sub-Agent Discovery | v2.9 | 0/TBD | Not started | - |
