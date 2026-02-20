@@ -97,6 +97,7 @@ See PROJECT.md Key Decisions table for full history.
 5. **event.routed sequence=0 collision** -- second routing event per conversation silently dropped (moderate)
 6. **work:register/query absent from agent definitions** -- add to dev-agent and product-agent YAML (low)
 7. **12 human verification items** -- visual/interactive testing across Phases 77-79
+8. **Add `failed` to taskStatusValues** -- schema has no `failed` task status, but evaluatePolicy and TERMINAL_STATUSES reference it. Add to schema + migration, update getGroupState switch, clean up dead refs. Natural home: Phase 83 or 86 (both touch task lifecycle).
 
 ### Blockers/Concerns
 
