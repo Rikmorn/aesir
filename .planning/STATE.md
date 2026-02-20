@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 
 ## Current Position
 
-Phase: 80 of 87 (Richer Negotiation)
-Plan: 3 of 4 in current phase
-Status: Executing
-Last activity: 2026-02-20 -- Completed 80-03 (agent negotiation definitions)
+Phase: 80 of 87 (Richer Negotiation) -- COMPLETE
+Plan: 4 of 4 in current phase
+Status: Phase Complete
+Last activity: 2026-02-20 -- Completed 80-04 (dashboard negotiation timeline)
 
-Progress: [#######   ] 75%
+Progress: [##########] 100%
 
 ## Milestone History
 
@@ -36,13 +36,14 @@ Progress: [#######   ] 75%
 **Cumulative:**
 - Total milestones shipped: 10
 - Total phases completed: 79
-- Total plans completed: 350
+- Total plans completed: 354
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 80 | 01 | 6min | 2 | 8 |
 | 80 | 02 | 4min | 2 | 6 |
 | 80 | 03 | 2min | 2 | 6 |
+| 80 | 04 | 6min | 2 | 6 |
 
 ## Accumulated Context
 
@@ -57,6 +58,9 @@ See PROJECT.md Key Decisions table for full history.
 - **80-03**: No MUST/ALWAYS/NEVER directives in negotiation guidance -- judgment-oriented per PROMPT_GUIDE.md
 - **80-02**: Clarify auto-pauses with null timeout (task timeout is the universal bound)
 - **80-02**: Answer auto-re-enters wait_for_task with all 5 signal types to prevent CRITICAL-1 deadlock
+- **80-04**: Both namespace and internal tool name formats in DELEGATION_TOOL_NAMES for robustness
+- **80-04**: Fixed pre-existing tool_name property access bug (JSONB stores snake_case, dashboard read camelCase)
+- **80-04**: Counter-proposed uses amber accent (matches waiting/paused) per design system status colors
 
 ### Pending Todos
 
@@ -77,9 +81,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 80-03-PLAN.md
-Resume file: .planning/phases/80-richer-negotiation/80-03-SUMMARY.md
-Next action: Execute 80-04-PLAN.md
+Stopped at: Completed 80-04-PLAN.md (Phase 80 complete)
+Resume file: .planning/phases/80-richer-negotiation/80-04-SUMMARY.md
+Next action: Transition to Phase 81
 
 ---
-*Updated: 2026-02-20 -- Completed 80-03 (agent negotiation definitions).*
+*Updated: 2026-02-20 -- Completed 80-04 (dashboard negotiation timeline). Phase 80 complete.*
