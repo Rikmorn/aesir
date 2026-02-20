@@ -5,13 +5,18 @@
  * reach terminal state. Handles orphan scenarios by writing completion_result
  * to the task row and logging signal.orphaned events.
  *
+ * Phase 81 extension: Group-aware signaling. When a task with a group_id reaches
+ * terminal state, the dispatcher evaluates the group's completion policy instead
+ * of sending per-task signals. The delegator is only woken when the policy
+ * dictates (satisfied, unsatisfiable, or settled).
+ *
  * At-most-once delivery: the task row (completion_result) is the durable record.
  * Signal dispatch failures are logged but never thrown -- the task update must
  * never fail due to signal delivery issues.
  */
 
 import type { PinoLogger } from "@aesir/platform";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type {
   ConversationExecutor,
@@ -19,7 +24,9 @@ import type {
   Signal,
 } from "../../framework/types.js";
 import type * as agentsSchemaModule from "../db/schema.js";
-import { tasks } from "../db/schema.js";
+import { taskGroups, tasks } from "../db/schema.js";
+import type { GroupService, GroupState } from "./group-service.js";
+import { evaluatePolicy } from "./group-service.js";
 import type { TaskService } from "./task-service.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -30,6 +37,8 @@ export interface TaskSignalDispatcherOptions {
   eventLog: EventLog;
   db: NodePgDatabase<typeof agentsSchemaModule>;
   logger: PinoLogger;
+  /** GroupService for policy evaluation (Phase 81, optional for backward compat) */
+  groupService?: GroupService;
 }
 
 export interface TaskSignalDispatcher {
@@ -45,6 +54,15 @@ export interface TaskSignalDispatcher {
 // ─── Terminal Status Set ────────────────────────────────────────────────────
 
 const TERMINAL_STATUSES = new Set(["completed", "failed", "cancelled"]);
+
+// ─── Group Terminal Statuses ────────────────────────────────────────────────
+
+const GROUP_TERMINAL_STATUSES = new Set([
+  "satisfied",
+  "unsatisfiable",
+  "cancelled",
+  "settled",
+]);
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -93,12 +111,79 @@ function buildSignalMessage(
   return message;
 }
 
+/**
+ * Build group signal data payload with state context.
+ */
+function buildGroupSignalData(
+  groupId: string,
+  triggeringTaskId: string,
+  policyType: string,
+  result: { satisfied: boolean; unsatisfiable: boolean },
+  state: GroupState,
+): Record<string, unknown> {
+  return {
+    groupId,
+    taskId: triggeringTaskId,
+    policyType,
+    policySatisfied: result.satisfied,
+    policyUnsatisfiable: result.unsatisfiable,
+    groupState: {
+      total: state.total,
+      completed: state.completed,
+      failed: state.failed,
+      cancelled: state.cancelled,
+      running: state.running,
+    },
+    taskSummaries: state.tasks
+      .filter((t) =>
+        ["completed", "failed", "cancelled"].includes(t.status),
+      )
+      .map((t) => ({
+        taskId: t.taskId,
+        status: t.status,
+        assigneeId: t.assigneeId,
+        result: t.completionResult,
+      })),
+  };
+}
+
+/**
+ * Build group signal human-readable message.
+ */
+function buildGroupSignalMessage(
+  signalType: string,
+  groupId: string,
+  triggeringTaskId: string,
+  policyType: string,
+  state: GroupState,
+): string {
+  switch (signalType) {
+    case "group_policy_satisfied":
+      return `Group ${groupId} policy satisfied (${policyType}). ${state.completed}/${state.total} tasks completed.`;
+    case "group_policy_unsatisfiable":
+      return `Task ${triggeringTaskId} failed in group ${groupId}. Group state: ${state.completed} completed, ${state.failed} failed, ${state.running} running. Policy: ${policyType} (no longer satisfiable).`;
+    case "group_task_failed":
+      return `Task ${triggeringTaskId} failed in group ${groupId} (all_required policy). Group state: ${state.completed} completed, ${state.failed} failed, ${state.running} running.`;
+    case "group_settled":
+      return `All tasks in group ${groupId} have reached terminal state. Final: ${state.completed} completed, ${state.failed} failed, ${state.cancelled} cancelled.`;
+    default:
+      return `Group ${groupId} signal: ${signalType}`;
+  }
+}
+
 // ─── Factory ────────────────────────────────────────────────────────────────
 
 export function createTaskSignalDispatcher(
   options: TaskSignalDispatcherOptions,
 ): TaskSignalDispatcher {
-  const { executor, taskService, eventLog, db, logger: parentLogger } = options;
+  const {
+    executor,
+    taskService,
+    eventLog,
+    db,
+    logger: parentLogger,
+    groupService,
+  } = options;
 
   if (!executor)
     throw new Error("executor is required for TaskSignalDispatcher");
@@ -111,6 +196,243 @@ export function createTaskSignalDispatcher(
     throw new Error("logger is required for TaskSignalDispatcher");
 
   const logger = parentLogger.child({ component: "task-signal-dispatcher" });
+
+  /**
+   * Handle group-aware task update: evaluate policy and signal delegator.
+   * Race condition prevented via SELECT FOR UPDATE on the group row.
+   */
+  async function handleGroupTaskUpdate(
+    task: { id: string; group_id: string; assignee_id: string },
+    newStatus: string,
+  ): Promise<void> {
+    if (!groupService) return;
+
+    // 1. Lock the group row to prevent concurrent evaluation races
+    const lockResult = await db.execute(
+      sql`SELECT * FROM agents.task_groups WHERE id = ${task.group_id} FOR UPDATE`,
+    );
+    const lockedGroup = lockResult.rows[0];
+
+    if (!lockedGroup) {
+      logger.warn(
+        { taskId: task.id, groupId: task.group_id },
+        "Group not found for group-aware signal dispatch",
+      );
+      return;
+    }
+
+    const groupStatus = lockedGroup.status as string;
+    const groupPolicy = lockedGroup.policy as {
+      type: string;
+      threshold?: number;
+    };
+    const delegatorConversationId =
+      lockedGroup.delegator_conversation_id as string;
+
+    // 2. Get full group state for policy evaluation
+    const state = await groupService.getGroupState(task.group_id);
+
+    // 3. Evaluate policy (only if group is still active)
+    if (!GROUP_TERMINAL_STATUSES.has(groupStatus)) {
+      const result = evaluatePolicy(groupPolicy, state);
+
+      if (result.satisfied) {
+        // Policy satisfied -- transition group and signal delegator
+        await groupService.updateStatus(task.group_id, "satisfied");
+
+        const signalData = buildGroupSignalData(
+          task.group_id,
+          task.id,
+          groupPolicy.type,
+          result,
+          state,
+        );
+
+        const signal: Signal = {
+          type: "group_policy_satisfied",
+          data: signalData,
+          message: buildGroupSignalMessage(
+            "group_policy_satisfied",
+            task.group_id,
+            task.id,
+            groupPolicy.type,
+            state,
+          ),
+          source: `group:${task.group_id}`,
+          deduplicationId: `group_policy_satisfied-${task.group_id}`,
+        };
+
+        const deliveryResult = await executor.signal(
+          delegatorConversationId,
+          signal,
+        );
+
+        logger.info(
+          {
+            taskId: task.id,
+            groupId: task.group_id,
+            signalType: "group_policy_satisfied",
+            policyType: groupPolicy.type,
+            deliveryAction: deliveryResult.action,
+          },
+          "Group policy satisfied signal dispatched",
+        );
+
+        // Write completion_result on the triggering task
+        await writeGroupCompletionResult(
+          task.id,
+          "group_policy_satisfied",
+          signalData,
+          delegatorConversationId,
+          deliveryResult.action === "rejected" ? "failed" : "delivered",
+        );
+      } else if (result.unsatisfiable) {
+        // Policy unsatisfiable -- transition group and signal delegator
+        await groupService.updateStatus(task.group_id, "unsatisfiable");
+
+        // Use group_task_failed for all_required (indicates specific failure),
+        // group_policy_unsatisfiable for other policy types
+        const signalType =
+          groupPolicy.type === "all_required"
+            ? "group_task_failed"
+            : "group_policy_unsatisfiable";
+
+        const signalData = buildGroupSignalData(
+          task.group_id,
+          task.id,
+          groupPolicy.type,
+          result,
+          state,
+        );
+
+        const signal: Signal = {
+          type: signalType,
+          data: signalData,
+          message: buildGroupSignalMessage(
+            signalType,
+            task.group_id,
+            task.id,
+            groupPolicy.type,
+            state,
+          ),
+          source: `group:${task.group_id}`,
+          deduplicationId: `${signalType}-${task.group_id}`,
+        };
+
+        const deliveryResult = await executor.signal(
+          delegatorConversationId,
+          signal,
+        );
+
+        logger.info(
+          {
+            taskId: task.id,
+            groupId: task.group_id,
+            signalType,
+            policyType: groupPolicy.type,
+            deliveryAction: deliveryResult.action,
+          },
+          "Group policy unsatisfiable signal dispatched",
+        );
+
+        // Write completion_result on the triggering task
+        await writeGroupCompletionResult(
+          task.id,
+          signalType,
+          signalData,
+          delegatorConversationId,
+          deliveryResult.action === "rejected" ? "failed" : "delivered",
+        );
+      }
+      // Neither satisfied nor unsatisfiable -- more tasks still running, no signal
+    }
+
+    // 4. Settled check: if all tasks are terminal and group is already in a non-active state,
+    // transition to settled and send group_settled signal
+    const currentGroupStatus = GROUP_TERMINAL_STATUSES.has(groupStatus)
+      ? groupStatus
+      : (await groupService.getGroupState(task.group_id)).status;
+
+    // Re-read state to get latest counts after possible status change
+    const latestState = await groupService.getGroupState(task.group_id);
+    const allTerminal =
+      latestState.running === 0 && latestState.pending === 0;
+
+    if (
+      allTerminal &&
+      latestState.status !== "active" &&
+      latestState.status !== "settled"
+    ) {
+      await groupService.updateStatus(task.group_id, "settled");
+
+      const result = evaluatePolicy(groupPolicy, latestState);
+      const signalData = buildGroupSignalData(
+        task.group_id,
+        task.id,
+        groupPolicy.type,
+        result,
+        latestState,
+      );
+
+      const signal: Signal = {
+        type: "group_settled",
+        data: signalData,
+        message: buildGroupSignalMessage(
+          "group_settled",
+          task.group_id,
+          task.id,
+          groupPolicy.type,
+          latestState,
+        ),
+        source: `group:${task.group_id}`,
+        deduplicationId: `group_settled-${task.group_id}`,
+      };
+
+      const deliveryResult = await executor.signal(
+        delegatorConversationId,
+        signal,
+      );
+
+      logger.info(
+        {
+          taskId: task.id,
+          groupId: task.group_id,
+          signalType: "group_settled",
+          deliveryAction: deliveryResult.action,
+        },
+        "Group settled signal dispatched",
+      );
+    }
+  }
+
+  /**
+   * Write completion_result on a task for group signal dispatch tracking.
+   */
+  async function writeGroupCompletionResult(
+    taskId: string,
+    signalType: string,
+    payload: Record<string, unknown>,
+    targetConversationId: string,
+    deliveryStatus: "delivered" | "failed",
+  ): Promise<void> {
+    const completionResult: CompletionResult = {
+      signalType,
+      payload,
+      writtenAt: new Date().toISOString(),
+      deliveryStatus,
+      targetConversationId,
+    };
+
+    await db
+      .update(tasks)
+      .set({
+        completion_result: completionResult as unknown as Record<
+          string,
+          unknown
+        >,
+      })
+      .where(eq(tasks.id, taskId));
+  }
 
   return {
     async onTaskUpdate(taskId, oldStatus, newStatus, handoffContext) {
@@ -127,7 +449,20 @@ export function createTaskSignalDispatcher(
           return;
         }
 
-        // 3. Return early if root task (no parent -- nobody to signal)
+        // 3a. Group-aware signaling: if task has group_id, delegate to group evaluation
+        if (task.group_id && groupService) {
+          await handleGroupTaskUpdate(
+            {
+              id: task.id,
+              group_id: task.group_id,
+              assignee_id: task.assignee_id,
+            },
+            newStatus,
+          );
+          return;
+        }
+
+        // 3b. Return early if root task (no parent -- nobody to signal)
         if (!task.parent_id) {
           return;
         }
