@@ -97,7 +97,7 @@ See `.planning/milestones/v2.8-ROADMAP.md` for full details.
 
 ### Phases
 
-- [x] **Phase 80: Richer Negotiation** - Counter-proposals and mid-task clarification in the delegation handshake (completed 2026-02-20)
+- [ ] **Phase 80: Richer Negotiation** - Counter-proposals and mid-task clarification in the delegation handshake (gaps found)
 - [ ] **Phase 81: Parallel Delegation** - Fan-out delegation with configurable completion policies
 - [ ] **Phase 82: Transparent Materialization** - Optional Linear ticket creation for delegated tasks
 - [ ] **Phase 83: Tree-Level Token Budgets** - Budget enforcement across entire delegation trees

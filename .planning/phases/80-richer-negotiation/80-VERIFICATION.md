@@ -1,8 +1,8 @@
 ---
 phase: 80-richer-negotiation
 verified: 2026-02-20T19:30:00Z
-status: passed
-score: 18/18 must-haves verified
+status: gaps_found
+score: 18/18 must-haves verified, 2 gaps found
 re_verification: false
 ---
 
@@ -10,7 +10,7 @@ re_verification: false
 
 **Phase Goal:** Agents negotiate delegation scope through counter-proposals and resolve ambiguity through mid-task clarification, replacing the binary accept/reject handshake
 **Verified:** 2026-02-20T19:30:00Z
-**Status:** passed
+**Status:** gaps_found
 **Re-verification:** No — initial verification
 
 ## Goal Achievement
@@ -116,11 +116,21 @@ None detected. All new tool files have substantive implementations with error ha
 
 ### Gaps Summary
 
-No gaps. All 18 observable truths verified. All 7 requirements satisfied. All required artifacts exist with substantive implementations and correct wiring.
+18/18 must-haves verified, but 2 gaps found during manual review that affect NEG-01 completeness.
 
-The phase delivered what was specified: agents can now negotiate delegation scope through counter-proposals (discriminated union on task:respond + auto-wait + auto-accept via wait_for_task) and resolve ambiguity through mid-task clarification (task:clarify + task:answer + auto-pause/resume). The binary accept/reject handshake is replaced with a three-option negotiation that lets agents honestly scope work before committing.
+#### Gap 1: Rejection signal missing `originalDescription`
 
-Notable bonus fix from Plan 04: a pre-existing bug where all tool events were filtered out of the dashboard timeline (camelCase vs snake_case property access) was discovered and fixed as part of this phase.
+**Requirement:** NEG-01 — "All delegation response signals (rejection, counter-proposal, counter-proposal-rejected) carry the original task summary, responding agent ID, and reason."
+**Evidence:** `respond-task.ts:209-224` — the reject branch sends `taskId`, `response`, `reason`, and `respondedBy` but no `originalDescription`. Compare with the counter-propose signal at line 161-169 which correctly includes `originalDescription: task.objective ?? task.title`.
+**Impact:** When a delegator receives a rejection signal and its conversation history has been compacted, it has no context about what task was rejected. It must look up the original task from potentially-compacted history, which may fail or produce a summary instead of the original description.
+**Fix:** Add `originalDescription: task.objective ?? task.title` to the reject signal data at line 209-224, matching the counter-propose signal pattern.
+
+#### Gap 2: No explicit path to reject a counter-proposal
+
+**Requirement:** NEG-01 — "Delegator sees the modification and decides: accept modified version, **reject and cancel**, or try someone else."
+**Evidence:** The accept path works cleanly — `wait-for-task-tool.ts:76-100` auto-sends `task_handshake(accepted)` when the delegator calls `wait_for_task` on a `counter_proposed` task. But there is no tool or mechanism for the delegator to explicitly reject a counter-proposal. The target waits for `task_handshake` with a 30-second timeout (`respond-task.ts:186`). The delegator's only options are: (1) accept via `wait_for_task`, (2) do nothing and let the target timeout after 30 seconds, or (3) cancel the task via a different signal path.
+**Impact:** A timeout masquerading as a decision. If the delegator instantly knows the counter-proposal doesn't work, the target sits idle for 30 seconds before timing out. This wastes time and produces a confusing timeout signal instead of a clear rejection.
+**Fix:** Add a `reject_counter_proposal` tool (or extend `wait_for_task` with a reject option) that sends `task_handshake({ response: "rejected" })` to the target's conversation immediately. The target should handle the rejected handshake by transitioning the task to cancelled and informing the LLM.
 
 ---
 
