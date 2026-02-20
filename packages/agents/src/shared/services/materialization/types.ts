@@ -56,7 +56,7 @@ export interface MaterializationCreateParams {
   /** Target-specific properties (priority, labels, teamId) */
   properties?: MaterializationConfig["properties"];
   /** Parent issue ID for sub-issue creation */
-  parentIssueId?: string;
+  parentIssueId?: string | undefined;
   /** Correlation ID for tracing */
   correlationId: string;
 }
