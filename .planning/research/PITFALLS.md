@@ -1,136 +1,137 @@
-# Domain Pitfalls: Multi-Agent Collaboration (v2.7)
+# Domain Pitfalls: Platform Completion (v2.9)
 
-**Domain:** Adding cross-agent delegation, shared memory, and completion signaling to an existing isolated-conversation system
-**Researched:** 2026-02-10
-**Overall confidence:** HIGH (based on deep codebase analysis + external research on multi-agent failure modes)
+**Domain:** Adding richer negotiation, parallel delegation, transparent materialization, tree-level token budgets, scheduled execution, sub-agent discovery, persistent agent identity, and knowledge retrieval enhancement to an existing multi-agent development platform
+**Researched:** 2026-02-20
+**Overall confidence:** HIGH (based on deep analysis of 2000+ lines of executor/worker-loop/signal code + external research on multi-agent failure modes)
 
-**Key insight from research:** Multi-agent LLM systems fail at 41-86.7% rates in production (arxiv.org/html/2503.13657v1). The primary failure categories are specification/coordination (79% combined), not infrastructure. The biggest risk to Aesir is not building the infrastructure wrong -- it is introducing coupling that breaks the reliable isolated-agent flows that work today.
+**Key insight:** v2.9 is the most dangerous milestone since v2.3 (the original executor). Every phase touches the signal/wait machinery, the worker loop, or both. The existing system works because conversations are isolated with simple pause/resume semantics. v2.9 introduces cross-conversation state dependencies (tree budgets, task groups, bidirectional clarification), lifecycle hooks (identity updates, pre-compaction flush), and new execution triggers (cron schedules). Each individually is tractable. Combined, they create interaction effects that no phase tests in isolation.
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites, data loss, cascading failures, or break existing single-agent functionality.
+Mistakes that cause rewrites, deadlocks, data loss, or break existing single-agent functionality.
 
 ---
 
-### CRITICAL-1: Completion Signal Lost to Terminal Conversation
+### CRITICAL-1: Clarification Deadlock From Nested Wait-For
 
-**What goes wrong:** Agent A delegates to Agent B, calls `wait_for` with type `task_completion`, and pauses. Agent B finishes and the system fires a completion signal to Agent A's conversation. But Agent A's conversation has already been moved to a terminal state (failed due to timeout, cancelled by user, or garbage-collected). The signal is rejected because `executor.signal()` rejects signals to terminal conversations. The completion result is silently lost -- no one picks up Agent B's work output.
+**What goes wrong:** Phase 1 introduces bidirectional clarification: a target agent sends a `task_clarification` signal back to the delegator mid-task. The delegator must resume, process the question, answer, and re-pause to await completion. But the current executor only supports one `pending_wait` per conversation. When the delegator resumes on a clarification signal, processes it, and needs to re-wait, the executor must clear the old pending_wait, handle the clarification turn, and set a new pending_wait. If the agent calls `wait_for` during the clarification handling turn AND a `task_completion` signal arrives during that narrow window, the completion signal could be queued (conversation is `running`), but the new `pending_wait` types might not include `task_completion` if the agent only waits for `task_clarification` again.
 
-**Why it happens:** The current `signal()` implementation returns `{ action: "rejected" }` for terminal conversations (line 480 of conversation-executor.ts). This is correct for the current system where signals come from external events (PR reviews, user replies) that are contextual to an active conversation. But completion signals from delegated tasks represent *work product* -- losing them means wasted compute and broken workflows.
+**Why it happens in this codebase:** The `signalMatchesPendingWait()` function (signal-matching.ts:22-52) does strict type membership checking against `pendingWait.types`. The `wait_for_task` tool (wait-for-task-tool.ts:73-77) hardcodes `types: ["task_completion", "task_failure", "task_timeout"]`. Adding `task_clarification` to this list means the tool always listens for it. But if the agent uses plain `wait_for` instead of `wait_for_task` for the clarification response, the types array may not include completions. Multi-round clarification means the agent alternates between waiting-for-clarification-response and waiting-for-task-completion, with a different `pending_wait` configuration each time.
 
 **Consequences:**
-- Agent B completes substantial work (e.g., full PR implementation) but the delegator never sees the result
-- The task tree shows subtask completed but parent task has no reaction -- work is orphaned
-- Users see a failed parent conversation and a completed subtask with no connection between them
-- Worst case: the system re-delegates the same work, burning tokens and creating duplicate PRs
+- Task completion signal arrives while delegator is waiting for clarification response -- signal queued but never consumed because `pending_wait.types` changed
+- Delegator stuck waiting for clarification response that will never come (target already completed)
+- Both conversations eventually timeout, wasting all work done
 
 **Prevention:**
-- Add orphan-aware signal handling: when a completion signal targets a terminal conversation, log the completion in `agent_events` with a new event type (`signal.orphaned`) and store the full payload
-- Add a `callbackConversationId` field to tasks (SIG-03 in spec) and check it before signal dispatch -- if the callback conversation is terminal, persist the result on the task itself (new `completion_result` JSONB column on tasks table)
-- The dashboard must surface orphaned completions prominently (Phase 75 OBS-05)
-- Consider a reopen-on-completion pattern: if the callback conversation is terminal but the task has meaningful results, automatically reopen the delegating conversation with the completion data
+- Extend `wait_for_task` to always include `task_clarification` in its types array. This tool should be the ONLY mechanism for delegation waits -- never plain `wait_for`
+- When the delegator resumes for a clarification, it must call `wait_for_task` (not `wait_for`) to re-pause. The prompt must make this clear: "After answering a clarification, always use wait_for_task to resume waiting"
+- The worker loop's queued signal check (worker-loop.ts:1278-1334) already handles consuming queued signals on resume. Verify this works when the pending_wait types change between pause cycles
+- Add an integration test: delegate -> target asks clarification -> delegator answers -> target completes. Verify completion signal is received
 
-**Phase to address:** Phase 74 (Completion Signaling) -- this is the core problem the phase must solve
-**Detection:** Monitor for `signal.orphaned` events; alert if count exceeds threshold per day
+**Phase to address:** Phase 1 (Richer Negotiation) -- this is the core design challenge
+**Detection:** Monitor for conversations that cycle between `waiting` and `running` more than 3 times on the same task
 
 ---
 
-### CRITICAL-2: Delegation Depth Explosion and Management-Layer Anti-Pattern
+### CRITICAL-2: Parallel Task Group Completion Race Condition
 
-**What goes wrong:** Agents start delegating instead of doing work. Product-agent delegates to dev-agent, dev-agent delegates a "research" task back to a new researcher via task delegation (not sub-agent spawn), that researcher delegates a "specific file lookup" to another agent. Four conversations running, four token budgets consumed, when a single sub-agent spawn would have sufficed. The system becomes a bureaucracy -- agents that only coordinate, never execute.
+**What goes wrong:** Phase 2 introduces task groups with completion policies (`all_required`, `any_sufficient`, `majority`). The delegator creates N parallel tasks and waits for the group to satisfy its policy. Completion signals arrive concurrently from different worker loop iterations. The signal aggregation logic must atomically check "does this new completion satisfy the policy?" But if two completions arrive simultaneously from two different workers processing `executor.signal()`, both read the same group state (e.g., 1 of 3 complete), both update it (now showing 2 of 3 from each transaction's perspective), and both conclude the policy is not yet satisfied. The actual state is 3 of 3 -- but neither transaction triggers the group completion signal.
 
-**Why it happens:** The spec correctly identifies this risk (DEL-07: "Delegation judgment guidance") but prompt-level guidance alone is insufficient. LLMs are biased toward delegation when they have delegation tools -- it feels like "doing something" without the cognitive load of actually solving the problem. Research shows agents in multi-agent systems duplicate effort and over-delegate, with "agents ping-pong the same task, each replanning because no one knows who owns it" (Augment Code analysis, 2025).
+**Why it happens in this codebase:** `executor.signal()` (conversation-executor.ts:353-567) uses `FOR UPDATE` row locks on the conversation row, which prevents concurrent modifications to the conversation. But the task group state is NOT on the conversation row -- it is in the tasks table (or a new task_groups table). If group state tracking is in a separate table without the same locking discipline, concurrent signals can race.
+
+Even if the group state update uses `FOR UPDATE`, the aggregation check happens after the update. Two transactions could both update their respective task to "completed" and then both read the group state as "2 of 3 complete" (each seeing their own update but not the other's uncommitted change). Neither triggers the "all 3 complete" policy.
 
 **Consequences:**
-- Token budget consumed by coordination overhead (4x conversations for 1x unit of work)
-- Latency explosion: each delegation hop adds handshake time + conversation startup time + LLM reasoning time
-- Context dilution: each delegation step loses nuance from the original request (the "telephone game" effect documented in multi-agent research)
-- Debugging nightmare: tracing failures across 4 conversations vs. reading 1 conversation log
+- `all_required` policy never fires -- delegator stuck waiting forever
+- `any_sufficient` with N=1 fires correctly (single completion), but `majority` with N>1 can miss
+- Token budget consumed by a delegator waiting for a signal that will never come
 
 **Prevention:**
-- Enforce the sub-agent vs. delegation distinction architecturally, not just in prompts: sub-agents (coder, researcher, tester) are spawned within the parent's conversation and share its token budget. Cross-conversation delegation is only for orchestrator-to-orchestrator or orchestrator-to-human handoffs
-- The existing `MAX_TASK_DEPTH = 5` limit (create-task.ts) is too generous for v1. Start at depth 3 (orchestrator -> orchestrator -> sub-agent is natural; deeper chains are almost certainly over-delegation). Increase only with evidence
-- Add a `delegationBudget` concept: each task tree has a maximum total token budget across all conversations. When a delegation creates a new conversation, it draws from the tree budget, not an unlimited pool
-- Track delegation-to-work ratio in the dashboard: if an agent creates more subtasks than tool calls, surface it as a health warning (Phase 75 OBS-05)
-- Prompt guidance must be specific: "Use sub-agents (spawn_agent) for focused execution work within your expertise. Use task delegation only when the work genuinely requires a different agent's capabilities or a human's judgment."
+- Use `pg_advisory_xact_lock` on the task group ID for ALL completion signal processing. The lock serializes policy evaluation: only one completion signal evaluates the policy at a time
+- The policy evaluation must happen INSIDE the same transaction that updates the task status. Read group state, update this task, evaluate policy, fire group completion signal -- all atomic
+- Alternatively, use a single atomic UPDATE with a RETURNING clause: `UPDATE task_groups SET completed_count = completed_count + 1 RETURNING completed_count, total_count, policy`. The returned `completed_count` is the authoritative post-increment value. If it satisfies the policy, fire the signal
+- Test with concurrent signal delivery: fire 3 completion signals within the same poll cycle and verify the group completion signal fires exactly once
 
-**Phase to address:** Phase 73 (Task Delegation) must enforce architectural guardrails; Phase 76 (QA Agent) will stress-test depth limits
-**Detection:** Dashboard metric: delegation depth per task tree, delegation-to-work-tool ratio per agent
+**Phase to address:** Phase 2 (Parallel Delegation)
+**Detection:** Monitor for task groups where all member tasks are "completed" but the group completion signal was never delivered
 
 ---
 
-### CRITICAL-3: Circular Wait / Deadlock Between Delegating Agents
+### CRITICAL-3: Tree-Level Token Budget Double-Spend Under Concurrency
 
-**What goes wrong:** Agent A delegates to Agent B and calls `wait_for` expecting a `task_completion` signal. Agent B, while working, needs clarification and delegates back to Agent A (or signals Agent A for input). But Agent A is in `waiting` status -- it can only be woken by a signal matching its `pending_wait.type`. If Agent B sends a `clarification` signal but Agent A is waiting for `task_completion`, the signal is rejected (type mismatch, line 376 of conversation-executor.ts). Agent B is blocked waiting for clarification. Agent A is blocked waiting for completion. Deadlock.
+**What goes wrong:** Phase 4 introduces tree-level token budgets that span all conversations in a delegation tree. The root task allocates 200k tokens, split across parallel delegates. Each conversation deducts tokens as it runs. But two parallel conversations in the same tree could both read `remaining = 50k`, each spend 30k, and both write back `remaining = 20k` instead of the correct `remaining = -10k`. The tree budget is silently overspent.
 
-**Why it happens:** The current `wait_for` mechanism is single-type: when an agent pauses, it specifies exactly which signal type will wake it. This is perfect for the current use case (wait for PR review, wait for approval) where the expected signal is well-defined. But delegation introduces bidirectional signaling -- the delegator needs to respond to both completions AND clarification requests from the delegate.
+**Why it happens in this codebase:** The current `TokenBudget` (token-budget.ts) is an in-memory mutable object shared by reference between an orchestrator and its sub-agents. This works because sub-agents run synchronously within the same `executeConversation()` call (spawn-agent.ts:160-169). Tree-level budgets span SEPARATE conversations running on SEPARATE worker loop iterations, potentially on DIFFERENT workers. There is no shared in-memory state -- the budget must live in the database.
+
+The `deduct(input, output)` method (token-budget.ts:71-73) does `this.remaining -= input + output`. In a database context, this becomes a read-modify-write on a shared row. Without proper locking, concurrent conversations will overwrite each other's deductions.
 
 **Consequences:**
-- Both conversations stuck in `waiting` state indefinitely
-- pg-boss timeout eventually fires for both, waking them with unhelpful timeout messages
-- The agents wake up, see a timeout, and have no way to know the other agent was trying to communicate
-- If timeout fires for A first, A might re-delegate to a different agent, abandoning B's partial work
-- Resource leak: waiting conversations hold message history in JSONB; many deadlocked conversations = database bloat
+- Tree budget exceeded without any conversation receiving a budget exhaustion signal
+- Actual token spend could be 2-3x the intended budget for parallel delegation trees
+- Operators see higher-than-expected costs with no explanation in the dashboard
 
 **Prevention:**
-- Modify `wait_for` to accept multiple signal types: `wait_for({ types: ["task_completion", "task_clarification", "task_failed", "task_timeout"] })`. The `pending_wait.type` becomes `pending_wait.types` (array). Signal type matching checks membership in the array
-- Alternative: add a `wait_for_task` variant that automatically registers for all task-lifecycle signal types (completion, failure, clarification, timeout). This keeps the simple `wait_for` for non-delegation use cases
-- Enforce that delegators always include clarification in their wait types -- prompt guidance alone will not suffice because agents forget
-- Add deadlock detection: a scheduled job that scans for pairs of conversations both in `waiting` status where each has a task referencing the other's callback conversation. Surface these in the dashboard
+- Store tree budget as a single row with `remaining` column. Use atomic SQL: `UPDATE tree_budgets SET remaining = remaining - $deducted WHERE id = $treeId AND remaining >= $deducted RETURNING remaining`. If the RETURNING is empty, the budget is exhausted
+- Never read-then-write the budget. Always use atomic decrement operations
+- For the warning threshold (80%), use `remaining <= total * 0.2` in the query, not an in-memory check
+- Budget checks should happen after each LLM response, not at conversation start. The `onResponse` callback in the worker loop (worker-loop.ts:1454-1480) is the natural hook -- add a tree budget deduction call here
+- Consider a budget reservation pattern: when a conversation starts, it reserves a chunk (e.g., 20k tokens). If it uses less, it returns the remainder. This reduces lock contention from per-LLM-call deductions to per-conversation-start reservations
 
-**Phase to address:** Phase 74 (Completion Signaling) for multi-type wait_for; Phase 73 (Task Delegation) for the `wait_for_task` variant
-**Detection:** Scheduled query: `SELECT pairs FROM conversations WHERE status = 'waiting' AND circular_reference_exists`
+**Phase to address:** Phase 4 (Tree-Level Token Budgets) -- BUD-01 must use atomic SQL, not application-level locking
+**Detection:** Dashboard comparison: sum of per-conversation token usage vs. tree budget total. Alert if sum exceeds total by >5%
 
 ---
 
-### CRITICAL-4: Shared Memory Poisoning via Confident Hallucination
+### CRITICAL-4: Webhook Echo Loop From Transparent Materialization
 
-**What goes wrong:** Agent A discovers something about the codebase (e.g., "the auth middleware is located at src/middleware/auth.ts and uses JWT") and stores it via `knowledge:store` with high confidence. Later, the codebase changes -- auth moves to a different file or switches to session-based auth. Agent B queries shared memory, gets the stale entry, and proceeds based on wrong information. Worse: Agent B might store a *derived* conclusion ("since auth uses JWT, we need to validate tokens in the middleware") that reinforces the original wrong fact. The knowledge store becomes a self-reinforcing echo chamber of stale data.
+**What goes wrong:** Phase 3 creates Linear tickets for transparently materialized tasks. When the delegated agent completes (MAT-03), the system updates the Linear ticket to "done." This fires a Linear webhook (`issue.updated`). The EventRouter processes it and potentially starts a NEW conversation or signals the existing one. That conversation does something that updates the ticket again. Infinite loop.
 
-**Why it happens:** LLMs assign confidence based on how certain they *feel* about information, not based on when they verified it or how it was obtained. Research on memory poisoning shows "a single compromised agent poisoned 87% of downstream decision-making within four hours" in simulated multi-agent systems (MintMCP, 2025). The stale data variant is less dramatic but more insidious -- the information was correct when stored, so there is no malicious intent to detect.
+**Why it happens in this codebase:** The existing echo filter was removed (webhooks.ts:142: "Echo filter removed: agent activities and user comments are structurally distinct"). This worked for the v2.7 model where agents post agent activities, not issue updates. But transparent materialization means agents (via the materialization layer) will UPDATE issue status -- the same type of change a human makes. The echo filter cannot distinguish "agent-initiated status change via materialization" from "human status change" because both are issue updates.
+
+The correlation service (work_correlations table) maps entities to conversations, but it does not track the DIRECTION of updates. It knows "Linear issue LIN-123 is correlated with conversation X" but not "the status change to 'done' originated from conversation X."
 
 **Consequences:**
-- Agents make decisions based on outdated codebase knowledge, leading to incorrect code changes
-- Derived knowledge compounds the error -- two levels of wrong is harder to debug than one
-- Trust in the knowledge store degrades, potentially causing agents to ignore valid knowledge
-- Debugging difficulty: the root cause (stale knowledge entry) may be far removed from the symptom (broken code)
+- Infinite webhook cycle: agent updates ticket -> webhook -> EventRouter -> signals conversation -> agent updates ticket
+- At best: wasted processing and token consumption
+- At worst: cascading state corruption as each cycle modifies the ticket differently
 
 **Prevention:**
-- All codebase-related knowledge entries must have mandatory `expiry` based on category: file locations expire in 24h, architecture decisions in 7d, general patterns in 30d. Never allow indefinite expiry for codebase facts
-- Attach `source_hash` to knowledge entries: hash the source evidence (file content, tool result) that led to the knowledge. On query, optionally verify the source still matches (expensive but available for critical decisions)
-- Knowledge entries store `verification_date` -- the last time the claim was independently verified. Query ranking should penalize entries with old verification dates
-- Prevent derived-knowledge reinforcement loops: if Agent B stores knowledge that cites Agent A's knowledge entry as its source, and Agent A's entry expires, Agent B's derived entry should also be flagged for re-verification
-- Start with a conservative scope for v1: only `discovery` and `constraint` types in shared memory. `architecture_decision` entries should require human confirmation before entering the shared pool
+- Add a `pending_materializations` tracking mechanism. Before updating a Linear ticket, record the expected change (e.g., `{issueId: "LIN-123", field: "status", value: "done", expiresAt: +30s}`) in a fast-expiring store (Redis or a Postgres table with TTL)
+- The adapter, when receiving a webhook, checks: "Is there a pending materialization that matches this change?" If yes, it is our own echo -- drop the event
+- This is the same pattern Workato and n8n use for bidirectional sync: track outbound changes and suppress their inbound echoes
+- Alternative: use Linear's `actor` field on webhooks. If the update was made by the Aesir OAuth application, suppress it. This is simpler but requires the materialization layer to always use the same OAuth identity
+- The correlation service should track update direction: add `last_outbound_update_at` to the correlations table. If an inbound webhook arrives within 5 seconds of our outbound update to the same entity, suppress it
 
-**Phase to address:** Phase 71 (Shared Memory) must implement expiry and verification infrastructure
-**Detection:** Dashboard view of knowledge entries by age, confidence, verification date; alert on entries past 2x their intended expiry
+**Phase to address:** Phase 3 (Transparent Materialization) -- MAT-03 (bidirectional sync) is the danger zone
+**Detection:** Monitor for rapid cycles of status changes on the same Linear issue within 10 seconds
 
 ---
 
-### CRITICAL-5: Linear OAuth Token Migration Breaks Running Conversations
+### CRITICAL-5: Lifecycle Hook Ordering Creates Unpredictable Agent Turns
 
-**What goes wrong:** The migration from long-lived OAuth tokens (valid ~10 years) to short-lived tokens (24h) with refresh tokens happens while agents have active conversations. The old token is migrated via `POST /oauth/migrate_old_token`, invalidating it immediately. Any in-flight MCP calls using the old token fail. If the refresh token rotation fails (Linear rotates refresh tokens, old one becomes unusable immediately), the entire integration goes dark -- no outbound communication to Linear until manual re-auth.
+**What goes wrong:** Phases 7 and 8 both inject agent turns at lifecycle boundaries. Phase 7 injects an identity update turn before conversation completion. Phase 8 injects a pre-compaction knowledge flush turn before history compaction. The spec explicitly notes this: "Whichever is built first should establish the general lifecycle hook mechanism so the other plugs into it rather than duplicating the pattern." But if both hooks fire on the same conversation, the agent runs TWO extra turns: one for knowledge flush, one for identity update. The ordering matters -- if identity update runs first, it uses the full uncompacted history. If knowledge flush runs first and compaction follows, the identity update sees a summarized history and may write a worse identity document.
 
-**Why it happens:** Linear's April 1, 2026 deadline for refresh token migration forces a token format change. The current credential store (`linear.credentials`) stores long-lived tokens and has no refresh logic. The migration endpoint returns a new short-lived token + refresh token, but existing code has no token refresh middleware. The `createLinearClientFromDatabase` factory creates a client once with a token and does not handle 401 retries with token refresh.
+**Why it happens in this codebase:** The history compaction point is in `executeConversation()` (worker-loop.ts:1337-1349), after loading messages but before running the agent loop. The completion point is after the agent loop returns with `result.status === "completed"` (worker-loop.ts:1734-1778). These are different points in the execution flow. Adding hooks at both points means the agent loop may run 2-3 times per `executeConversation()` call: once for the main work, once for knowledge flush (before compaction), once for identity update (before completion).
+
+Each extra agent turn costs tokens, and the turns compound. If the knowledge flush turn generates new knowledge that needs to be included in the identity update, the ordering dependency is real.
 
 **Consequences:**
-- All Linear MCP tool calls fail with 401 for up to 24 hours until someone notices
-- The denormalizer cannot post agent activities to Linear -- agent appears unresponsive
-- Webhook echo filtering (currently via `LINEAR_BOT_USER_ID`) continues working but outbound is broken
-- If refresh token rotation fails, manual OAuth re-authorization is required (workspace admin)
-- Running dev-agent conversations that need to post to Linear will fail and potentially exhaust retries
+- Unpredictable token cost: conversations run 2-3x more agent turns than expected
+- Ordering bugs: identity document updated before knowledge flush loses the flushed knowledge
+- Compaction + flush + identity update in the wrong order could lose context
+- Token budget exhaustion from unexpected extra turns
 
 **Prevention:**
-- Implement token refresh middleware in the Linear client factory BEFORE the `actor=app` migration. This is a prerequisite, not a phase 70 feature -- existing OAuth tokens also face the April 2026 deadline
-- Use the migration endpoint (`POST /oauth/migrate_old_token`) in a maintenance window, not on-the-fly. Announce the migration, drain active conversations, migrate, verify, then resume
-- Add 401 retry logic to `callMcpTool` that triggers a token refresh and retries once before propagating the error
-- Store both access_token and refresh_token in `linear.credentials` with an `expires_at` timestamp. Proactively refresh tokens before expiry (e.g., at 80% of lifetime = ~19 hours)
-- Test the migration path in a staging workspace first -- token migration is irreversible
+- Design the lifecycle hook mechanism as an ordered pipeline, not independent hooks. Define a clear execution order: (1) pre-compaction knowledge flush, (2) history compaction, (3) agent main loop, (4) pre-completion identity update. Each step is optional based on agent configuration
+- Lifecycle hooks should be LIGHTWEIGHT: restricted tool set, short max iterations (3-5), dedicated token allocation that does not come from the main conversation budget
+- Never run both hooks in the same `executeConversation()` call. Knowledge flush happens during compaction (which runs on RESUMED conversations), identity update happens at COMPLETION. These are inherently different lifecycle points and should not collide
+- If an agent has both knowledge tools and identity tools, the compaction flush turn should ALSO update identity (merge the two hooks for that agent)
 
-**Phase to address:** Phase 70 (Linear Agent SDK) -- token refresh must be plan 70-01, not an afterthought
-**Detection:** Monitor 401 error rates on Linear MCP tools; alert if > 0 within a 5-minute window
+**Phase to address:** Phases 7 and 8 -- whichever ships first MUST establish the hook mechanism. The spec says this explicitly. Phase ordering: 8 before 7, since compaction hooks are simpler and establish the pattern
+**Detection:** Log lifecycle hook execution count per conversation. Alert if >2 hooks fire in a single executeConversation() call
 
 ---
 
@@ -140,138 +141,140 @@ Mistakes that cause significant issues but are recoverable without rewrites.
 
 ---
 
-### HIGH-1: Fan-Out Delegation with Partial Completion
+### HIGH-1: Counter-Propose Creates Unbounded Negotiation Loop
 
-**What goes wrong:** Product-agent delegates three related subtasks to dev-agent simultaneously (e.g., "implement API endpoint", "add database migration", "update tests"). Two complete successfully, one fails. Product-agent receives two completion signals and one failure signal. It needs to decide: roll back the completed work? Proceed with partial results? Re-delegate the failed task? The agent has no framework-level support for this -- it must reason about partial completion from raw signal data.
+**What goes wrong:** Phase 1 adds counter-proposals: instead of flat accept/reject, the target agent can respond with a modified scope. The delegator then decides: accept the modification, reject, or try someone else. But what if the delegator counter-proposes the counter-proposal? Or the target issues another counter-proposal? Without a bound, negotiation can loop indefinitely, consuming tokens on both sides with no work being done.
 
-**Why it happens:** The spec mentions parallel delegation as an open question (DEL, open question 3) but does not prescribe a solution. The existing task tree structure supports fan-out (multiple subtasks with the same parent) but has no concept of "all-or-nothing" or "partial completion policy." The agent receives individual completion/failure signals with no aggregation.
+**Why it happens in this codebase:** The current `respond_task` tool (respond-task.ts:18-32) has a simple `response: z.enum(["accept", "reject"])`. Adding `"counter_propose"` as a third option is straightforward. But the interaction pattern changes from a single request-response to potentially unbounded back-and-forth. The existing handshake timeout (via `wait_for` with `timeout: "30s"`) bounds the total time but not the number of rounds.
 
 **Consequences:**
-- Inconsistent state: two features merged but tests for the third are missing
-- Agent makes poor partial-completion decisions (e.g., declaring success when 2/3 subtasks completed)
-- Difficult to reason about: the agent sees signals arrive over time, with context fading between each
+- Token budget consumed by negotiation overhead instead of actual work
+- Delegator and target stuck in a negotiation loop until timeout fires
+- Poor user experience: dashboard shows agents arguing about scope instead of working
 
 **Prevention:**
-- For v1, strongly discourage parallel delegation in prompts. Sequential delegation (A then B then C) is simpler and avoids partial-completion ambiguity
-- If parallel delegation is needed, add a `task_group` concept: subtasks can be grouped with a completion policy (`all_required`, `any_sufficient`, `majority`). The system aggregates completion signals and fires a single group-completion signal to the delegator
-- At minimum, the delegator's wait_for must handle multiple completion signals for the same delegation batch. The `wait_for_task` variant should accept a list of subtask IDs to wait for
-- Add a `delegated_subtask_ids` field to the parent task's metadata so the delegator can track which subtasks are outstanding when it wakes up
+- Hard limit on negotiation rounds: maximum 2 counter-proposals per delegation (configurable). After 2 counter-proposals, the next response must be accept or reject
+- Track round count in the task metadata: `{ negotiation_rounds: N }`. The `respond_task` tool checks the count before allowing a counter-proposal
+- The delegation handshake timeout bounds total time, but also add per-round tracking to the prompt: "You have had N rounds of negotiation. If you cannot agree on scope, reject and try someone else"
+- Counter-proposals should include structured fields (`modified_scope`, `modified_estimate`) alongside free-text reasoning. This helps the delegator make a quick accept/reject decision without another LLM reasoning loop
 
-**Phase to address:** Phase 73 (Task Delegation) should implement sequential-only for v1; Phase 74 (Completion Signaling) should handle the aggregation if parallel is allowed
-**Detection:** Task tree queries that show parent tasks with mixed-status subtasks
+**Phase to address:** Phase 1 (Richer Negotiation) -- NEG-06 (multi-round support) must include round limits
+**Detection:** Dashboard metric: average negotiation rounds per delegation. Alert if >2 average
 
 ---
 
-### HIGH-2: Entity Directory Returns Stale or Incorrect Capabilities
+### HIGH-2: Scheduled Execution Overlap With Singleton Key Collision
 
-**What goes wrong:** The entity directory is seeded from YAML definitions at deploy time. Between deploys, capabilities change (a new agent is defined, an agent's tools change, a human's role changes). The directory is stale. Agent A queries "who can run tests?" and gets no results because the QA agent was added after the last seed. Or worse, the directory returns an agent whose capabilities were reduced -- the delegation fails after the handshake because the target cannot actually do the work.
+**What goes wrong:** Phase 5 uses pg-boss for cron-scheduled agent execution. The overlap prevention (SCH-05) uses `skip` policy: if the previous scheduled run is still active, skip the new one. pg-boss implements this via `singletonKey` on the scheduled job. But pg-boss has a known limitation: scheduled jobs cannot run more than once per minute, and singleton key overlap detection uses debouncing with a 60-second resolution. If a schedule fires every minute and the previous run takes 61 seconds, the overlap detection may fail, starting two concurrent runs of the same scheduled agent.
 
-**Why it happens:** The directory is a projection of YAML + config at a point in time. It has no live-update mechanism. The spec acknowledges this as open question DIR-04 ("Directory staleness -- re-seed on deploy?") but does not prescribe a solution.
+**Why it happens in this codebase:** The timeout scheduler (timeout-scheduler.ts:247-253) already uses `singletonKey: conversationId` for timeout jobs. For scheduled execution, the singleton key would be `agentDefinitionId + scheduleName`. pg-boss's `schedule()` method (not `send()`) creates recurring cron jobs, but the singleton behavior differs from one-shot jobs. The debouncing offset calculation has had historical bugs (pg-boss changelog: "fixed debouncing offset calculation which would sometimes cause an interval overlap").
 
 **Consequences:**
-- Delegation to non-existent or incapable agents, wasting a handshake round-trip
-- Agents fall back to hardcoded agent IDs in their prompts, bypassing the directory entirely
-- Human entries become stale as team members change roles or Slack channels
+- Two instances of the same scheduled agent running simultaneously
+- If the agent creates Linear tickets or other external artifacts, duplicates are created
+- If the agent modifies shared state (knowledge entries, identity documents), concurrent writes can conflict
 
 **Prevention:**
-- Re-seed the directory on every deploy (add to CI/CD pipeline or service startup)
-- Add a `last_seeded_at` timestamp to the directory table. The `directory:find` tool should warn if the directory is older than 24 hours
-- For human entries, consider a periodic validation job (ping the Slack channel to verify it exists)
-- The negotiation handshake (Phase 73) is the safety net: if the directory is wrong, the target agent rejects the task with a capability mismatch reason. The delegator retries with a different entity. This is why the handshake is critical -- it validates directory claims at runtime
-- Do not allow agents to cache directory results across conversations. Each delegation should query fresh
+- Use `stately` queues (pg-boss v10+) for scheduled jobs: only 1 job queued and 1 job active. This is stricter than singleton
+- Add application-level overlap detection: before creating the conversation from a scheduled trigger, check if an active conversation already exists for this agent + schedule combination. Use `executor.list({ agentDefinitionId, status: "running" })` as a guard
+- Use a `pg_advisory_xact_lock` on a hash of `agentId + scheduleName` when processing scheduled job callbacks. This serializes schedule trigger processing
+- Test with schedules that fire faster than agent execution time (e.g., every 30 seconds with a 60-second agent run)
 
-**Phase to address:** Phase 72 (Entity Directory) for seeding infrastructure; Phase 73 (Task Delegation) for handshake as runtime validation
-**Detection:** Dashboard metric: handshake rejection rate by reason. High "capability mismatch" rejections indicate stale directory
+**Phase to address:** Phase 5 (Scheduled Agent Execution) -- SCH-05 overlap prevention is the critical requirement
+**Detection:** Monitor for concurrent conversations with the same `agent_definition_id` + schedule metadata
 
 ---
 
-### HIGH-3: Callback Routing Breaks When Conversations Are Re-Triggered
+### HIGH-3: Sub-Agent Discovery Returns Wrong Match From Embedding Similarity
 
-**What goes wrong:** Agent A delegates a task with `callbackConversationId = "product-agent-FEAT-123"`. Agent A's conversation fails and is re-triggered as `"product-agent-FEAT-123-r2"` (the existing re-trigger mechanism, line 227 of conversation-executor.ts). Agent B completes and signals `"product-agent-FEAT-123"` -- the original, now-terminal conversation. The signal is rejected. The new conversation `"product-agent-FEAT-123-r2"` never receives the completion.
+**What goes wrong:** Phase 6 introduces capability-based sub-agent discovery using pgvector embeddings. An orchestrator calls `spawn_agent` with `capability: "write production-quality code"` and the registry resolves to the coder sub-agent. But embedding similarity is fuzzy -- "write production-quality code" might also match a "documentation writer" sub-agent (high cosine similarity because both involve "writing"). The wrong sub-agent is spawned, wastes tokens, and returns unusable results.
 
-**Why it happens:** The re-trigger mechanism creates a new conversation with a suffixed ID. The callback stored in the delegated task still points to the original ID. There is no mechanism to update callback targets when conversations are re-triggered.
+**Why it happens in this codebase:** The entity directory already uses pgvector for capability matching (entity_directory table, schema.ts:466-495). The query uses cosine similarity ranking. Short capability descriptions ("write code", "run tests") have high overlap in embedding space. The DISC-07 fallback behavior (no match returns empty) does not help when there IS a match but it is wrong.
 
 **Consequences:**
-- Completion signals lost to terminal conversations (compounds with CRITICAL-1)
-- The re-triggered conversation has no way to know about the delegation from the previous attempt
-- Task tree shows completed subtask but the parent task's conversation is a dead end
+- Wrong sub-agent spawned, consuming shared token budget on useless work
+- Orchestrator receives irrelevant results, must re-spawn with a different capability query
+- If the wrong sub-agent modifies the sandbox (writes files, creates branches), cleanup is needed
 
 **Prevention:**
-- When a conversation is re-triggered, check if any active tasks have `callbackConversationId` pointing to the old ID. Update them to the new ID
-- Store `callbackConversationId` resolution as a query, not a static value: "look up the latest active conversation for correlation key X" rather than "signal conversation ID Y"
-- Alternative: callback routing should resolve through the task, not the conversation. When a subtask completes, look up the parent task, find the most recent active conversation for that task, and signal it. This is more robust than direct conversation ID references
-- The re-trigger mechanism already preserves context from the previous attempt (line 239 of conversation-executor.ts). Extend this to include "pending delegated subtasks" information
+- Require a minimum similarity threshold (e.g., 0.85 cosine similarity) for capability matches. Below the threshold, return no match rather than a weak match
+- Sub-agent capabilities should be SPECIFIC, not generic. "Generate TypeScript implementation files with tests" is better than "write code" for disambiguation
+- Add a `domain` field to sub-agent capabilities for coarse filtering before embedding search. Coder is `domain: "code"`, researcher is `domain: "codebase"`, tester is `domain: "testing"`. The query first filters by domain, then ranks by embedding similarity
+- Keep the hardcoded `subAgents` YAML map as a fallback. If the capability query returns a sub-agent that is NOT in the agent's `subAgents` map, log a warning and fall back to the hardcoded mapping. This provides a safety net during the transition
+- Test with adversarial capability queries that are semantically close but should resolve to different sub-agents
 
-**Phase to address:** Phase 74 (Completion Signaling) -- callback resolution strategy is the core design decision
-**Detection:** Monitor for signals sent to conversation IDs with `-r` suffixes that no longer exist
+**Phase to address:** Phase 6 (Sub-Agent Discovery) -- DISC-05 semantic matching must include thresholds
+**Detection:** Dashboard metric: sub-agent spawn outcomes. Track "spawned via discovery" vs "spawned via hardcoded" and success rates of each
 
 ---
 
-### HIGH-4: History Compaction Destroys Delegation Context
+### HIGH-4: Identity Document Token Bloat at Conversation Start
 
-**What goes wrong:** Agent A has a long conversation. It delegates to Agent B, pauses, and waits. When Agent B completes 2 hours later, Agent A resumes. The history manager compacts the conversation, and the delegation context (what was delegated, to whom, what was expected, the task IDs) gets summarized away. Agent A resumes with a summary that says "previously delegated work to dev-agent" but lacks the specific task ID, expected artifacts, or success criteria. The completion signal payload helps, but the agent has lost the reasoning context for what to do with the results.
+**What goes wrong:** Phase 7 injects all identity documents into the system prompt at conversation start (IDN-03). An agent with 5 identity document types (product_brief, architectural_model, stakeholder_map, domain_knowledge, working_context), each at their token limit (say 2000 tokens), adds 10k tokens to EVERY conversation's initial context. Over time, as documents grow, this fixed cost could reach 20-30k tokens before the agent processes a single message.
 
-**Why it happens:** The history manager (history-manager.ts) summarizes old messages when token count exceeds `pruneThreshold`. Delegation context is just another tool call result in the message history -- it gets the same treatment as any other old message. With a 2-hour wait and a complex conversation before the delegation, the delegation tool calls are very likely to be outside the `protectedMessages` boundary.
+**Why it happens in this codebase:** The system prompt is loaded from `definition.systemPrompt` (prompt.md file content) and passed directly to `runAgentLoop` (worker-loop.ts:1483). Identity documents would be prepended or appended to this prompt. The history manager's `pruneThreshold` (default 80k tokens from history-manager.ts:33-34) includes the system prompt. With 30k tokens of identity documents, the effective conversation capacity drops to 50k before compaction triggers.
 
 **Consequences:**
-- Agent makes poor post-delegation decisions because it lacks context about what was delegated and why
-- Agent re-delegates the same work because it doesn't remember the first delegation
-- Agent ignores completion results because it can't match them to the original delegation intent
+- Every conversation starts with a 10-30k token overhead
+- Conversations hit compaction earlier, losing more context
+- For short tasks (sub-agent spawns with low token budgets), identity injection could consume a significant fraction of the budget
+- Cost increase: 10k tokens per conversation * N conversations/day = meaningful cost at scale
 
 **Prevention:**
-- Completion signal payloads must be self-contained: include the original task description, expected outcomes, and results. The agent should be able to resume from the signal payload alone without relying on conversation history
-- Add delegation metadata to the conversation row (new JSONB column `active_delegations`) that survives history compaction. Track `{ taskId, delegateId, expectedOutcome, delegatedAt }` for each outstanding delegation
-- The history manager should treat delegation tool calls (`task:delegate`, `wait_for` with task context) as protected messages that resist summarization, similar to how `<summary>` blocks are detected
-- On resume after delegation, inject a `<delegation_context>` block (analogous to `<task_context>`) that provides structured information about the delegation, regardless of what the history manager did
+- Set per-document-type token limits that are conservative: 1000 tokens for product_brief, 500 for working_context, etc. Total identity injection should not exceed 5k tokens
+- Do NOT inject identity documents for sub-agents. Sub-agents are focused workers that do not need persistent identity -- they inherit context from their parent's task description. Only orchestrator agents get identity injection
+- Implement selective injection based on the incoming task type. A code review task does not need the full product brief. Use the initial message content to select relevant identity documents (requires a lightweight classification step)
+- The `tokenBudget` configuration should account for identity overhead. If an agent has identity documents, its `tokenBudget` should be increased by the expected identity token cost
+- IDN-07 (size management) must be aggressive: prompt the agent to summarize when approaching 80% of the limit, not at the limit
 
-**Phase to address:** Phase 74 (Completion Signaling) for self-contained signal payloads; Phase 73 (Task Delegation) for delegation context preservation
-**Detection:** Monitor for agents that re-delegate tasks that already have completed subtasks
+**Phase to address:** Phase 7 (Persistent Agent Identity) -- IDN-03 (context injection) must include token budgeting
+**Detection:** Dashboard metric: identity document token count per agent. Alert if total exceeds 5k
 
 ---
 
-### HIGH-5: Agent Session Lifecycle Mismatch With Conversation Lifecycle
+### HIGH-5: Pre-Compaction Knowledge Flush Causes Side Effects
 
-**What goes wrong:** Linear's Agent SDK expects agents to emit activities within specific timeframes: acknowledge within 10 seconds (emit a `thought` activity), then continue emitting activities while working. The Aesir conversation lifecycle is asynchronous -- a conversation is created as `queued`, waits for a worker to claim it (up to 5 seconds poll interval), then starts the agent loop. If the worker pool is busy (concurrency limit 3), the conversation might wait minutes to be claimed. Linear shows the agent session as unresponsive, and the user sees no acknowledgment.
+**What goes wrong:** Phase 8 injects a turn before history compaction prompting the agent to store knowledge. The flush turn runs with the agent's full tool set unless explicitly restricted (KR-06 open question). If the agent has integration tools (Linear, GitHub, Slack), it might use the flush turn to make external changes ("I should create a ticket for this before I forget") instead of just persisting knowledge. The flush turn was meant to be a focused preservation step, not a general-purpose agent turn.
 
-**Why it happens:** Linear's agent session model assumes synchronous processing: webhook arrives, agent processes, agent responds. Aesir's model is async: webhook arrives, conversation is queued, conversation is claimed when a worker is available, agent processes. The gap between "conversation created" and "first agent activity" can be significant under load.
+**Why it happens in this codebase:** The `executeConversation()` function (worker-loop.ts:927-2015) runs the agent loop once per execution. Adding a flush turn means running `runAgentLoop()` a SECOND time before compaction, with the same tool set. The agent has no way to know this is a "restricted" turn unless the tools are explicitly filtered. LLMs do what they can with the tools they have -- if integration tools are available, they may be used.
 
 **Consequences:**
-- Linear UI shows "agent is not responding" for sessions that are actually queued
-- Users lose trust in the agent and start doing the work themselves
-- If Linear has a hard timeout on initial response (the 10-second requirement), the session may be marked as errored before the agent even starts
+- Unexpected external side effects during what should be an internal housekeeping step
+- Duplicate ticket creation, unwanted Slack messages, or unintended GitHub operations
+- Flush turn consuming tokens from the main conversation budget
+- Confusion in the event log: tool calls during the flush turn look like regular agent activity
 
 **Prevention:**
-- Emit a `thought` activity immediately when the webhook is received, before queuing the conversation. This is an infrastructure concern, not an agent decision -- the adapter or webhook handler should call `createAgentActivity({ type: "thought", content: "Starting work..." })` synchronously during event processing
-- Track the Linear `agentSessionId` in the conversation row (or replyContext) so the denormalizer can map conversation events to Linear session activities
-- Map conversation lifecycle events to Linear session states: `queued` -> `pending`, `running` -> `active`, `waiting` -> `awaitingInput`, `completed` -> `complete`, `failed` -> `error`
-- Add periodic "heartbeat" activities while the agent is working (e.g., emit a `thought` activity every 60 seconds with current status). This requires the worker loop to emit outbound activities independent of the agent's tool calls
+- RESTRICT the tool set during flush turns. Only provide `knowledge:store` and `knowledge:query`. Strip all integration, codebase, communication, and coordination tools
+- Use a separate, cheaper model for flush turns (Haiku, matching the history compaction model from `summaryModel` config). This reduces cost and makes the flush lightweight
+- Set a strict `maxIterations: 3` for flush turns. The agent should store 0-5 knowledge entries and respond with a sentinel ("nothing to store" or "stored N entries"). More than 3 iterations means the agent is doing something unintended
+- Mark flush turn events in the event log with a distinct `agent_instance_id` prefix (e.g., `flush_inst_xxx`) so they are visually distinguishable in the dashboard
+- KR-06 answers itself: restricted tool set is mandatory, not optional
 
-**Phase to address:** Phase 70 (Linear Agent SDK) -- the 10-second requirement must be in plan 70-03 (adapter/denormalizer), not left to the agent prompt
-**Detection:** Monitor time-to-first-activity for Linear agent sessions; alert if > 10 seconds
+**Phase to address:** Phase 8 (Knowledge Retrieval Enhancement) -- KR-05/KR-06
+**Detection:** Monitor for non-knowledge tool calls during flush turns (any tool call to a non-`knowledge:` namespace)
 
 ---
 
-### HIGH-6: Knowledge Store Becomes a Token Sink
+### HIGH-6: Group Cancellation Races With In-Progress Completions
 
-**What goes wrong:** Agents liberally store knowledge entries because the prompt says "store discoveries for future agents." Every file path, every function signature, every architecture observation gets stored. The knowledge store grows to thousands of entries. When an agent queries "what do we know about authentication?", the query returns hundreds of entries, most redundant or trivially obvious. The agent's context is consumed by knowledge retrieval results instead of actual work.
+**What goes wrong:** Phase 2's `any_sufficient` policy fires when the first task in a group completes. The delegator may then cancel remaining tasks (PAR-06). But between the moment the delegator decides to cancel and the moment the cancellation signals reach the other conversations, one or more of those conversations may have already completed their work and sent completion signals. These "late" completion signals arrive at the delegator after it has already moved on, potentially re-waking it.
 
-**Why it happens:** Without clear guidance on *what is worth storing*, agents default to storing everything they learn. This is the "write amplification" problem: the cost of storing is zero (one tool call), but the cost of querying grows linearly with store size. Research shows that in multi-agent systems, shared memory tends to accumulate noise faster than signal (AgentPoison research, 2024).
+**Why it happens in this codebase:** `executor.cancel()` (conversation-executor.ts:591-657) transitions the conversation to `cancelled` and cancels pending timeouts. But it does NOT prevent the conversation from completing in the narrow window between "started" and "cancelled." The SKIP LOCKED claim (worker-loop.ts:894-918) only prevents two workers from claiming the same conversation -- it does not prevent a claimed and running conversation from completing while a cancel is in flight.
 
 **Consequences:**
-- Knowledge query results consume disproportionate token budget
-- Signal-to-noise ratio degrades, making useful knowledge harder to find
-- Agents spend more time processing knowledge results than doing actual work
-- Storage grows unbounded without active curation
+- Delegator receives unexpected completion signals after it has already processed the group result
+- If the delegator is waiting for a new task group, the stale completion signal might match a different pending_wait
+- Token waste: cancelled tasks that already completed did unnecessary work
 
 **Prevention:**
-- Rate-limit knowledge storage: maximum N entries per conversation (e.g., 5 for sub-agents, 10 for orchestrators)
-- Implement deduplication: before storing, query existing knowledge with the same topic/entity and supersede rather than duplicate
-- Knowledge entries must have a `relevance_scope` (e.g., "project:aesir", "file:src/auth/*"). Queries are scoped to prevent cross-project noise
-- Implement a curation mechanism: periodic cleanup job that removes low-confidence entries older than their expiry, deduplicates similar entries, and surfaces uncurated entries in the dashboard
-- For v1, consider read-only shared memory with a curated seed -- let agents query a knowledge base but only allow orchestrators to write. This prevents sub-agents from polluting the shared pool
+- Completion signals should carry a `groupId` field. The delegator's pending_wait should include group-scoped matching (similar to taskId-scoped matching in signal-matching.ts:42-49)
+- After satisfying a group policy, mark the group as "satisfied" in the database. Late completion signals for a satisfied group should be logged but not delivered to the delegator
+- The `computeUpdatedDelegations()` function (worker-loop.ts:386-440) already handles removing completed delegations. Extend this to handle group-level delegation removal
+- Use a dedicated signal type for group completion (`task_group_completion`) separate from individual task completion. The delegator waits for the group signal, not individual signals
 
-**Phase to address:** Phase 71 (Shared Memory) must implement rate limits and deduplication from day one
-**Detection:** Dashboard metric: knowledge store growth rate, average query result count, token consumption per knowledge query
+**Phase to address:** Phase 2 (Parallel Delegation) -- PAR-05 (signal aggregation) and PAR-06 (group cancellation)
+**Detection:** Monitor for completion signals delivered after group policy was already satisfied
 
 ---
 
@@ -281,85 +284,85 @@ Issues that cause friction or bugs but have straightforward fixes.
 
 ---
 
-### MODERATE-1: Negotiation Handshake Blocks on Unresponsive Agent
+### MODERATE-1: Materialization Sync Creates Tight Coupling to Linear Availability
 
-**What goes wrong:** Agent A delegates to Agent B and expects a handshake response (accept/reject with estimate). Agent B is busy, crashed, or its worker pool is exhausted. The handshake never completes. Agent A is blocked waiting for an accept/reject that never comes.
+**What goes wrong:** Phase 3's bidirectional sync (MAT-03) means that task status changes update the Linear ticket and vice versa. If Linear's API is down or rate-limited, task completions fail to materialize externally. The internal task succeeds but the external artifact is stale. When Linear recovers, there is no reconciliation mechanism -- the ticket shows the old status.
 
 **Prevention:**
-- The handshake must have its own timeout, separate from the task timeout. If no handshake response within 30 seconds (configurable), the delegator should treat it as a rejection and try the next entity from the directory
-- The handshake should be implemented as a fast-path signal exchange, not a full conversation start. Agent B's acceptance logic should run within the existing conversation if B is already active, or as a lightweight pre-conversation check if B needs to be started
-- Add a `handshake_timeout` field to the delegation tool parameters
+- Materialization updates must be fire-and-forget with retry. Use pg-boss to queue materialization jobs. If the first attempt fails, retry with exponential backoff
+- Never block task status transitions on materialization success. The internal task state is the source of truth; the external artifact is a projection
+- Add a reconciliation job: periodically scan for materialized tasks where internal status != external artifact status and issue corrective updates
+- The materialization interface (MAT-05) should include a `reconcile()` method alongside `materialize()` and `sync()`
 
-**Phase to address:** Phase 73 (Task Delegation) -- handshake timeout is required for the strategy abstraction
+**Phase to address:** Phase 3 (Transparent Materialization) -- MAT-03 is the risk, MAT-05 extensible interface must include reconciliation
 
 ---
 
-### MODERATE-2: Echo Storm From Linear Agent Activities
+### MODERATE-2: Schedule Registration Conflicts on Multi-Worker Deployments
 
-**What goes wrong:** The `actor=app` migration eliminates the need for echo filtering (LSDK-07) because agent activities and user prompts are structurally distinct. But during the migration period, if both `create_comment` and `createAgentActivity` are used, the old echo filter might incorrectly filter agent activities (the agent's new app identity might not match `LINEAR_BOT_USER_ID`). Or the filter might be removed too early, and old-style comments from the transition period create echo loops.
+**What goes wrong:** Phase 5 registers pg-boss scheduled jobs on startup (SCH-03). In a multi-worker deployment, every worker registers the same schedules. pg-boss's `schedule()` is idempotent (creates if not exists, updates if exists), but the registration race can cause duplicate schedule fires if workers start simultaneously and the idempotency check races.
 
 **Prevention:**
-- Plan the migration as a hard cutover, not a gradual transition. In one deployment: switch to `actor=app`, replace `create_comment` with `createAgentActivity`, remove echo filter, update adapter for `prompted` events
-- If a gradual migration is required, the echo filter must understand both identity types: `LINEAR_BOT_USER_ID` (old) and the app actor ID (new). Test this explicitly
-- The existing echo filtering is at the integration layer (CLAUDE.md: "Echo filtering at integration layer only"). Verify that the integration layer filters by actor type, not just user ID, during migration
+- Use a startup lock: only one worker registers schedules. Use `pg_advisory_lock` during schedule registration. Other workers wait for the lock, then verify schedules exist (no-op)
+- Alternatively, register schedules in a separate startup script (like the existing seed scripts: `pnpm seed:permissions`), not in the worker loop. This runs once per deployment, not once per worker
+- pg-boss v11 supports multiple schedules per queue with a `key` option. Use `key: scheduleName` to prevent duplicate registrations
 
-**Phase to address:** Phase 70 (Linear Agent SDK) -- plan 70-04 (remove echo filter) must be atomic with plan 70-03 (activity type mapping)
+**Phase to address:** Phase 5 (Scheduled Agent Execution) -- SCH-03 registration must handle multi-worker startup
 
 ---
 
-### MODERATE-3: Materialization Layer Creates Integration Coupling
+### MODERATE-3: Identity Document Versioning Creates Unbounded Storage Growth
 
-**What goes wrong:** The task materialization layer (DEL-05) decides how to deliver a delegated task to the recipient: internal signal for agents, Slack message for humans, optionally Linear ticket for transparent delegation. This creates a dependency from the delegation system to all integration packages. If Slack is down, human delegation fails. If the Linear MCP endpoint is unresponsive, transparent materialization blocks.
+**What goes wrong:** Phase 7 creates a new version on every identity document update (IDN-06). If an agent updates its identity document at the end of every conversation (which the prompt encourages), and the agent runs 10 conversations per day, that is 10 versions per document per day. Over weeks, the version history grows to hundreds of entries per document type per agent.
 
 **Prevention:**
-- Materialization failures should not block delegation. If the external materialization fails (Slack message not sent, Linear ticket not created), the task is still created internally and the delegation handshake proceeds. The external artifact is best-effort
-- Implement materialization as an async side-effect, not a synchronous prerequisite. Create the task, start the handshake, then fire-and-forget the external materialization. If it fails, log it and let the human check the dashboard instead
-- The materialization layer should have circuit breakers per integration: if Slack is returning errors, stop trying to materialize to Slack and fall back to a dashboard notification
-- This directly supports the spec's graceful degradation constraint: "collaboration enhances, isolation still works"
+- Retain only the last N versions (e.g., 10) per document type. Older versions are archived or deleted on a schedule
+- Use a compaction strategy similar to history manager: if the last 3 versions are very similar (high cosine similarity of content embeddings), keep only the most recent
+- Version diffing should be lazy: compute and store diffs only when requested through the dashboard, not on every update
+- Add a `version_count` column to the identity documents table. The `identity:update` tool checks this before creating a new version and triggers compaction if the count exceeds the limit
 
-**Phase to address:** Phase 73 (Task Delegation) -- materialization must be async and fault-tolerant from plan 73-02
+**Phase to address:** Phase 7 (Persistent Agent Identity) -- IDN-06 versioning must include retention policy
 
 ---
 
-### MODERATE-4: Database Hot Path From Cross-Conversation Queries
+### MODERATE-4: Retrieval Strategy Abstraction Adds Latency Without Benefit in v2.9
 
-**What goes wrong:** Delegation graph observability (Phase 75) and completion signaling (Phase 74) both need to query across conversations: "find all subtasks for this root task", "find the active conversation for this task", "trace the signal path from subtask to parent." These cross-conversation queries are inherently more expensive than single-conversation operations. Under load with many active delegation trees, these queries become the database bottleneck.
+**What goes wrong:** Phase 8 creates a pluggable retrieval pipeline with strategy registry, score fusion interface, and per-agent configuration. But in v2.9, only vector search ships as a concrete strategy (KRS-01 deferred to v3.0). The abstraction adds code complexity, an additional indirection layer, and potential latency (strategy resolution, weight application) with zero functional benefit until v3.0 adds real strategies.
 
 **Prevention:**
-- Add composite indexes for cross-conversation queries: `idx_tasks_parent_status` on `(parent_id, status)`, `idx_conversations_task_status` on `(task_id, status)`, `idx_task_handoffs_task_created` already exists but verify it covers the completion signal lookup path
-- Task tree queries should be recursive CTEs with depth limits (the existing `MAX_TASK_DEPTH = 5` provides a natural bound)
-- Cache delegation graph data for the dashboard. Task trees change slowly (delegation events are infrequent compared to tool calls). A materialized view or cache layer with 30-second TTL is sufficient
-- Signal dispatch should use direct lookups (`callbackConversationId`), not tree traversals. The tree is for observability, not for runtime signal routing
+- Design the abstraction but keep the implementation simple. The default vector strategy should be zero-overhead: if no retrieval config is specified in YAML, the pipeline calls the current vector search function directly with no abstraction layer in between
+- Use the strategy interface as a TYPE contract, not a runtime dispatch. The registry resolves strategy names to functions, but with a single strategy registered, this is a direct call
+- Do NOT introduce configuration complexity in YAML for v2.9. The `retrieval` config section should be documented but optional, with a note: "Additional strategies available in v3.0"
+- The score fusion interface can be designed but should be dead code until a second strategy exists. Test it with a mock strategy in integration tests
 
-**Phase to address:** Phase 74 (Completion Signaling) for runtime query optimization; Phase 75 (Delegation Graph Observability) for dashboard query optimization
+**Phase to address:** Phase 8 (Knowledge Retrieval Enhancement) -- KR-01/KR-04 must be minimal-overhead for v2.9
 
 ---
 
-### MODERATE-5: Token Budget Not Shared Across Delegation Tree
+### MODERATE-5: Concurrent Identity Document Updates From Parallel Conversations
 
-**What goes wrong:** The existing `tokenBudget` mechanism (token-budget.ts) is shared between a parent agent and its sub-agents within a single conversation. But cross-conversation delegation creates new conversations with their own independent token budgets. A delegation tree with 3 levels could consume 3x the intended token budget because each conversation has its own `maxIterations` and `tokenBudget` from the agent definition.
+**What goes wrong:** Phase 7's identity documents are scoped to an agent role, not a conversation (IDN-01). If two instances of dev-agent run simultaneously (which happens with parallel delegation), both may update the same identity document at conversation end. The spec acknowledges this (open question 4: "Last-write-wins with version history is probably sufficient for v1") but last-write-wins means the first conversation's identity update is silently overwritten by the second.
 
 **Prevention:**
-- For v1, accept that cross-conversation token budgets are independent. The delegation handshake (estimate) provides a soft budget signal, and the timeout mechanism provides a hard limit
-- For v2, add a `tree_token_budget` field to the root task. Each delegated task inherits a fraction of the remaining budget. The conversation executor reads the remaining tree budget and configures `tokenBudget` accordingly
-- At minimum, log total token usage per task tree in the dashboard so operators can identify expensive delegation chains
-- The existing `MAX_TASK_DEPTH` and `MAX_SUBTASKS_PER_PARENT` limits provide structural bounds on budget explosion, but they are blunt instruments
+- Last-write-wins is acceptable for v1, but LOG the overwrite. If conversation A updates the architectural_model at 10:05:01 and conversation B overwrites it at 10:05:03, the dashboard should show both versions with their source conversations
+- Use optimistic concurrency: include a `version` column. The `identity:update` tool does `UPDATE WHERE version = $expected_version`. If the version changed (another conversation updated it), retry with a merge prompt: "Your identity document was updated by another conversation. Here is their update: [diff]. Merge your update with theirs."
+- For v1, the merge prompt is too complex. Accept last-write-wins but ensure both versions are retained in the version history (IDN-06) so nothing is lost
 
-**Phase to address:** Phase 75 (Delegation Graph Observability) for token tracking; future milestone for budget enforcement
+**Phase to address:** Phase 7 (Persistent Agent Identity) -- IDN-04 update mechanism
 
 ---
 
-### MODERATE-6: Knowledge Classification Taxonomy Too Rigid or Too Flexible
+### MODERATE-6: Budget Exhaustion Signal Not Reaching All Tree Conversations
 
-**What goes wrong:** The spec proposes knowledge types: `discovery`, `architecture_decision`, `constraint`, `thought`. If the taxonomy is too rigid, agents miscategorize to fit the available types (storing a constraint as a discovery because it does not quite fit). If too flexible (extensible types), agents invent categories that are meaningless for querying ("general_info", "important_thing", "note").
+**What goes wrong:** Phase 4's BUD-04 requires that when the tree budget is approaching exhaustion, all active conversations in the tree receive a warning signal. But finding all active conversations in a delegation tree requires traversing the task hierarchy (tasks -> conversations -> active status). If one conversation is `waiting` (paused), the warning signal is queued but not immediately processed. When it resumes, the context may have changed.
 
 **Prevention:**
-- Start with a fixed, small taxonomy (4-5 types) and validate with real usage data before expanding
-- Each type should have clear examples in the agent prompt: "discovery = factual observation about the codebase (file locations, API shapes, test patterns). constraint = limitation or requirement that affects decisions (rate limits, API compatibility, performance targets)"
-- Log unclassified or frequently-miscategorized entries to inform taxonomy evolution
-- The classification should affect storage and query behavior (per MEM-06), so getting it wrong has consequences. This is a reason to keep the taxonomy small and well-understood for v1
+- Budget warnings should be delivered via the existing signal mechanism, not a new mechanism. Use `executor.signal()` for each active conversation in the tree
+- For waiting conversations, the signal is queued (existing behavior). When the conversation resumes, it processes the budget warning alongside whatever signal woke it
+- The budget warning signal should include the current remaining budget and the percentage, so the agent can calibrate regardless of when it processes the warning
+- Hard exhaustion (BUD-04) should be enforced at the executor level, not via signals. When the tree budget reaches zero, ALL conversations in the tree should have their `max_iterations` set to 0 in the database, preventing further LLM calls. This is an infrastructure guarantee, not an agent decision
 
-**Phase to address:** Phase 71 (Shared Memory) -- taxonomy design in plan 71-01
+**Phase to address:** Phase 4 (Tree-Level Token Budgets) -- BUD-04
 
 ---
 
@@ -369,42 +372,42 @@ Low-severity issues that should be addressed but are not blockers.
 
 ---
 
-### MINOR-1: Linear `delegate` vs. `assignee` Semantic Confusion
+### MINOR-1: Cron Timezone Confusion
 
-**What goes wrong:** Linear's Agent SDK introduces a `delegate` concept separate from `assignee`. When an agent is delegated an issue, it becomes the `delegate`, not the `assignee` -- the human remains the assignee. Aesir's current model uses `assignee_type` and `assignee_id` on tasks. If the mapping between Linear's delegate/assignee and Aesir's task assignee is unclear, the agent might be assigned in Aesir but not delegated in Linear, or vice versa.
+**What goes wrong:** Phase 5's cron expressions need a timezone (SCH-05 open question). Developers define schedules in their local timezone but the system interprets them in UTC. "Monday 9am" becomes "Monday 9am UTC" which is "Monday 4am EST" or "Monday 12am PST."
 
 **Prevention:**
-- Document the mapping explicitly: Linear `delegate` = Aesir `task.assignee_type=agent`. Linear `assignee` = human owner who initiated the work
-- The adapter must map `delegate` field from webhooks, not `assignee`, when creating tasks from Linear events
+- Default to UTC and document it clearly in the YAML schema validation error messages
+- Add an optional `timezone` field in the schedule definition. Validate timezone strings against the IANA timezone database at definition load time (KR-08 validates at startup)
+- The dashboard should always show schedule times in both UTC and the configured timezone
 
-**Phase to address:** Phase 70 (Linear Agent SDK) -- plan 70-03
+**Phase to address:** Phase 5 (Scheduled Agent Execution) -- SCH-02 format validation
 
 ---
 
-### MINOR-2: Dashboard Performance Degradation From Delegation Graph Rendering
+### MINOR-2: Counter-Propose Creates Asymmetric Tool Availability
 
-**What goes wrong:** The task tree view (Phase 75) renders delegation graphs with nodes (tasks), edges (delegation relationships), and signals (completion/failure/clarification). For a complex task tree (3 levels, 10 subtasks per level = 111 nodes), the React component becomes slow, especially with real-time signal flow visualization.
+**What goes wrong:** Phase 1 adds `counter_propose` as a response type to `task:respond`. But only the TARGET agent has `task:respond` in its tool list. The DELEGATOR needs to process counter-proposals and respond (accept the modification, reject, or try someone else), but the delegator does not have a tool for explicitly accepting/rejecting a counter-proposal. The delegator's response is implicit in its next action (re-delegate, cancel, wait_for_task).
 
 **Prevention:**
-- Limit the initial render to the first 2 levels of the tree; expand deeper levels on demand
-- Use virtualization for the timeline view (only render visible rows)
-- Signals are historical data -- render them as a static timeline, not a real-time animation
-- The existing SSE proxy (`/dashboard/api/sse/events`) should NOT push delegation graph updates in real-time. Poll every 30 seconds for graph changes
+- The delegator does not need a new tool for counter-proposal handling. When a counter-proposal signal arrives, the delegator's conversation resumes with the modification details. The delegator can then: (a) call `wait_for_task` to accept and continue waiting, (b) call `executor.cancel()` on the target conversation and re-delegate, or (c) respond via the existing signal mechanism
+- Add clear prompt guidance: "When you receive a counter-proposal, evaluate the modification. If acceptable, proceed with wait_for_task. If not, cancel the delegation and try someone else."
+- Do NOT add a `delegator_respond` tool -- this would create unnecessary symmetry. The delegator's existing tools (wait_for_task, delegate_task, cancel via signal) are sufficient
 
-**Phase to address:** Phase 75 (Delegation Graph Observability) -- plan 75-02
+**Phase to address:** Phase 1 (Richer Negotiation) -- NEG-01/NEG-02
 
 ---
 
-### MINOR-3: Seed Script Race Condition With Multiple Deployments
+### MINOR-3: Knowledge Flush Sentinel Detection Is Fragile
 
-**What goes wrong:** The entity directory is seeded from YAML via `pnpm seed:directory`. If two deployments run simultaneously (e.g., blue-green deployment), both seed scripts run concurrently and may create duplicate entries or fail on unique constraint violations.
+**What goes wrong:** Phase 8's pre-compaction flush (KR-06) expects the agent to respond with a sentinel if there is nothing to store. If the agent responds with natural language ("I don't have anything important to store") instead of a structured sentinel, the flush detection logic may not recognize it as "nothing to store" and retry the flush turn.
 
 **Prevention:**
-- Use `ON CONFLICT DO UPDATE` (upsert) in the seed script, not `INSERT`
-- Add a `seeded_at` timestamp to track freshness
-- The seed script should be idempotent by design
+- Do not rely on text-based sentinel detection. Instead, check the tool call log: if the flush turn completed without calling `knowledge:store`, treat it as "nothing to store" regardless of the text response
+- Set `maxIterations: 1` for the flush turn. The agent gets exactly one chance to store knowledge. If it does not call `knowledge:store` in that single iteration, flush is complete
+- If the agent calls `knowledge:store` in the flush turn, allow up to `maxIterations: 3` to store multiple entries
 
-**Phase to address:** Phase 72 (Entity Directory) -- plan 72-01
+**Phase to address:** Phase 8 (Knowledge Retrieval Enhancement) -- KR-06
 
 ---
 
@@ -412,82 +415,101 @@ Low-severity issues that should be addressed but are not blockers.
 
 | Phase | Topic | Likely Pitfall | Severity | Mitigation |
 |-------|-------|---------------|----------|------------|
-| Phase 70 | Linear Agent SDK | Token migration breaks running conversations (CRITICAL-5) | CRITICAL | Implement refresh token middleware first; drain conversations before migration |
-| Phase 70 | Linear Agent SDK | 10-second activity requirement vs. async queuing (HIGH-5) | HIGH | Emit thought activity synchronously in webhook handler |
-| Phase 70 | Linear Agent SDK | Echo storm during migration (MODERATE-2) | MODERATE | Atomic cutover, not gradual migration |
-| Phase 71 | Shared Memory | Knowledge poisoning from stale data (CRITICAL-4) | CRITICAL | Mandatory expiry, verification dates, source hashing |
-| Phase 71 | Shared Memory | Knowledge store becomes token sink (HIGH-6) | HIGH | Rate limits, deduplication, relevance scoping |
-| Phase 71 | Shared Memory | Classification taxonomy design (MODERATE-6) | MODERATE | Start small (4-5 types), validate before expanding |
-| Phase 72 | Entity Directory | Stale capabilities (HIGH-2) | HIGH | Re-seed on deploy, handshake validates at runtime |
-| Phase 73 | Task Delegation | Over-delegation / management layer (CRITICAL-2) | CRITICAL | Architectural enforcement of sub-agent vs. delegation boundary |
-| Phase 73 | Task Delegation | Handshake blocks on unresponsive agent (MODERATE-1) | MODERATE | Handshake-specific timeout (30s default) |
-| Phase 73 | Task Delegation | Materialization coupling (MODERATE-3) | MODERATE | Async best-effort materialization with circuit breakers |
-| Phase 74 | Completion Signaling | Lost signals to terminal conversations (CRITICAL-1) | CRITICAL | Task-level result storage, orphan-aware signal handling |
-| Phase 74 | Completion Signaling | Circular wait / deadlock (CRITICAL-3) | CRITICAL | Multi-type wait_for, deadlock detection job |
-| Phase 74 | Completion Signaling | Callback routing breaks on re-trigger (HIGH-3) | HIGH | Resolve callbacks through tasks, not conversation IDs |
-| Phase 74 | Completion Signaling | History compaction destroys delegation context (HIGH-4) | HIGH | Self-contained signal payloads, delegation context preservation |
-| Phase 74 | Completion Signaling | Fan-out partial completion (HIGH-1) | HIGH | Sequential-only for v1; task groups for v2 |
-| Phase 75 | Observability | Database hot path from cross-conversation queries (MODERATE-4) | MODERATE | Composite indexes, cached graph data, direct signal routing |
-| Phase 75 | Observability | Dashboard rendering performance (MINOR-2) | MINOR | Lazy tree expansion, virtualization, poll not push |
-| Phase 76 | QA Agent | All above pitfalls compound in the triangular workflow | VARIES | Phase 76 is the integration test -- every pitfall surfaced here should be resolved before Phase 76 begins |
+| Phase 1 | Richer Negotiation | Clarification deadlock from nested wait-for (CRITICAL-1) | CRITICAL | Extend wait_for_task to always include task_clarification |
+| Phase 1 | Richer Negotiation | Unbounded negotiation loop (HIGH-1) | HIGH | Hard limit on counter-proposal rounds (max 2) |
+| Phase 1 | Richer Negotiation | Asymmetric tool availability (MINOR-2) | MINOR | Delegator uses existing tools, no new tool needed |
+| Phase 2 | Parallel Delegation | Completion race condition (CRITICAL-2) | CRITICAL | pg_advisory_xact_lock or atomic SQL with RETURNING |
+| Phase 2 | Parallel Delegation | Group cancellation races (HIGH-6) | HIGH | Group-scoped signal matching, group "satisfied" flag |
+| Phase 3 | Transparent Materialization | Webhook echo loop (CRITICAL-4) | CRITICAL | Outbound change tracking + actor-based echo suppression |
+| Phase 3 | Transparent Materialization | Linear availability coupling (MODERATE-1) | MODERATE | Fire-and-forget materialization with pg-boss retry queue |
+| Phase 4 | Tree-Level Token Budgets | Double-spend under concurrency (CRITICAL-3) | CRITICAL | Atomic SQL decrement, never read-modify-write |
+| Phase 4 | Tree-Level Token Budgets | Warning signal not reaching all conversations (MODERATE-6) | MODERATE | Enforce exhaustion at executor level, not via signals |
+| Phase 5 | Scheduled Agent Execution | Overlap with singleton collision (HIGH-2) | HIGH | Stately queues + application-level overlap check |
+| Phase 5 | Scheduled Agent Execution | Multi-worker registration conflict (MODERATE-2) | MODERATE | Advisory lock during registration or separate seed script |
+| Phase 5 | Scheduled Agent Execution | Timezone confusion (MINOR-1) | MINOR | Default UTC, optional IANA timezone field |
+| Phase 6 | Sub-Agent Discovery | Wrong match from embedding similarity (HIGH-3) | HIGH | Minimum similarity threshold + domain pre-filter |
+| Phase 7 | Persistent Agent Identity | Token bloat at conversation start (HIGH-4) | HIGH | Per-type token limits, skip for sub-agents |
+| Phase 7 | Persistent Agent Identity | Concurrent update overwrites (MODERATE-5) | MODERATE | Last-write-wins with version history for v1 |
+| Phase 7 | Persistent Agent Identity | Unbounded version storage (MODERATE-3) | MODERATE | Retain last N versions, compact similar versions |
+| Phase 8 | Knowledge Retrieval Enhancement | Flush causes side effects (HIGH-5) | HIGH | Restrict tool set to knowledge: namespace only |
+| Phase 8 | Knowledge Retrieval Enhancement | Abstraction overhead without benefit (MODERATE-4) | MODERATE | Zero-overhead default path, strategy as type contract |
+| Phase 8 | Knowledge Retrieval Enhancement | Sentinel detection fragile (MINOR-3) | MINOR | Check tool call log, not text response |
+| Phases 7+8 | Lifecycle Hooks | Ordering creates unpredictable turns (CRITICAL-5) | CRITICAL | Ordered pipeline, not independent hooks |
 
 ---
 
-## Graceful Degradation Analysis
+## Integration Pitfalls: Cross-Phase Interactions
 
-The spec mandates: "Collaboration enhances, isolation still works." Here is an analysis of each new capability and what happens when it is unavailable.
+These pitfalls emerge from the combination of multiple phases, not from any single phase alone.
 
-| Capability | Unavailable When | Impact on Isolated Agents | Graceful? | Required Safeguard |
-|-----------|-----------------|--------------------------|-----------|-------------------|
-| Knowledge Store | pgvector extension down, table unreachable | Agents work without shared context (higher token cost for re-discovery) | YES, if tools return empty results not errors | `knowledge:query` must return `[]` on connection failure, not throw |
-| Entity Directory | Directory table empty or unreachable | Agents cannot discover delegation targets; fall back to self-execution | YES, if prompt says "if directory is unavailable, do the work yourself" | `directory:find` must return `[]` on failure, not throw |
-| Task Delegation | Delegation tool fails (directory down, materialization fails) | Agents cannot delegate; must execute work directly (the pre-v2.7 behavior) | YES, but only if agents have the tools to do the work themselves | Prompt guidance: "if delegation fails, consider whether you can handle this with sub-agents or directly" |
-| Completion Signaling | Signal delivery fails (callback conversation gone) | Delegated work completes but delegator does not resume automatically | PARTIAL -- work is done but result is stranded | Orphan handling (CRITICAL-1) + dashboard visibility + timeout fallback |
-| Linear Agent SDK | Linear API down, token expired | Agent cannot post activities to Linear; conversations continue internally | YES, with MCP error handling | MCP retry logic already exists; denormalizer errors should be non-fatal |
+### INTEGRATION-1: Parallel Delegation + Tree Budget + Clarification = Budget Death Spiral
 
-**Critical rule:** No collaboration tool failure should prevent an agent from completing its current conversation. Tool failures should return structured error results (not throw exceptions that crash the agent loop). The agent reasons about the error and adapts.
+Parallel delegation (Phase 2) creates N conversations from one budget. Tree-level budgets (Phase 4) split the budget across them. If one of those conversations uses clarification (Phase 1), the clarification round-trip consumes tokens from BOTH the delegator's budget share AND the target's budget share (the delegator must resume, process, re-pause). In a tree with 5 parallel tasks and frequent clarifications, the budget can be exhausted before any task completes.
 
-**Anti-pattern to avoid:** Adding collaboration tools as `required` dependencies that block conversation startup. If the knowledge store is unreachable, the conversation should still start -- the agent just won't have shared knowledge available.
+**Mitigation:** Clarification should have a separate token allocation from the main task budget. Or: count clarification round-trips against the target's budget, not the delegator's (the target initiated the clarification).
+
+### INTEGRATION-2: Scheduled Execution + Identity Documents = Stale Identity
+
+A scheduled agent runs weekly (Phase 5). Its identity documents (Phase 7) are injected at conversation start. If the agent only runs once a week, the identity documents are updated at most weekly. But other agents may have stored knowledge (Phase 8) relevant to this agent's domain during the week. The scheduled agent starts with a week-old mental model.
+
+**Mitigation:** Before injecting identity documents for scheduled agents, check if relevant knowledge entries have been stored since the last identity update. If so, append a "new knowledge since your last run" summary to the identity injection.
+
+### INTEGRATION-3: Transparent Materialization + Parallel Delegation = Ticket Flood
+
+A delegator creates 5 parallel tasks with `materialization: "transparent"`. Each creates a Linear ticket. If the delegator's task is also materialized, that is 6 Linear tickets for what is conceptually one unit of work. Humans see a flood of tickets and lose the forest for the trees.
+
+**Mitigation:** Group materialization: when a task group is created with transparent materialization, create a SINGLE parent ticket with subtask links, not individual tickets. This requires the materialization layer to understand groups (Phase 2 + Phase 3 interaction).
+
+### INTEGRATION-4: Sub-Agent Discovery + Capability-Based Spawn + Parallel Groups = Unpredictable Parallelism
+
+A delegator creates a parallel group with `capability: "write code"` and `count: 3`. Sub-agent discovery (Phase 6) resolves to the coder sub-agent. But sub-agents are spawned within the parent's conversation (not as separate conversations). Parallel delegation (Phase 2) creates separate conversations. These are different execution models. If the delegator mixes capability-based spawn (sub-agent) with parallel delegation (cross-conversation), the interaction is undefined.
+
+**Mitigation:** Parallel delegation is for orchestrator-to-orchestrator. Sub-agent spawning is for within-conversation. Do not allow capability-based discovery in `delegate_group`. Discovery is for `spawn_agent` only. Parallel delegation uses explicit entity directory lookups.
 
 ---
 
-## The Overarching Risk: Complexity Budget
+## The Overarching Risk: Signal Machinery Complexity
 
-The existing system works because it is simple: one conversation, one agent, isolated execution, SKIP LOCKED for concurrency. Each of the seven v2.7 phases adds complexity:
+v2.9 pushes the signal/wait machinery harder than any previous milestone. Consider what happens to a single `executeConversation()` call after v2.9:
 
-| Phase | New Concepts Introduced | New Failure Modes Introduced |
-|-------|------------------------|------------------------------|
-| 70 | Actor identity, session lifecycle, activity types, refresh tokens | Token rotation failures, timing requirements, migration period risks |
-| 71 | Knowledge classification, shared state, expiry, scope policies | Stale data, noise accumulation, classification errors |
-| 72 | Entity registry, capability matching, seeding lifecycle | Stale directory, false capability matches |
-| 73 | Cross-conversation delegation, materialization, handshake protocol | Over-delegation, deadlocks, handshake timeouts |
-| 74 | Callback routing, multi-type signals, orphan handling | Lost signals, partial completion, cascading failures |
-| 75 | Task tree queries, cross-conversation tracing, signal visualization | Database load, dashboard performance |
-| 76 | Three-agent workflow, feedback loops, re-delegation | All above, compounded |
+| Step | Before v2.9 | After v2.9 |
+|------|-------------|------------|
+| Signal types to match | 3-5 (approval, pr_review, etc.) | 10+ (task_completion, task_failure, task_timeout, task_handshake, task_clarification, task_group_completion, budget_warning, schedule_triggered...) |
+| Wait-for configurations | Single wait_for per pause | Multiple wait_for cycles (clarification -> re-wait -> completion) |
+| Pre-loop hooks | None | Knowledge flush (Phase 8) |
+| Post-loop hooks | None | Identity update (Phase 7) |
+| Budget checks | Per-conversation only | Per-conversation + tree-level |
+| Signal sources | External (webhooks) + internal (timeouts) | External + internal + scheduled + budget + group aggregation |
 
-Each phase's failure modes compound with the previous phases. Phase 76 (QA Agent) exercises every failure mode simultaneously. **The most important mitigation is phased delivery with validation**: do not start Phase 73 until Phase 72 is validated in production. Do not start Phase 74 until Phase 73's handshake mechanism is proven. Phase 76 should only begin when all preceding phases have been individually stress-tested.
+Each addition is individually simple. Combined, the `executeConversation()` function grows from its current ~1100 lines to potentially ~1500+ lines with hooks, budget checks, and group signal handling. This is the single most important code path in the system.
+
+**The most important mitigation across all phases:** Extract the lifecycle hook mechanism, budget checking, and signal aggregation into well-tested, composable modules. Do not grow `executeConversation()` linearly with each phase. Phase 8 should establish the hook pattern. Phase 4 should establish the budget check pattern. Phase 2 should establish the signal aggregation pattern. Each pattern should be independently testable and composable.
 
 ---
 
 ## Sources
 
-### Research Papers and Articles
-- [Why Do Multi-Agent LLM Systems Fail?](https://arxiv.org/html/2503.13657v1) -- 14 failure modes across 150+ execution traces, 41-86.7% failure rates
-- [Multi-Agent Coordination Strategies](https://galileo.ai/blog/multi-agent-coordination-strategies) -- Galileo AI, 10 coordination strategies
-- [17x Error Trap of Bag of Agents](https://towardsdatascience.com/why-your-multi-agent-system-is-failing-escaping-the-17x-error-trap-of-the-bag-of-agents/) -- Towards Data Science, topology matters more than agent count
-- [Why Multi-Agent LLM Systems Fail and How to Fix Them](https://www.augmentcode.com/guides/why-multi-agent-llm-systems-fail-and-how-to-fix-them) -- Augment Code, specification problems = 41.77%, coordination failures = 36.94%
-- [Memory Poisoning Attack and Defense](https://arxiv.org/html/2601.05504) -- Memory poisoning in LLM agents
-- [AI Agent Memory Poisoning](https://www.mintmcp.com/blog/ai-agent-memory-poisoning) -- 87% downstream decision contamination from single compromised agent
-- [Cascading Failures in Agentic AI (OWASP ASI08)](https://adversa.ai/blog/cascading-failures-in-agentic-ai-complete-owasp-asi08-security-guide-2026/) -- OWASP security guide 2026
+### Web Research
+- [Multi-Agent Coordination Strategies](https://galileo.ai/blog/multi-agent-coordination-strategies) -- Deadlock prevention, resource contention patterns
+- [Why Multi-Agent LLM Systems Fail (MAST Taxonomy)](https://arxiv.org/html/2503.13657v1) -- 1600+ failure traces, specification/coordination = 79% of failures
+- [17x Error Trap of Bag of Agents](https://towardsdatascience.com/why-your-multi-agent-system-is-failing-escaping-the-17x-error-trap-of-the-bag-of-agents/) -- Topology matters more than agent count
+- [Preventing Infinite Loops in Bidirectional Syncs](https://www.workato.com/product-hub/how-to-prevent-infinite-loops-in-bi-directional-data-syncs/) -- Record hashing, directional flags for echo prevention
+- [pg-boss Cron Scheduling Limitations](https://github.com/timgit/pg-boss/issues/427) -- Jobs cannot run more than once per minute
+- [pg-boss v10 Singleton Behavior](https://github.com/timgit/pg-boss/releases/tag/10.0.0) -- Singleton key, stately queues
+- [pg-boss v11 Multiple Schedules](https://github.com/timgit/pg-boss/releases/tag/11.0.0) -- Schedule per unique key
+- [Expensively Quadratic: LLM Agent Cost Curve](https://blog.exe.dev/expensively-quadratic) -- Token budget growth in multi-turn agent conversations
+- [Token-Budget-Aware LLM Reasoning](https://arxiv.org/html/2412.18547v1) -- Dynamic budget allocation by complexity
+- [SagaLLM: Transaction Management for LLM Agents](https://www.vldb.org/pvldb/vol18/p4874-chang.pdf) -- Concurrent agent state consistency
+- [Hybrid Search in PostgreSQL](https://www.paradedb.com/blog/hybrid-search-in-postgresql-the-missing-manual) -- Vector + keyword retrieval pitfalls
 
-### Linear Developer Documentation
-- [Getting Started -- Linear Agents](https://linear.app/developers/agents) -- Agent SDK overview, actor=app, scopes
-- [Agent Interaction](https://linear.app/developers/agent-interaction) -- Session lifecycle, activity types, timing requirements
-- [OAuth Actor Authorization](https://linear.app/developers/oauth-actor-authorization) -- actor=app parameter, migration from actor=application
-- [OAuth 2.0 Authentication](https://linear.app/developers/oauth-2-0-authentication) -- Refresh token migration, April 2026 deadline, migration endpoint
-- [Agent Interaction Guidelines and SDK Changelog](https://linear.app/changelog/2025-07-30-agent-interaction-guidelines-and-sdk) -- SDK release details
-
-### Architecture and Patterns
-- [AWS Well-Architected: Graceful Degradation](https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_mitigate_interaction_failure_graceful_degradation.html) -- Transform hard dependencies into soft dependencies
-- [AI Agent Observability -- OpenTelemetry](https://opentelemetry.io/blog/2025/ai-agent-observability/) -- Standards for multi-agent tracing
-- [Agent Tracing for Multi-Agent AI Systems](https://www.getmaxim.ai/articles/agent-tracing-for-debugging-multi-agent-ai-systems/) -- Cross-agent debugging patterns
+### Codebase Analysis (PRIMARY SOURCE)
+- conversation-executor.ts -- Signal delivery, re-trigger logic, FOR UPDATE locking
+- worker-loop.ts -- executeConversation lifecycle, signal consumption, history compaction, delegation context
+- signal-matching.ts -- Type matching, taskId-scoped matching
+- timeout-scheduler.ts -- pg-boss scheduling, singleton key usage
+- wait-for-tool.ts / wait-for-task-tool.ts -- Wait state management, multi-type support
+- token-budget.ts -- In-memory budget sharing pattern
+- delegate-task.ts / respond-task.ts / complete-task.ts -- Delegation flow, handshake protocol
+- spawn-agent.ts -- Sub-agent execution, shared budget, depth tracking
+- schema.ts -- Table structure, task hierarchy, knowledge entries, entity directory
+- knowledge store/query tools -- Embedding-based search, deduplication

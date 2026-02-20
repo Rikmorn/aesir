@@ -1,632 +1,235 @@
-# Technology Stack: v2.7 Agent Collaboration
+# Technology Stack
 
-**Project:** Aesir v2.7 -- Multi-agent collaboration (shared memory, entity directory, task delegation, completion signaling, delegation graph observability, QA agent)
-**Researched:** 2026-02-10
-**Research mode:** Stack additions for subsequent milestone
-**Overall confidence:** HIGH (most additions are well-established; Linear Agent SDK is developer preview -- MEDIUM)
+**Project:** Aesir v2.9 Platform Completion
+**Researched:** 2026-02-20
 
----
+## Key Finding: No New Dependencies Needed
 
-## Executive Summary
+The existing stack covers all 8 capability areas. v2.9 is primarily about **new Postgres tables, new tools, new YAML fields, and new service logic** -- not new libraries. This is the correct outcome for a "platform completion" milestone: the platform is mature enough that adding features means using the platform, not extending its foundations.
 
-v2.7 introduces **5 new npm dependencies** and **1 infrastructure change** (Docker image swap). The core additions are:
-
-1. **`@linear/sdk` upgrade to ^75.0.0** -- for agent activity methods (`createAgentActivity`, `agentSessionId` tracking)
-2. **Docker image swap from `postgres:15-alpine` to `pgvector/pgvector:pg15`** -- adds pgvector extension for vector similarity search
-3. **`pgvector` npm package** -- type-safe vector operations with Drizzle ORM
-4. **`voyageai` npm package** -- embedding generation via Voyage AI's TypeScript SDK (Anthropic's recommended provider)
-5. **`@xyflow/react` + `@dagrejs/dagre`** -- delegation graph visualization in the dashboard
-
-This is a significant but controlled expansion. The new dependencies are tightly scoped: pgvector + voyageai serve shared memory and entity directory; @xyflow/react + dagre serve dashboard visualization; @linear/sdk upgrade serves the Agent SDK migration. No new services are added -- all capabilities integrate into existing packages.
+The one exception is cron expression validation (Phase 5), where a lightweight library adds value over hand-rolling validation.
 
 ---
 
-## Recommended Stack
+## Recommended Stack Changes
 
-### 1. Linear Agent SDK Migration (Phase 70)
+### New Dependency: Cron Expression Validation (Phase 5)
 
-#### @linear/sdk Upgrade
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `cron-parser` | ^5.x | Validate and compute next occurrence for cron expressions | pg-boss handles cron scheduling internally, but we need client-side validation at YAML load time (fail-fast at startup) and "next run" computation for dashboard display. `cron-parser` is the most established library (15M+ weekly downloads), supports timezone, DST handling, and iterator for next occurrences. |
 
-| Property | Value |
-|----------|-------|
-| Package | `@linear/sdk` |
-| Current version | `^70.0.0` |
-| Target version | `^75.0.0` |
-| Location | `packages/integrations/linear/package.json` |
-| Confidence | MEDIUM -- Agent SDK is developer preview as of 2025-07-30 |
+**Confidence:** HIGH -- verified on npm, widely used, maintained, TypeScript types included since v5.
 
-**Why upgrade:** Version 75.0.0 (published 2026-02-10) includes the full Agent Interaction SDK: `createAgentActivity()` method, `AgentActivityCreateInput` types, agent session webhook event types. The current ^70.0.0 may already resolve to a version with these features (npm semver range), but pinning to ^75.0.0 ensures the agent activity API is available.
+**Alternatives considered:**
 
-**Key SDK additions used:**
+| Library | Why Not |
+|---------|---------|
+| `croner` | Zero-dependency alternative with TypeScript-first design. Lighter, but also a full scheduler -- we only need parsing/validation. `cron-parser` is more focused on parsing. |
+| `cron-validate` | Validation-only, but no next-occurrence computation. Dashboard needs "Next run: Mon 9:00 AM" display. |
+| Hand-rolled regex | Cron syntax has edge cases (month names, day-of-week ranges, step values). Not worth maintaining when a battle-tested library exists. |
 
-```typescript
-// Agent activity creation (new in Agent SDK)
-const { success, agentActivity } = await linearClient.createAgentActivity({
-  agentSessionId: "session-uuid",
-  content: {
-    type: "response",    // thought | elicitation | action | response | error
-    body: "Implementation complete. PR #42 created.",
-  },
-});
-```
-
-**Activity content types:**
-
-| Type | Fields | Maps from |
-|------|--------|-----------|
-| `thought` | `body: string` | Reasoning blocks, internal notes |
-| `elicitation` | `body: string` | `communication:ask` |
-| `action` | `action: string, parameter: string, result?: string` | Tool invocations |
-| `response` | `body: string` (Markdown) | `communication:reply` |
-| `error` | `body: string` (Markdown) | Agent errors |
-
-**No separate Agent SDK package.** Linear ships agent features within `@linear/sdk` itself -- there is no `@linear/agent-sdk` or similar. The SDK is auto-generated from Linear's GraphQL schema, so agent activity methods appear when the schema includes them.
-
-#### OAuth Changes
-
-| Property | Value |
-|----------|-------|
-| Parameter | `actor=app` added to OAuth authorization URL |
-| New scopes | `app:assignable`, `app:mentionable` |
-| Impact | Re-authorization required for existing installations |
-| File | `packages/integrations/linear/src/oauth/flow.ts` (or wherever auth URL is constructed) |
-
-**What `actor=app` does:** All mutations (issue creates, comments, status changes) are performed by the app itself, not on behalf of the installing user. The agent gets its own workspace identity with configurable name and avatar.
-
-**Identity customization via mutation fields:**
-- `createAsUser`: Display name for the app actor
-- `displayIconUrl`: Avatar URL
-
-These fields on `issueCreate` and `commentCreate` mutations configure how the agent appears. For `createAgentActivity`, the app identity is used automatically.
-
-**Webhook events (agent sessions):**
-- `agent_session.created` -- new session triggered by mention or delegation; agent must respond within 10 seconds
-- `agent_session.prompted` -- user sent follow-up message; prompt text in `agentActivity.body`
-
-Both include `promptContext` (formatted string with issue details, comments, workspace guidance) and structured fields like `agentSession.issue`.
-
-#### What NOT to add for Linear
-
-| Temptation | Why Not |
-|------------|---------|
-| Separate Linear Agent SDK package | Does not exist. Agent features are in `@linear/sdk`. |
-| Custom GraphQL client for agent mutations | The SDK wraps GraphQL. Use `linearClient.createAgentActivity()`, not raw mutations. |
-| Webhook signature library change | Existing webhook verification is unchanged. Agent session events use the same delivery mechanism. |
-
----
-
-### 2. Vector Search Infrastructure (Phases 71, 72)
-
-#### pgvector Extension (Docker Image Swap)
-
-| Property | Value |
-|----------|-------|
-| Current image | `postgres:15-alpine` |
-| Target image | `pgvector/pgvector:pg15` |
-| Location | `docker-compose.yml` line 53 |
-| Extension | `CREATE EXTENSION IF NOT EXISTS vector;` |
-| Confidence | HIGH -- pgvector is the standard Postgres vector extension; Docker image is officially maintained |
-
-**Why swap the Docker image (not compile pgvector in Alpine):** The `postgres:15-alpine` image does not include pgvector. Options:
-
-1. **`pgvector/pgvector:pg15`** -- Official pgvector Docker image based on the official PostgreSQL image. Drop-in replacement. Includes pgvector pre-compiled. **Use this.**
-2. Custom Dockerfile extending `postgres:15-alpine` with `apk add` + compile -- fragile, slow builds, Alpine's musl libc can cause issues with pgvector's C code.
-3. `ankane/pgvector` -- community image, less maintained than the official pgvector org image.
-
-The `pgvector/pgvector:pg15` image is a thin layer over the official `postgres:15` image (Debian-based, not Alpine). This means the data directory format is compatible -- existing volumes will work. The image adds only the pgvector shared library.
-
-**Migration note:** The first migration for Phase 71 must include `CREATE EXTENSION IF NOT EXISTS vector;` before any vector column definitions. This is a one-time operation per database.
-
-#### pgvector npm Package
-
-| Property | Value |
-|----------|-------|
-| Package | `pgvector` |
-| Version | `^0.2.0` |
-| Install in | `packages/agents/package.json` |
-| Confidence | HIGH -- 430+ stars, supports Drizzle ORM, node-postgres, and postgres.js |
-
-**Why this package:** Provides type registration for the `pg` driver (which the agents package uses) and utility functions for vector serialization. Drizzle ORM has built-in `vector()` column type support, but `pgvector` npm package adds:
-
-1. `pgvector.registerTypes(client)` -- registers the vector type with node-postgres so query results return proper arrays instead of strings
-2. `pgvector.toSql([1, 2, 3])` -- serializes arrays to PostgreSQL vector format for raw queries
-3. Named distance function imports for use outside Drizzle
-
-**Drizzle ORM vector support (already available, no new package):**
-
-```typescript
-import { index, pgTable, text, vector } from "drizzle-orm/pg-core";
-import { cosineDistance, gt, sql, desc } from "drizzle-orm";
-
-// Schema definition with vector column
-export const knowledgeEntries = pgTable(
-  "knowledge_entries",
-  {
-    id: text("id").primaryKey(),
-    content: text("content").notNull(),
-    embedding: vector("embedding", { dimensions: 1024 }),
-    // ... other columns
-  },
-  (table) => [
-    index("knowledge_embedding_idx")
-      .using("hnsw", table.embedding.op("vector_cosine_ops")),
-  ],
-);
-
-// Similarity search query
-const similarity = sql<number>`1 - (${cosineDistance(knowledgeEntries.embedding, queryEmbedding)})`;
-
-const results = await db
-  .select({ id: knowledgeEntries.id, content: knowledgeEntries.content, similarity })
-  .from(knowledgeEntries)
-  .where(gt(similarity, 0.5))
-  .orderBy(desc(similarity))
-  .limit(10);
-```
-
-**Available distance functions in Drizzle:**
-- `cosineDistance` -- use this (normalized, matches Voyage AI output)
-- `l2Distance` -- Euclidean distance
-- `innerProduct` -- dot product
-- `l1Distance`, `hammingDistance`, `jaccardDistance`
-
-**Index type recommendation:** Use HNSW (Hierarchical Navigable Small World) over IVFFlat. HNSW provides better recall at query time without requiring periodic rebuilds. For the expected dataset size (thousands of knowledge entries, not millions), HNSW performance is excellent.
-
-#### Embedding Generation: Voyage AI
-
-| Property | Value |
-|----------|-------|
-| Package | `voyageai` |
-| Version | `^0.1.0` |
-| Install in | `packages/agents/package.json` |
-| Model | `voyage-3.5-lite` (1024 dimensions, optimized for latency/cost) |
-| Confidence | HIGH -- Anthropic's official recommendation; TypeScript SDK is production-ready |
-
-**Why Voyage AI over OpenAI:**
-
-| Factor | Voyage AI (`voyage-3.5-lite`) | OpenAI (`text-embedding-3-small`) |
-|--------|-------------------------------|-----------------------------------|
-| Anthropic alignment | Official Anthropic partner and recommendation | Competitor's service |
-| Dimensions | 1024 (default), configurable 256/512/2048 | 1536 (fixed) |
-| Pricing | $0.02/1M tokens (200M free tokens per account) | $0.02/1M tokens |
-| Code optimized model | `voyage-code-3` available for code knowledge | No code-specific variant |
-| Retrieval quality | Higher on MTEB benchmarks (68.6%) | Lower overall retrieval scores |
-| TypeScript SDK | `voyageai` (0.1.0, official) | `openai` (6.18.0, mature) |
-
-**Recommendation: Use `voyage-3.5-lite` for general knowledge, `voyage-code-3` for code-related knowledge.**
-
-The platform already uses Anthropic for LLM -- aligning on Anthropic's recommended embedding provider simplifies vendor management. Voyage's `input_type` parameter (query vs document) improves retrieval quality for the knowledge:query use case.
-
-**Usage pattern:**
-
-```typescript
-import { VoyageAIClient } from "voyageai";
-
-const voyage = new VoyageAIClient({ apiKey: process.env.VOYAGE_API_KEY });
-
-// Store: embed as document
-const docResult = await voyage.embed({
-  input: ["Auth middleware uses JWT, located at src/middleware/auth.ts"],
-  model: "voyage-3.5-lite",
-  inputType: "document",
-});
-const embedding = docResult.data[0].embedding; // number[1024]
-
-// Query: embed as query
-const queryResult = await voyage.embed({
-  input: ["what do we know about authentication?"],
-  model: "voyage-3.5-lite",
-  inputType: "query",
-});
-```
-
-**Environment variable:** `VOYAGE_API_KEY` -- add to `.env.example`, Docker Compose agent-service environment, and Zod env config.
-
-**Fallback option:** If Voyage AI is not available or adds unacceptable latency, OpenAI `text-embedding-3-small` via the `openai` npm package (v6.18.0) is a drop-in alternative. The embedding dimension would change to 1536, requiring a schema migration. Design the embedding service as an abstraction layer to enable provider swapping.
-
-#### Embedding Dimensions: 1024
-
-**Use 1024 dimensions** across all vector columns. This matches `voyage-3.5-lite` default output and provides a good balance between retrieval quality and storage/index performance. Both the knowledge store (Phase 71) and entity directory (Phase 72) should use the same dimensionality for consistency.
-
-If code-specific knowledge uses `voyage-code-3`, that model also defaults to 1024 dimensions, so no separate column dimension is needed.
-
----
-
-### 3. Knowledge Store Schema (Phase 71)
-
-#### PostgreSQL Schema Pattern
-
-No new npm packages needed -- uses existing Drizzle ORM with pgvector support.
-
-**Schema design for `agents.knowledge_entries`:**
-
-```sql
-CREATE TABLE agents.knowledge_entries (
-  id            TEXT PRIMARY KEY,
-
-  -- Classification
-  type          TEXT NOT NULL CHECK (type IN ('discovery', 'architecture_decision', 'constraint', 'thought', 'test_result')),
-  scope         TEXT NOT NULL DEFAULT 'shared' CHECK (scope IN ('shared', 'private')),
-
-  -- Content
-  content       TEXT NOT NULL,
-  embedding     vector(1024),
-
-  -- Metadata
-  confidence    TEXT NOT NULL DEFAULT 'medium' CHECK (confidence IN ('low', 'medium', 'high')),
-  author_agent  TEXT NOT NULL,
-  conversation_id TEXT,
-  tags          TEXT[] DEFAULT '{}',
-  metadata      JSONB DEFAULT '{}',
-
-  -- Lifecycle
-  expires_at    TIMESTAMPTZ,
-  superseded_by TEXT REFERENCES agents.knowledge_entries(id),
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Vector similarity search index
-CREATE INDEX knowledge_embedding_idx ON agents.knowledge_entries
-  USING hnsw (embedding vector_cosine_ops);
-
--- Scoped queries (shared knowledge for all agents, private for specific agent)
-CREATE INDEX knowledge_scope_type_idx ON agents.knowledge_entries(scope, type)
-  WHERE superseded_by IS NULL AND (expires_at IS NULL OR expires_at > now());
-
--- Author lookup (for private notepad)
-CREATE INDEX knowledge_author_idx ON agents.knowledge_entries(author_agent, scope)
-  WHERE scope = 'private';
-```
-
-**Why NOT ltree for knowledge classification:** The knowledge classification is a flat taxonomy (type + tags), not a deep hierarchy. `ltree` is designed for deep tree structures (file paths, org charts). For a flat set of types with tag-based filtering, standard `TEXT CHECK` + `TEXT[]` is simpler and sufficient. If knowledge needs hierarchical topics later, add a `topic` ltree column -- but don't over-engineer for v1.
-
-**Why NOT a separate vector database (Pinecone, Weaviate, Qdrant):** pgvector in PostgreSQL keeps the architecture simple. Knowledge entries need transactional consistency with other agent data (conversations, tasks). A separate vector DB adds operational complexity (another service, connection management, consistency issues) for a dataset that will be thousands of entries, not millions. pgvector handles this scale with HNSW indexes trivially.
-
----
-
-### 4. Entity Directory Schema (Phase 72)
-
-#### PostgreSQL Schema Pattern
-
-No new npm packages needed -- uses existing Drizzle ORM with pgvector support.
-
-**Schema design for `agents.entities`:**
-
-```sql
-CREATE TABLE agents.entities (
-  id              TEXT PRIMARY KEY,
-  type            TEXT NOT NULL CHECK (type IN ('agent', 'human')),
-  name            TEXT NOT NULL,
-  description     TEXT,
-
-  -- Capabilities (natural language, embedded for semantic search)
-  capabilities    TEXT[] NOT NULL DEFAULT '{}',
-  capability_embedding vector(1024),
-
-  -- Reachability
-  reach_via       JSONB DEFAULT '{}',  -- { "slack": "#aesir-dev", "linear": true }
-
-  -- Metadata
-  source          TEXT NOT NULL CHECK (source IN ('yaml', 'config', 'manual')),
-  metadata        JSONB DEFAULT '{}',
-
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Semantic capability search
-CREATE INDEX entity_capability_idx ON agents.entities
-  USING hnsw (capability_embedding vector_cosine_ops);
-
--- Type-based queries
-CREATE INDEX entity_type_idx ON agents.entities(type);
-```
-
-**Capability matching strategy:** Combine the capabilities array into a single text for embedding: `"implement code changes, open pull requests, write tests"`. The `directory:find` tool embeds the query ("who can implement code changes?") and performs cosine similarity against `capability_embedding`. This is more flexible than keyword matching -- "code implementation" matches "implement code changes" semantically.
-
-**Why embed capabilities (not just text search):** Text search (`tsvector`) requires exact keyword overlap. An agent asking "who can review PRs?" should match an entity with capability "code review and pull request approval" -- semantic similarity handles this naturally. The entity directory is small (tens of entities), so embedding at seed time is cheap.
-
----
-
-### 5. Task Tree Schema (Phase 73)
-
-#### Existing Infrastructure (No New Packages)
-
-The task tree structure already exists in the `agents.tasks` table:
-
-```sql
--- Already exists in migration 0005_add_task_tables.sql
-parent_id TEXT REFERENCES agents.tasks(id)
-```
-
-**What needs to be added for delegation:**
-
-```sql
--- New columns for delegation (migration 0007 or similar)
-ALTER TABLE agents.tasks
-  ADD COLUMN callback_conversation_id TEXT REFERENCES agents.conversations(id),
-  ADD COLUMN delegation_status TEXT CHECK (delegation_status IN ('pending', 'accepted', 'rejected', 'completed', 'failed', 'timed_out')),
-  ADD COLUMN delegated_to_entity TEXT,
-  ADD COLUMN delegation_context JSONB DEFAULT '{}',
-  ADD COLUMN estimated_duration_ms BIGINT,
-  ADD COLUMN deadline_at TIMESTAMPTZ;
-```
-
-**Tree query pattern -- recursive CTE (not ltree):**
-
-```sql
--- Get full task tree from root
-WITH RECURSIVE task_tree AS (
-  SELECT id, parent_id, title, status, delegation_status, 0 AS depth
-  FROM agents.tasks
-  WHERE id = $1  -- root task ID
-
-  UNION ALL
-
-  SELECT t.id, t.parent_id, t.title, t.status, t.delegation_status, tt.depth + 1
-  FROM agents.tasks t
-  JOIN task_tree tt ON t.parent_id = tt.id
-)
-SELECT * FROM task_tree ORDER BY depth, created_at;
-```
-
-**Why recursive CTE (not ltree):** Task trees are shallow (3-4 levels in practice) and write-heavy (new tasks created frequently). ltree requires maintaining a materialized path column, which adds trigger complexity for no performance benefit at shallow depths. Recursive CTEs are the idiomatic PostgreSQL solution for task trees and are well-supported by Drizzle ORM's `sql` template literal.
-
----
-
-### 6. Dashboard Visualization (Phase 75)
-
-#### @xyflow/react (React Flow)
-
-| Property | Value |
-|----------|-------|
-| Package | `@xyflow/react` |
-| Version | `^12.10.0` |
-| Install in | `packages/dashboard/package.json` |
-| Confidence | HIGH -- actively maintained, React 19 compatible, Next.js examples available |
-
-**Why @xyflow/react (not react-d3-tree or custom SVG):**
-
-| Factor | @xyflow/react | react-d3-tree | Custom SVG |
-|--------|---------------|---------------|------------|
-| React 19 | Yes (v12.10.0, updated Oct 2025) | Unclear (last published ~1 year ago) | N/A |
-| Interactivity | Built-in pan, zoom, click, selection | Basic click handling | Must build everything |
-| Node customization | Full React components as nodes | Limited via `renderCustomNodeElement` | Full control but high effort |
-| Edge routing | Bezier, step, smoothstep, straight | Fixed tree links | Must implement |
-| Layout algorithms | Dagre, ELK via examples | Built-in D3 tree only | Must implement |
-| Ecosystem | 23K+ GitHub stars, active maintenance | 1K stars, infrequent updates | N/A |
-| Dashboard fit | shadcn/ui + Tailwind compatible | Harder to style consistently | Full control |
-
-React Flow is the de facto standard for interactive node-based UIs in React. The delegation graph (task tree with conversation links and signal edges) maps directly to React Flow's node + edge model. Custom node components can render task status, agent identity, and timing information inline.
-
-**Usage pattern:**
-
-```typescript
-import { ReactFlow, Background, Controls } from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
-
-// Task tree nodes
-const nodes = taskTree.map((task) => ({
-  id: task.id,
-  type: "taskNode", // custom node component
-  position: { x: 0, y: 0 }, // computed by dagre
-  data: { task },
-}));
-
-// Delegation edges
-const edges = taskTree
-  .filter((t) => t.parentId)
-  .map((task) => ({
-    id: `${task.parentId}-${task.id}`,
-    source: task.parentId,
-    target: task.id,
-    type: "smoothstep",
-    animated: task.status === "active",
-  }));
-```
-
-#### @dagrejs/dagre (Layout Algorithm)
-
-| Property | Value |
-|----------|-------|
-| Package | `@dagrejs/dagre` |
-| Version | `^2.0.3` |
-| Install in | `packages/dashboard/package.json` |
-| Confidence | HIGH -- standard layout library for React Flow, 137 dependents |
-
-**Why dagre (not elkjs or custom):** Dagre is a directed graph layout algorithm specifically designed for hierarchical/tree layouts. It is the recommended layout library in React Flow's documentation. ELK (Eclipse Layout Kernel) is more powerful but adds significant bundle size (~400KB vs dagre's ~30KB) and is overkill for task trees.
-
-**Layout computation:**
-
-```typescript
-import dagre from "@dagrejs/dagre";
-
-function getLayoutedElements(nodes, edges) {
-  const g = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: "TB", ranksep: 80, nodesep: 40 });
-
-  nodes.forEach((node) => g.setNode(node.id, { width: 280, height: 120 }));
-  edges.forEach((edge) => g.setEdge(edge.source, edge.target));
-
-  dagre.layout(g);
-
-  return {
-    nodes: nodes.map((node) => {
-      const pos = g.node(node.id);
-      return { ...node, position: { x: pos.x - 140, y: pos.y - 60 } };
-    }),
-    edges,
-  };
-}
-```
-
-#### What NOT to add for dashboard
-
-| Temptation | Why Not |
-|------------|---------|
-| D3.js directly | React Flow wraps D3 concepts in React idioms. Direct D3 + React is painful (imperative vs declarative mismatch). |
-| Mermaid.js for diagrams | Static rendering, no interactivity. Task trees need click-through to conversations. |
-| vis.js / vis-network | Not React-native. Requires ref-based imperative code. Poor fit with Next.js RSC. |
-| elkjs for layout | 10x bundle size of dagre for features we don't need (port constraints, layer optimization). Use dagre. |
-| Recharts for tree viz | Recharts is for charts (bar, line, area). Already in dashboard for metrics. Not for graph layouts. |
-
----
-
-### 7. Completion Signaling (Phase 74)
-
-#### No New Packages
-
-Completion signaling builds entirely on existing infrastructure:
-
-- **pg-boss** (already at `^12.8.0` in agents) -- for timeout scheduling. Delegation timeouts use `pg-boss.send()` with a delay, same pattern as `wait_for` timeouts.
-- **Signal infrastructure** -- existing `signal()` method on ConversationExecutor handles waking waiting conversations.
-- **Task state machine** -- new status transitions (`pending` -> `accepted` -> `completed`/`failed`) trigger signal dispatch via event log subscribers.
-
-The `callbackConversationId` on tasks (see Section 5) enables routing: when a task completes, the system looks up the callback conversation and delivers a completion signal.
-
----
-
-### 8. QA Agent (Phase 76)
-
-#### No New Packages
-
-The QA agent is a new agent definition (YAML + prompt.md) that uses existing tool namespaces:
-- `codebase:run_command` -- for test execution
-- `codebase:read_file`, `codebase:search_codebase` -- for PR diff review
-- `knowledge:store`, `knowledge:query` -- for storing/retrieving test results
-- `directory:find`, `directory:get` -- for discovering dev-agent
-- `task:delegate` -- for delegating fixes back
-- `communication:reply`, `communication:ask` -- for reporting results
-
-No new runtime dependencies. The QA agent exercises existing collaboration primitives.
-
----
-
-## Full Dependency Summary
-
-### New Dependencies (5 packages)
-
-| Package | Version | Install in | Purpose | Phase |
-|---------|---------|------------|---------|-------|
-| `voyageai` | `^0.1.0` | `@aesir/agents` | Embedding generation for knowledge store + entity directory | 71, 72 |
-| `pgvector` | `^0.2.0` | `@aesir/agents` | Vector type registration for node-postgres driver | 71, 72 |
-| `@xyflow/react` | `^12.10.0` | `@aesir/dashboard` | Interactive delegation graph visualization | 75 |
-| `@dagrejs/dagre` | `^2.0.3` | `@aesir/dashboard` | Hierarchical layout algorithm for task trees | 75 |
-| `@xyflow/react` CSS | (included) | `@aesir/dashboard` | Required stylesheet for React Flow | 75 |
-
-### Upgraded Dependencies (1 package)
-
-| Package | From | To | Install in | Purpose | Phase |
-|---------|------|----|------------|---------|-------|
-| `@linear/sdk` | `^70.0.0` | `^75.0.0` | `@aesir/integration-linear` | Agent activity API, session types | 70 |
-
-### Infrastructure Changes (1 change)
-
-| Change | From | To | Location | Phase |
-|--------|------|----|----------|-------|
-| Docker image | `postgres:15-alpine` | `pgvector/pgvector:pg15` | `docker-compose.yml` | 71 |
-
-### New Environment Variables (2 variables)
-
-| Variable | Service | Purpose | Phase |
-|----------|---------|---------|-------|
-| `VOYAGE_API_KEY` | agent-service | Voyage AI API key for embedding generation | 71 |
-| `VOYAGE_MODEL` | agent-service | Model name override (default: `voyage-3.5-lite`) | 71 |
-
-### No-Change Dependencies (confirmed sufficient)
-
-| Package | Current | Used for | Why sufficient |
-|---------|---------|----------|----------------|
-| `drizzle-orm` | `^0.45.1` | Vector column type, distance functions | Built-in pgvector support since v0.28.0 |
-| `pg` | `^8.17.2` | PostgreSQL driver | Works with pgvector npm package for type registration |
-| `pg-boss` | `^12.8.0` | Delegation timeout scheduling | Same delayed job pattern as wait_for timeouts |
-| `zod` | `3.25.67` | New tool schemas, knowledge entry validation | Already used everywhere |
-| `nanoid` | `^5.1.6` | ID generation for knowledge entries, entities | Already used for all IDs |
-| `@anthropic-ai/sdk` | `^0.72.0` | Agent loops | Unchanged |
-| `recharts` | `^2.15.4` | Dashboard metrics charts | Not used for graph visualization |
-
----
-
-## Installation
+**Install in:** `@aesir/agents` (validation at YAML load time + schedule registration)
 
 ```bash
-# Phase 70: Linear Agent SDK
-pnpm --filter @aesir/integration-linear add @linear/sdk@^75.0.0
-
-# Phase 71-72: Vector search (shared memory + entity directory)
-pnpm --filter @aesir/agents add voyageai@^0.1.0 pgvector@^0.2.0
-
-# Phase 75: Dashboard visualization (delegation graph)
-pnpm --filter @aesir/dashboard add @xyflow/react@^12.10.0 @dagrejs/dagre@^2.0.3
-
-# Docker image swap (docker-compose.yml)
-# Change: image: postgres:15-alpine
-# To:     image: pgvector/pgvector:pg15
-
-# Database migration (first vector-enabled migration)
-# Include: CREATE EXTENSION IF NOT EXISTS vector;
+pnpm --filter @aesir/agents add cron-parser
 ```
 
 ---
 
-## Alternatives Considered
+## Existing Stack: What Each Capability Area Uses
 
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| Embedding provider | Voyage AI (`voyage-3.5-lite`) | OpenAI (`text-embedding-3-small`) | Anthropic recommends Voyage; 1024 dims vs 1536; code-specific model available; same pricing |
-| Embedding provider | Voyage AI | Local model (e.g., `all-MiniLM-L6-v2`) | Adds model serving infrastructure; lower quality; not worth complexity for agent knowledge |
-| Vector database | pgvector (in PostgreSQL) | Pinecone / Weaviate / Qdrant | Separate service adds operational complexity; knowledge dataset is small (thousands, not millions); pgvector handles this trivially |
-| Graph visualization | @xyflow/react | react-d3-tree | Unclear React 19 support; less interactive; limited customization |
-| Graph visualization | @xyflow/react | vis.js / vis-network | Not React-native; imperative API; poor fit with Next.js |
-| Graph layout | @dagrejs/dagre | elkjs | 10x bundle size for features not needed; dagre handles hierarchical trees perfectly |
-| Hierarchical queries | Recursive CTE | PostgreSQL ltree | Task trees are shallow (3-4 levels); ltree adds trigger maintenance overhead for no performance benefit |
-| Linear agent features | @linear/sdk upgrade | Custom GraphQL client | SDK provides typed methods; no benefit to bypassing it |
-| Embedding SDK | `voyageai` npm | Raw fetch to Voyage HTTP API | SDK provides retry, timeout, TypeScript types; raw fetch loses all of this |
+### Phase 1: Richer Negotiation (Counter-Propose + Clarification)
+
+| Existing Technology | How It's Used |
+|---------------------|---------------|
+| `task:respond` tool + Zod schemas | Extend response enum from `["accept", "reject"]` to `["accept", "reject", "counter_propose"]` |
+| Signal system (`SignalSchema`, `executor.signal()`) | New signal type `task_clarification` for mid-task questions |
+| `wait_for` tool + signal matching | Target agent pauses for clarification response, delegator pauses for counter-proposal response |
+| Postgres `tasks` table | Add `counter_proposal` JSONB column for proposed modifications |
+| Drizzle ORM migrations | Schema migration for new columns |
+
+**No new dependencies.** This is signal types + tool parameter extensions + a DB column.
+
+### Phase 2: Parallel Delegation (Task Groups + Completion Policies)
+
+| Existing Technology | How It's Used |
+|---------------------|---------------|
+| Postgres + Drizzle | New `task_groups` table: `id`, `name`, `policy` (enum), `creator_conversation_id`, `status`, `created_at` |
+| Postgres + Drizzle | New `task_group_members` table: many-to-many linking tasks to groups |
+| `task:delegate` tool | Extended with optional `groupId` parameter for group membership |
+| Signal aggregation (new logic) | Collect completion signals, evaluate policy, signal delegator when policy satisfied |
+| Zod | Validation for completion policy enum: `all_required`, `any_sufficient`, `majority` |
+
+**No new dependencies.** Parallel delegation is coordination logic over existing primitives (tasks, signals, conversations). The completion policy evaluator is pure TypeScript logic (~50 lines: count completed/failed/total, check against policy).
+
+### Phase 3: Transparent Materialization (Linear Tickets)
+
+| Existing Technology | How It's Used |
+|---------------------|---------------|
+| `callMcpTool()` (MCP HTTP client) | Agent calls `linear:create_issue` via existing MCP wrapper to materialize task |
+| `CorrelationService` (work_correlations table) | Track bidirectional link between task and materialized Linear issue |
+| `task:delegate` tool | Add optional `materialization` parameter (`"internal"` or `"transparent"`) |
+| EventRouter + signal matching | Incoming Linear webhooks route to the task's conversation via correlation |
+| Zod schemas | Materialization config validation |
+
+**No new dependencies.** The Linear integration already has `create_issue` and `update_issue_status` MCP tools. Materialization is orchestration: create the issue via existing MCP, store the correlation via existing CorrelationService, and route webhooks via existing EventRouter. The materialization interface (strategy pattern for future GitHub/Slack targets) is a TypeScript interface + factory, not a library.
+
+### Phase 4: Tree-Level Token Budgets
+
+| Existing Technology | How It's Used |
+|---------------------|---------------|
+| `TokenBudget` class (`shared/agent-loop/token-budget.js`) | Extend with tree-aware tracking: shared budget reference passed through delegation chain |
+| Postgres `tasks` table | Add `tree_budget_total` and `tree_budget_consumed` columns for persistent tracking |
+| Signal system | New `budget_warning` signal type for approaching-exhaustion notifications |
+| Drizzle ORM | Migration for new columns + query for aggregating tree consumption |
+
+**No new dependencies.** The existing `TokenBudget` is already a mutable shared object passed by reference to sub-agents. Tree budgets extend this pattern to cross-conversation delegation. The key change is making budget state persistent (DB column) rather than in-memory-only, since delegation spans separate worker loop executions.
+
+### Phase 5: Scheduled Agent Execution
+
+| Existing Technology | How It's Used |
+|---------------------|---------------|
+| pg-boss v12.8.0 `schedule()` | Built-in cron scheduling with timezone support (`tz` option). Already initialized with `schedule: true`. |
+| `TimeoutScheduler` pattern | Extend to also register cron schedules alongside timeout jobs. Same pg-boss instance. |
+| `AgentDefinitionYamlSchema` (Zod) | Add optional `schedules` array field to the YAML schema |
+| `AgentRegistry` | Load schedule configs from YAML at startup |
+| `ConversationExecutor.start()` | Scheduled job handler creates synthetic `IncomingEvent` and calls `start()` |
+| Postgres `agent_events` table | New event type for schedule observability |
+
+| New Technology | Version | Purpose | Why |
+|----------------|---------|---------|-----|
+| `cron-parser` | ^5.x | Validate cron at YAML load time, compute next occurrence for dashboard | See detailed rationale above |
+
+**pg-boss schedule() API (verified from installed v12.8.0 types):**
+```typescript
+schedule(name: string, cron: string, data?: object | null, options?: ScheduleOptions): Promise<void>
+// ScheduleOptions extends SendOptions & { tz?: string; key?: string }
+unschedule(name: string, key?: string): Promise<void>
+getSchedules(name?: string, key?: string): Promise<Schedule[]>
+// Schedule = { name, key, cron, timezone, data?, options? }
+```
+
+This is already in the project's pg-boss instance with `schedule: true` enabled. The overlap prevention (`skip` vs `queue`) maps to pg-boss's `singletonKey` on the scheduled queue.
+
+### Phase 6: Sub-Agent Discovery (Capability-Based)
+
+| Existing Technology | How It's Used |
+|---------------------|---------------|
+| `entity_directory` table + pgvector | Reuse the same embedding + cosine similarity pattern. Add a `tier` discriminator column (`orchestrator` vs `sub-agent`). |
+| `DirectoryService.find()` | Extend or create parallel service that queries with tier filter |
+| `EmbeddingService` | Same Voyage/Ollama pipeline for capability embeddings |
+| `AgentDefinitionYamlSchema` | Already has optional `capabilities` field |
+| `coordination:spawn_agent` tool | Add optional `capability` parameter alongside existing `agentType` |
+| `seed-directory.ts` script | Extend to seed sub-agents with `tier: 'sub-agent'` |
+
+**No new dependencies.** Sub-agent discovery reuses the entity directory pattern exactly. Recommendation: same `entity_directory` table with a `tier` column rather than a separate table. Reasons: shared embedding pipeline, shared cleanup/deactivation logic, single source of truth for "who can do what." The only differentiation is query-time filtering by tier.
+
+### Phase 7: Persistent Agent Identity (Versioned Documents)
+
+| Existing Technology | How It's Used |
+|---------------------|---------------|
+| Postgres + Drizzle | New `identity_documents` table: `id`, `agent_id`, `document_type`, `content` (text), `version` (integer), `token_count`, `created_at` |
+| `AgentDefinitionYamlSchema` | Optional `identity` config block for document types and token limits |
+| ConversationExecutor / worker loop | Inject identity documents into system prompt at conversation start |
+| Zod | Validation for document types, token limits |
+| `react-markdown` (dashboard) | Already used -- renders identity document content in dashboard |
+
+**No new dependencies.** Identity documents are text blobs versioned with an integer column. No diffing library needed -- the dashboard shows version history via simple DB queries, and "comparison" is side-by-side text display (already have React Markdown rendering in the dashboard).
+
+### Phase 8: Knowledge Retrieval Enhancement (Pluggable Pipeline)
+
+| Existing Technology | How It's Used |
+|---------------------|---------------|
+| `KnowledgeService.query()` | Refactor into strategy pattern: current vector search becomes the default strategy |
+| `AgentDefinitionYamlSchema` | Add optional `retrieval` config block for strategy selection and weights |
+| Zod | Validate retrieval config at startup |
+| `HistoryManager.compact()` | Hook for pre-compaction flush: inject a turn before compaction triggers |
+| `@anthropic-ai/sdk` | The flush turn is a regular LLM turn with restricted tools |
+
+**No new dependencies.** The pluggable pipeline is a TypeScript interface (`RetrievalStrategy`) with a registry pattern (same as `ToolRegistry`). The current vector search is refactored into the first strategy implementation. Score fusion is a weighted average function. No new math/ML libraries needed -- pgvector handles the vector operations, and fusion is arithmetic.
 
 ---
 
-## Confidence Assessment
+## What NOT to Add
 
-| Area | Confidence | Reason |
-|------|------------|--------|
-| pgvector + Drizzle ORM | HIGH | Well-documented integration, official Drizzle guide, widely used |
-| Voyage AI embeddings | HIGH | Anthropic's official recommendation, TypeScript SDK exists, competitive pricing |
-| @xyflow/react + dagre | HIGH | Industry standard for React graph visualization, React 19 compatible, active maintenance |
-| @linear/sdk agent activities | MEDIUM | Agent SDK is developer preview (launched 2025-07-30); API surface may evolve; schema is generated from GraphQL so types are correct when available |
-| Docker image swap | HIGH | pgvector/pgvector:pg15 is official, drop-in replacement for postgres:15 |
-| Task tree recursive CTE | HIGH | Standard PostgreSQL pattern, shallow trees, well-supported by Drizzle |
-| Schema design patterns | MEDIUM | Knowledge classification taxonomy and entity capability embedding strategy need validation with real agent usage |
+| Technology | Why Not |
+|------------|---------|
+| Redis/Valkey | Token budget aggregation across tree could seem like a cache use case, but Postgres is sufficient -- budget updates are infrequent (per-LLM-call, not per-request) and `FOR UPDATE` handles contention |
+| Temporal/Inngest | Parallel delegation with completion policies looks like workflow orchestration, but our signal-based coordination handles it. Adding a workflow engine would duplicate the ConversationExecutor's job. |
+| Full-text search (pg_trgm, ts_vector) | Phase 8 mentions keyword search as a future strategy. Defer to v3.0 when role analysis reveals which agents need it. The pluggable pipeline interface accommodates it without pre-building. |
+| GraphQL | Dashboard additions (schedule visibility, identity documents, tree budgets) use the existing REST API + SSE pattern. No new query paradigm needed. |
+| Event streaming (Kafka, NATS) | Signal aggregation for parallel groups is handled by Postgres queries, not streaming. The volume (tens of signals per minute, not thousands per second) doesn't warrant infrastructure complexity. |
+| Diffing library (diff, jsdiff) | Identity document version comparison. Side-by-side text display in React is simpler and more useful than computed diffs for natural-language documents. |
+| BM25/Elasticsearch | Phase 8 explicitly defers concrete retrieval strategies (keyword, temporal decay, MMR) to v3.0. The pipeline interface is what ships in v2.9. |
+
+---
+
+## Version Compatibility Matrix
+
+All existing dependencies are compatible -- no upgrades required.
+
+| Package | Current Version | Required For | Status |
+|---------|----------------|--------------|--------|
+| `pg-boss` | ^12.8.0 | Cron scheduling (Phase 5) | Already supports `schedule()` with `tz` option |
+| `drizzle-orm` | ^0.45.1 | New tables (groups, identity docs) | Current, supports all needed features |
+| `drizzle-kit` | ^0.31.8 | Migration generation for new tables | Current |
+| `@anthropic-ai/sdk` | ^0.72.0 | Pre-compaction flush LLM turn (Phase 8) | Current, no new features needed |
+| `voyageai` | ^0.1.0 | Sub-agent capability embeddings (Phase 6) | Current, same pipeline |
+| `zod` | 3.25.67 | Extended YAML schemas (Phases 1-8) | Current |
+| `next` | 15.5.9 | Dashboard additions (Phases 4,5,7,8) | Current |
+| `@xyflow/react` | ^12.10.0 | Task tree budget visualization (Phase 4) | Already used for delegation graph |
+| `recharts` | ^2.15.4 | Budget consumption charts (Phase 4) | Already used in dashboard |
+
+---
+
+## New Database Tables Summary
+
+| Table | Phase | Purpose |
+|-------|-------|---------|
+| `agents.task_groups` | 2 | Parallel delegation groups with completion policies |
+| `agents.task_group_members` | 2 | Many-to-many: tasks in groups |
+| `agents.identity_documents` | 7 | Versioned agent identity documents |
+
+## Schema Modifications Summary
+
+| Table | Column/Change | Phase | Purpose |
+|-------|--------------|-------|---------|
+| `agents.tasks` | Add `counter_proposal` JSONB | 1 | Store counter-proposal content |
+| `agents.tasks` | Add `group_id` FK to task_groups | 2 | Link task to parallel group |
+| `agents.tasks` | Add `tree_budget_total` integer | 4 | Total tree token budget |
+| `agents.tasks` | Add `tree_budget_consumed` integer | 4 | Running consumption counter |
+| `agents.tasks` | Add `materialization_type` text | 3 | `internal` or `transparent` |
+| `agents.tasks` | Add `materialized_entity_id` text | 3 | External artifact reference |
+| `agents.entity_directory` | Add `tier` text | 6 | Discriminate `orchestrator` vs `sub-agent` |
+
+## New YAML Schema Fields Summary
+
+| YAML Field | Phase | Type | Default |
+|------------|-------|------|---------|
+| `schedules[]` | 5 | Array of `{ name, cron, overlap, timezone }` | None (optional) |
+| `identity.documents[]` | 7 | Array of `{ type, tokenLimit }` | None (optional) |
+| `retrieval` | 8 | Object `{ strategies[], weights }` | None (uses vector-only default) |
+
+---
+
+## Installation Summary
+
+```bash
+# Only new dependency
+pnpm --filter @aesir/agents add cron-parser
+```
+
+Everything else is Drizzle migrations, TypeScript interfaces, Zod schema extensions, and service logic built on existing infrastructure.
 
 ---
 
 ## Sources
 
-### Linear Agent SDK
-- [Getting Started -- Linear Agents](https://linear.app/developers/agents) -- OAuth scopes, actor=app, agent identity
-- [Agent Interaction -- Linear Developers](https://linear.app/developers/agent-interaction) -- Activity types, createAgentActivity, webhook events
-- [OAuth Actor Authorization](https://linear.app/developers/oauth-actor-authorization) -- actor=app flow, identity customization
-- [@linear/sdk npm](https://www.npmjs.com/package/@linear/sdk) -- Version 75.0.0, auto-generated from GraphQL schema
-- [Agent Interaction SDK Changelog](https://linear.app/changelog/2025-07-30-agent-interaction-guidelines-and-sdk) -- Developer preview announcement
-
-### pgvector + Drizzle ORM
-- [Drizzle ORM -- Vector similarity search](https://orm.drizzle.team/docs/guides/vector-similarity-search) -- Full setup guide, distance functions, HNSW indexes
-- [Drizzle ORM -- PostgreSQL extensions](https://orm.drizzle.team/docs/extensions/pg) -- Extension enablement
-- [pgvector/pgvector-node GitHub](https://github.com/pgvector/pgvector-node) -- TypeScript support, Drizzle ORM integration
-- [pgvector Docker Hub](https://hub.docker.com/r/pgvector/pgvector) -- pg15 tag confirmed available
-
-### Embedding Generation
-- [Anthropic Embeddings Guide](https://platform.claude.com/docs/en/build-with-claude/embeddings) -- Official Voyage AI recommendation, model comparison, usage patterns
-- [Voyage AI TypeScript SDK](https://github.com/voyage-ai/typescript-sdk) -- Version 0.1.0, client API, input_type parameter
-- [Voyage AI Pricing](https://docs.voyageai.com/docs/pricing) -- $0.02/1M tokens for voyage-3.5-lite, 200M free tokens
-- [Best Embedding Models 2026](https://elephas.app/blog/best-embedding-models) -- Comparative benchmark data
-
-### Dashboard Visualization
-- [React Flow -- Quick Start](https://reactflow.dev/learn) -- Version 12.10.0, API overview
-- [React Flow -- Dagre Tree Example](https://reactflow.dev/examples/layout/dagre) -- Layout integration pattern
-- [React Flow UI Components -- React 19 + Tailwind 4](https://reactflow.dev/whats-new/2025-10-28) -- React 19 compatibility confirmed
-- [@dagrejs/dagre npm](https://www.npmjs.com/package/@dagrejs/dagre) -- Version 2.0.3, 137 dependents
-
-### PostgreSQL Patterns
-- [PostgreSQL ltree vs WITH RECURSIVE](https://www.cybertec-postgresql.com/en/postgresql-ltree-vs-with-recursive/) -- Performance comparison, use case guidance
-- [Modeling Hierarchical Tree Data](https://leonardqmarcq.com/posts/modeling-hierarchical-tree-data) -- Pattern comparison for PostgreSQL hierarchies
+- pg-boss v12.8.0 types: Verified from installed `packages/agents/node_modules/pg-boss/dist/types.d.ts` and `dist/index.d.ts`
+- pg-boss schedule API: `schedule(name, cron, data?, options?: { tz?, key? })` confirmed in type definitions
+- pg-boss ScheduleOptions type: `SendOptions & { tz?: string; key?: string }` verified
+- cron-parser: [npm](https://www.npmjs.com/package/cron-parser), [GitHub](https://github.com/harrisiirak/cron-parser)
+- croner alternative: [npm](https://www.npmjs.com/package/croner), [GitHub](https://github.com/Hexagon/croner)
+- Drizzle ORM column types: [PostgreSQL column types docs](https://orm.drizzle.team/docs/column-types/pg)
+- Existing codebase: All integration points verified via source code reading of `packages/agents/src/`

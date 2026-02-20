@@ -1,838 +1,924 @@
-# Architecture Patterns: v2.7 Agent Collaboration
+# Architecture Patterns: v2.9 Platform Completion
 
-**Domain:** Multi-agent collaboration features for an existing agentic development platform
-**Researched:** 2026-02-10
-**Overall confidence:** HIGH (extensive codebase review, official docs for external dependencies)
-
----
-
-## Recommended Architecture
-
-The v2.7 collaboration features integrate into the existing architecture through three patterns: **new tables in existing schemas**, **new tool namespaces in the existing ToolRegistry**, and **new services following the existing factory pattern**. No new packages or services are needed -- everything lives in `@aesir/agents` and `@aesir/integration-linear`.
-
-### Architecture Principle: Extend, Don't Restructure
-
-The existing architecture was designed with collaboration in mind (polymorphic creator/assignee on tasks, event log as ground truth, tool-based control flow). v2.7 adds capabilities by:
-1. Adding tables to `agents.*` schema (knowledge, directory)
-2. Adding tool namespaces (`knowledge:*`, `directory:*`) to ToolRegistry
-3. Extending existing services (TaskService gains delegation, denormalizer gains Linear activities)
-4. Adding new services following the same factory pattern (KnowledgeService, DirectoryService)
-
-Nothing about the ConversationExecutor, WorkerLoop, or EventRouter fundamentals changes.
+**Domain:** 8 new capabilities for an existing agentic development platform
+**Researched:** 2026-02-20
+**Overall confidence:** HIGH (deep codebase analysis, all integration points verified against source code)
 
 ---
 
-## Component Architecture
+## Architectural Principle: v2.9 Completes the Platform
 
-### 1. Shared Memory (Knowledge Store)
+v2.9 adds the final platform capabilities before domain modeling (v3.0). Every feature integrates with existing infrastructure. The design constraint from the spec: "all capabilities must be additive -- v2.7's existing delegation, knowledge, and directory systems continue working unchanged."
 
-**Where it lives:** `@aesir/agents` -- new tables in `agents.*` schema, new service, new tools.
+The 8 features decompose into three integration patterns:
 
-**Storage approach: pgvector in existing Postgres** because:
-- Already using PostgreSQL for everything. No new infrastructure service to deploy or maintain.
-- Drizzle ORM has first-class pgvector support via `vector()` column type and distance functions (`cosineDistance`, `l2Distance`).
-- Knowledge entries are dual-indexed: structured metadata queries (type, scope, author, expiry) via standard columns + semantic search via pgvector embeddings.
-- The volume of knowledge entries is moderate (hundreds to low thousands per workspace), well within pgvector's comfortable range.
-- Alternative (dedicated vector DB like Pinecone/Weaviate) adds operational complexity for marginal benefit at this scale.
+1. **Extend existing services/tools** (Phases 1, 2, 3, 4): Negotiation, parallel delegation, materialization, and tree budgets all extend the existing TaskService + DelegationDeps + signal infrastructure
+2. **New infrastructure alongside existing** (Phases 5, 6, 7): Scheduled execution, sub-agent discovery, and persistent identity add new services bootstrapped in main.ts
+3. **Refactor existing pipeline** (Phase 8): Knowledge retrieval enhancement restructures the existing KnowledgeService query path
 
-**Confidence:** HIGH -- Drizzle pgvector integration verified via [official Drizzle docs](https://orm.drizzle.team/docs/guides/vector-similarity-search). pgvector extension is widely supported in managed Postgres (RDS, Supabase, Neon).
+---
 
-```
-agents.knowledge_entries (NEW TABLE)
-  id                  TEXT PK
-  workspace_id        TEXT NOT NULL (future multi-tenancy ready)
-  scope               TEXT NOT NULL ('shared' | 'private')
-  author_agent_id     TEXT NOT NULL (agent that stored this)
-  author_conversation_id TEXT (conversation context)
-  entry_type          TEXT NOT NULL ('discovery' | 'architecture_decision' | 'constraint' | 'pattern' | 'thought')
-  topic               TEXT NOT NULL (human-readable topic)
-  content             TEXT NOT NULL (the actual knowledge)
-  confidence          REAL (0.0-1.0, agent's confidence)
-  embedding           VECTOR(1536) (for semantic search)
-  metadata            JSONB (extensible key-value)
-  superseded_by       TEXT REFERENCES knowledge_entries(id) (chain)
-  expires_at          TIMESTAMPTZ (optional TTL)
-  created_at          TIMESTAMPTZ NOT NULL
-  updated_at          TIMESTAMPTZ NOT NULL
+## Feature-by-Feature Architecture
 
-  INDEXES:
-  - idx_knowledge_scope ON (scope, workspace_id)
-  - idx_knowledge_type ON (entry_type)
-  - idx_knowledge_author ON (author_agent_id)
-  - idx_knowledge_topic ON (topic) -- text search
-  - idx_knowledge_embedding USING hnsw (embedding vector_cosine_ops) -- semantic search
-  - idx_knowledge_expiry ON (expires_at) WHERE expires_at IS NOT NULL
-```
+### Phase 1: Richer Negotiation
 
-**New service: `KnowledgeService`**
+**Integration type:** Extend existing tools and signal types. No new tables. No new services.
+
+**What changes:**
+
+| Component | Change |
+|-----------|--------|
+| `task:respond` tool (`shared/tools/task/respond-task.ts`) | Add `counter_propose` response type alongside existing `accept`/`reject`. Counter-propose carries `modifiedScope` (free-text) and optional `modifiedEstimate` |
+| `task:clarify` tool (NEW: `shared/tools/task/clarify-task.ts`) | New tool for target agents. Sends `task_clarification` signal to delegator's conversation with question and optional structured options |
+| `DelegateTaskInputSchema` | No change -- delegation brief format stays the same |
+| `WaitForState` / `signal-matching.ts` | No change -- `task_clarification` is just another signal type that matches via existing multi-type `wait_for` |
+| Signal types (`framework/types.ts`) | Add `task_clarification` and `task_counter_propose` to `KNOWN_SIGNAL_TYPES` documentation (signals are already open strings, not enums) |
+| Conversations table | No change -- `active_delegations` JSONB already carries delegation state; `handshakeStatus` field can hold `counter_proposed` |
+| `computeUpdatedDelegations()` (worker-loop.ts) | Extend to handle `task_counter_propose` signal type -- update handshakeStatus to `counter_proposed` |
+| Agent prompts | Guidance on when to counter-propose vs reject, when to ask for clarification vs proceed |
+
+**Data flow -- Counter-propose:**
 
 ```
-packages/agents/src/shared/services/knowledge-service.ts
-
-Interface:
-  store(params: StoreKnowledgeParams): Promise<KnowledgeEntry>
-  query(params: QueryKnowledgeParams): Promise<KnowledgeEntry[]>
-  update(id: string, fields: UpdateKnowledgeParams): Promise<KnowledgeEntry>
-  invalidate(id: string, supersededBy?: string): Promise<void>
-  health(): Promise<{ healthy: boolean; latencyMs: number }>
-  close(): Promise<void>
-
-Dependencies:
-  db: NodePgDatabase  (existing pool)
-  logger: PinoLogger
-  embeddingModel?: string (default: text-embedding-3-small)
+Target agent calls task:respond({ response: "counter_propose", modifiedScope: "..." })
+  -> TaskService.update(taskId, { status: "created" })  // stays created, not accepted
+  -> Signal to delegator: { type: "task_handshake", data: { response: "counter_proposed", modifiedScope } }
+  -> Delegator resumes, sees modification, decides: accept modified, reject, or try someone else
+  -> If accepted: delegator signals target with type: "task_counter_accepted"
+  -> Target's wait_for resumes, task transitions to active
 ```
 
-Query supports dual-mode: structured filters (type, scope, topic ILIKE) AND semantic similarity (cosine distance on embedding). Results are scored by combining relevance and recency, excluding expired/superseded entries.
-
-**Embedding generation:** Call Anthropic/OpenAI embeddings API at store time. The KnowledgeService generates embeddings synchronously on store -- the latency (50-100ms) is acceptable since `knowledge:store` is not in the hot path of every tool call.
-
-**New tools: `knowledge:store`, `knowledge:query`, `knowledge:update`**
+**Data flow -- Clarification:**
 
 ```
-packages/agents/src/shared/tools/knowledge/
-  store.ts       -- knowledge:store tool factory
-  query.ts       -- knowledge:query tool factory
-  update.ts      -- knowledge:update tool factory
-  index.ts       -- barrel export
+Target agent (mid-work) calls task:clarify({ taskId, question: "Which API version?" })
+  -> Finds delegator's active conversation via task.parent_id -> executor.findActiveForTask()
+  -> Signal to delegator: { type: "task_clarification", data: { taskId, question } }
+  -> Delegator resumes, reads question, formulates answer
+  -> Delegator signals target: { type: "task_clarification_response", data: { taskId, answer } }
+  -> Target's wait_for resumes with the answer
 ```
 
-Registered in `tool-factories.ts` using a new `knowledgeAdapter` following the existing `communicationAdapter` pattern -- extracts agentId and correlationId from ToolContext, passes to KnowledgeService.
+**New components:**
+- `shared/tools/task/clarify-task.ts` -- new tool factory (~80 lines, mirrors respond-task.ts pattern)
 
-**Private notepad:** Uses the same table with `scope = 'private'`. Query tool filters: private entries only visible when `author_agent_id` matches the querying agent. This is a query-time filter, not a separate table -- simpler and the security model is sufficient (agents don't have direct DB access).
+**Modified components:**
+- `shared/tools/task/respond-task.ts` -- extend `RespondTaskInputSchema` with `counter_propose` option
+- `worker-loop.ts` -- extend `computeUpdatedDelegations()` for new signal types
+- `framework/types.ts` -- add signal type documentation
+- `tool-factories.ts` -- register `task:clarify`
+- Agent definition YAMLs -- add `task:clarify` to tool lists for delegatable agents
+- Agent prompts -- negotiation guidance
 
-### 2. Entity Directory
+**No schema migrations required.**
 
-**Where it lives:** `@aesir/agents` -- new table in `agents.*` schema, new service, new tools, seed script.
+---
 
-```
-agents.entity_directory (NEW TABLE)
-  id                  TEXT PK
-  entity_type         TEXT NOT NULL ('agent' | 'human')
-  name                TEXT NOT NULL
-  description         TEXT
-  capabilities        TEXT[] NOT NULL (natural language capability strings)
-  capabilities_embedding VECTOR(1536) (semantic search on combined capabilities)
-  reach_via           JSONB (how to contact: channel type + target)
-  source_definition   TEXT (for agents: definition.yaml path, for seeding)
-  status              TEXT NOT NULL DEFAULT 'active' ('active' | 'inactive')
-  metadata            JSONB DEFAULT '{}'
-  created_at          TIMESTAMPTZ NOT NULL
-  updated_at          TIMESTAMPTZ NOT NULL
+### Phase 2: Parallel Delegation
 
-  INDEXES:
-  - idx_directory_type ON (entity_type, status)
-  - idx_directory_capabilities USING hnsw (capabilities_embedding vector_cosine_ops)
-  - idx_directory_name ON (name)
-```
+**Integration type:** New table for task groups, new tools, extends TaskService. Extends signal aggregation logic.
 
-**Capability matching: semantic similarity** because:
-- Agents query with intent descriptions ("who can implement code changes?"), not exact strings.
-- Capability descriptions are short natural language phrases -- embeddings handle synonyms and paraphrases naturally.
-- Same pgvector infrastructure as knowledge store -- no additional complexity.
-- Alternative (keyword search, pg_trgm) would miss semantic matches like "write code" matching "implement features".
+**What changes:**
 
-**Seeding pattern:** `pnpm seed:directory` reads YAML definitions, extracts `id`, `name`, `description`, and new `capabilities` field (list of strings), generates embedding from combined capabilities text, upserts to `entity_directory`. Follows the same pattern as `pnpm seed:permissions`. Human entries from a config file or environment variable (JSON array).
+| Component | Change |
+|-----------|--------|
+| New table: `agents.task_groups` | Groups of delegated tasks with completion policy |
+| `task:delegate_group` tool (NEW) | Creates multiple delegations as a named group |
+| `task:group_status` tool (NEW) | Returns aggregated group state |
+| `task:cancel_group` tool (NEW) | Cancels remaining tasks in a group |
+| `TaskService` | Add group CRUD methods: `createGroup()`, `getGroup()`, `updateGroupMember()` |
+| `TaskSignalDispatcher` | Extend to evaluate group completion policies when member tasks complete. Only signal delegator when policy is satisfied |
+| `conversations.active_delegations` | Group tasks appear as individual entries but with a shared `groupId` |
 
-```
-packages/agents/scripts/seed-directory.ts
-
-Reads: definitions/*/definition.yaml (capabilities field)
-Reads: DIRECTORY_HUMANS env var or .directory-humans.json config
-Writes: agents.entity_directory (upsert on id)
-```
-
-**AgentDefinitionYamlSchema extension:** Add optional `capabilities` field:
-
-```yaml
-# definition.yaml addition
-capabilities:
-  - "Implement code changes and create pull requests"
-  - "Research codebases and analyze architecture"
-  - "Run tests and verify implementations"
-```
-
-```typescript
-// types.ts schema addition
-capabilities: z.array(z.string()).optional(),
-```
-
-**New service: `DirectoryService`**
-
-```
-packages/agents/src/shared/services/directory-service.ts
-
-Interface:
-  find(query: string, opts?: { type?: 'agent' | 'human'; limit?: number }): Promise<DirectoryEntry[]>
-  get(entityId: string): Promise<DirectoryEntry | null>
-  upsert(entry: UpsertDirectoryEntry): Promise<DirectoryEntry>
-  health(): Promise<{ healthy: boolean; latencyMs: number }>
-  close(): Promise<void>
-```
-
-`find()` generates an embedding for the query string, then runs cosine similarity search against `capabilities_embedding`. Returns ranked results with similarity scores. The `type` filter enables searching for only agents or only humans.
-
-**New tools: `directory:find`, `directory:get`**
-
-```
-packages/agents/src/shared/tools/directory/
-  find.ts        -- directory:find tool factory
-  get.ts         -- directory:get tool factory
-  index.ts       -- barrel export
-```
-
-**Integration with existing ToolRegistry:** Same registration pattern as other namespaces. DirectoryService injected via `RegisterAllToolsOptions` extension (same as TaskService).
-
-### 3. Task Delegation
-
-**Where it lives:** `@aesir/agents` -- extends existing TaskService, new tool, new materialization layer.
-
-**`task:delegate` tool is NOT a new TaskService method.** It is a composite tool that orchestrates multiple existing and new services:
-
-```
-task:delegate tool execution flow:
-  1. Creates task via TaskService.create() with parentTaskId
-  2. Sets callbackConversationId in task metadata
-  3. Triggers materialization layer
-  4. Returns task ID to the agent
-```
-
-**Materialization layer:** A new module that sits between task creation and conversation start / external delivery.
-
-```
-packages/agents/src/shared/services/materialization.ts
-
-Interface:
-  materialize(task: Task, entity: DirectoryEntry): Promise<MaterializationResult>
-
-Dispatch logic:
-  entity.type === 'agent':
-    - Internal: calls ConversationExecutor.start() with taskId
-    - Transparent: creates Linear ticket (via MCP) + starts conversation
-  entity.type === 'human':
-    - Slack: sends approval-style message with task details
-    - Linear: creates issue assigned to human (future)
-```
-
-The materialization layer extends the denormalizer pattern: task:delegate creates a task, then the materializer dispatches based on entity type and team policy. The policy decision (internal vs transparent) comes from task metadata or a workspace config -- it is NOT hardcoded.
-
-**Interaction with existing ConversationExecutor:** The materializer calls `executor.start()` for agent-to-agent delegation. This is the same `start()` used by the EventRouter -- no new executor methods needed.
-
-```typescript
-// Materialization for agent recipient (internal)
-const conversationId = await executor.start({
-  agentDefinitionId: entity.id,      // target agent
-  correlationKey: `task:${task.id}`,  // deterministic ID from task
-  initialMessage: task.objective ?? task.title,
-  taskId: task.id,                    // links conversation to task
-  context: buildDelegationContext(task, sourceConversation),
-});
-```
-
-**Task table extension:**
+**New table schema:**
 
 ```sql
-ALTER TABLE agents.tasks
-  ADD COLUMN callback_conversation_id TEXT,    -- who to signal on completion
-  ADD COLUMN delegation_depth INTEGER DEFAULT 0, -- for cycle detection
-  ADD COLUMN expectations JSONB;                -- priority, estimated_effort, deadline
+CREATE TABLE agents.task_groups (
+  id TEXT PRIMARY KEY,
+  name TEXT,
+  policy TEXT NOT NULL,  -- 'all_required' | 'any_sufficient' | 'majority'
+  majority_count INTEGER,  -- only for 'majority' policy
+  delegator_task_id TEXT REFERENCES agents.tasks(id),
+  delegator_conversation_id TEXT REFERENCES agents.conversations(id),
+  status TEXT NOT NULL DEFAULT 'active',  -- 'active' | 'completed' | 'cancelled'
+  -- Budget fields for Phase 4 retrofit
+  tree_budget_tokens INTEGER,
+  budget_allocated_tokens INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Junction: group membership
+ALTER TABLE agents.tasks ADD COLUMN group_id TEXT REFERENCES agents.task_groups(id);
+CREATE INDEX idx_tasks_group ON agents.tasks(group_id);
 ```
 
-**Negotiation handshake:** Implemented as a signal exchange, not a separate mechanism:
-
-1. Delegator creates task (status='created') + calls `wait_for` with type='delegation_response'
-2. Materializer starts target conversation with task context
-3. Target agent evaluates and calls `task:respond` (accept/reject/estimate)
-4. `task:respond` tool updates task status + fires signal to callbackConversationId
-5. Delegator wakes, reads response, decides to proceed or pivot
+**Data flow -- Fan-out delegation:**
 
 ```
-New tool: task:respond
-  - Sets task status to 'active' (accept) or 'cancelled' (reject)
-  - Fires signal to callback_conversation_id
-  - Carries: accepted, estimate, reason (on reject)
-```
-
-This reuses the existing `signal()` infrastructure entirely. No new signal delivery mechanism needed.
-
-### 4. Completion Signaling
-
-**Where it lives:** `@aesir/agents` -- extends existing task lifecycle events, new event subscriber, signal dispatch.
-
-**Core mechanism: task state change triggers signal dispatch.**
-
-When a task transitions to a terminal state (completed, failed, cancelled), the system fires a signal to `callback_conversation_id`. This is a new subscriber on the task state change, not a modification to the ConversationExecutor.
-
-```
-packages/agents/src/shared/services/task-signal-dispatcher.ts
-
-Interface:
-  TaskSignalDispatcher:
-    initialize(): void  // subscribes to task events
-    close(): void       // unsubscribes
-```
-
-**How it works:**
-
-```
-Task state changes (via task:complete_task, task:pause_task, etc.)
-  |
-  v
-TaskService emits state change (new: add EventEmitter or event log append)
-  |
-  v
-TaskSignalDispatcher catches state change
-  |
-  v
-If task.callback_conversation_id exists:
-  |
-  v
-ConversationExecutor.signal(callbackConversationId, {
-  type: 'task_completed' | 'task_failed' | 'task_clarification',
-  data: { taskId, status, summary, artifacts },
-  source: 'task-system'
+Orchestrator calls task:delegate_group({
+  name: "parallel-research",
+  policy: "any_sufficient",
+  delegations: [
+    { targetEntityId: "agent-a", description: "Research approach 1" },
+    { targetEntityId: "agent-b", description: "Research approach 2" },
+    { targetEntityId: "agent-c", description: "Research approach 3" },
+  ]
 })
+  -> Creates task_group row with policy
+  -> Creates 3 tasks (each with group_id)
+  -> Starts 3 conversations via executor.start()
+  -> Writes 3 entries to delegator's active_delegations
+  -> Returns groupId
+  -> Agent calls wait_for with types: ["task_completion", "task_failure", "task_timeout"]
+
+Each target goes through individual handshake (accept/reject)
+
+When agent-b completes first:
+  -> TaskSignalDispatcher checks: is task in a group?
+  -> YES: evaluate policy. any_sufficient + 1 complete = SATISFIED
+  -> Signal delegator: { type: "task_group_completed", data: { groupId, satisfiedBy: taskId } }
+  -> Delegator resumes, can call task:cancel_group to stop remaining
 ```
 
-**Implementation approach for task state change notification:** Two options:
-
-1. **EventEmitter on TaskService** (recommended) -- TaskService gains an `on('stateChange', handler)` method. TaskSignalDispatcher subscribes at bootstrap. Lightweight, in-process, follows the EventLog subscriber pattern.
-
-2. **Database trigger + pg_notify** -- Postgres LISTEN/NOTIFY on task status changes. Heavier, but survives process restarts. Overkill for v1 where all services are in one process.
-
-Recommend option 1 for simplicity. The TaskService emits after successful `update()` or `transitionWithHandoff()`.
-
-**Signal types added:**
-
-| Signal Type | When | Payload |
-|-------------|------|---------|
-| `delegation_response` | Target responds to delegation | `{ accepted, estimate?, reason? }` |
-| `task_completed` | Delegated task finishes | `{ taskId, summary, artifacts }` |
-| `task_failed` | Delegated task fails | `{ taskId, reason, partialResults? }` |
-| `task_clarification` | Target needs more info | `{ taskId, question }` |
-| `task_timeout` | Estimated time exceeded | `{ taskId, elapsedMs, estimatedMs }` |
-
-These are domain-typed signals exactly like existing `approval`, `pr_review`, etc. -- the signal infrastructure handles them identically.
-
-**Timeout mechanism:** Uses existing pg-boss TimeoutScheduler. When the delegator accepts an estimate, it calls `wait_for` with a timeout matching the estimate. If the timeout fires before completion, the delegator receives `task_timeout` and decides to keep waiting, cancel, or escalate. Zero new timeout infrastructure needed.
-
-**Orphan handling:** If `signal()` returns `rejected` (conversation in terminal state), the TaskSignalDispatcher logs an `orphaned_completion` event to the event log. Dashboard can query these for visibility.
-
-### 5. Linear Agent SDK Migration
-
-**Where it lives:** `@aesir/integration-linear` -- modifies existing OAuth, adds new MCP tools, updates webhook handling.
-
-**Confidence:** MEDIUM -- Linear Agent APIs are in "Developer Preview" per [Linear docs](https://linear.app/developers/agents). API surface may change. All implementation should be behind feature flags.
-
-**OAuth changes (`linear/src/oauth/flow.ts`):**
-
-Current: `createLinearClientFromDatabase()` uses user OAuth token.
-New: Add `actor=app` parameter to authorization URL, request `app:assignable` + `app:mentionable` scopes.
+**Signal aggregation logic in TaskSignalDispatcher:**
 
 ```typescript
-// OAuth URL modification
-const authUrl = `https://linear.app/oauth/authorize?${params.toString()}&actor=app`;
+// In onTaskUpdate():
+if (task.group_id) {
+  const group = await taskService.getGroup(task.group_id);
+  const members = await taskService.getGroupMembers(task.group_id);
+
+  const completed = members.filter(m => m.status === 'completed');
+  const failed = members.filter(m => m.status === 'cancelled' || m.status === 'failed');
+
+  let satisfied = false;
+  switch (group.policy) {
+    case 'any_sufficient': satisfied = completed.length >= 1; break;
+    case 'all_required': satisfied = completed.length === members.length; break;
+    case 'majority': satisfied = completed.length >= (group.majority_count ?? Math.ceil(members.length / 2)); break;
+  }
+
+  if (satisfied) {
+    // Signal delegator with group completion
+  } else if (group.policy === 'all_required' && failed.length > 0) {
+    // Immediate notification to delegator about failure
+  }
+}
 ```
 
-The `actor=app` parameter makes Linear create a dedicated app user in the workspace. This user appears in mention menus and can be assigned issues. The access token represents the app, not the installing user.
+**New components:**
+- `shared/tools/task/delegate-group.ts` -- composite tool (~150 lines)
+- `shared/tools/task/group-status.ts` -- read-only query tool (~60 lines)
+- `shared/tools/task/cancel-group.ts` -- cancellation tool (~80 lines)
+- `shared/services/task-service.ts` -- add group methods
 
-**New MCP tools (replace `create_comment` for agent sessions):**
+**Modified components:**
+- `shared/db/schema.ts` -- add `task_groups` table, add `group_id` to tasks
+- `shared/services/task-signal-dispatcher.ts` -- group policy evaluation
+- `tool-factories.ts` -- register 3 new tools
+- `worker-loop.ts` -- extend `computeUpdatedDelegations()` for group signals
+- `service/main.ts` -- no change (TaskService already bootstrapped)
 
-```
-linear:create_agent_activity
-  Input: { agentSessionId, type, body?, action?, parameter?, result? }
-  Maps to: linearClient.createAgentActivity({ agentSessionId, content })
-  Activity types: thought, response, elicitation, action, error
+---
 
-linear:update_agent_session
-  Input: { agentSessionId, state?, externalUrl? }
-  Maps to: linearClient.agentSessionUpdate(...)
-```
+### Phase 3: Transparent Materialization
 
-**ReplyContext extension:**
+**Integration type:** New materialization dispatch module, extends `task:delegate` tool, adds bidirectional Linear sync.
+
+**What changes:**
+
+| Component | Change |
+|-----------|--------|
+| `task:delegate` tool | Add optional `materialization` parameter: `"internal"` (default) or `"transparent"` |
+| New module: `MaterializationDispatcher` | Dispatches transparent materialization to integration-specific handlers |
+| New: Linear materialization handler | Creates Linear issue via MCP, registers work correlation |
+| `TaskSignalDispatcher` | On task completion, if materialized, update the external artifact |
+| `CorrelationService` | Already exists (Phase 78) -- used to link materialized artifact back to task |
+| EventRouter / webhook handling | Correlation-based routing already handles incoming webhooks for materialized artifacts |
+
+**Materialization dispatcher architecture:**
 
 ```typescript
-// LinearReplyContextSchema gains agentSessionId
-export const LinearReplyContextSchema = z.object({
-  channel: z.literal("linear"),
-  issueId: z.string(),
-  agentSessionId: z.string().optional(), // NEW: for agent activity routing
-});
+// shared/services/materialization-dispatcher.ts
+interface MaterializationHandler {
+  materialize(task: Task, entity: DirectoryEntry, brief: string): Promise<MaterializationResult>;
+  syncCompletion(task: Task, result: Record<string, unknown>): Promise<void>;
+}
+
+interface MaterializationResult {
+  artifactType: string;  // "linear_issue" | "github_issue" | ...
+  artifactId: string;    // External ID
+  artifactUrl?: string;  // Human-accessible URL
+}
+
+// Registry pattern: handlers registered by integration name
+const handlers = new Map<string, MaterializationHandler>();
+handlers.set("linear", createLinearMaterializationHandler({ ... }));
 ```
 
-**Denormalizer modification:**
-
-When `replyContext.agentSessionId` is present, the denormalizer routes to `linear:create_agent_activity` instead of `linear:create_comment`. The communication-to-activity type mapping:
-
-| Communication Intent | Activity Type |
-|---------------------|---------------|
-| `reply` | `response` |
-| `ask` | `elicitation` |
-| `notify` | `thought` |
-
-**Webhook handling changes:**
-
-- `agent_session.created` -- already handled, but adapter now extracts `agentSessionId` into replyContext
-- `agent_session.prompted` -- already handled as `agent_prompt`, replyContext now includes `agentSessionId`
-- Echo filter removal -- `LINEAR_BOT_USER_ID` filtering in webhooks becomes unnecessary since agent activities and user prompts are structurally distinct types
-
-**Agent session tracking:** The `agentSessionId` is carried in the `replyContext` (already persisted in the `reply_context` JSONB column on conversations). No new table needed -- the session ID flows through the existing replyContext pipeline.
-
-### 6. Delegation Graph Observability
-
-**Where it lives:** Dashboard reads from existing + new tables, agent-service exposes new API endpoints.
-
-**Data sources -- no new tables needed:**
-
-The delegation graph is fully derivable from existing data:
-- `agents.tasks` -- tree structure via `parent_id`, with new `callback_conversation_id`
-- `agents.task_handoffs` -- handoff events in the delegation chain
-- `agents.conversations` -- linked via `task_id`
-- `agents.agent_events` -- signal delivery, lifecycle events
-- `agents.knowledge_entries` -- knowledge shared during delegation
-
-**New API endpoints on agent-service:**
+**Data flow -- Transparent materialization:**
 
 ```
-GET /api/tasks/:taskId/tree
-  Returns: full task tree with subtasks, statuses, linked conversations
+Agent calls task:delegate({ targetEntityId: "dev-agent", description: "...", materialization: "transparent" })
+  -> Creates task (same as before)
+  -> MaterializationDispatcher.materialize(task, entity, description)
+     -> LinearMaterializationHandler:
+        1. callMcpTool("linear", "create_issue", { title, description, assigneeId: entity.linearUserId })
+        2. correlationService.register({ entityType: "linear_issue", entityId: issueId, conversationId })
+        3. Returns { artifactType: "linear_issue", artifactId: issueId }
+  -> Task metadata updated with materialization info
+  -> Starts target conversation (same as before)
+  -> Target agent has access to Linear issue context
 
-GET /api/tasks/:taskId/timeline
-  Returns: chronological delegation events across the tree
+On task completion:
+  -> TaskSignalDispatcher calls MaterializationDispatcher.syncCompletion()
+     -> LinearMaterializationHandler: callMcpTool("linear", "update_issue", { id: issueId, state: { name: "Done" } })
 
-GET /api/tasks/:taskId/signals
-  Returns: signals exchanged between conversations in the tree
+On incoming Linear webhook (issue updated by human):
+  -> CorrelationService resolves issueId -> conversationId
+  -> Signal routed to target agent's conversation (existing v2.8 correlation routing)
 ```
 
-These endpoints query across tasks, conversations, and events using existing indexed columns (`parent_id`, `task_id`, `conversation_id`).
+**Extensibility:** The `MaterializationHandler` interface supports future targets (GitHub issues, Slack threads) without changing the delegation tool. Only a new handler + registration needed.
 
-**Dashboard additions:**
+**New components:**
+- `shared/services/materialization-dispatcher.ts` -- dispatcher + handler interface (~120 lines)
+- `shared/services/materialization/linear-handler.ts` -- Linear-specific handler (~100 lines)
 
-```
-packages/dashboard/src/
-  app/tasks/[taskId]/tree/page.tsx      -- task tree view
-  components/task-tree.tsx               -- tree visualization component
-  components/delegation-timeline.tsx     -- chronological event view
-  components/signal-flow.tsx             -- signal edges between conversations
-  services/task-tree.ts                  -- data fetching for tree queries
-```
+**Modified components:**
+- `shared/tools/task/delegate-task.ts` -- add `materialization` parameter, call dispatcher
+- `shared/services/task-signal-dispatcher.ts` -- call `syncCompletion()` on terminal transitions
+- `service/main.ts` -- bootstrap MaterializationDispatcher with handlers
+- `tool-factories.ts` -- pass materialization dispatcher into delegation deps
 
-Dashboard mirrors the new tables in its local `lib/schema.ts` (read-only copies, same pattern as existing).
+**Schema changes:**
+- `agents.tasks` -- add `materialization JSONB` column for tracking artifact info
 
 ---
 
-## Data Flow Diagrams
+### Phase 4: Tree-Level Token Budgets
 
-### Delegation Flow (Agent-to-Agent)
+**Integration type:** New budget tracking table, modifies ConversationExecutor start flow, extends worker loop budget management.
 
-```
-Product-Agent conversation
-  |
-  | 1. directory:find("implement code changes")
-  |    -> DirectoryService.find() -> returns dev-agent
-  |
-  | 2. task:delegate({target: "dev-agent", description: "..."})
-  |    -> TaskService.create({parentId, callbackConversationId})
-  |    -> MaterializationLayer.materialize(task, entity)
-  |       -> ConversationExecutor.start({agentDefinitionId: "dev-agent", taskId})
-  |    -> Agent calls wait_for({type: "delegation_response"})
-  |
-  v
-Dev-Agent conversation (new, with task context injected)
-  |
-  | 3. Evaluates task, calls task:respond({accept: true, estimate: "30m"})
-  |    -> TaskService.update(taskId, {status: "active"})
-  |    -> Signal dispatched to product-agent: {type: "delegation_response", data: {accepted: true}}
-  |
-  v
-Product-Agent resumes
-  |
-  | 4. Reads acceptance, calls wait_for({type: "task_completed", timeout: "30m"})
-  |
-  v
-Dev-Agent works... completes... calls task:complete_task
-  |
-  | 5. TaskService.transitionWithHandoff(taskId, "completed", handoff)
-  |    -> TaskSignalDispatcher fires signal to callbackConversationId
-  |    -> Signal: {type: "task_completed", data: {summary, artifacts}}
-  |
-  v
-Product-Agent resumes with completion results
-```
+**What changes:**
 
-### Knowledge Flow
+| Component | Change |
+|-----------|--------|
+| New table: `agents.tree_budgets` | Tracks token allocation and usage across delegation trees |
+| `task:delegate` tool | Accept optional `treeBudgetTokens` for root delegation; accept `budgetAllocation` for sub-delegations |
+| `task:tree_budget` tool (NEW) | Returns current tree budget usage and remaining |
+| `TokenBudget` (`shared/agent-loop/token-budget.ts`) | Extend to support tree-level tracking alongside per-conversation budgets |
+| Worker loop | When conversation has a tree budget, create TokenBudget from tree allocation instead of definition default |
+| `TaskSignalDispatcher` | On tree budget exhaustion, signal all active conversations in the tree |
+| Conversations table | Add `tree_budget_id TEXT` column |
+| Task groups (Phase 2) | Groups reference tree budget for shared allocation |
 
-```
-Dev-Agent discovers architecture pattern
-  |
-  | knowledge:store({
-  |   type: "architecture_decision",
-  |   topic: "auth middleware",
-  |   content: "JWT-based, located at src/middleware/auth.ts",
-  |   confidence: 0.95
-  | })
-  |    -> KnowledgeService.store()
-  |    -> Generates embedding
-  |    -> Inserts into agents.knowledge_entries
-  |
-  v
-Later: Different QA-Agent conversation
-  |
-  | knowledge:query({ query: "what do we know about authentication?" })
-  |    -> KnowledgeService.query()
-  |    -> Semantic search via cosine distance on embedding
-  |    -> Filters: scope='shared', not expired, not superseded
-  |    -> Returns ranked results
-  |
-  v
-QA-Agent has context without re-discovering
+**New table schema:**
+
+```sql
+CREATE TABLE agents.tree_budgets (
+  id TEXT PRIMARY KEY,
+  root_task_id TEXT NOT NULL REFERENCES agents.tasks(id),
+  total_tokens INTEGER NOT NULL,
+  consumed_tokens INTEGER NOT NULL DEFAULT 0,
+  warning_threshold_pct INTEGER NOT NULL DEFAULT 80,
+  status TEXT NOT NULL DEFAULT 'active',  -- 'active' | 'warning' | 'exhausted'
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Per-conversation allocation within a tree
+CREATE TABLE agents.tree_budget_allocations (
+  tree_budget_id TEXT NOT NULL REFERENCES agents.tree_budgets(id),
+  conversation_id TEXT NOT NULL REFERENCES agents.conversations(id),
+  allocated_tokens INTEGER NOT NULL,
+  consumed_tokens INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (tree_budget_id, conversation_id)
+);
 ```
 
-### Linear Agent SDK Flow
+**Budget propagation flow:**
 
 ```
-User mentions @aesir-agent on Linear issue
-  |
-  v
-Linear webhook: agent_session.created
-  payload: { issueId, agentSessionId, promptContext }
-  |
-  v
-Linear Integration (port 3001)
-  -> Webhook verification
-  -> NormalizedEvent to agent-service POST /events
-  |
-  v
-Linear Adapter
-  -> Extracts issueId, agentSessionId
-  -> ReplyContext: { channel: "linear", issueId, agentSessionId }
-  |
-  v
-EventRouter -> start dev-agent conversation
-  |
-  v
-Dev-Agent works, calls communication:reply
-  |
-  v
-Denormalizer checks replyContext.agentSessionId
-  YES -> callMcpTool("linear", "create_agent_activity", {
-           agentSessionId, content: { type: "response", body: text }
-         })
-  NO  -> callMcpTool("linear", "create_comment", { issueId, body: text })
-  |
-  v
-Agent appears in Linear UI with native activity types
+Root delegation: task:delegate({ treeBudgetTokens: 200000, ... })
+  -> Creates tree_budget row (total: 200000)
+  -> Creates allocation for target conversation (allocated: 200000 or fraction)
+  -> Worker loop reads allocation, creates TokenBudget from it
+
+Sub-delegation within tree:
+  -> Inherits tree_budget_id from parent task
+  -> Agent specifies budgetAllocation or defaults to equal split of remaining
+  -> New allocation row created for sub-conversation
+  -> Consumed tokens tracked per-allocation AND aggregated on tree_budget
+
+Token tracking:
+  -> onResponse callback in worker loop reports input+output tokens
+  -> Atomically increment tree_budget_allocations.consumed_tokens
+  -> Atomically increment tree_budgets.consumed_tokens (parent aggregate)
+  -> Check threshold: if consumed >= warning_threshold_pct * total -> status='warning', signal all
+  -> If consumed >= total -> status='exhausted', signal all active conversations
 ```
+
+**Key design decision:** Token tracking uses atomic `UPDATE ... SET consumed_tokens = consumed_tokens + $delta` to handle concurrent conversations in the same tree. No locks needed -- the aggregate is eventually consistent (acceptable for budget warnings).
+
+**Backward compatibility:** Conversations without a `tree_budget_id` use per-conversation budgets from the agent definition (existing behavior). The worker loop checks for tree budget first; if absent, falls through to definition budget.
+
+**New components:**
+- `shared/services/tree-budget-service.ts` -- CRUD + atomic token tracking (~200 lines)
+- `shared/tools/task/tree-budget.ts` -- `task:tree_budget` read tool (~50 lines)
+
+**Modified components:**
+- `shared/db/schema.ts` -- add `tree_budgets`, `tree_budget_allocations` tables; add `tree_budget_id` to conversations
+- `shared/tools/task/delegate-task.ts` -- propagate tree budget on delegation
+- `worker-loop.ts` -- read tree budget allocation, create TokenBudget from it, report usage
+- `shared/agent-loop/token-budget.ts` -- add tree-level reporting callback
+- `service/main.ts` -- bootstrap TreeBudgetService
+- Dashboard -- tree budget visualization in task tree view
 
 ---
 
-## Component Boundaries
+### Phase 5: Scheduled Agent Execution
 
-| Component | Responsibility | Communicates With |
-|-----------|---------------|-------------------|
-| **KnowledgeService** | Store/query/update knowledge entries, manage embeddings, enforce scope | DB (agents.knowledge_entries), Embedding API |
-| **DirectoryService** | Entity CRUD, capability-based semantic search | DB (agents.entity_directory), Embedding API |
-| **MaterializationLayer** | Dispatch delegated tasks to appropriate channel based on entity type | ConversationExecutor, Slack MCP, Linear MCP |
-| **TaskSignalDispatcher** | React to task state changes, fire signals to callback conversations | TaskService (events), ConversationExecutor.signal() |
-| **Knowledge tools** (`knowledge:*`) | Agent-facing interface to KnowledgeService | KnowledgeService via ToolRegistry |
-| **Directory tools** (`directory:*`) | Agent-facing interface to DirectoryService | DirectoryService via ToolRegistry |
-| **Delegation tool** (`task:delegate`) | Composite: create task + materialize + wait | TaskService, DirectoryService, MaterializationLayer |
-| **Response tool** (`task:respond`) | Negotiation: accept/reject delegation | TaskService, ConversationExecutor.signal() |
-| **Linear activity MCP tools** | `create_agent_activity`, `update_agent_session` | Linear SDK (via OAuth app token) |
-| **Updated denormalizer** | Routes to activity tools when agentSessionId present | Linear MCP (activity or comment) |
+**Integration type:** New schedule registry using existing pg-boss, synthetic events through existing EventRouter.
+
+**What changes:**
+
+| Component | Change |
+|-----------|--------|
+| `AgentDefinitionYamlSchema` (types.ts) | Add optional `schedules` array field |
+| `AgentRegistry` | Parse and validate schedules from YAML |
+| New: `ScheduleRegistry` | Registers pg-boss scheduled jobs on startup for all agents with schedules |
+| `TimeoutScheduler` / pg-boss | Reuse existing pg-boss instance for schedule jobs |
+| EventRouter | No change -- synthetic `schedule.triggered` events route through existing `start` trigger matching |
+| Conversations table | No change -- scheduled conversations are regular conversations |
+| New table: `agents.schedule_runs` | Track schedule execution history |
+| API endpoint | `POST /api/schedules/:name/trigger` for manual triggers |
+| Dashboard | Schedule visibility page |
+
+**Definition.yaml extension:**
+
+```yaml
+schedules:
+  - name: weekly-grooming
+    cron: "0 9 * * MON"
+    overlap: skip          # 'skip' | 'queue'
+    timezone: "UTC"        # Optional, defaults to UTC
+```
+
+**Zod schema addition to AgentDefinitionYamlSchema:**
+
+```typescript
+schedules: z.array(z.object({
+  name: z.string().min(1),
+  cron: z.string().min(1),  // Validated at registration time by pg-boss
+  overlap: z.enum(["skip", "queue"]).default("skip"),
+  timezone: z.string().default("UTC"),
+})).optional(),
+```
+
+**Schedule registration flow (on startup):**
+
+```
+main.ts bootstrap:
+  -> ScheduleRegistry.initialize(agentRegistry, boss)
+     -> For each agent definition with schedules:
+        -> For each schedule:
+           -> boss.schedule(queueName, cron, { agentId, scheduleName })
+           -> boss.work(queueName, handler)
+              handler:
+                1. Check overlap: query agents.schedule_runs for last run status
+                2. If overlap=skip and last run still active -> log skip, return
+                3. Create schedule_runs row (status: started)
+                4. Build synthetic IncomingEvent:
+                   { type: "schedule.triggered", source: "scheduler",
+                     payload: { agentId, scheduleName, lastRunAt, lastRunOutcome } }
+                5. Route through executor.start() directly (deterministic, no EventRouter LLM needed)
+                6. Update schedule_runs on completion
+```
+
+**Why executor.start() directly instead of EventRouter:** Schedule triggers are deterministic -- we know exactly which agent to start. Routing through EventRouter would waste an LLM call on something that's always the same answer. The EventRouter is for ambiguous events.
+
+**New table:**
+
+```sql
+CREATE TABLE agents.schedule_runs (
+  id TEXT PRIMARY KEY,
+  agent_id TEXT NOT NULL,
+  schedule_name TEXT NOT NULL,
+  conversation_id TEXT REFERENCES agents.conversations(id),
+  status TEXT NOT NULL DEFAULT 'started',  -- 'started' | 'completed' | 'failed' | 'skipped'
+  started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  completed_at TIMESTAMPTZ,
+  outcome_summary TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_schedule_runs_agent ON agents.schedule_runs(agent_id, schedule_name, started_at DESC);
+```
+
+**Context injection:** The scheduled conversation's initial message includes:
+
+```xml
+<schedule_context>
+Schedule: weekly-grooming
+Last run: 2026-02-13T09:00:00Z (completed, summary: "Groomed 3 items")
+Time since last run: 7 days
+</schedule_context>
+
+Your scheduled task: Review and groom the product backlog.
+```
+
+**New components:**
+- `framework/schedule-registry.ts` -- pg-boss schedule registration + overlap logic (~200 lines)
+- `shared/db/schema.ts` -- add `schedule_runs` table
+- API endpoint in `service/api/router.ts` -- manual trigger
+- Dashboard schedule pages
+
+**Modified components:**
+- `framework/types.ts` -- extend `AgentDefinitionYamlSchema` with `schedules`
+- `framework/agent-registry.ts` -- parse schedules (automatic via Zod)
+- `service/main.ts` -- bootstrap ScheduleRegistry after pg-boss starts
+- Agent definition YAMLs -- add schedule blocks where needed
 
 ---
 
-## New Tables, Migrations, Indexes Summary
+### Phase 6: Sub-Agent Discovery
+
+**Integration type:** New sub-agent registry (reuses pgvector), extends `coordination:spawn_agent` tool.
+
+**What changes:**
+
+| Component | Change |
+|-----------|--------|
+| `AgentDefinitionYamlSchema` | Already has `capabilities` field (added in v2.7). Sub-agents declare capabilities the same way |
+| New: `SubAgentRegistry` service | Internal registry queryable by capability, separate from entity directory |
+| `coordination:spawn_agent` tool | Accept optional `capability` parameter alongside existing `agentType` |
+| `SpawnAgentDeps` (types.ts) | Add `subAgentRegistry` reference |
+| Worker loop | Populate `subAgentRegistry` in `spawnDeps` |
+
+**Design decision: Separate table vs entity_directory with tier discriminator.**
+
+Use the entity_directory table with a `tier` column. Rationale: same embedding pipeline, same pgvector infrastructure, same seed pattern. The tier discriminator cleanly separates orchestrators (visible to each other via `directory:find`) from sub-agents (visible only via `spawn_agent` capability matching). Adding a separate table would duplicate the embedding generation, seed script, and query infrastructure.
+
+**Schema change:**
+
+```sql
+ALTER TABLE agents.entity_directory ADD COLUMN tier TEXT NOT NULL DEFAULT 'orchestrator';
+-- tier: 'orchestrator' (existing entries) | 'sub_agent' (new)
+CREATE INDEX idx_directory_tier ON agents.entity_directory(tier, status);
+```
+
+**DirectoryService modification:** All existing queries add `WHERE tier = 'orchestrator'` to preserve backward compatibility. A new `findSubAgent(capability: string)` method queries `WHERE tier = 'sub_agent'`.
+
+**Seed script modification:** The existing `seed-directory.ts` already reads capabilities from definition.yaml. Extend it to detect sub-agents (agents with no triggers and no directory entry type 'agent') and seed them with `tier = 'sub_agent'`.
+
+**spawn_agent tool modification:**
+
+```typescript
+const SpawnAgentInputSchema = z.object({
+  agentType: z.string().optional()   // Existing: role key from subAgents map
+    .describe("Role of sub-agent (from subAgents mapping)"),
+  capability: z.string().optional()  // NEW: semantic capability description
+    .describe("Capability needed (e.g., 'write production-quality code')"),
+  task: z.string().describe("Task for the sub-agent"),
+  context: z.string().optional(),
+}).refine(
+  data => data.agentType || data.capability,
+  "Either agentType or capability is required"
+);
+
+// Resolution logic:
+// 1. If agentType provided: existing hardcoded lookup (backward compat)
+// 2. If capability provided: query SubAgentRegistry for best match
+// 3. If both: agentType takes precedence (explicit > discovery)
+```
+
+**New components:**
+- `shared/services/sub-agent-registry.ts` -- thin wrapper over DirectoryService with tier filter (~60 lines)
+
+**Modified components:**
+- `shared/db/schema.ts` -- add `tier` column to entity_directory
+- `shared/services/directory-service.ts` -- add `findSubAgent()` method, add tier filter to `find()`
+- `shared/tools/coordination/spawn-agent.ts` -- add `capability` parameter, resolution logic
+- `framework/types.ts` -- add `subAgentRegistry` to SpawnAgentDeps
+- `worker-loop.ts` -- pass subAgentRegistry in spawnDeps
+- `scripts/seed-directory.ts` -- seed sub-agents with tier discriminator
+- `service/main.ts` -- no change (DirectoryService already bootstrapped)
+
+---
+
+### Phase 7: Persistent Agent Identity
+
+**Integration type:** New table, new tools (`identity:*`), new lifecycle hook in worker loop for context injection.
+
+**What changes:**
+
+| Component | Change |
+|-----------|--------|
+| New table: `agents.identity_documents` | Versioned structured documents scoped to agent roles |
+| New tools: `identity:update`, `identity:read` | Agent tools for managing identity documents |
+| Worker loop -- conversation start | Inject identity documents into system prompt preamble |
+| Worker loop -- conversation end | Lifecycle hook: prompt agent to update identity before completing |
+| New: `IdentityService` | CRUD + version management for identity documents |
+
+**New table schema:**
+
+```sql
+CREATE TABLE agents.identity_documents (
+  id TEXT PRIMARY KEY,
+  agent_id TEXT NOT NULL,
+  document_type TEXT NOT NULL,  -- 'product_brief', 'architectural_model', etc.
+  content TEXT NOT NULL,
+  version INTEGER NOT NULL DEFAULT 1,
+  token_count INTEGER NOT NULL DEFAULT 0,
+  max_tokens INTEGER NOT NULL DEFAULT 4000,  -- per-type configurable limit
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  UNIQUE(agent_id, document_type, version)
+);
+CREATE INDEX idx_identity_agent ON agents.identity_documents(agent_id, document_type);
+CREATE INDEX idx_identity_latest ON agents.identity_documents(agent_id, document_type, version DESC);
+```
+
+**Version strategy:** Each update creates a new version row (append-only). Queries use `ORDER BY version DESC LIMIT 1` for latest. Full history retained for audit and dashboard version comparison.
+
+**Context injection at conversation start (worker loop):**
+
+```
+executeConversation():
+  // After loading agent definition, before running agent loop
+  if (identityService) {
+    const docs = await identityService.getLatest(conv.agent_definition_id);
+    if (docs.length > 0) {
+      const identityBlock = buildIdentityBlock(docs);
+      // Prepend to system prompt (not initial message -- identity is persistent context)
+      definition.systemPrompt = `${identityBlock}\n\n${definition.systemPrompt}`;
+    }
+  }
+```
+
+**Identity block format:**
+
+```xml
+<agent_identity>
+<document type="product_brief" updated="2026-02-20T10:00:00Z" version="5">
+[content]
+</document>
+<document type="architectural_model" updated="2026-02-19T15:30:00Z" version="3">
+[content]
+</document>
+</agent_identity>
+```
+
+**Lifecycle hook -- identity update prompt:**
+
+This is the first lifecycle hook. Per the spec: "Phases 7 and 8 both inject agent turns at lifecycle boundaries. Whichever is built first should establish the general lifecycle hook mechanism so the other plugs into it."
+
+**Lifecycle hook mechanism (new concept):**
+
+```typescript
+// framework/lifecycle-hooks.ts
+interface LifecycleHook {
+  name: string;
+  phase: 'pre_completion' | 'pre_compaction';
+  shouldRun: (ctx: LifecycleContext) => boolean;
+  prompt: string;  // Injected as user message
+  toolRestriction?: string[];  // Only these tools available during hook turn
+  sentinel?: string;  // Agent response indicating "nothing to do"
+}
+
+// Worker loop integrates hooks at lifecycle boundaries:
+// pre_completion: after agent loop returns completed, before persisting
+// pre_compaction: before history manager runs, before the agent loop
+```
+
+Phase 7 registers `pre_completion` hook:
+- **shouldRun:** Agent has `identity:update` in its tools AND conversation is completing (not pausing)
+- **prompt:** "Review this conversation for significant learnings. Update your identity documents if you discovered something important about your domain."
+- **toolRestriction:** `["identity:update", "identity:read"]`
+- **sentinel:** Agent responds "No identity updates needed" -- hook completes without action
+
+Phase 8 registers `pre_compaction` hook (see below).
+
+**Graceful degradation:** If identity document loading fails, conversation starts without them. Agent operates with higher context cost (may need to query knowledge more) but doesn't fail.
+
+**New components:**
+- `shared/services/identity-service.ts` -- CRUD + versioning (~150 lines)
+- `shared/tools/identity/update.ts` -- identity:update tool factory
+- `shared/tools/identity/read.ts` -- identity:read tool factory
+- `shared/tools/identity/index.ts` -- barrel export
+- `framework/lifecycle-hooks.ts` -- lifecycle hook mechanism (~100 lines)
+- Dashboard: identity document viewer with version comparison
+
+**Modified components:**
+- `shared/db/schema.ts` -- add `identity_documents` table
+- `worker-loop.ts` -- inject identity at conversation start, run lifecycle hooks at completion
+- `tool-factories.ts` -- register `identity:update`, `identity:read`
+- `service/main.ts` -- bootstrap IdentityService, register lifecycle hooks
+
+---
+
+### Phase 8: Knowledge Retrieval Enhancement
+
+**Integration type:** Refactor KnowledgeService query pipeline, add retrieval config to agent definitions, add pre-compaction lifecycle hook.
+
+**What changes:**
+
+| Component | Change |
+|-----------|--------|
+| `KnowledgeService.query()` | Refactored into pluggable strategy pipeline |
+| New: `RetrievalStrategy` interface | Pluggable strategy abstraction |
+| New: `VectorRetrievalStrategy` | Default: current cosine similarity (refactored from KnowledgeService) |
+| New: `StrategyRegistry` | Maps strategy names to implementations |
+| New: `ScoreFusion` module | Combines scores from multiple strategies (designed for hybrid, only vector ships) |
+| `AgentDefinitionYamlSchema` | Add optional `retrieval` config block |
+| Worker loop | Pre-compaction lifecycle hook prompts agent to persist knowledge |
+| History manager | No change -- lifecycle hook runs before compaction |
+
+**Retrieval strategy interface:**
+
+```typescript
+interface RetrievalStrategy {
+  name: string;
+  search(query: string, options: RetrievalOptions): Promise<ScoredResult[]>;
+}
+
+interface ScoredResult {
+  entry: KnowledgeEntry;
+  score: number;  // 0-1 normalized
+  strategy: string;  // which strategy produced this
+}
+
+interface RetrievalOptions {
+  agentId: string;
+  type?: string;
+  limit: number;
+  metadata?: Record<string, unknown>;
+}
+```
+
+**Score fusion (designed for future hybrid):**
+
+```typescript
+interface ScoreFusionConfig {
+  method: 'weighted_sum' | 'reciprocal_rank';  // rrf for future
+  weights: Record<string, number>;  // strategy name -> weight
+}
+
+// v2.9 ships with single-strategy (vector only), but the fusion
+// interface is in place for v3.0 to add keyword/temporal/diversity strategies
+function fuseScores(results: Map<string, ScoredResult[]>, config: ScoreFusionConfig): ScoredResult[] {
+  // Weighted sum of normalized scores across strategies
+}
+```
+
+**Agent definition retrieval config:**
+
+```yaml
+# definition.yaml addition (optional, absent = vector-only default)
+retrieval:
+  strategies:
+    - type: vector
+      weight: 1.0
+  # Future v3.0 additions:
+  # - type: keyword
+  #   weight: 0.3
+  # - type: temporal_decay
+  #   weight: 0.2
+  #   halfLifeDays: 7
+```
+
+**Pre-compaction knowledge flush (lifecycle hook):**
+
+Uses the lifecycle hook mechanism established by Phase 7.
+
+- **Phase:** `pre_compaction`
+- **shouldRun:** Agent has `knowledge:store` in its tools AND compaction is about to happen (estimatedTokens > pruneThreshold)
+- **prompt:** "History compaction is about to compress your conversation. Review the conversation for discoveries, decisions, and context that should persist beyond this conversation. Store anything important via knowledge_store. Respond with 'FLUSH_COMPLETE' when done or 'NOTHING_TO_STORE' if nothing needs persisting."
+- **toolRestriction:** `["knowledge_store"]`
+- **sentinel:** `"NOTHING_TO_STORE"`
+- **safeguard:** Track flush count per conversation to prevent double-flushing. Skip if agent has no knowledge tools.
+
+**Integration with history manager:**
+
+```
+Worker loop executeConversation():
+  // Step 7 (history compaction) becomes:
+  if (needsCompaction) {
+    // Run pre_compaction hooks first
+    await runLifecycleHooks('pre_compaction', hookContext);
+    // Then run compaction
+    const compactionResult = await historyManager.compact(...);
+  }
+```
+
+**New components:**
+- `shared/services/retrieval/strategy.ts` -- interface + registry (~80 lines)
+- `shared/services/retrieval/vector-strategy.ts` -- refactored from KnowledgeService (~100 lines)
+- `shared/services/retrieval/score-fusion.ts` -- fusion interface + weighted_sum impl (~60 lines)
+
+**Modified components:**
+- `shared/services/knowledge-service.ts` -- query() delegates to strategy pipeline
+- `framework/types.ts` -- extend `AgentDefinitionYamlSchema` with `retrieval` block
+- `framework/lifecycle-hooks.ts` -- register pre_compaction hook (established by Phase 7)
+- `worker-loop.ts` -- run pre_compaction hooks before history compaction
+
+---
+
+## Component Boundaries Summary
+
+| Component | Responsibility | Phase | New/Modified |
+|-----------|---------------|-------|-------------|
+| `task:clarify` tool | Clarification signal from target to delegator | 1 | NEW |
+| `task:respond` (extended) | Accept/reject/counter-propose responses | 1 | MODIFIED |
+| `task:delegate_group` tool | Fan-out delegation with policies | 2 | NEW |
+| `task:group_status` tool | Group state aggregation | 2 | NEW |
+| `task:cancel_group` tool | Cancel remaining group tasks | 2 | NEW |
+| `TaskGroups` (in TaskService) | Group lifecycle management | 2 | MODIFIED |
+| `TaskSignalDispatcher` (extended) | Group policy evaluation | 2 | MODIFIED |
+| `MaterializationDispatcher` | External artifact creation dispatch | 3 | NEW |
+| `LinearMaterializationHandler` | Linear issue creation/sync | 3 | NEW |
+| `TreeBudgetService` | Tree-level token allocation/tracking | 4 | NEW |
+| `task:tree_budget` tool | Budget visibility for agents | 4 | NEW |
+| `ScheduleRegistry` | pg-boss schedule registration | 5 | NEW |
+| `SubAgentRegistry` | Capability-based sub-agent discovery | 6 | NEW |
+| `IdentityService` | Identity document CRUD + versioning | 7 | NEW |
+| `identity:update` tool | Agent identity document updates | 7 | NEW |
+| `identity:read` tool | Agent identity document reads | 7 | NEW |
+| Lifecycle hook mechanism | General hook system for lifecycle boundaries | 7 | NEW |
+| `RetrievalStrategy` interface | Pluggable retrieval pipeline | 8 | NEW |
+| `VectorRetrievalStrategy` | Default vector search (refactored) | 8 | NEW |
+| `ScoreFusion` | Multi-strategy score combination | 8 | NEW |
+
+---
+
+## Data Model Changes Summary
 
 ### New Tables
 
-| Table | Schema | Purpose |
-|-------|--------|---------|
-| `agents.knowledge_entries` | Phase 71 | Shared knowledge store with vector embeddings |
-| `agents.entity_directory` | Phase 72 | Entity directory (agents + humans) |
+| Table | Phase | Purpose |
+|-------|-------|---------|
+| `agents.task_groups` | 2 | Parallel delegation groups with policies |
+| `agents.tree_budgets` | 4 | Token budget tracking across delegation trees |
+| `agents.tree_budget_allocations` | 4 | Per-conversation budget allocations within trees |
+| `agents.schedule_runs` | 5 | Schedule execution history |
+| `agents.identity_documents` | 7 | Versioned agent identity documents |
 
 ### Table Modifications
 
-| Table | Change | Phase |
-|-------|--------|-------|
-| `agents.tasks` | Add `callback_conversation_id TEXT`, `delegation_depth INTEGER DEFAULT 0`, `expectations JSONB` | Phase 73 |
-| `agents.tasks` | Add index `idx_tasks_callback` on `callback_conversation_id` | Phase 73 |
+| Table | Column/Change | Phase |
+|-------|--------------|-------|
+| `agents.tasks` | Add `group_id TEXT` | 2 |
+| `agents.tasks` | Add `materialization JSONB` | 3 |
+| `agents.conversations` | Add `tree_budget_id TEXT` | 4 |
+| `agents.entity_directory` | Add `tier TEXT DEFAULT 'orchestrator'` | 6 |
 
-### Migration Plan
+### No Schema Changes
 
-```
-Phase 70: No schema changes (Linear integration only)
-Phase 71: Migration 1 - CREATE EXTENSION vector; CREATE TABLE agents.knowledge_entries with indexes
-Phase 72: Migration 2 - CREATE TABLE agents.entity_directory with indexes
-Phase 73: Migration 3 - ALTER TABLE agents.tasks ADD COLUMN callback_conversation_id, delegation_depth, expectations
-Phase 74: No schema changes (uses existing signal infrastructure)
-Phase 75: No schema changes (reads from existing tables)
-Phase 76: No schema changes (new agent definition only)
-```
-
-**Important: pgvector extension must be created before knowledge_entries table.** The migration must include `CREATE EXTENSION IF NOT EXISTS vector;` before the table creation. This requires superuser or extension-creation privileges on the Postgres instance. Docker Compose Postgres image has this by default; managed services (RDS, Cloud SQL) require enabling the extension via console/CLI first.
-
-### Existing Schema Retention
-
-Per CLAUDE.md: `schema.drizzle.ts` retains old table definitions to prevent destructive DROP TABLE migrations. New tables must be added to BOTH `schema.ts` (runtime) and `schema.drizzle.ts` (drizzle-kit migration generation).
+| Phase | Reason |
+|-------|--------|
+| Phase 1 (Negotiation) | Uses existing signal types, existing conversations.active_delegations |
+| Phase 8 (Knowledge Retrieval) | Query pipeline change only, existing knowledge_entries table unchanged |
 
 ---
 
-## New vs Modified Components
+## Build Order and Dependencies
 
-### New Components (create from scratch)
+```
+             Phase 1: Richer Negotiation
+                      |
+                      v
+             Phase 2: Parallel Delegation --------+
+                      |                            |
+                      v                            |
+             Phase 4: Tree-Level Token Budgets     |
+                                                   |
+Independent (can run parallel to Phase 1-2-4 chain):
+                                                   |
+  Phase 3: Transparent Materialization (after v2.8)|
+  Phase 5: Scheduled Agent Execution (after v2.8)  |
+  Phase 6: Sub-Agent Discovery (after v2.8)        |
+  Phase 7: Persistent Agent Identity (after v2.8) -+-- Phase 7 BEFORE Phase 8
+  Phase 8: Knowledge Retrieval Enhancement --------+   (establishes lifecycle hooks)
+```
 
-| Component | Location | Phase |
-|-----------|----------|-------|
-| `KnowledgeService` | `agents/src/shared/services/knowledge-service.ts` | 71 |
-| Knowledge tools (3) | `agents/src/shared/tools/knowledge/` | 71 |
-| `DirectoryService` | `agents/src/shared/services/directory-service.ts` | 72 |
-| Directory tools (2) | `agents/src/shared/tools/directory/` | 72 |
-| Seed directory script | `agents/scripts/seed-directory.ts` | 72 |
-| `MaterializationLayer` | `agents/src/shared/services/materialization.ts` | 73 |
-| `task:delegate` tool | `agents/src/shared/tools/task/delegate.ts` | 73 |
-| `task:respond` tool | `agents/src/shared/tools/task/respond.ts` | 73 |
-| `TaskSignalDispatcher` | `agents/src/shared/services/task-signal-dispatcher.ts` | 74 |
-| Linear activity MCP tools | `linear/src/mcp/tools/activities.ts` | 70 |
-| Task tree API endpoints | `agents/src/service/api/task-tree.ts` | 75 |
-| Dashboard task tree views | `dashboard/src/app/tasks/`, `dashboard/src/components/task-*` | 75 |
-| QA agent definition | `agents/definitions/qa-agent/` | 76 |
+### Suggested Build Order
 
-### Modified Components (extend existing)
+**Wave 1 (no inter-dependencies):**
+- Phase 1: Richer Negotiation
+- Phase 3: Transparent Materialization
+- Phase 5: Scheduled Agent Execution
+- Phase 6: Sub-Agent Discovery
 
-| Component | Location | Change | Phase |
-|-----------|----------|--------|-------|
-| `tool-factories.ts` | `agents/src/framework/` | Register knowledge:*, directory:*, task:delegate, task:respond | 71-73 |
-| `RegisterAllToolsOptions` | `agents/src/framework/tool-factories.ts` | Add knowledgeService, directoryService, materializationLayer | 71-73 |
-| `schema.ts` | `agents/src/shared/db/` | Add knowledge_entries, entity_directory tables; extend tasks | 71-73 |
-| `schema.drizzle.ts` | `agents/src/shared/db/` | Mirror schema.ts changes for drizzle-kit | 71-73 |
-| `main.ts` | `agents/src/service/` | Bootstrap new services, pass to registerAllTools | 71-74 |
-| `api/router.ts` | `agents/src/service/api/` | Mount task tree API routes | 75 |
-| `AgentDefinitionYamlSchema` | `agents/src/framework/types.ts` | Add optional `capabilities` field | 72 |
-| `LinearReplyContextSchema` | `agents/src/shared/communication/types.ts` | Add optional `agentSessionId` | 70 |
-| `denormalizer.ts` | `agents/src/shared/communication/` | Route to activity tools when agentSessionId present | 70 |
-| `linear/src/oauth/flow.ts` | Linear integration | Add `actor=app` to auth URL | 70 |
-| `linear/src/mcp/server.ts` | Linear integration | Register new activity tools | 70 |
-| `linear/src/mcp/schemas.ts` | Linear integration | Add activity schemas | 70 |
-| `linear/scripts/seed-permissions.ts` | Linear integration | Add permissions for new tools | 70 |
-| `agents/src/adapters/linear.ts` | Agents adapters | Extract agentSessionId into replyContext | 70 |
-| Agent definition YAMLs | `agents/definitions/*/definition.yaml` | Add capabilities, new tool refs | 72-76 |
-| Agent prompts | `agents/definitions/*/prompt.md` | Add delegation/knowledge guidance | 71-76 |
-| Dashboard `lib/schema.ts` | Dashboard | Mirror new agents schema tables | 75 |
-| TaskService | `agents/src/shared/services/task-service.ts` | Add EventEmitter for state changes | 74 |
+**Wave 2 (depends on Wave 1 Phase 1):**
+- Phase 2: Parallel Delegation
+- Phase 7: Persistent Agent Identity (independent but establishes lifecycle hooks needed by Phase 8)
+
+**Wave 3 (depends on Wave 2):**
+- Phase 4: Tree-Level Token Budgets (depends on Phase 2)
+- Phase 8: Knowledge Retrieval Enhancement (depends on Phase 7 lifecycle hooks)
+
+### Build Order Rationale
+
+1. **Phase 1 first in Wave 1** because Phase 2 builds on the richer negotiation primitives (counter-propose composing with group handshakes)
+
+2. **Phases 3, 5, 6 are truly independent** -- they touch different parts of the system with no shared state. Running them in parallel with Phase 1 maximizes throughput
+
+3. **Phase 7 before Phase 8** because the lifecycle hook mechanism is a shared infrastructure concern. Phase 7 establishes the `pre_completion` hook pattern; Phase 8 plugs into it with `pre_compaction`. Building them in opposite order would require Phase 8 to establish the mechanism AND use it, creating a larger PR
+
+4. **Phase 4 after Phase 2** because tree budgets need the group data model (task_groups.tree_budget_tokens) and the fan-out patterns to apply budget distribution
+
+5. **Phase 2 after Phase 1** because group delegations should support counter-propose in individual handshakes within the group
 
 ---
 
-## Patterns to Follow
+## Cross-Cutting Concerns
 
-### Pattern 1: Service Factory with Tool Adapter
+### Worker Loop Modifications (Aggregate)
 
-**What:** New services (KnowledgeService, DirectoryService) follow the existing `createService(options)` factory pattern. Tools use adapter functions to bridge ToolContext to service dependencies.
+The worker loop (`worker-loop.ts`) is the most modified component across all phases. Changes should be carefully sequenced to avoid conflicts:
 
-**When:** Always -- this is the established pattern for all services in Aesir.
+| Area | Phase | Change |
+|------|-------|--------|
+| `computeUpdatedDelegations()` | 1, 2 | New signal types for counter-propose, group signals |
+| Tool context creation | 4, 6 | Tree budget in TokenBudget creation; subAgentRegistry in spawnDeps |
+| Conversation start | 7 | Identity document injection into system prompt |
+| Pre-compaction | 8 | Lifecycle hook before history compaction |
+| Post-loop / pre-completion | 7 | Lifecycle hook for identity update |
+| Budget tracking | 4 | Token usage reporting to TreeBudgetService |
 
-**Example:**
+### ToolContext Extensions
 
 ```typescript
-// Service factory (same as createTaskService)
-export function createKnowledgeService(options: KnowledgeServiceOptions): KnowledgeService {
-  const { db, logger } = options;
-  if (!db) throw new Error("db is required for KnowledgeService");
-  if (!logger) throw new Error("logger is required for KnowledgeService");
+// Phase 4: tree budget reference
+treeBudgetId?: string;
 
-  return {
-    async store(params) { /* ... */ },
-    async query(params) { /* ... */ },
-    async health() { /* ... */ },
-    async close() { /* ... */ },
-  };
-}
+// Phase 6: sub-agent discovery
+subAgentRegistry?: SubAgentRegistry;
 
-// Tool adapter (same as task tools)
-function knowledgeAdapter(
-  createFn: (ks: KnowledgeService, ctx: ToolContext) => ToolDefinition,
-  knowledgeService: KnowledgeService,
-): (ctx: ToolContext) => ToolDefinition {
-  return (ctx: ToolContext) => createFn(knowledgeService, ctx);
-}
+// Phase 7: identity service
+identityService?: IdentityService;
 ```
 
-### Pattern 2: Signal-Based Inter-Conversation Communication
-
-**What:** Conversations communicate via signals through the existing ConversationExecutor.signal() mechanism. Task lifecycle events trigger signals to callback conversations.
-
-**When:** Whenever one conversation needs to notify another (delegation response, task completion, clarification requests).
-
-**Example:**
-
-```typescript
-// TaskSignalDispatcher subscribes to task state changes
-const dispatcher = createTaskSignalDispatcher({
-  executor,  // for signal()
-  taskService,  // for task lookups
-  eventLog,  // for orphan logging
-  logger,
-});
-
-// When task completes:
-await executor.signal(task.callback_conversation_id, {
-  type: "task_completed",
-  data: { taskId: task.id, summary: handoff.context.summary },
-  source: "task-system",
-});
-```
-
-### Pattern 3: Denormalizer Extension for New Channels
-
-**What:** The outbound denormalizer gains a new dispatch path for Linear agent activities, following the existing channel-based routing pattern.
-
-**When:** Extending the denormalizer for any new outbound delivery mechanism.
-
-**Example:**
-
-```typescript
-// denormalizer.ts extension
-case "linear": {
-  if (replyContext.agentSessionId) {
-    // Agent SDK path: use activity types
-    return callMcpTool({
-      integration: "linear",
-      tool: "create_agent_activity",
-      params: {
-        agentSessionId: replyContext.agentSessionId,
-        content: { type: activityType, body: text },
-      },
-      ...mcpBase,
-    });
-  }
-  // Legacy path: comment on issue
-  return callMcpTool({ /* existing create_comment call */ });
-}
-```
-
-### Pattern 4: Seed Scripts for Data Initialization
-
-**What:** New seed scripts follow the existing pattern from `seed:permissions` -- standalone tsx scripts that use `loadEnvFromRoot()`, connect to the database, and upsert data.
-
-**When:** Initializing entity directory from YAML definitions, seeding permissions for new MCP tools.
-
-**Example:**
-
-```typescript
-#!/usr/bin/env tsx
-import { loadEnvFromRoot } from "@aesir/platform";
-loadEnvFromRoot();
-
-// Read YAML definitions, extract capabilities, generate embeddings, upsert to DB
-```
-
----
-
-## Anti-Patterns to Avoid
-
-### Anti-Pattern 1: Orchestrator-Driven Delegation
-
-**What:** Building a central orchestrator that decides which agent delegates to which.
-**Why bad:** Violates agent-first principles. Agents decide when to delegate through their tools and reasoning. A central orchestrator creates a bottleneck and single point of failure.
-**Instead:** Agents discover capabilities via `directory:find`, decide to delegate via their own judgment, and use `task:delegate` as a tool. The agent makes the decision; the infrastructure executes it.
-
-### Anti-Pattern 2: Separate Vector Database
-
-**What:** Running Pinecone, Weaviate, or Qdrant alongside Postgres for knowledge embeddings.
-**Why bad:** Operational complexity for low-volume use case. Consistency issues between Postgres metadata and external vector store. Extra infrastructure to deploy, monitor, and maintain.
-**Instead:** pgvector in existing Postgres. Single source of truth, transactional consistency, adequate performance for the expected volume (hundreds to low thousands of entries).
-
-### Anti-Pattern 3: Knowledge Store as Message Passing
-
-**What:** Using the knowledge store for real-time communication between agents instead of signals.
-**Why bad:** Knowledge is for persistent, queryable facts. Real-time coordination uses signals. Mixing these creates stale-data bugs where agents read knowledge entries that are mid-update.
-**Instead:** Signals for real-time coordination (delegation response, task completion). Knowledge for persistent facts that outlive conversations.
-
-### Anti-Pattern 4: Task Status as Framework Logic
-
-**What:** Adding `if (task.status === 'completed') { fireSignal() }` in the ConversationExecutor or WorkerLoop.
-**Why bad:** The executor manages conversation lifecycle, not task lifecycle. Mixing these creates coupling.
-**Instead:** TaskSignalDispatcher is a separate service that subscribes to task state changes and dispatches signals independently. The executor only knows about conversations and signals.
-
-### Anti-Pattern 5: Modifying ConversationExecutor for Delegation
-
-**What:** Adding delegation-specific methods or branching to the ConversationExecutor or WorkerLoop.
-**Why bad:** The executor is the most critical, most tested component. Adding delegation concerns increases its surface area and risk of regression.
-**Instead:** Delegation uses the existing `executor.start()` and `executor.signal()` methods. The MaterializationLayer and TaskSignalDispatcher sit alongside the executor, not inside it.
-
----
-
-## Scalability Considerations
-
-| Concern | At Current Scale (~10 agents) | At 100 Agents | At 1000 Agents |
-|---------|------------------------------|---------------|----------------|
-| Knowledge entries | pgvector fine, no partitioning | pgvector fine, HNSW index handles 100K+ entries | Consider partitioning by workspace, HNSW tuning |
-| Directory queries | In-memory cache viable | pgvector search, ~5ms per query | pgvector with aggressive caching |
-| Delegation depth | Max 3 levels sufficient | May need deeper trees, cycle detection | Delegation graph analysis, depth limits |
-| Embedding generation | Sync call acceptable | Batch embedding for bulk operations | Async embedding queue |
-| Signal volume | Low, existing infra handles | Moderate, existing infra handles | May need dedicated signal queue |
-| Task tree queries | Simple recursive CTE | Indexed, millisecond range | Materialized task tree projection |
-
----
-
-## Build Order Rationale
+### Service Bootstrap Order in main.ts
 
 ```
-Phase 70 (Linear Agent SDK) + Phase 71 (Shared Memory) -- PARALLEL
-  |
-  v
-Phase 72 (Entity Directory)
-  Depends on: Phase 70 (agent identity must be resolved for directory)
-  |
-  v
-Phase 73 (Task Delegation)
-  Depends on: Phase 72 (agents need to discover who to delegate to)
-  |
-  v
-Phase 74 (Completion Signaling)
-  Depends on: Phase 73 (signals need tasks to signal about)
-  |
-  v
-Phase 75 (Delegation Graph Observability)
-  Depends on: Phase 74 (full lifecycle must exist before visualization)
-  |
-  v
-Phase 76 (QA Agent + Validation Workflow)
-  Depends on: Phase 75 (all infrastructure must be in place)
+Existing services (unchanged):
+  1. Pool + Drizzle
+  2. AgentRegistry
+  3. ToolRegistry + registerAllTools()
+  4. TaskService
+  5. EmbeddingService
+  6. KnowledgeService
+  7. DirectoryService
+  8. CorrelationService
+
+New services (v2.9):
+  9. IdentityService (Phase 7)
+  10. TreeBudgetService (Phase 4)
+  11. MaterializationDispatcher (Phase 3)
+  12. SubAgentRegistry (Phase 6 -- thin wrapper on DirectoryService)
+
+Existing services (extended registration):
+  13. registerAllTools() -- add new tools from Phases 1-8
+
+Existing infrastructure (unchanged):
+  14. EventLog
+  15. SessionProjection
+  16. TimeoutScheduler
+
+New infrastructure:
+  17. ScheduleRegistry (Phase 5 -- needs pg-boss from TimeoutScheduler)
+  18. Lifecycle hooks registration (Phases 7, 8)
+
+Existing (extended):
+  19. ConversationExecutor (gains tree budget + identity + lifecycle hooks)
+  20. TaskSignalDispatcher (gains group policy + materialization sync)
 ```
 
-**Why this order:**
+### Dashboard Impact
 
-1. **Phases 70+71 parallel** -- No dependencies between Linear SDK and knowledge store. Different packages, different concerns. Parallel execution cuts timeline.
+| Feature | Dashboard Change | Scope |
+|---------|-----------------|-------|
+| Negotiation (1) | Counter-propose and clarification in conversation detail | Small |
+| Parallel delegation (2) | Group status in task tree view | Medium |
+| Transparent materialization (3) | Materialized artifact links in task detail | Small |
+| Tree budgets (4) | Budget visualization in task tree | Medium |
+| Scheduled execution (5) | New schedules page: list, history, manual trigger | Large |
+| Sub-agent discovery (6) | Capability-based resolution in agent detail | Small |
+| Persistent identity (7) | Identity document viewer with version diff | Large |
+| Knowledge retrieval (8) | Retrieval strategy config in agent detail | Small |
 
-2. **Phase 72 after 70** -- The directory needs to know about agent identity. With `actor=app`, the agent has a real Linear identity that should be reflected in the directory. Building directory before agent identity is resolved risks misalignment.
-
-3. **Phase 73 after 72** -- Delegation requires knowing WHO to delegate to. Without the directory, delegation is blind. The directory enables informed delegation decisions.
-
-4. **Phase 74 after 73** -- Completion signaling only makes sense after delegation exists. The callback routing mechanism depends on task structure created in 73.
-
-5. **Phase 75 after 74** -- You cannot visualize what doesn't exist yet. Observability requires the full delegation lifecycle.
-
-6. **Phase 76 last** -- The QA agent exercises everything. Building it before the infrastructure is complete would require constant rework.
-
----
-
-## Open Architecture Questions
-
-1. **Embedding provider choice** -- OpenAI `text-embedding-3-small` (1536 dims) is the pragmatic default. Anthropic does not yet offer an embeddings API. Should we use OpenAI, or a local embedding model (e.g., via Ollama) to avoid the external dependency? Trade-off: OpenAI is simpler but adds a dependency; local is self-contained but adds infra.
-
-2. **MaterializationLayer and ConversationExecutor coupling** -- The materializer needs access to `executor.start()`. Passing the executor to the materializer creates a circular-feeling dependency (executor -> tools -> materializer -> executor). In practice this is fine (it is a runtime call, not an import cycle), but the DI wiring in `main.ts` needs careful ordering.
-
-3. **Task state change notification mechanism** -- EventEmitter on TaskService vs. event log append with subscriber. EventEmitter is simpler but in-memory only. Event log approach is durable but heavier. For v1 where everything is one process, EventEmitter wins. If services split later, switch to event log.
-
-4. **Linear API stability** -- Agent SDK is "Developer Preview." Changes may require adaptation. All Linear Agent SDK code should be behind a feature flag (`LINEAR_AGENT_SDK_ENABLED=true`) so the system can fall back to comment-based communication.
+Dashboard changes follow existing patterns: local schema mirrors in `lib/schema.ts`, server components with direct Postgres reads, no imports from `@aesir/agents`.
 
 ---
 
 ## Sources
 
-- Linear Agent SDK: [Getting Started](https://linear.app/developers/agents), [Agent Interaction](https://linear.app/developers/agent-interaction), [Changelog](https://linear.app/changelog/2025-07-30-agent-interaction-guidelines-and-sdk)
-- pgvector + Drizzle ORM: [Vector Similarity Search Guide](https://orm.drizzle.team/docs/guides/vector-similarity-search), [PostgreSQL Extensions](https://orm.drizzle.team/docs/extensions/pg)
-- pgvector general: [pgvector-node GitHub](https://github.com/pgvector/pgvector-node), [pgvector 2026 guide](https://www.instaclustr.com/education/vector-database/pgvector-key-features-tutorial-and-pros-and-cons-2026-guide/)
-- Existing codebase: `packages/agents/src/framework/`, `packages/agents/src/shared/`, `packages/integrations/linear/src/`, `packages/dashboard/src/`
+- Existing codebase analysis: `packages/agents/src/framework/`, `packages/agents/src/shared/`, `packages/agents/definitions/`
+- v2.9 spec: `.planning/specs/2.9-platform-completion.md`
+- Design vision: `.planning/specs/design-vision.md`
+- v2.7 architecture (predecessor): `.planning/research/ARCHITECTURE.md` (previous version)
+- pg-boss documentation: pg-boss schedule API for Phase 5 cron support (verified pg-boss already used in TimeoutScheduler)
+- pgvector: already in use for knowledge + directory embeddings, no new external deps
