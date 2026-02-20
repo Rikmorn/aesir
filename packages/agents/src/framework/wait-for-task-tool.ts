@@ -38,6 +38,14 @@ const WaitForTaskInputSchema = z.object({
       "Max time to wait for the task. Format: '<number><unit>' where unit is h (hours) or d (days). " +
         "E.g., '24h', '7d'. If omitted, waits indefinitely.",
     ),
+  action: z
+    .enum(["accept", "reject"])
+    .optional()
+    .default("accept")
+    .describe(
+      "Action to take on a counter-proposed task. 'accept' (default) accepts the modified scope. " +
+        "'reject' rejects the counter-proposal and cancels the task.",
+    ),
 });
 
 // ─── Factory ────────────────────────────────────────────────────────────────
@@ -63,7 +71,8 @@ export function createWaitForTaskTool(
       "Pause this conversation and wait for a delegated task to complete. " +
       "Automatically listens for task completion, failure, timeout, clarification, " +
       "and counter-proposal signals. If the task was counter-proposed, calling this " +
-      "tool accepts the modified scope and resumes the target agent. " +
+      "tool accepts the modified scope by default; pass action='reject' to reject " +
+      "the counter-proposal and cancel the task instead. " +
       "Use after calling delegate_task to wait for the delegated agent's result.",
     inputSchema: WaitForTaskInputSchema,
     async execute(
@@ -71,12 +80,40 @@ export function createWaitForTaskTool(
     ): Promise<{ content: string; isError?: boolean }> {
       const parsed = WaitForTaskInputSchema.parse(input);
 
-      // Auto-accept counter-proposals: when delegator calls wait_for_task on a
-      // counter_proposed task, that implicitly accepts the modified scope.
+      // Handle counter-proposed tasks: accept (default) or reject based on action param
       if (ctx?.delegationDeps) {
         const task = await ctx.delegationDeps.taskService.get(parsed.taskId);
         if (task?.status === "counter_proposed") {
-          // Find target's conversation and send acceptance
+          if (parsed.action === "reject") {
+            // Reject counter-proposal: signal target and cancel task immediately
+            const targetConv =
+              await ctx.delegationDeps.executor.findActiveForTask(
+                parsed.taskId,
+              );
+            if (targetConv) {
+              await ctx.delegationDeps.executor.signal(targetConv.id, {
+                type: "task_handshake",
+                data: {
+                  taskId: parsed.taskId,
+                  response: "rejected",
+                  rejectedBy: ctx.agentId,
+                },
+                message: `Counter-proposal rejected for task ${parsed.taskId}`,
+                source: `agent:${ctx.agentId}`,
+                deduplicationId: `handshake-reject-${parsed.taskId}`,
+              });
+            }
+            // Transition task to cancelled
+            await ctx.delegationDeps.taskService.update(parsed.taskId, {
+              status: "cancelled",
+            });
+            // Do NOT set waitForState -- delegator continues immediately after rejection
+            return {
+              content: `Counter-proposal for task ${parsed.taskId} rejected and task cancelled. You can re-delegate to a different agent or take a different approach.`,
+            };
+          }
+
+          // Default: accept the counter-proposal (existing behavior)
           const targetConv =
             await ctx.delegationDeps.executor.findActiveForTask(parsed.taskId);
           if (targetConv) {
