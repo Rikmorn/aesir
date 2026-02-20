@@ -2,17 +2,17 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-18)
+See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** Planning next milestone
+**Current focus:** v2.9 Platform Completion -- Phase 80 (Richer Negotiation)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-20 — Milestone v2.9 Platform Completion started
+Phase: 80 of 87 (Richer Negotiation)
+Plan: 0 of TBD in current phase
+Status: Ready to plan
+Last activity: 2026-02-20 -- Roadmap created for v2.9 (8 phases, 58 requirements)
 
 Progress: [          ] 0%
 
@@ -58,12 +58,13 @@ See PROJECT.md Key Decisions table for full history.
 
 - Linear Agent SDK is developer preview -- feature flag (LINEAR_AGENT_SDK_ENABLED) may be needed for fallback
 - Linear OAuth token migration deadline: April 1, 2026
+- worker-loop.ts is modified by Phases 80, 81, 83, 85, 86, 87 -- explicit file ownership needed for parallel execution
 
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Defining v2.9 requirements
-Next action: Define requirements and create roadmap
+Stopped at: v2.9 roadmap created (8 phases, 58 requirements mapped)
+Next action: Plan Phase 80 (Richer Negotiation)
 
 ---
-*Updated: 2026-02-20 — Milestone v2.9 Platform Completion started.*
+*Updated: 2026-02-20 -- v2.9 roadmap created.*
