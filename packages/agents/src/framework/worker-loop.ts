@@ -34,6 +34,7 @@ import { conversations } from "../shared/db/schema.js";
 import type { CorrelationService } from "../shared/services/correlation-service.js";
 import type { DirectoryService } from "../shared/services/directory-service.js";
 import type { TaskService } from "../shared/services/task-service.js";
+import { createRespondTaskTool } from "../shared/tools/task/respond-task.js";
 import { hasTextContent } from "./event-content.js";
 import { createHistoryManager } from "./history-manager.js";
 import { signalMatchesPendingWait } from "./signal-matching.js";
@@ -434,6 +435,21 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         });
         return updated;
       }
+    }
+
+    if (signalType === "task_counter_proposed") {
+      const updated = currentDelegations.map((d) => {
+        const entry = d as { taskId?: string; [key: string]: unknown };
+        if (entry.taskId === taskId) {
+          return {
+            ...entry,
+            handshakeStatus: "counter_proposed",
+            proposal: signalData?.proposal as string | undefined,
+          };
+        }
+        return d;
+      });
+      return updated;
     }
 
     return null;
@@ -1252,12 +1268,31 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         (t) => t.name === "wait_for_task",
       );
       if (waitForTaskToolIndex >= 0) {
-        const realWaitForTaskTool = createWaitForTaskTool(waitForState);
+        const realWaitForTaskTool = createWaitForTaskTool(
+          waitForState,
+          toolContext,
+        );
         const existingTaskTool = resolvedTools[waitForTaskToolIndex];
         if (existingTaskTool) {
           resolvedTools[waitForTaskToolIndex] = {
             ...existingTaskTool,
             execute: realWaitForTaskTool.execute,
+          };
+        }
+      }
+      const respondTaskToolIndex = resolvedTools.findIndex(
+        (t) => t.name === "respond_task",
+      );
+      if (respondTaskToolIndex >= 0) {
+        const realRespondTool = createRespondTaskTool(
+          toolContext,
+          waitForState,
+        );
+        const existingRespondTool = resolvedTools[respondTaskToolIndex];
+        if (existingRespondTool) {
+          resolvedTools[respondTaskToolIndex] = {
+            ...existingRespondTool,
+            execute: realRespondTool.execute,
           };
         }
       }

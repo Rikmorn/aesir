@@ -27,7 +27,7 @@ describe("createWaitForTaskTool", () => {
     expect(state.triggered).toBe(true);
   });
 
-  it("sets waitTypes to all 3 task lifecycle types", async () => {
+  it("sets waitTypes to all 5 delegation-related signal types", async () => {
     const state = createDefaultWaitForState();
     const tool = createWaitForTaskTool(state);
 
@@ -37,6 +37,8 @@ describe("createWaitForTaskTool", () => {
       "task_completion",
       "task_failure",
       "task_timeout",
+      "task_clarification",
+      "task_counter_proposed",
     ]);
   });
 

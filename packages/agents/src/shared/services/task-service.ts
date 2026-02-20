@@ -28,6 +28,7 @@ const ActorTypeSchema = z.enum(["agent", "human"]);
 /** Task status enum */
 const TaskStatusSchema = z.enum([
   "created",
+  "counter_proposed",
   "active",
   "paused",
   "completed",
