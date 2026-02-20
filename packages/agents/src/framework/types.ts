@@ -26,6 +26,7 @@ import type {
 } from "../shared/db/schema.js";
 import type { CorrelationService } from "../shared/services/correlation-service.js";
 import type { DirectoryService } from "../shared/services/directory-service.js";
+import type { GroupService } from "../shared/services/group-service.js";
 import type { TaskService } from "../shared/services/task-service.js";
 import type { TimeoutScheduler } from "./timeout-scheduler.js";
 import type { WorkerLoopStatus } from "./worker-loop.js";
@@ -400,6 +401,10 @@ export interface DelegationDeps {
   taskService: TaskService;
   /** Database client for direct conversation row access (active_delegations) */
   db: NodePgDatabase<typeof agentsSchemaModule>;
+  /** GroupService for parallel delegation (Phase 81) */
+  groupService?: GroupService | undefined;
+  /** TimeoutScheduler for group-level timeouts (Phase 81) */
+  timeoutScheduler?: TimeoutScheduler | undefined;
 }
 
 /**
