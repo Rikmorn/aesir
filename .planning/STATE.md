@@ -41,6 +41,7 @@ Progress: [#######   ] 75%
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 80 | 01 | 6min | 2 | 8 |
+| 80 | 02 | 4min | 2 | 6 |
 | 80 | 03 | 2min | 2 | 6 |
 
 ## Accumulated Context
@@ -54,6 +55,8 @@ See PROJECT.md Key Decisions table for full history.
 - **80-01**: Auto-acceptance: wait_for_task on counter_proposed task sends acceptance implicitly
 - **80-03**: Same negotiation text for all three agents -- generic principles, no role-specific calibration
 - **80-03**: No MUST/ALWAYS/NEVER directives in negotiation guidance -- judgment-oriented per PROMPT_GUIDE.md
+- **80-02**: Clarify auto-pauses with null timeout (task timeout is the universal bound)
+- **80-02**: Answer auto-re-enters wait_for_task with all 5 signal types to prevent CRITICAL-1 deadlock
 
 ### Pending Todos
 
