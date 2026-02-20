@@ -100,6 +100,10 @@ See PROJECT.md Key Decisions table for full history.
 - **82-03**: agent-work label resolved lazily on first create() and cached for adapter lifetime
 - **82-03**: handleWebhook is synchronous per interface; caller resolves materialization record context
 - **82-03**: parentIssueId type changed to string | undefined for exactOptionalPropertyTypes compatibility
+- **82-04**: Conditional spread for parentIssueId to satisfy exactOptionalPropertyTypes (avoid string|undefined)
+- **82-04**: Parent Linear issue resolved once per group (not per task) for efficiency
+- **82-04**: Group label uses last 8 chars of group UUID for readability (group-{shortId})
+- **82-04**: Materialization fires after task creation but before conversation start
 
 ### Pending Todos
 
@@ -121,9 +125,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 82-03-PLAN.md
-Resume file: .planning/phases/82-transparent-materialization/82-03-SUMMARY.md
-Next action: Execute 82-04-PLAN.md
+Stopped at: Completed 82-04-PLAN.md
+Resume file: .planning/phases/82-transparent-materialization/82-04-SUMMARY.md
+Next action: Execute 82-05-PLAN.md
 
 ---
-*Updated: 2026-02-20 -- Completed 82-03 (linear materialization adapter and forward sync).*
+*Updated: 2026-02-20 -- Completed 82-04 (delegation tool materialization integration).*
