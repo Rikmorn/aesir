@@ -78,6 +78,8 @@ export const CreateIssueInputSchema = z.object({
     .optional(),
   /** Array of label IDs to apply */
   labelIds: z.array(z.string()).optional(),
+  /** Parent issue ID for creating sub-issues */
+  parentId: z.string().optional(),
 });
 
 export type CreateIssueInput = z.infer<typeof CreateIssueInputSchema>;
@@ -100,13 +102,36 @@ export type CreateIssueOutput = z.infer<typeof CreateIssueOutputSchema>;
 
 /**
  * Input schema for update_issue_status tool
+ *
+ * Supports two resolution modes:
+ * - statusName: resolve by exact state name (e.g., "In Progress", "Done")
+ * - stateType: resolve by state type (e.g., "completed", "canceled") -- team-agnostic
+ *
+ * When stateType is provided, it takes precedence over statusName.
+ * At least one of statusName or stateType must be provided.
  */
-export const UpdateIssueStatusInputSchema = z.object({
-  /** Issue ID (UUID) or identifier (e.g., "ABC-123") */
-  issueId: z.string().min(1, "Issue ID is required"),
-  /** Target status name (e.g., "In Progress", "Done") */
-  statusName: z.string().min(1, "Status name is required"),
-});
+export const UpdateIssueStatusInputSchema = z
+  .object({
+    /** Issue ID (UUID) or identifier (e.g., "ABC-123") */
+    issueId: z.string().min(1, "Issue ID is required"),
+    /** Target status name (e.g., "In Progress", "Done") */
+    statusName: z.string().min(1, "Status name is required").optional(),
+    /** Target state type. When provided, resolves the first workflow state matching this type. Takes precedence over statusName. */
+    stateType: z
+      .enum([
+        "triage",
+        "backlog",
+        "unstarted",
+        "started",
+        "completed",
+        "canceled",
+      ])
+      .optional(),
+  })
+  .refine(
+    (data) => data.statusName !== undefined || data.stateType !== undefined,
+    { message: "Either statusName or stateType must be provided" },
+  );
 
 export type UpdateIssueStatusInput = z.infer<
   typeof UpdateIssueStatusInputSchema

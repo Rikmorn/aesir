@@ -9,7 +9,7 @@
 
 import type { MCPLogger, MCPToolContext, MCPToolResult } from "@aesir/types";
 import { createErrorResult, createToolResult } from "@aesir/types";
-import type { Issue, LinearClient } from "@linear/sdk";
+import type { Issue, LinearClient, WorkflowState } from "@linear/sdk";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { checkLinearToolPermission } from "../../db/permissions.js";
 import { createLinearClientFromDatabase } from "../../oauth/flow.js";
@@ -189,6 +189,7 @@ export async function handleCreateIssue(
       description?: string;
       priority?: 0 | 1 | 2 | 3 | 4;
       labelIds?: string[];
+      parentId?: string;
     } = {
       teamId: input.teamId,
       title: input.title,
@@ -202,6 +203,9 @@ export async function handleCreateIssue(
     }
     if (input.labelIds !== undefined) {
       createParams.labelIds = input.labelIds;
+    }
+    if (input.parentId !== undefined) {
+      createParams.parentId = input.parentId;
     }
 
     // Create issue
@@ -285,7 +289,7 @@ export async function handleUpdateIssueStatus(
     );
   }
 
-  const { issueId, statusName } = parseResult.data;
+  const { issueId, statusName, stateType } = parseResult.data;
 
   try {
     // Create Linear client
@@ -307,18 +311,36 @@ export async function handleUpdateIssueStatus(
     }
 
     const states = await team.states();
-    const targetState = states.nodes.find((state) => state.name === statusName);
 
-    if (!targetState) {
-      const availableStates = states.nodes.map((s) => s.name);
-      context.logger.warn(
-        { issueId, statusName, availableStates },
-        "State not found for team",
-      );
-      return createErrorResult(
-        context,
-        `State "${statusName}" not found for team. Available states: ${availableStates.join(", ")}`,
-      );
+    // Resolve target state: stateType takes precedence over statusName
+    let targetState: WorkflowState | undefined;
+    if (stateType !== undefined) {
+      targetState = states.nodes.find((state) => state.type === stateType);
+      if (!targetState) {
+        const availableTypes = [...new Set(states.nodes.map((s) => s.type))];
+        context.logger.warn(
+          { issueId, stateType, availableTypes },
+          "State type not found for team",
+        );
+        return createErrorResult(
+          context,
+          `State type "${stateType}" not found for team. Available state types: ${availableTypes.join(", ")}`,
+        );
+      }
+    } else {
+      // Resolve by name (original behavior)
+      targetState = states.nodes.find((state) => state.name === statusName);
+      if (!targetState) {
+        const availableStates = states.nodes.map((s) => s.name);
+        context.logger.warn(
+          { issueId, statusName, availableStates },
+          "State not found for team",
+        );
+        return createErrorResult(
+          context,
+          `State "${statusName}" not found for team. Available states: ${availableStates.join(", ")}`,
+        );
+      }
     }
 
     // Update the issue
@@ -344,7 +366,7 @@ export async function handleUpdateIssueStatus(
     );
   } catch (error) {
     context.logger.error(
-      { err: error, issueId, statusName },
+      { err: error, issueId, statusName: statusName ?? stateType },
       "Failed to update issue status",
     );
     return createErrorResult(
