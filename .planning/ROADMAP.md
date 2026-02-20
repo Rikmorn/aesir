@@ -231,7 +231,7 @@ Wave 1 (parallel): 80, 82, 84, 85 -> Wave 2: 81, 86 -> Wave 3: 83, 87
 | 67-73 | v2.7 Agent Collaboration | 26 | Complete | 2026-02-13 |
 | 74-79 | v2.8 Resilience and Observability | 22 | Complete | 2026-02-18 |
 | 80. Richer Negotiation | 5/5 | Complete    | 2026-02-20 | - |
-| 81. Parallel Delegation | 6/6 | Complete   | 2026-02-20 | - |
+| 81. Parallel Delegation | 6/6 | Complete    | 2026-02-20 | - |
 | 82. Transparent Materialization | v2.9 | 0/TBD | Not started | - |
 | 83. Tree-Level Token Budgets | v2.9 | 0/TBD | Not started | - |
 | 84. Scheduled Execution | v2.9 | 0/TBD | Not started | - |
