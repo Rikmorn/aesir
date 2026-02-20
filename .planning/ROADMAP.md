@@ -153,7 +153,13 @@ Plans:
   2. Task completion or failure updates the materialized Linear issue status, and Linear issue status changes sync back to the internal task
   3. Incoming webhooks from materialized Linear issues route correctly to the owning task via the correlation layer
   4. The materialization dispatch interface is extensible for future targets (GitHub issue, Slack thread) without changing the delegation tool
-**Plans**: TBD
+**Plans:** 5 plans
+Plans:
+- [ ] 82-01-PLAN.md -- Foundation: DB migration, types, MaterializationAdapter interface, Linear MCP extensions
+- [ ] 82-02-PLAN.md -- Prompt guidance for materialization decisions (dev-agent, product-agent)
+- [ ] 82-03-PLAN.md -- LinearMaterializationAdapter implementation + forward status sync
+- [ ] 82-04-PLAN.md -- delegate_task/delegate_group tool extensions with materialization parameter
+- [ ] 82-05-PLAN.md -- Reverse sync webhook pipeline, service wiring, label seed script
 
 ### Phase 83: Tree-Level Token Budgets
 **Goal**: Token spending across an entire delegation tree is tracked and enforced as a single budget, preventing runaway costs from parallel or deep delegation chains
