@@ -49,6 +49,7 @@ import { createEmbeddingService } from "../shared/embedding/index.js";
 import { config } from "../shared/env/config.js";
 import { createCorrelationService } from "../shared/services/correlation-service.js";
 import { createDirectoryService } from "../shared/services/directory-service.js";
+import { createGroupService } from "../shared/services/group-service.js";
 import { createKnowledgeService } from "../shared/services/knowledge-service.js";
 import { createTaskService } from "../shared/services/task-service.js";
 import { createTaskSignalDispatcher } from "../shared/services/task-signal-dispatcher.js";
@@ -190,19 +191,23 @@ async function bootstrap(): Promise<void> {
     correlationService,
   });
 
-  // 8b. TaskSignalDispatcher -- fires completion/failure signals to delegating agents
+  // 8b. GroupService -- parallel delegation group management (Phase 81)
+  const groupService = createGroupService({ db, logger });
+
+  // 8c. TaskSignalDispatcher -- fires completion/failure signals to delegating agents
   const taskSignalDispatcher = createTaskSignalDispatcher({
     executor,
     taskService,
     eventLog,
     db,
     logger,
+    groupService,
   });
   taskService.setDispatcher((taskId, oldStatus, newStatus, ctx) =>
     taskSignalDispatcher.onTaskUpdate(taskId, oldStatus, newStatus, ctx),
   );
 
-  // 8c. Knowledge cleanup -- hourly hard-delete of entries expired 24h+ ago
+  // 8d. Knowledge cleanup -- hourly hard-delete of entries expired 24h+ ago
   // Uses setInterval (single-process deployment). The 24h grace period after expiry
   // allows debugging before permanent deletion. cleanupExpired() is idempotent.
   const KNOWLEDGE_CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour

@@ -33,6 +33,7 @@ import type { Conversation, TaskHandoff } from "../shared/db/schema.js";
 import { conversations } from "../shared/db/schema.js";
 import type { CorrelationService } from "../shared/services/correlation-service.js";
 import type { DirectoryService } from "../shared/services/directory-service.js";
+import { createGroupService } from "../shared/services/group-service.js";
 import type { TaskService } from "../shared/services/task-service.js";
 import { createAnswerTaskTool } from "../shared/tools/task/answer-task.js";
 import { createClarifyTaskTool } from "../shared/tools/task/clarify-task.js";
@@ -51,6 +52,7 @@ import type {
   ToolContext,
   ToolRegistry,
 } from "./types.js";
+import { createWaitForGroupTool } from "./wait-for-group-tool.js";
 import { createWaitForTaskTool } from "./wait-for-task-tool.js";
 import {
   createDefaultWaitForState,
@@ -182,6 +184,11 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
   // executor is accessed via options.executor (late-bound reference)
   // because the executor and worker loop are created in sequence and
   // the executor passes itself after both are constructed.
+
+  // GroupService for parallel delegation (Phase 81)
+  const groupService = taskService
+    ? createGroupService({ db, logger: parentLogger })
+    : undefined;
 
   const logger = parentLogger.child({ component: "worker-loop", workerId });
 
@@ -1249,11 +1256,14 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
               maxSpawnDepth: 3,
             },
           }),
-        // Delegation deps: populated when agent has task:delegate, task:respond, task:clarify, or task:answer in its tools
+        // Delegation deps: populated when agent has task:delegate, task:respond, task:clarify, task:answer, or group tools in its tools
         ...((definition.tools.includes("task:delegate") ||
           definition.tools.includes("task:respond") ||
           definition.tools.includes("task:clarify") ||
-          definition.tools.includes("task:answer")) &&
+          definition.tools.includes("task:answer") ||
+          definition.tools.includes("task:delegate_group") ||
+          definition.tools.includes("task:group_status") ||
+          definition.tools.includes("task:cancel_group")) &&
           taskService &&
           directoryService &&
           options.executor && {
@@ -1262,6 +1272,8 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
               directoryService,
               taskService,
               db,
+              groupService,
+              timeoutScheduler,
             },
           }),
       };
@@ -1342,6 +1354,23 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
           resolvedTools[answerTaskToolIndex] = {
             ...existingAnswerTool,
             execute: realAnswerTool.execute,
+          };
+        }
+      }
+      // Wire coordination:wait_for_group to shared WaitForState (Phase 81)
+      const waitForGroupToolIndex = resolvedTools.findIndex(
+        (t) => t.name === "wait_for_group",
+      );
+      if (waitForGroupToolIndex >= 0) {
+        const realWaitForGroupTool = createWaitForGroupTool(
+          waitForState,
+          toolContext,
+        );
+        const existingGroupTool = resolvedTools[waitForGroupToolIndex];
+        if (existingGroupTool) {
+          resolvedTools[waitForGroupToolIndex] = {
+            ...existingGroupTool,
+            execute: realWaitForGroupTool.execute,
           };
         }
       }

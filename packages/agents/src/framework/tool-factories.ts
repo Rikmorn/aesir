@@ -1,7 +1,7 @@
 /**
  * Tool Factory Registration
  *
- * Registers all 51 tool factories in the ToolRegistry, bridging the v2.3
+ * Registers all 55 tool factories in the ToolRegistry, bridging the v2.3
  * ToolContext interface to the existing v2.2 tool factory signatures.
  *
  * Tool categories:
@@ -10,8 +10,9 @@
  * - GitHub (10): get_repository, create_branch, create_commit, create_pull_request,
  *                get_pull_request, list_pull_requests, merge_pull_request, get_file_contents, list_files, create_pr_comment
  * - Slack (5): send_message, send_approval_request, get_message, reply_to_thread, list_channels
- * - Coordination (4): spawn_agent, request_human_input, wait_for, wait_for_task
- * - Task (10): create_task, complete_task, pause_task, handoff_task, list_tasks, get_task_context, delegate_task, respond_task, clarify_task, answer_task
+ * - Coordination (5): spawn_agent, request_human_input, wait_for, wait_for_task, wait_for_group
+ * - Task (13): create_task, complete_task, pause_task, handoff_task, list_tasks, get_task_context,
+ *              delegate_task, respond_task, clarify_task, answer_task, delegate_group, group_status, cancel_group
  * - Knowledge (3): knowledge_store, knowledge_query, knowledge_update
  * - Work (2): work_register, work_query
  * - Directory (2): directory_find, directory_get
@@ -60,11 +61,14 @@ import {
 } from "../shared/tools/knowledge/index.js";
 import {
   createAnswerTaskTool,
+  createCancelGroupTool,
   createClarifyTaskTool,
   createCompleteTaskTool,
   createCreateTaskTool,
+  createDelegateGroupTool,
   createDelegateTaskTool,
   createGetTaskContextTool,
+  createGroupStatusTool,
   createHandoffTaskTool,
   createListTasksTool,
   createPauseTaskTool,
@@ -76,6 +80,7 @@ import {
   createWorkRegisterTool,
 } from "../shared/tools/work/index.js";
 import type { AgentRegistry, ToolContext, ToolRegistry } from "./types.js";
+import { createWaitForGroupTool } from "./wait-for-group-tool.js";
 import { createWaitForTaskTool } from "./wait-for-task-tool.js";
 import {
   createDefaultWaitForState,
@@ -180,7 +185,7 @@ function communicationAdapter(
 // ─── Registration ────────────────────────────────────────────────────────────
 
 /**
- * Register all 51 tool factories in the ToolRegistry.
+ * Register all 55 tool factories in the ToolRegistry.
  *
  * This bridges the v2.3 registry-based tool resolution to the existing v2.2
  * tool factory functions. After calling this, `registry.resolve(refs, context)`
@@ -341,7 +346,15 @@ export function registerAllTools(options: RegisterAllToolsOptions): void {
     return createWaitForTaskTool(defaultState);
   });
 
-  // ── Task tools (10) ─────────────────────────────────────────────────
+  // wait_for_group -- delegates to group lifecycle signals (Phase 81)
+  // Same pattern as wait_for / wait_for_task: creates a default WaitForState;
+  // the worker loop replaces execute at runtime with per-conversation state.
+  registry.register("coordination:wait_for_group", (_ctx: ToolContext) => {
+    const defaultState = createDefaultWaitForState();
+    return createWaitForGroupTool(defaultState);
+  });
+
+  // ── Task tools (13) ─────────────────────────────────────────────────
 
   const ts = options.taskService;
   registry.register("task:create_task", (ctx) => createCreateTaskTool(ts, ctx));
@@ -362,6 +375,13 @@ export function registerAllTools(options: RegisterAllToolsOptions): void {
   // WaitForState wired at runtime by worker loop (same pattern as wait_for)
   registry.register("task:clarify", (ctx) => createClarifyTaskTool(ctx));
   registry.register("task:answer", (ctx) => createAnswerTaskTool(ctx));
+
+  // ── Group delegation tools (3) ── Phase 81
+  registry.register("task:delegate_group", (ctx) =>
+    createDelegateGroupTool(ctx),
+  );
+  registry.register("task:group_status", (ctx) => createGroupStatusTool(ctx));
+  registry.register("task:cancel_group", (ctx) => createCancelGroupTool(ctx));
 
   // ── Knowledge tools (3) ─────────────────────────────────────────────
 
