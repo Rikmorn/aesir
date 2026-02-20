@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 80 of 87 (Richer Negotiation)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-02-20 -- Roadmap created for v2.9 (8 phases, 58 requirements)
+Plan: 1 of 4 in current phase
+Status: Executing
+Last activity: 2026-02-20 -- Completed 80-01 (counter-propose foundation)
 
-Progress: [          ] 0%
+Progress: [##        ] 25%
 
 ## Milestone History
 
@@ -36,13 +36,21 @@ Progress: [          ] 0%
 **Cumulative:**
 - Total milestones shipped: 10
 - Total phases completed: 79
-- Total plans completed: 349
+- Total plans completed: 350
+
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 80 | 01 | 6min | 2 | 8 |
 
 ## Accumulated Context
 
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
+
+- **80-01**: Discriminated union on 'type' field for task:respond (accept/reject/counter_propose)
+- **80-01**: Counter-propose auto-enters wait_for on target side (30s timeout)
+- **80-01**: Auto-acceptance: wait_for_task on counter_proposed task sends acceptance implicitly
 
 ### Pending Todos
 
@@ -63,9 +71,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Phase 80 context gathered
-Resume file: .planning/phases/80-richer-negotiation/80-CONTEXT.md
-Next action: Plan Phase 80 (Richer Negotiation)
+Stopped at: Completed 80-01-PLAN.md
+Resume file: .planning/phases/80-richer-negotiation/80-01-SUMMARY.md
+Next action: Execute 80-02-PLAN.md
 
 ---
-*Updated: 2026-02-20 -- Phase 80 context gathered.*
+*Updated: 2026-02-20 -- Completed 80-01 (counter-propose foundation).*

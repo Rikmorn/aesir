@@ -9,12 +9,12 @@ Requirements for v2.9 Platform Completion. Each maps to roadmap phases.
 
 ### Negotiation
 
-- [ ] **NEG-01**: Counter-propose response type -- target responds with modified scope, timeline, or approach. Delegator sees the modification and decides: accept modified version, reject and cancel, or try someone else
-- [ ] **NEG-02**: Counter-propose as handshake strategy -- new strategy implementation alongside existing accept/reject. Same `task:respond` tool with additional response type
+- [x] **NEG-01**: Counter-propose response type -- target responds with modified scope, timeline, or approach. Delegator sees the modification and decides: accept modified version, reject and cancel, or try someone else
+- [x] **NEG-02**: Counter-propose as handshake strategy -- new strategy implementation alongside existing accept/reject. Same `task:respond` tool with additional response type
 - [ ] **NEG-03**: Clarification signal type -- `task_clarification` signal from target to delegator with question and optional structured options
 - [ ] **NEG-04**: `task:clarify` tool -- target agent sends a clarification request back to the delegating conversation
 - [ ] **NEG-05**: Clarification response -- delegator answers via signal back to target. Target's `wait_for` resumes with the answer
-- [ ] **NEG-06**: Multi-round support -- clarification can go back and forth within a single delegation, bounded by the task timeout
+- [x] **NEG-06**: Multi-round support -- clarification can go back and forth within a single delegation, bounded by the task timeout
 - [ ] **NEG-07**: Prompt guidance -- agents understand when to counter-propose vs reject, when to ask for clarification vs proceed with assumptions
 
 ### Parallel Delegation
@@ -136,12 +136,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NEG-01 | Phase 80 | Pending |
-| NEG-02 | Phase 80 | Pending |
+| NEG-01 | Phase 80 | Complete |
+| NEG-02 | Phase 80 | Complete |
 | NEG-03 | Phase 80 | Pending |
 | NEG-04 | Phase 80 | Pending |
 | NEG-05 | Phase 80 | Pending |
-| NEG-06 | Phase 80 | Pending |
+| NEG-06 | Phase 80 | Complete |
 | NEG-07 | Phase 80 | Pending |
 | PAR-01 | Phase 81 | Pending |
 | PAR-02 | Phase 81 | Pending |
