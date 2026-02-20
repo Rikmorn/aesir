@@ -64,6 +64,9 @@ export const createId = {
   /** Task ID (agents.tasks) */
   task: () => `task_${nanoid()}`,
 
+  /** Task Group ID (agents.task_groups) */
+  taskGroup: () => `grp_${nanoid()}`,
+
   /** Webhook delivery ID (integrations.webhook_deliveries) */
   webhookDelivery: () => `whd_${nanoid()}`,
 

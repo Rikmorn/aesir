@@ -81,6 +81,41 @@ const handoffTypeValues = [
   "escalation",
 ] as const;
 
+// ─── Task Groups ────────────────────────────────────────────────────────────
+
+const groupStatusValues = [
+  "active",
+  "satisfied",
+  "unsatisfiable",
+  "cancelled",
+  "settled",
+] as const;
+
+export const taskGroups = agentsSchema.table(
+  "task_groups",
+  {
+    id: text("id").primaryKey(),
+    delegator_conversation_id: text("delegator_conversation_id").notNull(),
+    policy: jsonb("policy").notNull(),
+    status: text("status", { enum: groupStatusValues })
+      .notNull()
+      .default("active"),
+    timeout_duration: text("timeout_duration"),
+    timeout_job_id: text("timeout_job_id"),
+    token_budget: integer("token_budget"),
+    created_at: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updated_at: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("idx_task_groups_delegator").on(table.delegator_conversation_id),
+    index("idx_task_groups_status").on(table.status),
+  ],
+);
+
 // ─── Tasks ──────────────────────────────────────────────────────────────────
 
 export const tasks = agentsSchema.table(
@@ -88,6 +123,7 @@ export const tasks = agentsSchema.table(
   {
     id: text("id").primaryKey(),
     parent_id: text("parent_id"),
+    group_id: text("group_id"),
 
     creator_type: text("creator_type", {
       enum: ["agent", "human"] as const,
@@ -123,6 +159,7 @@ export const tasks = agentsSchema.table(
       table.status,
     ),
     index("idx_tasks_parent").on(table.parent_id),
+    index("idx_tasks_group").on(table.group_id),
     index("idx_tasks_status").on(table.status),
     index("idx_tasks_depth").on(table.depth),
   ],

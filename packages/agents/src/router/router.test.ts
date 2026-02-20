@@ -105,6 +105,7 @@ function createMockTask(overrides?: Partial<Task>): Task {
   return {
     id: "task_abc123",
     parent_id: null,
+    group_id: null,
     creator_type: "human",
     creator_id: "user-1",
     assignee_type: "agent",
