@@ -48,8 +48,7 @@ export function createForwardSyncListener(
 ): ForwardSyncListener {
   const { adapter, db, logger: parentLogger } = options;
 
-  if (!adapter)
-    throw new Error("adapter is required for ForwardSyncListener");
+  if (!adapter) throw new Error("adapter is required for ForwardSyncListener");
   if (!db) throw new Error("db is required for ForwardSyncListener");
   if (!parentLogger)
     throw new Error("logger is required for ForwardSyncListener");

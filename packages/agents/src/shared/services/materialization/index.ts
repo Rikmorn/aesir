@@ -6,13 +6,13 @@
  */
 
 export {
+  createForwardSyncListener,
   type ForwardSyncListener,
   type ForwardSyncListenerOptions,
-  createForwardSyncListener,
 } from "./forward-sync.js";
 export {
-  type LinearMaterializationAdapterOptions,
   createLinearMaterializationAdapter,
+  type LinearMaterializationAdapterOptions,
 } from "./linear-adapter.js";
 export {
   type MaterializationAdapter,
