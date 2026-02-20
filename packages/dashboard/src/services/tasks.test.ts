@@ -39,6 +39,9 @@ function makeNode(overrides: Partial<TaskTreeNode> = {}): TaskTreeNode {
     createdAt: "2026-02-11T00:00:00Z",
     updatedAt: "2026-02-11T00:00:00Z",
     completedAt: null,
+    groupId: null,
+    groupPolicy: null,
+    groupStatus: null,
     ...overrides,
   };
 }

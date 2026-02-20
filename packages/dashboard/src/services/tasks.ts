@@ -31,6 +31,9 @@ export interface TaskTreeNode {
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
+  groupId: string | null;
+  groupPolicy: { type: string; threshold?: number } | null;
+  groupStatus: string | null;
 }
 
 export interface TimelineEvent {
@@ -107,10 +110,14 @@ export async function getTaskTree(rootTaskId: string): Promise<TaskTreeNode[]> {
       c.status AS conversation_status,
       tt.created_at,
       tt.updated_at,
-      tt.completed_at
+      tt.completed_at,
+      tt.group_id,
+      tg.policy AS group_policy,
+      tg.status AS group_status
     FROM task_tree tt
     LEFT JOIN agents.conversations c ON c.task_id = tt.id
     LEFT JOIN agents.entity_directory ed ON ed.id = tt.assignee_id
+    LEFT JOIN agents.task_groups tg ON tg.id = tt.group_id
     ORDER BY tt.depth, tt.created_at
   `);
 
@@ -132,6 +139,10 @@ export async function getTaskTree(rootTaskId: string): Promise<TaskTreeNode[]> {
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
     completedAt: row.completed_at ? String(row.completed_at) : null,
+    groupId: (row.group_id as string) ?? null,
+    groupPolicy:
+      (row.group_policy as { type: string; threshold?: number }) ?? null,
+    groupStatus: (row.group_status as string) ?? null,
   }));
 }
 
@@ -161,6 +172,9 @@ const DELEGATION_TOOL_NAMES = new Set([
   "task:clarify",
   "task:answer",
   "wait_for_task",
+  "task:delegate_group",
+  "task:group_status",
+  "task:cancel_group",
   // Internal tool names (stored in event payload as tool_name)
   "delegate_task",
   "respond_task",
@@ -168,6 +182,10 @@ const DELEGATION_TOOL_NAMES = new Set([
   "clarify_task",
   "answer_task",
   "wait_for_task",
+  "delegate_group",
+  "group_status",
+  "cancel_group",
+  "wait_for_group",
 ]);
 
 /**
