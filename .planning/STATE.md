@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 80 of 87 (Richer Negotiation) -- COMPLETE
-Plan: 4 of 4 in current phase
+Plan: 5 of 5 in current phase
 Status: Phase Complete
-Last activity: 2026-02-20 -- Completed 80-04 (dashboard negotiation timeline)
+Last activity: 2026-02-20 -- Completed 80-05 (gap closure: rejection signal + counter-proposal rejection)
 
 Progress: [##########] 100%
 
@@ -36,7 +36,7 @@ Progress: [##########] 100%
 **Cumulative:**
 - Total milestones shipped: 10
 - Total phases completed: 79
-- Total plans completed: 354
+- Total plans completed: 355
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -44,6 +44,7 @@ Progress: [##########] 100%
 | 80 | 02 | 4min | 2 | 6 |
 | 80 | 03 | 2min | 2 | 6 |
 | 80 | 04 | 6min | 2 | 6 |
+| 80 | 05 | 2min | 2 | 2 |
 
 ## Accumulated Context
 
@@ -61,6 +62,8 @@ See PROJECT.md Key Decisions table for full history.
 - **80-04**: Both namespace and internal tool name formats in DELEGATION_TOOL_NAMES for robustness
 - **80-04**: Fixed pre-existing tool_name property access bug (JSONB stores snake_case, dashboard read camelCase)
 - **80-04**: Counter-proposed uses amber accent (matches waiting/paused) per design system status colors
+- **80-05**: Reject signal payload includes originalDescription only for reject type (not accept)
+- **80-05**: Counter-proposal rejection returns immediately without pausing -- delegator continues to re-delegate
 
 ### Pending Todos
 
@@ -81,9 +84,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 80-04-PLAN.md (Phase 80 complete)
-Resume file: .planning/phases/80-richer-negotiation/80-04-SUMMARY.md
+Stopped at: Completed 80-05-PLAN.md (Phase 80 gap closure complete)
+Resume file: .planning/phases/80-richer-negotiation/80-05-SUMMARY.md
 Next action: Transition to Phase 81
 
 ---
-*Updated: 2026-02-20 -- Completed 80-04 (dashboard negotiation timeline). Phase 80 complete.*
+*Updated: 2026-02-20 -- Completed 80-05 (gap closure: rejection signal + counter-proposal rejection). Phase 80 complete.*

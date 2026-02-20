@@ -97,7 +97,7 @@ See `.planning/milestones/v2.8-ROADMAP.md` for full details.
 
 ### Phases
 
-- [ ] **Phase 80: Richer Negotiation** - Counter-proposals and mid-task clarification in the delegation handshake (gaps found)
+- [x] **Phase 80: Richer Negotiation** - Counter-proposals and mid-task clarification in the delegation handshake (gaps found) (completed 2026-02-20)
 - [ ] **Phase 81: Parallel Delegation** - Fan-out delegation with configurable completion policies
 - [ ] **Phase 82: Transparent Materialization** - Optional Linear ticket creation for delegated tasks
 - [ ] **Phase 83: Tree-Level Token Budgets** - Budget enforcement across entire delegation trees
@@ -117,7 +117,7 @@ See `.planning/milestones/v2.8-ROADMAP.md` for full details.
   2. Target agent can send a clarification question back to the delegator mid-task, and the delegator's answer resumes the target's paused conversation
   3. Clarification can go back and forth multiple rounds within a single delegation, bounded by the task timeout
   4. Agents demonstrate judgment about when to counter-propose vs reject and when to clarify vs proceed with assumptions, guided by prompt updates
-**Plans:** 5 plans (4 complete, 1 gap closure)
+**Plans:** 5/5 plans complete
 Plans:
 - [x] 80-01-PLAN.md -- Counter-propose response type + foundation types + wait_for_task extension
 - [x] 80-02-PLAN.md -- task:clarify and task:answer tool factories + wiring
@@ -223,7 +223,7 @@ Wave 1 (parallel): 80, 82, 84, 85 -> Wave 2: 81, 86 -> Wave 3: 83, 87
 | 60-66 | v2.6 Unified Agent Communication | 16 | Complete | 2026-02-09 |
 | 67-73 | v2.7 Agent Collaboration | 26 | Complete | 2026-02-13 |
 | 74-79 | v2.8 Resilience and Observability | 22 | Complete | 2026-02-18 |
-| 80. Richer Negotiation | 4/4 | Complete    | 2026-02-20 | - |
+| 80. Richer Negotiation | 5/5 | Complete   | 2026-02-20 | - |
 | 81. Parallel Delegation | v2.9 | 0/TBD | Not started | - |
 | 82. Transparent Materialization | v2.9 | 0/TBD | Not started | - |
 | 83. Tree-Level Token Budgets | v2.9 | 0/TBD | Not started | - |
