@@ -14,11 +14,12 @@
  * 6. Return task ID and suggest wait_for with task_handshake type
  */
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import type { ToolContext } from "../../../framework/types.js";
 import type { ToolDefinition, ToolResult } from "../../agent-loop/types.js";
-import { conversations } from "../../db/schema.js";
+import { conversations, workCorrelations } from "../../db/schema.js";
+import { MaterializationConfigSchema } from "../../services/materialization/types.js";
 import { MAX_DELEGATION_DEPTH } from "./types.js";
 
 const DelegateTaskInputSchema = z.object({
@@ -38,6 +39,9 @@ const DelegateTaskInputSchema = z.object({
     .describe(
       "Parent task ID override. Defaults to the current conversation's task.",
     ),
+  materialization: MaterializationConfigSchema.optional().describe(
+    'Optional materialization config. Use { type: "transparent", target: "linear" } to create a corresponding Linear issue for human visibility.',
+  ),
 });
 
 /**
@@ -54,6 +58,33 @@ export function buildDelegationBlock(params: {
   return `<delegation task_id="${params.taskId}" from="${params.from}" depth="${params.depth}" max_depth="${params.maxDepth}">
 ${params.description}
 </delegation>`;
+}
+
+/**
+ * Resolve the Linear issue ID correlated with the current conversation.
+ * Used to create sub-issues under the parent when materializing.
+ * Returns null on any error (non-fatal).
+ */
+export async function resolveParentLinearIssueId(
+  deps: NonNullable<ToolContext["delegationDeps"]>,
+  ctx: ToolContext,
+): Promise<string | null> {
+  try {
+    const [corr] = await deps.db
+      .select({ entity_id: workCorrelations.entity_id })
+      .from(workCorrelations)
+      .where(
+        and(
+          eq(workCorrelations.conversation_id, ctx.correlationId),
+          eq(workCorrelations.entity_type, "linear_issue"),
+        ),
+      )
+      .limit(1);
+
+    return corr?.entity_id ?? null;
+  } catch {
+    return null; // Non-fatal
+  }
 }
 
 /**
@@ -140,6 +171,47 @@ export function createDelegateTaskTool(ctx: ToolContext): ToolDefinition {
           metadata: { delegatedBy: ctx.agentId },
         });
 
+        // 4b. Attempt materialization if requested
+        let materializationWarning: string | undefined;
+        let materializationUrl: string | undefined;
+        if (
+          parsed.data.materialization?.type === "transparent" &&
+          deps.materializationAdapter
+        ) {
+          const parentIssueId = await resolveParentLinearIssueId(deps, ctx);
+
+          const matResult = await deps.materializationAdapter.create({
+            taskId: task.id,
+            conversationId: ctx.correlationId,
+            agentId: ctx.agentId,
+            description,
+            properties: parsed.data.materialization.properties ?? {},
+            ...(parentIssueId ? { parentIssueId } : {}),
+            correlationId: ctx.correlationId,
+          });
+
+          if (matResult) {
+            materializationUrl = matResult.externalUrl;
+            ctx.logger.info(
+              {
+                taskId: task.id,
+                externalId: matResult.externalId,
+                externalUrl: matResult.externalUrl,
+              },
+              "Task materialized as Linear issue",
+            );
+          } else {
+            materializationWarning =
+              "Warning: materialization failed. Task is running as internal.";
+          }
+        } else if (
+          parsed.data.materialization?.type === "transparent" &&
+          !deps.materializationAdapter
+        ) {
+          materializationWarning =
+            "Warning: materialization requested but adapter not configured. Task is running as internal.";
+        }
+
         // 5. Build delegation XML block
         const delegationBlock = buildDelegationBlock({
           taskId: task.id,
@@ -195,16 +267,30 @@ export function createDelegateTaskTool(ctx: ToolContext): ToolDefinition {
         }
 
         // 8. Return success with guidance
+        const responseLines = [
+          `Delegation created successfully.`,
+          `Task ID: ${task.id}`,
+          `Target: ${entity.name} (${entity.id})`,
+          `Conversation: ${conversationId}`,
+          `Depth: ${newDepth}/${MAX_DELEGATION_DEPTH}`,
+        ];
+
+        if (materializationUrl) {
+          responseLines.push(
+            `Materialized: Linear issue ${materializationUrl}`,
+          );
+        }
+        if (materializationWarning) {
+          responseLines.push(materializationWarning);
+        }
+
+        responseLines.push(
+          ``,
+          `Next: call wait_for with type "task_handshake" and timeout "30s" to await the target agent's accept/reject response.`,
+        );
+
         return {
-          content: [
-            `Delegation created successfully.`,
-            `Task ID: ${task.id}`,
-            `Target: ${entity.name} (${entity.id})`,
-            `Conversation: ${conversationId}`,
-            `Depth: ${newDepth}/${MAX_DELEGATION_DEPTH}`,
-            ``,
-            `Next: call wait_for with type "task_handshake" and timeout "30s" to await the target agent's accept/reject response.`,
-          ].join("\n"),
+          content: responseLines.join("\n"),
         };
       } catch (error) {
         const message =

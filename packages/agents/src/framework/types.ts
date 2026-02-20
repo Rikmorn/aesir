@@ -27,6 +27,7 @@ import type {
 import type { CorrelationService } from "../shared/services/correlation-service.js";
 import type { DirectoryService } from "../shared/services/directory-service.js";
 import type { GroupService } from "../shared/services/group-service.js";
+import type { MaterializationAdapter } from "../shared/services/materialization/types.js";
 import type { TaskService } from "../shared/services/task-service.js";
 import type { TimeoutScheduler } from "./timeout-scheduler.js";
 import type { WorkerLoopStatus } from "./worker-loop.js";
@@ -405,6 +406,8 @@ export interface DelegationDeps {
   groupService?: GroupService | undefined;
   /** TimeoutScheduler for group-level timeouts (Phase 81) */
   timeoutScheduler?: TimeoutScheduler | undefined;
+  /** MaterializationAdapter for transparent materialization (Phase 82) */
+  materializationAdapter?: MaterializationAdapter | undefined;
 }
 
 /**
