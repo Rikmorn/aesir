@@ -47,6 +47,7 @@ Progress: [######----] 66%
 | 80 | 05 | 2min | 2 | 2 |
 | 81 | 01 | 7min | 2 | 7 |
 | 81 | 02 | 10min | 2 | 5 |
+| 81 | 03 | 6min | 2 | 4 |
 | 81 | 04 | 4min | 2 | 4 |
 
 ## Accumulated Context
@@ -72,6 +73,9 @@ See PROJECT.md Key Decisions table for full history.
 - **81-02**: Direct DB update for group_id on tasks (TaskService.create does not accept groupId)
 - **81-02**: Capability routing returns explicit error referencing Phase 85 (forward-compatible schema)
 - **81-02**: Group timeout scheduling is no-op when timeoutScheduler is undefined (Plan 04 wires it)
+- **81-03**: group_task_failed for all_required policy failures vs group_policy_unsatisfiable for other policies
+- **81-03**: SELECT FOR UPDATE on task_groups row prevents concurrent duplicate signal dispatch
+- **81-03**: Settled transition independent of policy evaluation (group can be satisfied but not yet settled)
 - **81-04**: GroupService conditional on taskService in worker loop, unconditional in main.ts for dispatcher
 - **81-04**: Group timeout null in WaitForState (pg-boss handles via delegate_group, prevents double-scheduling)
 - **81-04**: DelegationDeps condition extended to detect group tool refs (delegate_group, group_status, cancel_group)

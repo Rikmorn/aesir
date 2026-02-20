@@ -21,7 +21,7 @@ Requirements for v2.9 Platform Completion. Each maps to roadmap phases.
 
 - [x] **PAR-01**: Task groups -- `task:delegate_group` creates multiple delegations as a named group with a shared completion policy
 - [x] **PAR-02**: Completion policies -- `all_required` (wait for all), `any_sufficient` (first success unblocks delegator), `majority` (N of M). Defined at group creation
-- [ ] **PAR-03**: Partial completion handling -- when policy is `all_required` and one task fails, delegator receives immediate notification and decides: wait for others, cancel remaining, or accept partial results
+- [x] **PAR-03**: Partial completion handling -- when policy is `all_required` and one task fails, delegator receives immediate notification and decides: wait for others, cancel remaining, or accept partial results
 - [x] **PAR-04**: Group status tool -- `task:group_status` returns aggregated group state (how many complete, pending, failed)
 - [x] **PAR-05**: Signal aggregation -- completion signals from group members are collected. Delegator is signaled when the group's completion policy is satisfied
 - [x] **PAR-06**: Group cancellation -- delegator can cancel all remaining tasks in a group (e.g., after `any_sufficient` is met, cancel the rest)
@@ -145,7 +145,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NEG-07 | Phase 80 | Complete |
 | PAR-01 | Phase 81 | Complete |
 | PAR-02 | Phase 81 | Complete |
-| PAR-03 | Phase 81 | Pending |
+| PAR-03 | Phase 81 | Complete |
 | PAR-04 | Phase 81 | Complete |
 | PAR-05 | Phase 81 | Complete |
 | PAR-06 | Phase 81 | Complete |
