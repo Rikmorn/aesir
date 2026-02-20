@@ -30,7 +30,7 @@ Requirements for v2.9 Platform Completion. Each maps to roadmap phases.
 ### Transparent Materialization
 
 - [ ] **MAT-01**: Materialization policy parameter -- `task:delegate` accepts an optional `materialization` parameter: `internal` (default, current behavior) or `transparent`
-- [ ] **MAT-02**: Linear materialization -- transparent mode creates a Linear issue with task description, priority, assignee (agent), and a link/reference back to the internal task
+- [x] **MAT-02**: Linear materialization -- transparent mode creates a Linear issue with task description, priority, assignee (agent), and a link/reference back to the internal task
 - [ ] **MAT-03**: Bidirectional sync -- status changes on the materialized artifact (Linear issue updated) sync to task status. Task completion updates the Linear issue
 - [x] **MAT-04**: Materialization as prompt guidance -- the decision to use internal vs transparent is agent judgment. Prompt guidance describes when transparency is valuable
 - [x] **MAT-05**: Materialization interface -- extensible dispatch for future targets (Slack thread, GitHub issue) without changing the delegation tool
@@ -151,7 +151,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PAR-06 | Phase 81 | Complete |
 | PAR-07 | Phase 81 | Complete |
 | MAT-01 | Phase 82 | Pending |
-| MAT-02 | Phase 82 | Pending |
+| MAT-02 | Phase 82 | Complete |
 | MAT-03 | Phase 82 | Pending |
 | MAT-04 | Phase 82 | Complete |
 | MAT-05 | Phase 82 | Complete |

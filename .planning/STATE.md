@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 82 of 87 (Transparent Materialization)
-Plan: 2 of 5 in current phase
+Plan: 4 of 5 in current phase
 Status: Executing Phase 82 plans
-Last activity: 2026-02-20 -- Completed 82-02 (agent prompt materialization guidance)
+Last activity: 2026-02-20 -- Completed 82-04 (delegation tool materialization integration)
 
-Progress: [####------] 40%
+Progress: [########--] 80%
 
 ## Milestone History
 
@@ -53,6 +53,8 @@ Progress: [####------] 40%
 | 81 | 06 | 4min | 2 | 8 |
 | 82 | 01 | 4min | 2 | 7 |
 | 82 | 02 | 1min | 1 | 2 |
+| 82 | 03 | 4min | 2 | 4 |
+| 82 | 04 | 5min | 2 | 3 |
 
 ## Accumulated Context
 
@@ -95,6 +97,9 @@ See PROJECT.md Key Decisions table for full history.
 - **82-02**: Materialization sections placed in domain_knowledge after delegation sections for natural reading flow
 - **82-02**: Dev-agent emphasizes internal for sub-agents; product-agent emphasizes transparent for dev/qa delegations
 - **82-02**: Zero strong directives in materialization sections -- judgment-oriented per PROMPT_GUIDE.md
+- **82-03**: agent-work label resolved lazily on first create() and cached for adapter lifetime
+- **82-03**: handleWebhook is synchronous per interface; caller resolves materialization record context
+- **82-03**: parentIssueId type changed to string | undefined for exactOptionalPropertyTypes compatibility
 
 ### Pending Todos
 
@@ -116,9 +121,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 82-02-PLAN.md
-Resume file: .planning/phases/82-transparent-materialization/82-02-SUMMARY.md
-Next action: Execute 82-03-PLAN.md
+Stopped at: Completed 82-03-PLAN.md
+Resume file: .planning/phases/82-transparent-materialization/82-03-SUMMARY.md
+Next action: Execute 82-04-PLAN.md
 
 ---
-*Updated: 2026-02-20 -- Completed 82-02 (agent prompt materialization guidance).*
+*Updated: 2026-02-20 -- Completed 82-03 (linear materialization adapter and forward sync).*
