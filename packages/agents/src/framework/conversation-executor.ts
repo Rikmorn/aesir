@@ -503,6 +503,10 @@ export function createConversationExecutor(
               messages: updatedMessages,
               pending_wait: null,
               delivered_signal_ids: deliveredIds,
+              // Set pending_cancellation so worker loop enforces one-turn limit (Phase 81)
+              ...(signal.type === "task_cancelled" && {
+                pending_cancellation: true,
+              }),
               ...(signal.replyContext && {
                 reply_context: signal.replyContext,
               }),
@@ -546,6 +550,10 @@ export function createConversationExecutor(
             .set({
               queued_signals: queuedSignals,
               delivered_signal_ids: deliveredIds,
+              // Set pending_cancellation immediately so worker loop can check after current agent loop (Phase 81)
+              ...(signal.type === "task_cancelled" && {
+                pending_cancellation: true,
+              }),
               updated_at: new Date(),
             })
             .where(eq(conversations.id, conversationId));

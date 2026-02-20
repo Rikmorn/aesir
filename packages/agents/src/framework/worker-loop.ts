@@ -1679,6 +1679,96 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         }
       }
 
+      // 13c. Check for pending cancellation (one-cleanup-turn pattern, Phase 81)
+      // Re-read the conversation to get the latest pending_cancellation flag
+      // (may have been set by a signal delivered during the agent loop)
+      const cancellationCheck = await db
+        .select({
+          pending_cancellation: conversations.pending_cancellation,
+        })
+        .from(conversations)
+        .where(eq(conversations.id, conv.id))
+        .limit(1);
+
+      if (cancellationCheck[0]?.pending_cancellation) {
+        // Agent had one turn to clean up. Force-terminate regardless of waitForState.
+        await db
+          .update(conversations)
+          .set({
+            status: "cancelled",
+            messages: finalMessages as unknown[],
+            pending_cancellation: false,
+            last_persisted_sequence: eventLog.getSequence(conv.id),
+            claimed_by: null,
+            claimed_at: null,
+            last_heartbeat_at: null,
+            updated_at: new Date(),
+          })
+          .where(eq(conversations.id, conv.id));
+
+        eventLog.append({
+          ...eventBase,
+          type: "agent.completed",
+          payload: {
+            output: "Conversation terminated after cancellation cleanup turn",
+          },
+        });
+        await eventLog.flush();
+
+        // Cascade: send task_cancelled to any active delegations this conversation has
+        const freshConv = await db
+          .select({ active_delegations: conversations.active_delegations })
+          .from(conversations)
+          .where(eq(conversations.id, conv.id))
+          .limit(1);
+        const activeDelegations = (freshConv[0]?.active_delegations ??
+          []) as Array<{ taskId?: string }>;
+        for (const delegation of activeDelegations) {
+          if (delegation.taskId) {
+            const childConv = await options.executor?.findActiveForTask(
+              delegation.taskId,
+            );
+            if (childConv) {
+              void options.executor
+                ?.signal(childConv.id, {
+                  type: "task_cancelled",
+                  data: {
+                    taskId: delegation.taskId,
+                    reason: "Parent conversation cancelled",
+                  },
+                  message:
+                    "Your task has been cancelled because the parent was cancelled. You have one turn to clean up.",
+                  source: `cascade:${conv.id}`,
+                  deduplicationId: `cancel-cascade-${delegation.taskId}`,
+                })
+                .catch((err) => {
+                  childLogger.warn(
+                    { err, taskId: delegation.taskId },
+                    "Failed to cascade cancellation (non-fatal)",
+                  );
+                });
+            }
+          }
+        }
+
+        // Update correlation status to failed (Phase 78)
+        if (correlationService) {
+          void correlationService
+            .updateStatus(conv.id, "failed")
+            .catch((err) => {
+              childLogger.warn(
+                { err },
+                "Failed to update correlation status after cancellation (non-fatal)",
+              );
+            });
+        }
+
+        childLogger.info(
+          "Conversation terminated after cancellation cleanup turn",
+        );
+        return;
+      }
+
       // 14. Handle result based on waitForState and loop status
       if (waitForState.triggered) {
         // Before transitioning to waiting, check if a signal was queued
