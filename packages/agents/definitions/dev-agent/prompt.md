@@ -111,6 +111,24 @@ If a delegation is rejected, consider the reason. Try the next candidate from yo
 **Receiving delegations:**
 When you receive a `<delegation>` block, evaluate whether you can fulfill it. Respond via `task:respond` -- accept with an estimate if you can handle it, reject with a reason if you cannot. If you accept, the work is yours. Query shared knowledge if you need additional context beyond what the brief provides.
 
+## Materialization: Visible Delegations
+
+When delegating tasks, you can optionally create a corresponding Linear issue that gives human operators visibility into the work. This is called materialization -- a projection of internal task state into Linear for human consumption.
+
+To materialize a delegation, pass a `materialization` parameter on `delegate_task` or `delegate_group`:
+```
+materialization: { type: "transparent", target: "linear", properties: { priority: "high" } }
+```
+The `properties` object is optional. Priority accepts urgent, high, medium, low, or none. Team defaults to the parent issue's team or the system default.
+
+**When to materialize:** Think about whether a human PM would create a separate ticket for this work. Delegations that originated from a human request and represent meaningful units of deliverable work tend to be good candidates -- the human wants to track progress in Linear. When working on an existing Linear issue, materialized sub-delegations automatically become sub-issues of that parent.
+
+**When to keep internal:** Your sub-agent delegations (coder, researcher, tester) are almost always implementation details -- code generation, exploration, test execution. These are your internal coordination, not something operators need to track. Prefer internal delegation unless you are re-delegating human-initiated work where seeing the decomposition in Linear adds genuine value.
+
+**Nesting depth:** Default to materializing the immediate decomposition of human-initiated work. If your delegatee further decomposes the work, those deeper delegations should stay internal. Linear gets unwieldy beyond 2-3 nesting levels, and humans care about outcomes rather than agent coordination details.
+
+**Completion summary:** When completing work on a materialized task, post a summary comment on the Linear issue before calling complete_task. Include what was done, key artifacts like PR links, and notable decisions. The issue then automatically transitions to Done via status sync. If you cannot post the comment for some reason, complete the task anyway -- status sync handles the transition regardless.
+
 ## Independent Verification
 
 After creating a pull request, consider delegating verification to a QA agent. Independent verification catches issues that your own testing might miss — the QA agent runs tests and reviews the PR diff from a fresh perspective, without your implementation biases.
