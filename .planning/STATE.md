@@ -84,9 +84,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 80-05-PLAN.md (Phase 80 gap closure complete)
-Resume file: .planning/phases/80-richer-negotiation/80-05-SUMMARY.md
-Next action: Transition to Phase 81
+Stopped at: Phase 81 context gathered
+Resume file: .planning/phases/81-parallel-delegation/81-CONTEXT.md
+Next action: Plan Phase 81
 
 ---
-*Updated: 2026-02-20 -- Completed 80-05 (gap closure: rejection signal + counter-proposal rejection). Phase 80 complete.*
+*Updated: 2026-02-20 -- Phase 81 context gathered (parallel delegation decisions captured).*
