@@ -153,7 +153,7 @@ Plans:
   2. Task completion or failure updates the materialized Linear issue status, and Linear issue status changes sync back to the internal task
   3. Incoming webhooks from materialized Linear issues route correctly to the owning task via the correlation layer
   4. The materialization dispatch interface is extensible for future targets (GitHub issue, Slack thread) without changing the delegation tool
-**Plans:** 5 plans
+**Plans:** 1/5 plans executed
 Plans:
 - [ ] 82-01-PLAN.md -- Foundation: DB migration, types, MaterializationAdapter interface, Linear MCP extensions
 - [ ] 82-02-PLAN.md -- Prompt guidance for materialization decisions (dev-agent, product-agent)
@@ -238,7 +238,7 @@ Wave 1 (parallel): 80, 82, 84, 85 -> Wave 2: 81, 86 -> Wave 3: 83, 87
 | 74-79 | v2.8 Resilience and Observability | 22 | Complete | 2026-02-18 |
 | 80. Richer Negotiation | 5/5 | Complete    | 2026-02-20 | - |
 | 81. Parallel Delegation | 6/6 | Complete    | 2026-02-20 | - |
-| 82. Transparent Materialization | v2.9 | 0/TBD | Not started | - |
+| 82. Transparent Materialization | 1/5 | In Progress|  | - |
 | 83. Tree-Level Token Budgets | v2.9 | 0/TBD | Not started | - |
 | 84. Scheduled Execution | v2.9 | 0/TBD | Not started | - |
 | 85. Sub-Agent Discovery | v2.9 | 0/TBD | Not started | - |

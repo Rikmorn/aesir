@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 82 of 87 (Transparent Materialization)
-Plan: 0 of TBD in current phase
-Status: Context gathered, ready for planning
-Last activity: 2026-02-20 -- Phase 82 context gathered
+Plan: 2 of 5 in current phase
+Status: Executing Phase 82 plans
+Last activity: 2026-02-20 -- Completed 82-02 (agent prompt materialization guidance)
 
-Progress: [##########] 100%
+Progress: [####------] 40%
 
 ## Milestone History
 
@@ -51,6 +51,7 @@ Progress: [##########] 100%
 | 81 | 04 | 4min | 2 | 4 |
 | 81 | 05 | 2min | 2 | 5 |
 | 81 | 06 | 4min | 2 | 8 |
+| 82 | 02 | 1min | 1 | 2 |
 
 ## Accumulated Context
 
@@ -87,6 +88,9 @@ See PROJECT.md Key Decisions table for full history.
 - **81-06**: Group nodes use 280x90px dimensions (vs 220x80 for task nodes) for visual distinction
 - **81-06**: Edge re-parenting: delegator -> group node -> individual tasks (removes direct edges for grouped tasks)
 - **81-06**: MiniMap uses groupStatus for group node colors (satisfied=green, active=amber, unsatisfiable=red)
+- **82-02**: Materialization sections placed in domain_knowledge after delegation sections for natural reading flow
+- **82-02**: Dev-agent emphasizes internal for sub-agents; product-agent emphasizes transparent for dev/qa delegations
+- **82-02**: Zero strong directives in materialization sections -- judgment-oriented per PROMPT_GUIDE.md
 
 ### Pending Todos
 
@@ -108,9 +112,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Phase 82 context gathered
-Resume file: .planning/phases/82-transparent-materialization/82-CONTEXT.md
-Next action: Plan Phase 82
+Stopped at: Completed 82-02-PLAN.md
+Resume file: .planning/phases/82-transparent-materialization/82-02-SUMMARY.md
+Next action: Execute 82-03-PLAN.md
 
 ---
-*Updated: 2026-02-20 -- Phase 82 context gathered (transparent materialization).*
+*Updated: 2026-02-20 -- Completed 82-02 (agent prompt materialization guidance).*
