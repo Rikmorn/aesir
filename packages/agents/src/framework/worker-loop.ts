@@ -34,6 +34,7 @@ import { conversations } from "../shared/db/schema.js";
 import type { CorrelationService } from "../shared/services/correlation-service.js";
 import type { DirectoryService } from "../shared/services/directory-service.js";
 import { createGroupService } from "../shared/services/group-service.js";
+import type { MaterializationAdapter } from "../shared/services/materialization/types.js";
 import type { TaskService } from "../shared/services/task-service.js";
 import { createAnswerTaskTool } from "../shared/tools/task/answer-task.js";
 import { createClarifyTaskTool } from "../shared/tools/task/clarify-task.js";
@@ -109,6 +110,8 @@ export interface WorkerLoopOptions {
   executor?: ConversationExecutor | undefined;
   /** CorrelationService for work correlation status propagation (Phase 78) */
   correlationService?: CorrelationService | undefined;
+  /** MaterializationAdapter for transparent materialization injection into DelegationDeps (Phase 82) */
+  materializationAdapter?: MaterializationAdapter | undefined;
 }
 
 /**
@@ -1274,6 +1277,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
               db,
               groupService,
               timeoutScheduler,
+              materializationAdapter: options.materializationAdapter,
             },
           }),
       };

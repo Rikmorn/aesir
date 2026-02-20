@@ -51,6 +51,10 @@ import { createCorrelationService } from "../shared/services/correlation-service
 import { createDirectoryService } from "../shared/services/directory-service.js";
 import { createGroupService } from "../shared/services/group-service.js";
 import { createKnowledgeService } from "../shared/services/knowledge-service.js";
+import {
+  createForwardSyncListener,
+  createLinearMaterializationAdapter,
+} from "../shared/services/materialization/index.js";
 import { createTaskService } from "../shared/services/task-service.js";
 import { createTaskSignalDispatcher } from "../shared/services/task-signal-dispatcher.js";
 import { createApiRouter } from "./api/router.js";
@@ -165,6 +169,15 @@ async function bootstrap(): Promise<void> {
   // 7b. SandboxManager -- Docker-backed dev containers (swap for Fargate/Lambda in prod)
   const sandboxManager = createDevContainerManager({ db: platformDb, logger });
 
+  // 7d. MaterializationAdapter -- Linear issue projection for delegated tasks (Phase 82)
+  const materializationAdapter = createLinearMaterializationAdapter({
+    db,
+    logger,
+    linearTeamId: config.linear.teamId,
+    dashboardBaseUrl: "http://localhost:3005/dashboard",
+    correlationService,
+  });
+
   // 8. ConversationExecutor -- SKIP LOCKED conversation lifecycle
   const executor = createConversationExecutor({
     db,
@@ -189,6 +202,7 @@ async function bootstrap(): Promise<void> {
     taskService,
     directoryService,
     correlationService,
+    materializationAdapter,
   });
 
   // 8b. GroupService -- parallel delegation group management (Phase 81)
@@ -203,11 +217,33 @@ async function bootstrap(): Promise<void> {
     logger,
     groupService,
   });
-  taskService.setDispatcher((taskId, oldStatus, newStatus, ctx) =>
-    taskSignalDispatcher.onTaskUpdate(taskId, oldStatus, newStatus, ctx),
-  );
 
-  // 8d. Knowledge cleanup -- hourly hard-delete of entries expired 24h+ ago
+  // 8d. Forward sync listener -- syncs task status to materialized Linear issues (Phase 82)
+  const forwardSyncListener = createForwardSyncListener({
+    adapter: materializationAdapter,
+    db,
+    logger,
+  });
+
+  // Composite dispatcher: signal dispatch + materialization forward sync
+  taskService.setDispatcher((taskId, oldStatus, newStatus, ctx) => {
+    // Signal dispatch (primary)
+    const signalPromise = taskSignalDispatcher.onTaskUpdate(
+      taskId,
+      oldStatus,
+      newStatus,
+      ctx,
+    );
+    // Forward sync (secondary, non-fatal)
+    forwardSyncListener
+      .onTaskUpdate(taskId, oldStatus, newStatus)
+      .catch((err) => {
+        logger.error({ err, taskId }, "Forward sync failed (non-fatal)");
+      });
+    return signalPromise;
+  });
+
+  // 8f. Knowledge cleanup -- hourly hard-delete of entries expired 24h+ ago
   // Uses setInterval (single-process deployment). The 24h grace period after expiry
   // allows debugging before permanent deletion. cleanupExpired() is idempotent.
   const KNOWLEDGE_CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
@@ -268,6 +304,7 @@ async function bootstrap(): Promise<void> {
     db, // Phase 58.4: advisory lock transactions
     webhookFilter, // Phase 75: dedup and echo suppression
     correlationService, // Phase 78: work correlation routing
+    materializationAdapter, // Phase 82: reverse sync webhook routing
   };
 
   // Shutdown flag -- declared early so the health endpoint closure can capture it

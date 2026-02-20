@@ -745,6 +745,8 @@ export interface ConversationExecutorOptions {
   directoryService?: DirectoryService | undefined;
   /** CorrelationService for work correlation tracking (Phase 78) */
   correlationService?: CorrelationService | undefined;
+  /** MaterializationAdapter for transparent materialization (Phase 82) */
+  materializationAdapter?: MaterializationAdapter | undefined;
 }
 
 // ─── Non-Retryable Error Classes ────────────────────────────────────────────

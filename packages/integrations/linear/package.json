@@ -25,7 +25,8 @@
     "db:studio": "drizzle-kit studio",
     "migrate": "tsx -r dotenv-flow/config scripts/migrate-credentials.ts",
     "seed:permissions": "tsx scripts/seed-permissions.ts",
-    "seed:credential": "tsx scripts/seed-credential.ts"
+    "seed:credential": "tsx scripts/seed-credential.ts",
+    "seed:labels": "tsx scripts/seed-label.ts"
   },
   "dependencies": {
     "@aesir/types": "workspace:*",
