@@ -28,12 +28,13 @@ import DelegationEdgeComponent, {
   type DelegationEdgeData,
 } from "./delegation-edge";
 import { getLayoutedElements } from "./graph-layout";
+import GroupNodeComponent, { type GroupNodeData } from "./group-node";
 import { transformTreeToGraph as transformTreeToGraphBase } from "./graph-utils";
 import TaskNodeComponent, { type TaskNodeData } from "./task-node";
 
 // ─── Node & Edge Types (module-level for referential equality) ──────────────
 
-const nodeTypes = { task: TaskNodeComponent };
+const nodeTypes = { task: TaskNodeComponent, group: GroupNodeComponent };
 const edgeTypes = { delegation: DelegationEdgeComponent };
 
 // ─── Data Transformation (delegates to graph-utils.ts) ──────────────────────
@@ -46,11 +47,14 @@ export function transformTreeToGraph(
   nodes: TaskTreeNode[],
   events: TimelineEvent[],
   health: TreeHealth,
-): { nodes: RFNode<TaskNodeData>[]; edges: RFEdge<DelegationEdgeData>[] } {
+): {
+  nodes: RFNode<TaskNodeData | GroupNodeData>[];
+  edges: RFEdge<DelegationEdgeData>[];
+} {
   const result = transformTreeToGraphBase(nodes, events, health);
   // GraphNode/GraphEdge are structurally compatible with RFNode/RFEdge
   return result as unknown as {
-    nodes: RFNode<TaskNodeData>[];
+    nodes: RFNode<TaskNodeData | GroupNodeData>[];
     edges: RFEdge<DelegationEdgeData>[];
   };
 }
@@ -118,6 +122,22 @@ export function DelegationGraph({
       <Controls showInteractive={false} />
       <MiniMap
         nodeColor={(node) => {
+          // Group nodes use groupStatus for color
+          if (node.type === "group") {
+            const gd = node.data as GroupNodeData | undefined;
+            if (!gd) return "#64748b";
+            switch (gd.groupStatus) {
+              case "satisfied":
+              case "settled":
+                return "#10b981";
+              case "unsatisfiable":
+                return "#ef4444";
+              case "active":
+                return "#f59e0b";
+              default:
+                return "#64748b";
+            }
+          }
           const data = node.data as TaskNodeData | undefined;
           if (!data) return "#64748b";
           switch (data.status) {

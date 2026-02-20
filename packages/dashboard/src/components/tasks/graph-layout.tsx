@@ -12,6 +12,8 @@ import type { Edge, Node } from "@xyflow/react";
 
 export const NODE_WIDTH = 220;
 export const NODE_HEIGHT = 80;
+export const GROUP_NODE_WIDTH = 280;
+export const GROUP_NODE_HEIGHT = 90;
 
 // ─── Layout ─────────────────────────────────────────────────────────────────
 
@@ -37,7 +39,11 @@ export function getLayoutedElements<
   });
 
   for (const node of nodes) {
-    g.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
+    const isGroup = node.type === "group";
+    g.setNode(node.id, {
+      width: isGroup ? GROUP_NODE_WIDTH : NODE_WIDTH,
+      height: isGroup ? GROUP_NODE_HEIGHT : NODE_HEIGHT,
+    });
   }
 
   for (const edge of edges) {
@@ -48,12 +54,15 @@ export function getLayoutedElements<
 
   const layoutedNodes = nodes.map((node) => {
     const pos = g.node(node.id);
+    const isGroup = node.type === "group";
+    const w = isGroup ? GROUP_NODE_WIDTH : NODE_WIDTH;
+    const h = isGroup ? GROUP_NODE_HEIGHT : NODE_HEIGHT;
 
     return {
       ...node,
       position: {
-        x: pos.x - NODE_WIDTH / 2,
-        y: pos.y - NODE_HEIGHT / 2,
+        x: pos.x - w / 2,
+        y: pos.y - h / 2,
       },
       targetPosition: "left" as const,
       sourcePosition: "right" as const,

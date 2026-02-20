@@ -17,6 +17,7 @@ import { describe, expect, it } from "vitest";
 import type { TaskTreeNode, TimelineEvent, TreeHealth } from "@/services/tasks";
 
 import {
+  type GraphNodeData,
   getEdgeState,
   getHealthBadge,
   getNodeStatus,
@@ -120,8 +121,9 @@ describe("transformTreeToGraph", () => {
       defaultHealth,
     );
 
-    expect(graphNodes[0]?.data.summary.length).toBeLessThanOrEqual(52); // 49 chars + "..."
-    expect(graphNodes[0]?.data.summary).toContain("...");
+    const d = graphNodes[0]?.data as GraphNodeData;
+    expect(d.summary.length).toBeLessThanOrEqual(52); // 49 chars + "..."
+    expect(d.summary).toContain("...");
   });
 
   it("preserves short titles without truncation", () => {
@@ -134,7 +136,7 @@ describe("transformTreeToGraph", () => {
       defaultHealth,
     );
 
-    expect(graphNodes[0]?.data.summary).toBe(shortTitle);
+    expect((graphNodes[0]?.data as GraphNodeData).summary).toBe(shortTitle);
   });
 
   it("uses assigneeId when entityName is null", () => {
@@ -148,7 +150,7 @@ describe("transformTreeToGraph", () => {
       defaultHealth,
     );
 
-    expect(graphNodes[0]?.data.entityName).toBe("agent-123");
+    expect((graphNodes[0]?.data as GraphNodeData).entityName).toBe("agent-123");
   });
 
   it("uses entityName when available", () => {
@@ -162,7 +164,7 @@ describe("transformTreeToGraph", () => {
       defaultHealth,
     );
 
-    expect(graphNodes[0]?.data.entityName).toBe("dev-agent");
+    expect((graphNodes[0]?.data as GraphNodeData).entityName).toBe("dev-agent");
   });
 });
 

@@ -47,6 +47,19 @@ export interface GraphNodeData {
   isRejected: boolean;
 }
 
+/** Group node data for graph rendering */
+export interface GraphGroupNodeData {
+  groupId: string;
+  policyType: string;
+  policyThreshold?: number;
+  groupStatus: string;
+  completed: number;
+  failed: number;
+  cancelled: number;
+  running: number;
+  total: number;
+}
+
 /** Edge data for graph rendering */
 export interface GraphEdgeData {
   state: EdgeState;
@@ -58,9 +71,9 @@ export interface GraphEdgeData {
 /** A positioned graph node (framework-agnostic) */
 export interface GraphNode {
   id: string;
-  type: "task";
+  type: "task" | "group";
   position: { x: number; y: number };
-  data: GraphNodeData;
+  data: GraphNodeData | GraphGroupNodeData;
 }
 
 /** A graph edge (framework-agnostic) */
@@ -168,67 +181,180 @@ export function getEdgeState(
 
 // ─── Tree-to-Graph Transformation ────────────────────────────────────────────
 
+/**
+ * Build a delegation edge for a child task (or from delegator to group node).
+ */
+function buildDelegationEdge(
+  sourceId: string,
+  targetId: string,
+  child: TaskTreeNode,
+  events: TimelineEvent[],
+): GraphEdge {
+  const state = getEdgeState(child, events);
+
+  // Find delegation tool event for this edge
+  // Events may store tool name as tool_name (snake_case) or toolName (camelCase)
+  const delegationEvent = events.find((e) => {
+    if (e.type !== "tool.called") return false;
+    if (e.taskId !== child.parentId) return false;
+    const p = e.payload as Record<string, unknown>;
+    const tn =
+      (p?.tool_name as string | undefined) ??
+      (p?.toolName as string | undefined);
+    return (
+      tn === "delegate_task" ||
+      tn === "task:delegate" ||
+      tn === "delegate_group" ||
+      tn === "task:delegate_group"
+    );
+  });
+
+  return {
+    id: `${sourceId}-${targetId}`,
+    source: sourceId,
+    target: targetId,
+    type: "delegation" as const,
+    data: {
+      state,
+      signalType: delegationEvent
+        ? "delegation"
+        : state === "completed"
+          ? "completion"
+          : undefined,
+      timestamp: delegationEvent?.timestamp ?? child.createdAt,
+      payloadPreview: delegationEvent
+        ? truncate(
+            JSON.stringify(
+              (delegationEvent.payload as Record<string, unknown>)
+                ?.arguments ?? {},
+            ),
+            80,
+          )
+        : undefined,
+    },
+  };
+}
+
+/**
+ * Compute status counts for a set of grouped tasks.
+ */
+function computeGroupCounts(tasks: TaskTreeNode[]): {
+  completed: number;
+  failed: number;
+  cancelled: number;
+  running: number;
+  total: number;
+} {
+  let completed = 0;
+  let failed = 0;
+  let cancelled = 0;
+  let running = 0;
+  for (const t of tasks) {
+    if (t.status === "completed") completed++;
+    else if (t.status === "cancelled") cancelled++;
+    else if (t.status === "active") running++;
+    else if (t.conversationStatus === "failed") failed++;
+  }
+  return { completed, failed, cancelled, running, total: tasks.length };
+}
+
 export function transformTreeToGraph(
   nodes: TaskTreeNode[],
   events: TimelineEvent[],
   _health: TreeHealth,
 ): { nodes: GraphNode[]; edges: GraphEdge[] } {
-  const graphNodes: GraphNode[] = nodes.map((node) => ({
-    id: node.id,
-    type: "task" as const,
-    position: { x: 0, y: 0 }, // dagre will overwrite
-    data: {
-      entityName: node.entityName ?? node.assigneeId,
-      status: getNodeStatus(node),
-      summary: truncate(node.title, 50),
-      elapsedTime: getElapsedTime(node.createdAt),
-      healthBadge: getHealthBadge(node, events),
-      isRejected: getNodeStatus(node) === "rejected",
-    },
-  }));
+  // Detect groups: tasks sharing the same non-null groupId
+  const groupMap = new Map<string, TaskTreeNode[]>();
+  const groupedTaskIds = new Set<string>();
 
-  const graphEdges: GraphEdge[] = nodes
-    .filter((node) => node.parentId != null)
-    .map((child) => {
-      const state = getEdgeState(child, events);
+  for (const node of nodes) {
+    if (node.groupId) {
+      const existing = groupMap.get(node.groupId);
+      if (existing) {
+        existing.push(node);
+      } else {
+        groupMap.set(node.groupId, [node]);
+      }
+      groupedTaskIds.add(node.id);
+    }
+  }
 
-      // Find delegation tool event for this edge
-      // Events may store tool name as tool_name (snake_case) or toolName (camelCase)
-      const delegationEvent = events.find((e) => {
-        if (e.type !== "tool.called") return false;
-        if (e.taskId !== child.parentId) return false;
-        const p = e.payload as Record<string, unknown>;
-        const tn =
-          (p?.tool_name as string | undefined) ??
-          (p?.toolName as string | undefined);
-        return tn === "delegate_task" || tn === "task:delegate";
-      });
+  const graphNodes: GraphNode[] = [];
+  const graphEdges: GraphEdge[] = [];
 
-      return {
-        id: `${child.parentId}-${child.id}`,
-        source: child.parentId as string,
-        target: child.id,
+  // Create task nodes for all tasks (grouped and non-grouped)
+  for (const node of nodes) {
+    graphNodes.push({
+      id: node.id,
+      type: "task" as const,
+      position: { x: 0, y: 0 }, // dagre will overwrite
+      data: {
+        entityName: node.entityName ?? node.assigneeId,
+        status: getNodeStatus(node),
+        summary: truncate(node.title, 50),
+        elapsedTime: getElapsedTime(node.createdAt),
+        healthBadge: getHealthBadge(node, events),
+        isRejected: getNodeStatus(node) === "rejected",
+      },
+    });
+  }
+
+  // Create group nodes and re-parent edges
+  const groupParentEdgesAdded = new Set<string>();
+
+  for (const [groupId, groupTasks] of groupMap) {
+    const firstTask = groupTasks[0];
+    if (!firstTask) continue;
+
+    const counts = computeGroupCounts(groupTasks);
+
+    // Create group node
+    graphNodes.push({
+      id: groupId,
+      type: "group" as const,
+      position: { x: 0, y: 0 },
+      data: {
+        groupId,
+        policyType: firstTask.groupPolicy?.type ?? "all_required",
+        policyThreshold: firstTask.groupPolicy?.threshold,
+        groupStatus: firstTask.groupStatus ?? "active",
+        ...counts,
+      },
+    });
+
+    // Edge: delegator (parent of grouped tasks) -> group node
+    // All tasks in a group share the same parent
+    const parentId = firstTask.parentId;
+    if (parentId && !groupParentEdgesAdded.has(groupId)) {
+      graphEdges.push(
+        buildDelegationEdge(parentId, groupId, firstTask, events),
+      );
+      groupParentEdgesAdded.add(groupId);
+    }
+
+    // Edge: group node -> each task in the group
+    for (const task of groupTasks) {
+      graphEdges.push({
+        id: `${groupId}-${task.id}`,
+        source: groupId,
+        target: task.id,
         type: "delegation" as const,
         data: {
-          state,
-          signalType: delegationEvent
-            ? "delegation"
-            : state === "completed"
-              ? "completion"
-              : undefined,
-          timestamp: delegationEvent?.timestamp ?? child.createdAt,
-          payloadPreview: delegationEvent
-            ? truncate(
-                JSON.stringify(
-                  (delegationEvent.payload as Record<string, unknown>)
-                    ?.arguments ?? {},
-                ),
-                80,
-              )
-            : undefined,
+          state: getEdgeState(task, events),
         },
-      };
-    });
+      });
+    }
+  }
+
+  // Create edges for non-grouped child tasks (existing behavior)
+  for (const child of nodes) {
+    if (child.parentId == null) continue;
+    if (groupedTaskIds.has(child.id)) continue; // handled above
+
+    graphEdges.push(
+      buildDelegationEdge(child.parentId, child.id, child, events),
+    );
+  }
 
   return { nodes: graphNodes, edges: graphEdges };
 }
