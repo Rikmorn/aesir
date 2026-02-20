@@ -22,9 +22,9 @@ Requirements for v2.9 Platform Completion. Each maps to roadmap phases.
 - [x] **PAR-01**: Task groups -- `task:delegate_group` creates multiple delegations as a named group with a shared completion policy
 - [x] **PAR-02**: Completion policies -- `all_required` (wait for all), `any_sufficient` (first success unblocks delegator), `majority` (N of M). Defined at group creation
 - [ ] **PAR-03**: Partial completion handling -- when policy is `all_required` and one task fails, delegator receives immediate notification and decides: wait for others, cancel remaining, or accept partial results
-- [ ] **PAR-04**: Group status tool -- `task:group_status` returns aggregated group state (how many complete, pending, failed)
+- [x] **PAR-04**: Group status tool -- `task:group_status` returns aggregated group state (how many complete, pending, failed)
 - [ ] **PAR-05**: Signal aggregation -- completion signals from group members are collected. Delegator is signaled when the group's completion policy is satisfied
-- [ ] **PAR-06**: Group cancellation -- delegator can cancel all remaining tasks in a group (e.g., after `any_sufficient` is met, cancel the rest)
+- [x] **PAR-06**: Group cancellation -- delegator can cancel all remaining tasks in a group (e.g., after `any_sufficient` is met, cancel the rest)
 - [x] **PAR-07**: Budget-aware group design -- group data model accommodates future tree budget distribution (Phase 4). Phase 2 uses per-conversation budgets; Phase 4 retrofits tree-level allocation into groups
 
 ### Transparent Materialization
@@ -146,9 +146,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PAR-01 | Phase 81 | Complete |
 | PAR-02 | Phase 81 | Complete |
 | PAR-03 | Phase 81 | Pending |
-| PAR-04 | Phase 81 | Pending |
+| PAR-04 | Phase 81 | Complete |
 | PAR-05 | Phase 81 | Pending |
-| PAR-06 | Phase 81 | Pending |
+| PAR-06 | Phase 81 | Complete |
 | PAR-07 | Phase 81 | Complete |
 | MAT-01 | Phase 82 | Pending |
 | MAT-02 | Phase 82 | Pending |

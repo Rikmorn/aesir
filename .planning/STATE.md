@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 81 of 87 (Parallel Delegation)
-Plan: 1 of 6 in current phase
+Plan: 2 of 6 in current phase
 Status: Executing
-Last activity: 2026-02-20 -- Completed 81-01 (task groups schema and GroupService)
+Last activity: 2026-02-20 -- Completed 81-02 (group tools: delegate_group, group_status, cancel_group)
 
-Progress: [#---------] 17%
+Progress: [###-------] 33%
 
 ## Milestone History
 
@@ -46,6 +46,7 @@ Progress: [#---------] 17%
 | 80 | 04 | 6min | 2 | 6 |
 | 80 | 05 | 2min | 2 | 2 |
 | 81 | 01 | 7min | 2 | 7 |
+| 81 | 02 | 10min | 2 | 5 |
 
 ## Accumulated Context
 
@@ -67,6 +68,9 @@ See PROJECT.md Key Decisions table for full history.
 - **80-05**: Counter-proposal rejection returns immediately without pausing -- delegator continues to re-delegate
 - **81-01**: FKs defined in migration SQL only to avoid circular Drizzle reference (taskGroups -> conversations -> tasks -> taskGroups)
 - **81-01**: Task 'failed' status absent from schema but tracked in GroupState counts for evaluatePolicy correctness
+- **81-02**: Direct DB update for group_id on tasks (TaskService.create does not accept groupId)
+- **81-02**: Capability routing returns explicit error referencing Phase 85 (forward-compatible schema)
+- **81-02**: Group timeout scheduling is no-op when timeoutScheduler is undefined (Plan 04 wires it)
 
 ### Pending Todos
 
@@ -87,9 +91,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 81-01-PLAN.md
-Resume file: .planning/phases/81-parallel-delegation/81-01-SUMMARY.md
-Next action: Execute 81-02-PLAN.md
+Stopped at: Completed 81-02-PLAN.md
+Resume file: .planning/phases/81-parallel-delegation/81-02-SUMMARY.md
+Next action: Execute 81-03-PLAN.md
 
 ---
-*Updated: 2026-02-20 -- Completed 81-01 (task groups schema and GroupService).*
+*Updated: 2026-02-20 -- Completed 81-02 (group tools: delegate_group, group_status, cancel_group).*
