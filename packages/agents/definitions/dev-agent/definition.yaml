@@ -25,6 +25,8 @@ tools:
   - task:get_task_context
   - task:delegate
   - task:respond
+  - task:clarify
+  - task:answer
   - linear:get_issue
   - linear:update_issue_status
   - github:create_branch

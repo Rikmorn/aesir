@@ -13,6 +13,8 @@ tools:
   - codebase:read_file
   - github:get_pull_request
   - task:respond
+  - task:clarify
+  - task:answer
   - task:complete_task
   - task:delegate
   - task:get_task_context

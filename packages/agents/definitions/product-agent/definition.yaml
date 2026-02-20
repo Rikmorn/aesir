@@ -19,6 +19,8 @@ tools:
   - task:get_task_context
   - task:delegate
   - task:respond
+  - task:clarify
+  - task:answer
   - linear:create_issue
   - linear:get_issue
   - linear:list_labels
