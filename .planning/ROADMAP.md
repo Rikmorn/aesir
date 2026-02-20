@@ -98,7 +98,7 @@ See `.planning/milestones/v2.8-ROADMAP.md` for full details.
 ### Phases
 
 - [x] **Phase 80: Richer Negotiation** - Counter-proposals and mid-task clarification in the delegation handshake (gaps found) (completed 2026-02-20)
-- [ ] **Phase 81: Parallel Delegation** - Fan-out delegation with configurable completion policies
+- [x] **Phase 81: Parallel Delegation** - Fan-out delegation with configurable completion policies (completed 2026-02-20)
 - [ ] **Phase 82: Transparent Materialization** - Optional Linear ticket creation for delegated tasks
 - [ ] **Phase 83: Tree-Level Token Budgets** - Budget enforcement across entire delegation trees
 - [ ] **Phase 84: Scheduled Execution** - Cron-based agent triggers via pg-boss for periodic work
@@ -135,7 +135,7 @@ Plans:
   3. The delegator can query aggregated group status (complete/pending/failed counts) and cancel all remaining tasks in a group
   4. When an all_required group has a task failure, the delegator receives immediate notification and can decide how to proceed (wait, cancel remaining, or accept partial)
   5. The group data model accommodates future tree budget distribution without schema changes
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans complete
 Plans:
 - [ ] 81-01-PLAN.md -- Database schema (task_groups table, group_id FK) and GroupService
 - [ ] 81-02-PLAN.md -- delegate_group, group_status, cancel_group tools
@@ -231,7 +231,7 @@ Wave 1 (parallel): 80, 82, 84, 85 -> Wave 2: 81, 86 -> Wave 3: 83, 87
 | 67-73 | v2.7 Agent Collaboration | 26 | Complete | 2026-02-13 |
 | 74-79 | v2.8 Resilience and Observability | 22 | Complete | 2026-02-18 |
 | 80. Richer Negotiation | 5/5 | Complete    | 2026-02-20 | - |
-| 81. Parallel Delegation | 5/6 | In Progress|  | - |
+| 81. Parallel Delegation | 6/6 | Complete   | 2026-02-20 | - |
 | 82. Transparent Materialization | v2.9 | 0/TBD | Not started | - |
 | 83. Tree-Level Token Budgets | v2.9 | 0/TBD | Not started | - |
 | 84. Scheduled Execution | v2.9 | 0/TBD | Not started | - |

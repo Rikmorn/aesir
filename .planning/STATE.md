@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 81 of 87 (Parallel Delegation)
-Plan: 5 of 6 in current phase
-Status: Executing
-Last activity: 2026-02-20 -- Completed 81-05 (cancellation cleanup turn pattern)
+Plan: 6 of 6 in current phase
+Status: Phase Complete
+Last activity: 2026-02-20 -- Completed 81-06 (dashboard group nodes)
 
-Progress: [########--] 83%
+Progress: [##########] 100%
 
 ## Milestone History
 
@@ -50,6 +50,7 @@ Progress: [########--] 83%
 | 81 | 03 | 6min | 2 | 4 |
 | 81 | 04 | 4min | 2 | 4 |
 | 81 | 05 | 2min | 2 | 5 |
+| 81 | 06 | 4min | 2 | 8 |
 
 ## Accumulated Context
 
@@ -83,6 +84,9 @@ See PROJECT.md Key Decisions table for full history.
 - **81-05**: pending_cancellation set on both resume and queue paths for task_cancelled signals
 - **81-05**: Cancellation check placed before waitForState.triggered so it takes precedence
 - **81-05**: Cascade uses fire-and-forget pattern with catch for non-fatal failure tolerance
+- **81-06**: Group nodes use 280x90px dimensions (vs 220x80 for task nodes) for visual distinction
+- **81-06**: Edge re-parenting: delegator -> group node -> individual tasks (removes direct edges for grouped tasks)
+- **81-06**: MiniMap uses groupStatus for group node colors (satisfied=green, active=amber, unsatisfiable=red)
 
 ### Pending Todos
 
@@ -103,9 +107,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 81-05-PLAN.md
-Resume file: .planning/phases/81-parallel-delegation/81-05-SUMMARY.md
-Next action: Execute 81-06-PLAN.md
+Stopped at: Completed 81-06-PLAN.md (Phase 81 complete)
+Resume file: .planning/phases/81-parallel-delegation/81-06-SUMMARY.md
+Next action: Begin Phase 82
 
 ---
-*Updated: 2026-02-20 -- Completed 81-05 (cancellation cleanup turn pattern).*
+*Updated: 2026-02-20 -- Completed 81-06 (dashboard group nodes). Phase 81 complete.*
