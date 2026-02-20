@@ -51,6 +51,7 @@ Progress: [####------] 40%
 | 81 | 04 | 4min | 2 | 4 |
 | 81 | 05 | 2min | 2 | 5 |
 | 81 | 06 | 4min | 2 | 8 |
+| 82 | 01 | 4min | 2 | 7 |
 | 82 | 02 | 1min | 1 | 2 |
 
 ## Accumulated Context
@@ -88,6 +89,9 @@ See PROJECT.md Key Decisions table for full history.
 - **81-06**: Group nodes use 280x90px dimensions (vs 220x80 for task nodes) for visual distinction
 - **81-06**: Edge re-parenting: delegator -> group node -> individual tasks (removes direct edges for grouped tasks)
 - **81-06**: MiniMap uses groupStatus for group node colors (satisfied=green, active=amber, unsatisfiable=red)
+- **82-01**: MaterializationAdapter interface uses explicit typed params (not generic Record) for compile-time safety
+- **82-01**: stateType takes precedence over statusName when both provided in update_issue_status
+- **82-01**: materializationSyncStatusValues enum constrained to active/completed/failed in Drizzle schema
 - **82-02**: Materialization sections placed in domain_knowledge after delegation sections for natural reading flow
 - **82-02**: Dev-agent emphasizes internal for sub-agents; product-agent emphasizes transparent for dev/qa delegations
 - **82-02**: Zero strong directives in materialization sections -- judgment-oriented per PROMPT_GUIDE.md
