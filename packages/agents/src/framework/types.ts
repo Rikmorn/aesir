@@ -475,6 +475,9 @@ export interface AgentRegistry {
  * - "task_completion"     -- Delegated task completed by another agent
  * - "task_failure"        -- Delegated task failed
  * - "task_timeout"        -- Delegated task timed out
+ * - "task_counter_proposed" -- Target agent counter-proposes modified scope/approach
+ * - "task_clarification"    -- Target agent asks delegator for clarification mid-task
+ * - "task_clarification_response" -- Delegator answers a clarification question
  * - "entity_update"       -- Correlation-routed event for an entity this agent is working on (Phase 78)
  */
 export const KNOWN_SIGNAL_TYPES = [
@@ -488,6 +491,9 @@ export const KNOWN_SIGNAL_TYPES = [
   "task_completion",
   "task_failure",
   "task_timeout",
+  "task_counter_proposed",
+  "task_clarification",
+  "task_clarification_response",
   "entity_update",
 ] as const;
 

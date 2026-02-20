@@ -9,7 +9,8 @@ import type { TaskService } from "../../services/task-service.js";
 
 /** Valid status transitions enforced by task tools (not the service layer). */
 export const VALID_TRANSITIONS: Record<string, string[]> = {
-  created: ["active"],
+  created: ["active", "counter_proposed"],
+  counter_proposed: ["active", "cancelled"],
   active: ["paused", "completed", "cancelled"],
   paused: ["active", "cancelled"],
   completed: [],

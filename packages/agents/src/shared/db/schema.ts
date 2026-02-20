@@ -271,6 +271,7 @@ export const agentEventContent = agentsSchema.table("agent_event_content", {
  */
 export const taskStatusValues = [
   "created",
+  "counter_proposed",
   "active",
   "paused",
   "completed",
