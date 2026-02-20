@@ -63,8 +63,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: v2.9 roadmap created (8 phases, 58 requirements mapped)
+Stopped at: Phase 80 context gathered
+Resume file: .planning/phases/80-richer-negotiation/80-CONTEXT.md
 Next action: Plan Phase 80 (Richer Negotiation)
 
 ---
-*Updated: 2026-02-20 -- v2.9 roadmap created.*
+*Updated: 2026-02-20 -- Phase 80 context gathered.*
