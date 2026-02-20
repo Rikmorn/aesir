@@ -500,6 +500,12 @@ export const KNOWN_SIGNAL_TYPES = [
   "task_clarification",
   "task_clarification_response",
   "entity_update",
+  "group_policy_satisfied",
+  "group_policy_unsatisfiable",
+  "group_task_failed",
+  "group_settled",
+  "group_timeout",
+  "task_cancelled",
 ] as const;
 
 /**

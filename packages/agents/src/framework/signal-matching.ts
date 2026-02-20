@@ -48,5 +48,12 @@ export function signalMatchesPendingWait(
     if (signalTaskId !== metadata.taskId) return false;
   }
 
+  // GroupId-scoped matching: if the pending wait was created by wait_for_group,
+  // the signal must carry the same groupId in its data payload.
+  if (metadata?.groupId) {
+    const signalGroupId = signal.data?.groupId;
+    if (signalGroupId !== metadata.groupId) return false;
+  }
+
   return true;
 }
