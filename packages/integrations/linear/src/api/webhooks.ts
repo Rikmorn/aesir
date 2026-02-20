@@ -9,6 +9,7 @@
  */
 
 import type { PinoLogger } from "@aesir/platform";
+import { createId } from "@aesir/types";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { Request, Response } from "express";
@@ -171,6 +172,87 @@ export function createWebhookRouter(deps: WebhookRouterDeps): Router {
             ...(commentTaskId && { taskId: commentTaskId }),
           },
           "Comment created event dispatched",
+        );
+
+        res.status(200).json({ received: true });
+        return;
+      }
+
+      // Handle Issue events (for materialized task sync, Phase 82)
+      if (basicPayload.type === "Issue") {
+        if (basicPayload.action !== "update") {
+          childLogger.debug(
+            { action: basicPayload.action },
+            "Ignoring non-update Issue event",
+          );
+          res.status(200).json({ received: true });
+          return;
+        }
+
+        // Validate timestamp
+        if (basicPayload.webhookTimestamp === undefined) {
+          childLogger.warn("Issue webhook missing timestamp");
+          res.status(400).json({ error: "Missing timestamp" });
+          return;
+        }
+        const issueTimestampValid = validateWebhookTimestamp(
+          basicPayload.webhookTimestamp,
+        );
+        if (!issueTimestampValid) {
+          childLogger.warn("Issue webhook timestamp too old");
+          res.status(400).json({ error: "Timestamp too old" });
+          return;
+        }
+
+        // Parse the Issue payload
+        const issuePayload = basicPayload as {
+          type: string;
+          action: string;
+          data: {
+            id: string;
+            title?: string;
+            state?: { id: string; name: string; type: string };
+            assignee?: { id: string; name: string; isMe?: boolean };
+          };
+          updatedFrom?: { stateId?: string; assigneeId?: string };
+          webhookTimestamp: number;
+        };
+
+        // Build normalized event
+        const normalizedIssueEvent = {
+          id: createId.event(),
+          type: "linear.issue.updated" as const,
+          source: "linear" as const,
+          correlationId: deliveryId,
+          payload: {
+            issueId: issuePayload.data.id,
+            title: issuePayload.data.title,
+            state: issuePayload.data.state,
+            assignee: issuePayload.data.assignee,
+            updatedFrom: issuePayload.updatedFrom,
+            actorType:
+              (basicPayload as Record<string, unknown>).actorType ?? "user",
+          },
+          timestamp: new Date().toISOString(),
+        };
+
+        // Look up task correlation for potential materialized issues
+        const issueTaskId = await lookupTaskCorrelation(
+          db,
+          "issue",
+          issuePayload.data.id,
+          childLogger,
+        );
+        if (issueTaskId) {
+          (normalizedIssueEvent.payload as Record<string, unknown>).taskId =
+            issueTaskId;
+        }
+
+        // Dispatch via existing dispatcher
+        dispatcher.dispatch(normalizedIssueEvent);
+        childLogger.info(
+          { issueId: issuePayload.data.id, eventId: normalizedIssueEvent.id },
+          "Issue.update event dispatched",
         );
 
         res.status(200).json({ received: true });

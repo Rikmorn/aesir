@@ -6,7 +6,7 @@
  * Handles:
  * - agent_session.created -> "linear.agent_session.created" (start trigger, preserves original type)
  * - issue.created -> "linear.issue.created" (adapted for IGNORE_EVENT_TYPES matching)
- * - issue.updated -> "linear.issue.updated" (adapted for IGNORE_EVENT_TYPES matching)
+ * - issue.updated -> "linear.issue.updated" (with correlationKey for materialization routing)
  * - comment.created -> "issue_comment" (domain-language)
  * - agent_session.prompted -> "agent_prompt" (domain-language)
  *
@@ -83,6 +83,7 @@ export function adaptLinearEvent(event: NormalizedEvent): IncomingEvent | null {
         type: "linear.issue.updated",
         data: payload,
         source: "linear:webhook",
+        correlationKey: issueId, // Enables materialization lookup in router
         deduplicationId: event.correlationId,
         ...(actorInfo && { actorInfo }),
         ...(issueId && {
@@ -91,7 +92,6 @@ export function adaptLinearEvent(event: NormalizedEvent): IncomingEvent | null {
             entityId: issueId,
           },
         }),
-        // No correlationKey -- this is an ignore event
       };
     }
 

@@ -13,12 +13,12 @@
 import type { PinoLogger } from "@aesir/platform";
 import type { NormalizedEvent } from "@aesir/types";
 import { createId } from "@aesir/types";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { ALL_ADAPTERS } from "../adapters/index.js";
 import { adaptPassThrough } from "../adapters/pass-through.js";
 import type { IncomingEvent } from "../adapters/types.js";
 import { isAdapterIgnore } from "../adapters/types.js";
-import { agentEvents } from "../shared/db/schema.js";
+import { agentEvents, materializationRecords } from "../shared/db/schema.js";
 import { callMcpTool } from "../shared/mcp/index.js";
 import { enrichInitialMessage } from "./enrichment.js";
 import { routeViaAgentLoopV2 } from "./slow-path.js";
@@ -260,6 +260,124 @@ export async function routeEvent(
           filterResult.reason === "duplicate" ? "deduplicated" : "ignored",
       };
     }
+  }
+
+  // 1.4. Materialization routing for linear.issue.updated events (Phase 82)
+  // Check if this is a materialized issue update. If so, translate to a domain
+  // signal and deliver to the owning conversation. If not materialized, ignore
+  // (preserving existing behavior for non-materialized issue updates).
+  if (incomingEvent.type === "linear.issue.updated") {
+    if (deps.materializationAdapter && deps.db) {
+      const issueId = incomingEvent.entityRef?.entityId;
+      if (issueId) {
+        try {
+          // Look up materialization record for this issue
+          const records = await deps.db
+            .select()
+            .from(materializationRecords)
+            .where(eq(materializationRecords.external_id, issueId))
+            .limit(1);
+
+          const record = records[0];
+          if (record) {
+            // Build event data with context from the materialization record
+            const eventData: Record<string, unknown> = {
+              ...incomingEvent.data,
+              taskId: record.task_id,
+              conversationId: record.conversation_id,
+            };
+
+            // Determine event type from payload changes
+            const payload = incomingEvent.data;
+            let webhookEventType = "issue.updated";
+            if (payload.updatedFrom) {
+              const updatedFrom = payload.updatedFrom as Record<
+                string,
+                unknown
+              >;
+              if (updatedFrom.stateId !== undefined) {
+                webhookEventType = "status_change";
+                // Extract stateType from the new state
+                const state = payload.state as { type?: string } | undefined;
+                if (state?.type) {
+                  eventData.stateType = state.type;
+                }
+              }
+              if (updatedFrom.assigneeId !== undefined) {
+                webhookEventType = "assignee_change";
+                const assignee = payload.assignee as
+                  | { name?: string; isMe?: boolean }
+                  | undefined;
+                if (assignee) {
+                  eventData.assigneeName = assignee.name;
+                  eventData.isBot = assignee.isMe ?? false;
+                }
+              }
+            }
+
+            const webhookResult = deps.materializationAdapter.handleWebhook({
+              externalId: issueId,
+              eventType: webhookEventType,
+              eventData,
+            });
+
+            if (webhookResult) {
+              // Materialized issue produced a signal -- deliver it
+              const signal = {
+                type: webhookResult.signalType,
+                data: webhookResult.signalData,
+                message: `Linear issue update: ${webhookResult.signalType}`,
+                source: "linear:materialization",
+                deduplicationId: webhookResult.deduplicationId,
+              };
+
+              await deps.executor.signal(webhookResult.conversationId, signal);
+
+              eventLogger.info(
+                {
+                  issueId,
+                  signalType: webhookResult.signalType,
+                  conversationId: webhookResult.conversationId,
+                },
+                "Materialized issue update routed as signal",
+              );
+
+              // Emit event.routed for materialization routing
+              void emitRoutedEvent(deps, {
+                ...(incomingEvent.entityRef && {
+                  entity: incomingEvent.entityRef,
+                }),
+                disposition: "signal",
+                routingMethod: "correlation_fallback",
+                targetConversationId: webhookResult.conversationId,
+              });
+
+              return {
+                received: true,
+                action: "signaled",
+                conversationId: webhookResult.conversationId,
+              };
+            }
+
+            // handleWebhook returned null -- not actionable, ignore
+            eventLogger.debug(
+              { issueId },
+              "Materialized issue update not actionable; ignoring",
+            );
+            return { received: true, action: "ignored" };
+          }
+        } catch (err) {
+          eventLogger.warn(
+            { err, issueId },
+            "Materialization lookup failed; falling through to ignore",
+          );
+        }
+      }
+    }
+
+    // Not materialized or no adapter -- ignore (preserves existing behavior)
+    eventLogger.debug("Non-materialized linear.issue.updated event ignored");
+    return { received: true, action: "ignored" };
   }
 
   // 1.5. Task routing branch (early exit)

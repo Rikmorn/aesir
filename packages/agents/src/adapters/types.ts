@@ -124,7 +124,4 @@ export const SIGNAL_TYPE_MAP = {
  * Event types that should be explicitly ignored (not routed, not sent to slow-path).
  * These events are handled by integration webhooks directly.
  */
-export const IGNORE_EVENT_TYPES = new Set([
-  "linear.issue.created",
-  "linear.issue.updated",
-]);
+export const IGNORE_EVENT_TYPES = new Set(["linear.issue.created"]);

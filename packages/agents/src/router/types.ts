@@ -13,6 +13,7 @@ import type { ConversationExecutor, EventRouter } from "../framework/types.js";
 import type { ReplyContext } from "../shared/communication/types.js";
 import type * as agentsSchemaModule from "../shared/db/schema.js";
 import type { CorrelationService } from "../shared/services/correlation-service.js";
+import type { MaterializationAdapter } from "../shared/services/materialization/types.js";
 import type { TaskService } from "../shared/services/task-service.js";
 import type { WebhookFilterResult } from "./webhook-filter.js";
 
@@ -141,6 +142,8 @@ export interface RouteEventDeps {
   correlationService?: CorrelationService | undefined;
   /** Correlation context for slow-path enrichment (Phase 78) */
   correlationContext?: CorrelationContext | undefined;
+  /** MaterializationAdapter for reverse sync webhook routing (Phase 82) */
+  materializationAdapter?: MaterializationAdapter | undefined;
 }
 
 /**
