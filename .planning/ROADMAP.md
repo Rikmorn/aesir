@@ -117,12 +117,13 @@ See `.planning/milestones/v2.8-ROADMAP.md` for full details.
   2. Target agent can send a clarification question back to the delegator mid-task, and the delegator's answer resumes the target's paused conversation
   3. Clarification can go back and forth multiple rounds within a single delegation, bounded by the task timeout
   4. Agents demonstrate judgment about when to counter-propose vs reject and when to clarify vs proceed with assumptions, guided by prompt updates
-**Plans:** 4/4 plans complete
+**Plans:** 5 plans (4 complete, 1 gap closure)
 Plans:
-- [ ] 80-01-PLAN.md -- Counter-propose response type + foundation types + wait_for_task extension
-- [ ] 80-02-PLAN.md -- task:clarify and task:answer tool factories + wiring
-- [ ] 80-03-PLAN.md -- Agent definition updates + negotiation prompt guidance
-- [ ] 80-04-PLAN.md -- Dashboard representation of counter-proposals and clarifications
+- [x] 80-01-PLAN.md -- Counter-propose response type + foundation types + wait_for_task extension
+- [x] 80-02-PLAN.md -- task:clarify and task:answer tool factories + wiring
+- [x] 80-03-PLAN.md -- Agent definition updates + negotiation prompt guidance
+- [x] 80-04-PLAN.md -- Dashboard representation of counter-proposals and clarifications
+- [ ] 80-05-PLAN.md -- Gap closure: rejection signal context + counter-proposal reject action
 
 ### Phase 81: Parallel Delegation
 **Goal**: Orchestrator agents can fan out work to multiple delegates simultaneously with policy-driven completion semantics
