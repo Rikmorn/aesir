@@ -150,7 +150,7 @@ describe("registerAllTools", () => {
 
     it("should register exactly 47 tools", () => {
       const { registry } = setupRegistry();
-      expect(registry.listRegistered()).toHaveLength(49);
+      expect(registry.listRegistered()).toHaveLength(51);
     });
 
     it("should register all expected namespaces", () => {
@@ -402,7 +402,7 @@ describe("registerAllTools", () => {
       const { logger } = setupRegistry();
 
       expect(logger.info).toHaveBeenCalledWith(
-        { toolCount: 49 },
+        { toolCount: 51 },
         "All tool factories registered",
       );
     });

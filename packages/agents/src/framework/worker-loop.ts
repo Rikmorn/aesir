@@ -34,6 +34,8 @@ import { conversations } from "../shared/db/schema.js";
 import type { CorrelationService } from "../shared/services/correlation-service.js";
 import type { DirectoryService } from "../shared/services/directory-service.js";
 import type { TaskService } from "../shared/services/task-service.js";
+import { createAnswerTaskTool } from "../shared/tools/task/answer-task.js";
+import { createClarifyTaskTool } from "../shared/tools/task/clarify-task.js";
 import { createRespondTaskTool } from "../shared/tools/task/respond-task.js";
 import { hasTextContent } from "./event-content.js";
 import { createHistoryManager } from "./history-manager.js";
@@ -445,6 +447,20 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
             ...entry,
             handshakeStatus: "counter_proposed",
             proposal: signalData?.proposal as string | undefined,
+          };
+        }
+        return d;
+      });
+      return updated;
+    }
+
+    if (signalType === "task_clarification") {
+      const updated = currentDelegations.map((d) => {
+        const entry = d as { taskId?: string; [key: string]: unknown };
+        if (entry.taskId === taskId) {
+          return {
+            ...entry,
+            lastClarification: signalData?.question as string | undefined,
           };
         }
         return d;
@@ -1233,9 +1249,11 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
               maxSpawnDepth: 3,
             },
           }),
-        // Delegation deps: populated when agent has task:delegate or task:respond in its tools
+        // Delegation deps: populated when agent has task:delegate, task:respond, task:clarify, or task:answer in its tools
         ...((definition.tools.includes("task:delegate") ||
-          definition.tools.includes("task:respond")) &&
+          definition.tools.includes("task:respond") ||
+          definition.tools.includes("task:clarify") ||
+          definition.tools.includes("task:answer")) &&
           taskService &&
           directoryService &&
           options.executor && {
@@ -1293,6 +1311,37 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
           resolvedTools[respondTaskToolIndex] = {
             ...existingRespondTool,
             execute: realRespondTool.execute,
+          };
+        }
+      }
+      // Wire task:clarify to shared WaitForState (Phase 80)
+      const clarifyTaskToolIndex = resolvedTools.findIndex(
+        (t) => t.name === "clarify_task",
+      );
+      if (clarifyTaskToolIndex >= 0) {
+        const realClarifyTool = createClarifyTaskTool(
+          toolContext,
+          waitForState,
+        );
+        const existingClarifyTool = resolvedTools[clarifyTaskToolIndex];
+        if (existingClarifyTool) {
+          resolvedTools[clarifyTaskToolIndex] = {
+            ...existingClarifyTool,
+            execute: realClarifyTool.execute,
+          };
+        }
+      }
+      // Wire task:answer to shared WaitForState (Phase 80)
+      const answerTaskToolIndex = resolvedTools.findIndex(
+        (t) => t.name === "answer_task",
+      );
+      if (answerTaskToolIndex >= 0) {
+        const realAnswerTool = createAnswerTaskTool(toolContext, waitForState);
+        const existingAnswerTool = resolvedTools[answerTaskToolIndex];
+        if (existingAnswerTool) {
+          resolvedTools[answerTaskToolIndex] = {
+            ...existingAnswerTool,
+            execute: realAnswerTool.execute,
           };
         }
       }

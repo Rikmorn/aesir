@@ -1,9 +1,11 @@
 /**
  * Task Tools - Barrel Export
  *
- * Re-exports all eight task tool factories for registration in tool-factories.ts.
+ * Re-exports all ten task tool factories for registration in tool-factories.ts.
  */
 
+export { createAnswerTaskTool } from "./answer-task.js";
+export { createClarifyTaskTool } from "./clarify-task.js";
 export { createCompleteTaskTool } from "./complete-task.js";
 export { createCreateTaskTool } from "./create-task.js";
 export {
