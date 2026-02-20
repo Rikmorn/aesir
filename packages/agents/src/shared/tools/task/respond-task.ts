@@ -213,6 +213,9 @@ export function createRespondTaskTool(
             response: type,
             ...(estimate && { estimate }),
             ...(reason && { reason }),
+            ...(type === "reject" && {
+              originalDescription: task.objective ?? task.title,
+            }),
             respondedBy: ctx.agentId,
           },
           message:
