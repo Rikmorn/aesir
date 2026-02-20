@@ -446,3 +446,45 @@ export const workCorrelations = agentsSchema.table(
     ),
   ],
 );
+
+// ─── Materialization Records ─────────────────────────────────────────────────
+
+const materializationSyncStatusValues = [
+  "active",
+  "completed",
+  "failed",
+] as const;
+
+/**
+ * Materialization Records table (drizzle-kit mirror)
+ *
+ * Links agent tasks to their materialized external artifacts (e.g., Linear issues).
+ * Created at materialization time, queried on webhook receipt for reverse sync routing.
+ */
+export const materializationRecords = agentsSchema.table(
+  "materialization_records",
+  {
+    task_id: text("task_id").notNull().primaryKey(),
+    target: text("target").notNull(),
+    external_id: text("external_id").notNull(),
+    external_url: text("external_url"),
+    conversation_id: text("conversation_id").notNull(),
+    agent_id: text("agent_id").notNull(),
+    config: jsonb("config").notNull().default({}),
+    sync_status: text("sync_status", {
+      enum: materializationSyncStatusValues,
+    })
+      .notNull()
+      .default("active"),
+    created_at: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updated_at: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("idx_materialization_external").on(table.target, table.external_id),
+    index("idx_materialization_conversation").on(table.conversation_id),
+  ],
+);

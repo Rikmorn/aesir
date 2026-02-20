@@ -607,6 +607,59 @@ export const workCorrelations = agentsSchema.table(
   ],
 );
 
+// ─── Materialization Records ─────────────────────────────────────────────────
+
+/**
+ * Materialization sync status values
+ */
+export const materializationSyncStatusValues = [
+  "active",
+  "completed",
+  "failed",
+] as const;
+export type MaterializationSyncStatus =
+  (typeof materializationSyncStatusValues)[number];
+
+/**
+ * Materialization Records table
+ *
+ * Links agent tasks to their materialized external artifacts (e.g., Linear issues).
+ * Created at materialization time, queried on webhook receipt for reverse sync routing.
+ * Internal task state is authoritative; the external artifact is a projection.
+ *
+ * One-to-one: each task has at most one materialization record.
+ */
+export const materializationRecords = agentsSchema.table(
+  "materialization_records",
+  {
+    task_id: text("task_id").notNull().primaryKey(),
+    target: text("target").notNull(), // "linear" (extensible for future targets)
+    external_id: text("external_id").notNull(), // Linear issue UUID
+    external_url: text("external_url"), // Linear issue URL
+    conversation_id: text("conversation_id").notNull(), // Owning conversation
+    agent_id: text("agent_id").notNull(), // Agent that requested materialization
+    config: jsonb("config")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}), // Full MaterializationConfig snapshot
+    sync_status: text("sync_status", {
+      enum: materializationSyncStatusValues,
+    })
+      .notNull()
+      .default("active"),
+    created_at: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updated_at: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("idx_materialization_external").on(table.target, table.external_id),
+    index("idx_materialization_conversation").on(table.conversation_id),
+  ],
+);
+
 // ─── Type Exports ────────────────────────────────────────────────────────────
 
 export type Conversation = typeof conversations.$inferSelect;
@@ -629,3 +682,6 @@ export type EntityDirectory = typeof entityDirectory.$inferSelect;
 export type NewEntityDirectory = typeof entityDirectory.$inferInsert;
 export type WorkCorrelation = typeof workCorrelations.$inferSelect;
 export type NewWorkCorrelation = typeof workCorrelations.$inferInsert;
+export type MaterializationRecord = typeof materializationRecords.$inferSelect;
+export type NewMaterializationRecord =
+  typeof materializationRecords.$inferInsert;
