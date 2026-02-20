@@ -72,18 +72,24 @@ export function TaskDetailPanel({
   const isOrphaned = !!orphanEvent;
 
   // Extract handshake info from timeline events (task:respond tool calls)
-  const handshakeEvent = events.find(
-    (e) =>
-      (e.type === "tool.called" || e.type === "tool.succeeded") &&
-      (e.payload as Record<string, unknown>)?.toolName === "task:respond" &&
-      e.taskId === node.id,
-  );
+  // Events may store tool name as tool_name (snake_case) or toolName (camelCase)
+  const handshakeEvent = events.find((e) => {
+    if (e.type !== "tool.called" && e.type !== "tool.succeeded") return false;
+    if (e.taskId !== node.id) return false;
+    const p = e.payload as Record<string, unknown>;
+    const tn =
+      (p?.tool_name as string | undefined) ??
+      (p?.toolName as string | undefined);
+    return tn === "respond_task" || tn === "task:respond";
+  });
 
   // Extract handshake details from metadata or event payload
   const metadata = node.metadata as Record<string, unknown> | null;
+  const isCounterProposed = node.status === "counter_proposed";
   const isRejected = metadata?.rejected === true || !!metadata?.rejectionReason;
   const rejectionReason = metadata?.rejectionReason as string | undefined;
   const estimate = metadata?.estimate as string | undefined;
+  const counterProposal = metadata?.proposal as string | undefined;
 
   // Filter signal events for this task
   const signalEvents = events.filter(
@@ -158,7 +164,7 @@ export function TaskDetailPanel({
         </div>
 
         {/* 3. Handshake detail */}
-        {(handshakeEvent || isRejected || estimate) && (
+        {(handshakeEvent || isRejected || isCounterProposed || estimate) && (
           <div>
             <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
               Handshake
@@ -168,14 +174,29 @@ export function TaskDetailPanel({
                 <span
                   className={cn(
                     "inline-block h-1.5 w-1.5 rounded-full",
-                    isRejected ? "bg-red-500" : "bg-emerald-500",
+                    isRejected
+                      ? "bg-red-500"
+                      : isCounterProposed
+                        ? "bg-amber-500"
+                        : "bg-emerald-500",
                   )}
                 />
-                <span>{isRejected ? "Rejected" : "Accepted"}</span>
+                <span>
+                  {isRejected
+                    ? "Rejected"
+                    : isCounterProposed
+                      ? "Counter-Proposed"
+                      : "Accepted"}
+                </span>
               </div>
               {estimate && (
                 <p className="text-xs text-muted-foreground">
                   Estimate: {estimate}
+                </p>
+              )}
+              {counterProposal && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  Proposal: {counterProposal}
                 </p>
               )}
               {rejectionReason && (
@@ -227,6 +248,29 @@ export function TaskDetailPanel({
             <div className="space-y-1">
               {signalEvents.map((event) => {
                 const payload = event.payload as Record<string, unknown>;
+                const signalType = payload?.signalType as string | undefined;
+
+                // Determine display label and color for negotiation signals
+                let signalLabel: string;
+                let signalColor: string;
+
+                if (event.type === "signal.orphaned") {
+                  signalLabel = "orphaned";
+                  signalColor = "text-amber-600 dark:text-amber-400";
+                } else if (signalType === "task_counter_proposed") {
+                  signalLabel = "counter-proposed";
+                  signalColor = "text-amber-600 dark:text-amber-400";
+                } else if (signalType === "task_clarification") {
+                  signalLabel = "clarification";
+                  signalColor = "text-blue-600 dark:text-blue-400";
+                } else if (signalType === "task_clarification_response") {
+                  signalLabel = "clarification response";
+                  signalColor = "text-blue-600 dark:text-blue-400";
+                } else {
+                  signalLabel = String(signalType ?? event.type);
+                  signalColor = "text-foreground";
+                }
+
                 return (
                   <div
                     key={event.id}
@@ -235,17 +279,8 @@ export function TaskDetailPanel({
                     <span className="text-muted-foreground shrink-0">
                       {formatTime(event.timestamp)}
                     </span>
-                    <span
-                      className={cn(
-                        "font-medium",
-                        event.type === "signal.orphaned"
-                          ? "text-amber-600 dark:text-amber-400"
-                          : "text-foreground",
-                      )}
-                    >
-                      {event.type === "signal.orphaned"
-                        ? "orphaned"
-                        : String(payload?.signalType ?? event.type)}
+                    <span className={cn("font-medium", signalColor)}>
+                      {signalLabel}
                     </span>
                   </div>
                 );

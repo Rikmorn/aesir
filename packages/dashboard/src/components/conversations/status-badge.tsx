@@ -50,6 +50,11 @@ const statusConfig: Record<
     dotClassName: "bg-amber-500",
     className: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
   },
+  counter_proposed: {
+    label: "Counter-Proposed",
+    dotClassName: "bg-amber-500",
+    className: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  },
 };
 
 export function StatusBadge({ status }: { status: string }) {

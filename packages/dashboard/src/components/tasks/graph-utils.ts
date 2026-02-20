@@ -193,14 +193,16 @@ export function transformTreeToGraph(
       const state = getEdgeState(child, events);
 
       // Find delegation tool event for this edge
-      const delegationEvent = events.find(
-        (e) =>
-          e.type === "tool.called" &&
-          (e.payload as Record<string, unknown>)?.toolName ===
-            "task:delegate" &&
-          // Match by checking if the event's conversation is the parent's conversation
-          e.taskId === child.parentId,
-      );
+      // Events may store tool name as tool_name (snake_case) or toolName (camelCase)
+      const delegationEvent = events.find((e) => {
+        if (e.type !== "tool.called") return false;
+        if (e.taskId !== child.parentId) return false;
+        const p = e.payload as Record<string, unknown>;
+        const tn =
+          (p?.tool_name as string | undefined) ??
+          (p?.toolName as string | undefined);
+        return tn === "delegate_task" || tn === "task:delegate";
+      });
 
       return {
         id: `${child.parentId}-${child.id}`,
