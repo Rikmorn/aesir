@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 81 of 87 (Parallel Delegation)
-Plan: 4 of 6 in current phase
+Plan: 5 of 6 in current phase
 Status: Executing
-Last activity: 2026-02-20 -- Completed 81-04 (tool integration and worker loop wiring)
+Last activity: 2026-02-20 -- Completed 81-05 (cancellation cleanup turn pattern)
 
-Progress: [######----] 66%
+Progress: [########--] 83%
 
 ## Milestone History
 
@@ -49,6 +49,7 @@ Progress: [######----] 66%
 | 81 | 02 | 10min | 2 | 5 |
 | 81 | 03 | 6min | 2 | 4 |
 | 81 | 04 | 4min | 2 | 4 |
+| 81 | 05 | 2min | 2 | 5 |
 
 ## Accumulated Context
 
@@ -79,6 +80,9 @@ See PROJECT.md Key Decisions table for full history.
 - **81-04**: GroupService conditional on taskService in worker loop, unconditional in main.ts for dispatcher
 - **81-04**: Group timeout null in WaitForState (pg-boss handles via delegate_group, prevents double-scheduling)
 - **81-04**: DelegationDeps condition extended to detect group tool refs (delegate_group, group_status, cancel_group)
+- **81-05**: pending_cancellation set on both resume and queue paths for task_cancelled signals
+- **81-05**: Cancellation check placed before waitForState.triggered so it takes precedence
+- **81-05**: Cascade uses fire-and-forget pattern with catch for non-fatal failure tolerance
 
 ### Pending Todos
 
@@ -99,9 +103,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 81-04-PLAN.md
-Resume file: .planning/phases/81-parallel-delegation/81-04-SUMMARY.md
-Next action: Execute 81-05-PLAN.md
+Stopped at: Completed 81-05-PLAN.md
+Resume file: .planning/phases/81-parallel-delegation/81-05-SUMMARY.md
+Next action: Execute 81-06-PLAN.md
 
 ---
-*Updated: 2026-02-20 -- Completed 81-04 (tool integration and worker loop wiring).*
+*Updated: 2026-02-20 -- Completed 81-05 (cancellation cleanup turn pattern).*
