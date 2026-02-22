@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.9 Platform Completion -- Phase 84 (Scheduled Execution)
+**Current focus:** v2.9 Platform Completion -- Phase 86 (Persistent Agent Identity)
 
 ## Current Position
 
-Phase: 84 of 87 (Scheduled Execution)
-Plan: 3 of 3 in current phase
-Status: Phase Complete
-Last activity: 2026-02-22 -- Completed 84-03 (dashboard schedule visibility)
+Phase: 86 of 87 (Persistent Agent Identity)
+Plan: 1 of 3 in current phase
+Status: In Progress
+Last activity: 2026-02-22 -- Completed 86-01 (identity storage layer)
 
-Progress: [##########] 100%
+Progress: [########--] 80%
 
 ## Milestone History
 
@@ -36,7 +36,7 @@ Progress: [##########] 100%
 **Cumulative:**
 - Total milestones shipped: 10
 - Total phases completed: 80
-- Total plans completed: 356
+- Total plans completed: 357
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -59,6 +59,7 @@ Progress: [##########] 100%
 | 84 | 01 | 9min | 2 | 8 |
 | 84 | 02 | 7min | 2 | 8 |
 | 84 | 03 | 7min | 2 | 10 |
+| 86 | 01 | 6min | 2 | 11 |
 
 ## Accumulated Context
 
@@ -128,6 +129,10 @@ See PROJECT.md Key Decisions table for full history.
 - **84-03**: Schedule state API merges definition data with runtime state, computes nextRunAt server-side via cron-parser
 - **84-03**: Inline trigger feedback (dots + text) instead of toast library (no sonner dependency in dashboard)
 - **84-03**: exactOptionalPropertyTypes on schedules.timezone uses string | undefined to match Zod-inferred type
+- **86-01**: identityDocument ID prefix 'idoc_' added to createId for collision-resistant IDs
+- **86-01**: DISTINCT ON (document_type) Postgres query for efficient latest-version-per-type retrieval
+- **86-01**: conversation_id FK with ON DELETE SET NULL preserves document history when conversations are deleted
+- **86-01**: Identity tools follow same factory pattern as knowledge tools: (service, ctx) -> ToolDefinition
 
 ### Pending Todos
 
@@ -150,9 +155,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Phase 86 context gathered
-Resume file: .planning/phases/86-persistent-agent-identity/86-CONTEXT.md
-Next action: Plan Phase 86
+Stopped at: Completed 86-01-PLAN.md
+Resume file: .planning/phases/86-persistent-agent-identity/86-01-SUMMARY.md
+Next action: Execute 86-02-PLAN.md
 
 ---
-*Updated: 2026-02-22 -- Phase 86 context gathered. Phase 85 deferred to v3.0+.*
+*Updated: 2026-02-22 -- Completed 86-01 (identity storage layer).*

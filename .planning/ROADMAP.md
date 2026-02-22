@@ -209,10 +209,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Agents start every conversation with their accumulated identity documents (product brief, architectural model, domain knowledge, etc.) injected into the system prompt
   2. Agents can update their identity documents mid-conversation or at conversation end via `identity:update`, with every update creating a new version (full history retained)
-  3. Identity documents have configurable token limits per type, and agents are prompted to summarize when approaching the limit
-  4. The dashboard shows identity documents per agent with version history and side-by-side comparison of how understanding evolved
+  3. Identity documents enforce a 12,000-character hard limit per document and a 5-document cap per agent, enforced at write time with full replacement semantics
+  4. The dashboard shows identity documents per agent with collapsible cards, version history with char count deltas, and conversation provenance links
   5. If identity documents fail to load, the conversation starts without them (graceful degradation, not hard failure)
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 Plans:
 - [ ] 86-01-PLAN.md -- Database schema, IdentityService, identity:update and identity:read tools
 - [ ] 86-02-PLAN.md -- Lifecycle hooks, system prompt injection, agent definition updates
@@ -253,7 +253,7 @@ Wave 1 (parallel): 80, 82, 84 -> Wave 2: 81, 86 -> Wave 3: 83, 87
 | 83. Tree-Level Token Budgets | v2.9 | 0/TBD | Not started | - |
 | 84. Scheduled Execution | 3/3 | Complete    | 2026-02-22 | - |
 | 85. Sub-Agent Discovery | v2.9 | - | Deferred to v3.0+ | - |
-| 86. Persistent Agent Identity | v2.9 | 0/3 | Planning complete | - |
+| 86. Persistent Agent Identity | 1/3 | In Progress|  | - |
 | 87. Knowledge Retrieval Enhancement | v2.9 | 0/TBD | Not started | - |
 
 **Total: 10 milestones shipped (79 phases, 349 plans) + v2.9 in progress (8 phases)**
