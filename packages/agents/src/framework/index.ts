@@ -20,6 +20,11 @@ export {
   estimateTokens,
   formatArtifacts,
 } from "./history-manager.js";
+export {
+  buildScheduleQueueName,
+  createScheduleRegistry,
+  SCHEDULE_QUEUE_PREFIX,
+} from "./schedule-registry.js";
 export { createSessionProjection } from "./session-projection.js";
 export type {
   TimeoutScheduler,
