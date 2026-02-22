@@ -163,9 +163,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 86-03-PLAN.md
-Resume file: .planning/phases/86-persistent-agent-identity/86-03-SUMMARY.md
-Next action: Execute 86-02-PLAN.md (if not completed by parallel agent)
+Stopped at: Phase 87 context gathered
+Resume file: .planning/phases/87-knowledge-retrieval-enhancement/87-CONTEXT.md
+Next action: /gsd:plan-phase 87
 
 ---
-*Updated: 2026-02-22 -- Completed 86-03 (dashboard identity visibility).*
+*Updated: 2026-02-22 -- Phase 87 context gathered.*
