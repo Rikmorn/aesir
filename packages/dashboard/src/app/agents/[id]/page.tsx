@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { AgentConfigPanel } from "@/components/agents/agent-config-panel";
 import { AgentDetailTabs } from "@/components/agents/agent-detail-tabs";
+import { AgentIdentityPanel } from "@/components/agents/agent-identity-panel";
 import { AgentPromptViewer } from "@/components/agents/agent-prompt-viewer";
 import { AgentRecentConversations } from "@/components/agents/agent-recent-conversations";
 import { AgentSchedulePanel } from "@/components/agents/agent-schedule-panel";
@@ -13,6 +14,7 @@ import {
 } from "@/components/agents/agent-type-badge";
 import {
   getAgentDetail,
+  getIdentityDocumentsForAgent,
   getRecentConversationsByAgent,
   getScheduleStatesForAgent,
 } from "@/services/agents";
@@ -31,11 +33,13 @@ export default async function AgentDetailPage({
 }: AgentDetailPageProps) {
   const { id } = await params;
 
-  const [agent, conversations, scheduleStates] = await Promise.all([
-    getAgentDetail(id),
-    getRecentConversationsByAgent(id),
-    getScheduleStatesForAgent(id),
-  ]);
+  const [agent, conversations, scheduleStates, identityDocuments] =
+    await Promise.all([
+      getAgentDetail(id),
+      getRecentConversationsByAgent(id),
+      getScheduleStatesForAgent(id),
+      getIdentityDocumentsForAgent(id),
+    ]);
 
   if (!agent) {
     notFound();
@@ -95,6 +99,14 @@ export default async function AgentDetailPage({
                 agentId={agent.id}
                 schedules={agent.schedules}
                 scheduleStates={scheduleStates}
+              />
+            </div>
+          )}
+          {identityDocuments.length > 0 && (
+            <div className="mt-6 border-t pt-6">
+              <AgentIdentityPanel
+                agentId={agent.id}
+                documents={identityDocuments}
               />
             </div>
           )}
