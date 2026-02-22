@@ -227,7 +227,11 @@ Plans:
   2. Agents can declare retrieval preferences in their definition.yaml (strategy selection, weights, feature flags), validated at load time via Zod, with agents without config using current vector-only behavior
   3. Before history compaction, agents receive a prompt to persist important knowledge via `store_knowledge`, with safeguards preventing double-flush and skipping agents without knowledge tools
   4. New retrieval strategies can be added by implementing the strategy interface and registering by name, without changing pipeline code
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 87-01-PLAN.md -- Retrieval pipeline abstraction (strategy interface, vector/keyword strategies, RRF fusion, pipeline factory)
+- [ ] 87-02-PLAN.md -- Pre-compaction knowledge flush (lifecycle hook extension, worker loop integration, flush prompt)
+- [ ] 87-03-PLAN.md -- YAML schema extension and strategy validation (retrieval config schema, agent-registry validation, backward compatibility)
 
 ## Progress
 
