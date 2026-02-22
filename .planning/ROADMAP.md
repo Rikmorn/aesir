@@ -212,7 +212,11 @@ Plans:
   3. Identity documents have configurable token limits per type, and agents are prompted to summarize when approaching the limit
   4. The dashboard shows identity documents per agent with version history and side-by-side comparison of how understanding evolved
   5. If identity documents fail to load, the conversation starts without them (graceful degradation, not hard failure)
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 86-01-PLAN.md -- Database schema, IdentityService, identity:update and identity:read tools
+- [ ] 86-02-PLAN.md -- Lifecycle hooks, system prompt injection, agent definition updates
+- [ ] 86-03-PLAN.md -- Dashboard identity section with version history
 
 ### Phase 87: Knowledge Retrieval Enhancement
 **Goal**: The knowledge retrieval pipeline is pluggable for future strategies, and agents get a chance to persist important knowledge before history compaction discards it
@@ -249,11 +253,11 @@ Wave 1 (parallel): 80, 82, 84 -> Wave 2: 81, 86 -> Wave 3: 83, 87
 | 83. Tree-Level Token Budgets | v2.9 | 0/TBD | Not started | - |
 | 84. Scheduled Execution | 3/3 | Complete    | 2026-02-22 | - |
 | 85. Sub-Agent Discovery | v2.9 | - | Deferred to v3.0+ | - |
-| 86. Persistent Agent Identity | v2.9 | 0/TBD | Not started | - |
+| 86. Persistent Agent Identity | v2.9 | 0/3 | Planning complete | - |
 | 87. Knowledge Retrieval Enhancement | v2.9 | 0/TBD | Not started | - |
 
 **Total: 10 milestones shipped (79 phases, 349 plans) + v2.9 in progress (8 phases)**
 
 ---
 
-_Last updated: 2026-02-20 after v2.9 roadmap creation_
+_Last updated: 2026-02-22 after Phase 86 planning_
