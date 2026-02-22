@@ -112,6 +112,8 @@ export interface WorkerLoopOptions {
   correlationService?: CorrelationService | undefined;
   /** MaterializationAdapter for transparent materialization injection into DelegationDeps (Phase 82) */
   materializationAdapter?: MaterializationAdapter | undefined;
+  /** Schedule registry for updating schedule state on completion (Phase 84) */
+  scheduleRegistry?: import("./types.js").ScheduleRegistry | undefined;
 }
 
 /**
@@ -1982,6 +1984,45 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
             });
         }
 
+        // Update schedule state if this was a scheduled conversation (Phase 84)
+        // Detection heuristic: schedule correlationKeys use the format "agentId:scheduleName"
+        // (from CONTEXT.md locked decision). The correlationKey is embedded in the conversation
+        // ID as {agentDefinitionId}-{correlationKey}. No other correlationKey sources use colons --
+        // event-based correlationKeys use UUIDs/issue IDs, and delegation keys use hyphens.
+        // If a new correlationKey source introduces colons, this heuristic must be updated.
+        if (options.scheduleRegistry) {
+          const schedCorrelationKey = conv.id.slice(
+            conv.agent_definition_id.length + 1,
+          );
+          if (schedCorrelationKey.includes(":")) {
+            const [schedAgentId, schedName] = schedCorrelationKey.split(":");
+            if (schedAgentId && schedName) {
+              const lastAssistant = finalMessages
+                .filter(
+                  (m: unknown) =>
+                    (m as { role?: string }).role === "assistant" &&
+                    typeof (m as { content?: unknown }).content === "string",
+                )
+                .pop() as { content?: string } | undefined;
+              const summary = lastAssistant?.content?.slice(0, 500) ?? null;
+              void options.scheduleRegistry
+                .updateScheduleState(
+                  schedAgentId,
+                  schedName,
+                  "completed",
+                  conv.id,
+                  summary,
+                )
+                .catch((err: unknown) => {
+                  childLogger.warn(
+                    { err },
+                    "Failed to update schedule state (non-fatal)",
+                  );
+                });
+            }
+          }
+        }
+
         childLogger.info("Conversation completed");
       } else if (
         result.status === "error" ||
@@ -2050,6 +2091,32 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
                   "Failed to update correlation status to failed (non-fatal)",
                 );
               });
+          }
+
+          // Update schedule state on failure (Phase 84)
+          if (options.scheduleRegistry) {
+            const schedCorrelationKey = conv.id.slice(
+              conv.agent_definition_id.length + 1,
+            );
+            if (schedCorrelationKey.includes(":")) {
+              const [schedAgentId, schedName] = schedCorrelationKey.split(":");
+              if (schedAgentId && schedName) {
+                void options.scheduleRegistry
+                  .updateScheduleState(
+                    schedAgentId,
+                    schedName,
+                    "failed",
+                    conv.id,
+                    failureReason,
+                  )
+                  .catch((err: unknown) => {
+                    childLogger.warn(
+                      { err },
+                      "Failed to update schedule state on failure (non-fatal)",
+                    );
+                  });
+              }
+            }
           }
 
           childLogger.error(

@@ -827,6 +827,8 @@ export interface ConversationExecutorOptions {
   correlationService?: CorrelationService | undefined;
   /** MaterializationAdapter for transparent materialization (Phase 82) */
   materializationAdapter?: MaterializationAdapter | undefined;
+  /** Schedule registry for updating schedule state on completion (Phase 84) */
+  scheduleRegistry?: ScheduleRegistry | undefined;
 }
 
 // ─── Non-Retryable Error Classes ────────────────────────────────────────────

@@ -549,6 +549,118 @@ describe("EventRouter", () => {
     });
   });
 
+  // ── Schedule Trigger Routing ───────────────────────────────────────────
+
+  describe("schedule.triggered routing", () => {
+    it("routes schedule.triggered with valid agentId and correlationKey to start", async () => {
+      const { router } = await createRouter();
+
+      const result = router.handle(
+        makeEvent({
+          type: "schedule.triggered",
+          source: "scheduler",
+          correlationKey: "dev-agent:daily-standup",
+          data: {
+            agentId: "dev-agent",
+            scheduleName: "daily-standup",
+            cron: "0 9 * * *",
+          },
+          message: "Scheduled run: daily-standup",
+        }),
+      );
+
+      expect(result).toEqual({
+        action: "start",
+        agentDefinitionId: "dev-agent",
+        conversationId: "dev-agent-dev-agent:daily-standup",
+        correlationKey: "dev-agent:daily-standup",
+        message: "Scheduled run: daily-standup",
+        event: expect.objectContaining({ type: "schedule.triggered" }),
+      });
+    });
+
+    it("returns ignore when schedule.triggered is missing agentId", async () => {
+      const { router } = await createRouter();
+
+      const result = router.handle(
+        makeEvent({
+          type: "schedule.triggered",
+          source: "scheduler",
+          correlationKey: "some-key",
+          data: { scheduleName: "daily-standup" },
+        }),
+      );
+
+      expect(result).toEqual({
+        action: "ignore",
+        reason: "Malformed schedule.triggered event",
+      });
+    });
+
+    it("returns ignore when schedule.triggered is missing correlationKey", async () => {
+      const { router, logger } = await createRouter();
+
+      const result = router.handle(
+        makeEvent({
+          type: "schedule.triggered",
+          source: "scheduler",
+          data: { agentId: "dev-agent", scheduleName: "daily-standup" },
+        }),
+      );
+
+      expect(result).toEqual({
+        action: "ignore",
+        reason: "Malformed schedule.triggered event",
+      });
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({ event: expect.any(Object) }),
+        expect.stringContaining("missing agentId or correlationKey"),
+      );
+    });
+
+    it("uses default message when event.message is not provided", async () => {
+      const { router } = await createRouter();
+
+      const result = router.handle(
+        makeEvent({
+          type: "schedule.triggered",
+          source: "scheduler",
+          correlationKey: "dev-agent:cleanup",
+          data: { agentId: "dev-agent", scheduleName: "cleanup" },
+        }),
+      );
+
+      expect(result.action).toBe("start");
+      if (result.action === "start") {
+        expect(result.message).toBe("Scheduled run");
+      }
+    });
+
+    it("schedule.triggered takes priority over start rules (not in startRules map)", async () => {
+      const { router } = await createRouter();
+
+      // schedule.triggered is not in start rules -- it's handled by the special check
+      // before start rules. Verify it still works.
+      const result = router.handle(
+        makeEvent({
+          type: "schedule.triggered",
+          source: "scheduler",
+          correlationKey: "product-agent:weekly-report",
+          data: { agentId: "product-agent", scheduleName: "weekly-report" },
+          message: "Weekly report run",
+        }),
+      );
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          action: "start",
+          agentDefinitionId: "product-agent",
+          conversationId: "product-agent-product-agent:weekly-report",
+        }),
+      );
+    });
+  });
+
   // ── Slow-path Fallback ─────────────────────────────────────────────────
 
   describe("slow-path fallback", () => {

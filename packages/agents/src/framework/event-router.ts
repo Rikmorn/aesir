@@ -88,6 +88,30 @@ export function createEventRouter(options: EventRouterOptions): EventRouter {
         };
       }
 
+      // 1.5. Schedule trigger check (synthetic events from schedule-registry)
+      if (event.type === "schedule.triggered" && event.data) {
+        const data = event.data as { agentId?: string };
+        if (data.agentId && event.correlationKey) {
+          const conversationId = `${data.agentId}-${event.correlationKey}`;
+          return {
+            action: "start",
+            agentDefinitionId: data.agentId,
+            conversationId,
+            correlationKey: event.correlationKey,
+            message: event.message ?? "Scheduled run",
+            event,
+          };
+        }
+        logger.warn(
+          { event },
+          "schedule.triggered event missing agentId or correlationKey",
+        );
+        return {
+          action: "ignore",
+          reason: "Malformed schedule.triggered event",
+        };
+      }
+
       // 2. Start rule check
       const agentDefinitionId = startRules.get(event.type);
       if (agentDefinitionId !== undefined) {

@@ -133,6 +133,8 @@ export function createConversationExecutor(
         loopOpts.correlationService = options.correlationService;
       if (options.materializationAdapter !== undefined)
         loopOpts.materializationAdapter = options.materializationAdapter;
+      if (options.scheduleRegistry !== undefined)
+        loopOpts.scheduleRegistry = options.scheduleRegistry;
       // Late-bind executor reference so the worker loop can start delegated conversations
       loopOpts.executor = executor;
       workerLoop = createWorkerLoop(loopOpts);

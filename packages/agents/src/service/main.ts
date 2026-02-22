@@ -35,6 +35,7 @@ import {
   createConversationExecutor,
   createEventLog,
   createEventRouter,
+  createScheduleRegistry,
   createSessionProjection,
   createTimeoutScheduler,
   createToolRegistry,
@@ -178,6 +179,13 @@ async function bootstrap(): Promise<void> {
     correlationService,
   });
 
+  // 8a. Schedule registry -- pg-boss cron management for agent schedules (Phase 84)
+  const scheduleRegistry = createScheduleRegistry({
+    agentRegistry,
+    pool,
+    logger,
+  });
+
   // 8. ConversationExecutor -- SKIP LOCKED conversation lifecycle
   const executor = createConversationExecutor({
     db,
@@ -203,6 +211,7 @@ async function bootstrap(): Promise<void> {
     directoryService,
     correlationService,
     materializationAdapter,
+    scheduleRegistry,
   });
 
   // 8b. GroupService -- parallel delegation group management (Phase 81)
@@ -436,6 +445,30 @@ async function bootstrap(): Promise<void> {
       }
     });
     logger.info("Webhook dedup cleanup scheduled (hourly, 24h TTL)");
+  }
+
+  // 12c. Schedule registration (Phase 84)
+  if (boss) {
+    // Set the event handler that routes synthetic schedule events through the normal pipeline.
+    // The handler receives IncomingEvent from the schedule registry, passes it through
+    // EventRouter.handle() for deterministic routing, then dispatches via executor.start().
+    scheduleRegistry.setEventHandler(async (event) => {
+      const decision = eventRouter.handle(event);
+      if (decision.action === "start") {
+        await executor.start({
+          agentDefinitionId: decision.agentDefinitionId,
+          correlationKey: decision.correlationKey,
+          initialMessage: decision.message,
+        });
+      } else {
+        logger.warn(
+          { eventType: event.type, action: decision.action },
+          "Schedule event did not produce a start action",
+        );
+      }
+    });
+    await scheduleRegistry.registerAll(boss);
+    logger.info("Agent schedules registered");
   }
 
   // 13. Graceful shutdown
