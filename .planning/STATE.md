@@ -150,9 +150,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Phase 85 deferred to v3.0+ (activation pattern unification)
-Resume file: .planning/ROADMAP.md
-Next action: Execute Phase 83 or 86
+Stopped at: Phase 86 context gathered
+Resume file: .planning/phases/86-persistent-agent-identity/86-CONTEXT.md
+Next action: Plan Phase 86
 
 ---
-*Updated: 2026-02-22 -- Phase 85 (Sub-Agent Discovery) deferred to v3.0+. Reason: orchestrator/sub-agent distinction is an activation pattern, not an agent type — building a separate sub_agent tier now creates infrastructure to merge later. Discovery should query a unified entity directory filtered by activation patterns.*
+*Updated: 2026-02-22 -- Phase 86 context gathered. Phase 85 deferred to v3.0+.*
