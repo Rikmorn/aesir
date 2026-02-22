@@ -28,8 +28,8 @@ import DelegationEdgeComponent, {
   type DelegationEdgeData,
 } from "./delegation-edge";
 import { getLayoutedElements } from "./graph-layout";
-import GroupNodeComponent, { type GroupNodeData } from "./group-node";
 import { transformTreeToGraph as transformTreeToGraphBase } from "./graph-utils";
+import GroupNodeComponent, { type GroupNodeData } from "./group-node";
 import TaskNodeComponent, { type TaskNodeData } from "./task-node";
 
 // ─── Node & Edge Types (module-level for referential equality) ──────────────

@@ -135,9 +135,7 @@ function buildGroupSignalData(
       running: state.running,
     },
     taskSummaries: state.tasks
-      .filter((t) =>
-        ["completed", "failed", "cancelled"].includes(t.status),
-      )
+      .filter((t) => ["completed", "failed", "cancelled"].includes(t.status))
       .map((t) => ({
         taskId: t.taskId,
         status: t.status,
@@ -355,8 +353,7 @@ export function createTaskSignalDispatcher(
 
     // Re-read state to get latest counts after possible status change
     const latestState = await groupService.getGroupState(task.group_id);
-    const allTerminal =
-      latestState.running === 0 && latestState.pending === 0;
+    const allTerminal = latestState.running === 0 && latestState.pending === 0;
 
     if (
       allTerminal &&

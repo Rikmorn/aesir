@@ -72,9 +72,7 @@ export function createWaitForGroupTool(
 
       // Verify the group exists if GroupService is available
       if (ctx?.delegationDeps?.groupService) {
-        const group = await ctx.delegationDeps.groupService.get(
-          parsed.groupId,
-        );
+        const group = await ctx.delegationDeps.groupService.get(parsed.groupId);
         if (!group) {
           return {
             content: `Error: Group ${parsed.groupId} not found. Verify the group ID from delegate_group output.`,

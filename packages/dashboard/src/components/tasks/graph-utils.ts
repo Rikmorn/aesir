@@ -225,8 +225,8 @@ function buildDelegationEdge(
       payloadPreview: delegationEvent
         ? truncate(
             JSON.stringify(
-              (delegationEvent.payload as Record<string, unknown>)
-                ?.arguments ?? {},
+              (delegationEvent.payload as Record<string, unknown>)?.arguments ??
+                {},
             ),
             80,
           )

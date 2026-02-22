@@ -107,7 +107,9 @@ function createMockTask(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function createMockGroupService(overrides: Partial<GroupService> = {}): GroupService {
+function createMockGroupService(
+  overrides: Partial<GroupService> = {},
+): GroupService {
   return {
     create: vi.fn(),
     get: vi.fn().mockResolvedValue(null),
@@ -506,9 +508,7 @@ describe("createTaskSignalDispatcher", () => {
       executor.signal.mockResolvedValue({ action: "resumed" });
 
       const taskService = createMockTaskService();
-      taskService.get.mockResolvedValue(
-        createMockTask({ group_id: null }),
-      );
+      taskService.get.mockResolvedValue(createMockTask({ group_id: null }));
 
       const eventLog = createMockEventLog();
       const db = createMockDb();
@@ -577,14 +577,15 @@ describe("createTaskSignalDispatcher", () => {
 
       // Setup getGroupState to return the provided state, then subsequent states
       const getGroupStateMock = vi.fn();
-      const allStates = [opts.state, ...(opts.subsequentStates ?? [opts.state])];
+      const allStates = [
+        opts.state,
+        ...(opts.subsequentStates ?? [opts.state]),
+      ];
       for (const s of allStates) {
         getGroupStateMock.mockResolvedValueOnce(s);
       }
       // Final fallback
-      getGroupStateMock.mockResolvedValue(
-        allStates[allStates.length - 1],
-      );
+      getGroupStateMock.mockResolvedValue(allStates[allStates.length - 1]);
 
       const groupService = createMockGroupService({
         getGroupState: getGroupStateMock,
@@ -638,12 +639,14 @@ describe("createTaskSignalDispatcher", () => {
         db: (() => {
           const db = createMockDb();
           db.execute.mockResolvedValue({
-            rows: [{
-              id: GROUP_ID,
-              delegator_conversation_id: DELEGATOR_CONV_ID,
-              policy,
-              status: "active",
-            }],
+            rows: [
+              {
+                id: GROUP_ID,
+                delegator_conversation_id: DELEGATOR_CONV_ID,
+                policy,
+                status: "active",
+              },
+            ],
           });
           return db;
         })() as never,
@@ -660,7 +663,11 @@ describe("createTaskSignalDispatcher", () => {
       // Mock task with group_id
       const ts = createMockTaskService();
       ts.get.mockResolvedValue(
-        createMockTask({ id: "task_triggering", group_id: GROUP_ID, parent_id: "task_p" }),
+        createMockTask({
+          id: "task_triggering",
+          group_id: GROUP_ID,
+          parent_id: "task_p",
+        }),
       );
 
       // Use the setupGroupTest helper instead
@@ -670,7 +677,11 @@ describe("createTaskSignalDispatcher", () => {
         subsequentStates: [settledState],
       });
 
-      await result.dispatcher.onTaskUpdate("task_triggering", "active", "failed");
+      await result.dispatcher.onTaskUpdate(
+        "task_triggering",
+        "active",
+        "failed",
+      );
 
       // Should send group_task_failed (not group_policy_unsatisfiable) for all_required
       expect(result.executor.signal).toHaveBeenCalledWith(
@@ -985,17 +996,20 @@ describe("createTaskSignalDispatcher", () => {
 
       const db = createMockDb();
       db.execute.mockResolvedValue({
-        rows: [{
-          id: GROUP_ID,
-          delegator_conversation_id: DELEGATOR_CONV_ID,
-          policy,
-          status: "settled", // Already settled
-        }],
+        rows: [
+          {
+            id: GROUP_ID,
+            delegator_conversation_id: DELEGATOR_CONV_ID,
+            policy,
+            status: "settled", // Already settled
+          },
+        ],
       });
 
       const logger = createMockLogger();
 
-      const getGroupStateMock = vi.fn()
+      const getGroupStateMock = vi
+        .fn()
         .mockResolvedValueOnce(state)
         .mockResolvedValue(settledState);
 
@@ -1097,12 +1111,14 @@ describe("createTaskSignalDispatcher", () => {
 
       const db = createMockDb();
       db.execute.mockResolvedValue({
-        rows: [{
-          id: GROUP_ID,
-          delegator_conversation_id: DELEGATOR_CONV_ID,
-          policy,
-          status: "satisfied", // Already satisfied
-        }],
+        rows: [
+          {
+            id: GROUP_ID,
+            delegator_conversation_id: DELEGATOR_CONV_ID,
+            policy,
+            status: "satisfied", // Already satisfied
+          },
+        ],
       });
 
       const logger = createMockLogger();
