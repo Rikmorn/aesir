@@ -227,7 +227,7 @@ Plans:
   2. Agents can declare retrieval preferences in their definition.yaml (strategy selection, weights, feature flags), validated at load time via Zod, with agents without config using current vector-only behavior
   3. Before history compaction, agents receive a prompt to persist important knowledge via `store_knowledge`, with safeguards preventing double-flush and skipping agents without knowledge tools
   4. New retrieval strategies can be added by implementing the strategy interface and registering by name, without changing pipeline code
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 Plans:
 - [ ] 87-01-PLAN.md -- Retrieval pipeline abstraction (strategy interface, vector/keyword strategies, RRF fusion, pipeline factory)
 - [ ] 87-02-PLAN.md -- Pre-compaction knowledge flush (lifecycle hook extension, worker loop integration, flush prompt)
@@ -258,7 +258,7 @@ Wave 1 (parallel): 80, 82, 84 -> Wave 2: 81, 86 -> Wave 3: 83, 87
 | 84. Scheduled Execution | 3/3 | Complete    | 2026-02-22 | - |
 | 85. Sub-Agent Discovery | v2.9 | - | Deferred to v3.0+ | - |
 | 86. Persistent Agent Identity | 3/3 | Complete    | 2026-02-22 | - |
-| 87. Knowledge Retrieval Enhancement | 1/3 | In Progress|  | - |
+| 87. Knowledge Retrieval Enhancement | 2/3 | In Progress|  | - |
 
 **Total: 10 milestones shipped (79 phases, 349 plans) + v2.9 in progress (8 phases)**
 

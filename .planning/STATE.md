@@ -62,6 +62,7 @@ Progress: [#########-] 90%
 | 86 | 01 | 6min | 2 | 11 |
 | 86 | 02 | 7min | 2 | 12 |
 | 86 | 03 | 6min | 2 | 7 |
+| 87 | 01 | 4min | 2 | 8 |
 | 87 | 02 | 3min | 2 | 3 |
 
 ## Accumulated Context
@@ -142,6 +143,10 @@ See PROJECT.md Key Decisions table for full history.
 - **86-03**: /dashboard/ basePath prefix in fetch URLs to match Next.js basePath configuration
 - [Phase 86]: Pre-completion hook runs inside completed branch after cancellation check, uses separate runAgentLoop with maxIterations:3
 - [Phase 86]: Identity review hook skips agents with zero documents; first documents created organically via identity:update tool
+- **87-01**: Module-level strategies Map populated at import time for getRegisteredStrategyNames() without pipeline instantiation
+- **87-01**: Vector strategy passes embeddingService via config bag (config.embeddingService) per StrategyFactory signature
+- **87-01**: Keyword strategy uses expression index (no schema column change) for simplicity
+- **87-01**: Pipeline auto-injects embeddingService into all strategy configs
 - **87-02**: Pre-compaction flush uses same estimateMessageTokens threshold as compaction (no divergence)
 - **87-02**: Flush turn restricted to only knowledge_store tool (no other tools available during flush)
 - **87-02**: flushedBeforeCompaction guard scoped to executeConversation function (reset per cycle)
