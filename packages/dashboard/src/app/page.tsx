@@ -1,5 +1,9 @@
 import { LiveOverview } from "@/components/overview/live-overview";
-import { fetchToolsHealth, fetchWorkerStatus } from "@/lib/agent-service";
+import {
+  fetchAllScheduleStates,
+  fetchToolsHealth,
+  fetchWorkerStatus,
+} from "@/lib/agent-service";
 import { getDefaultResolution, getTimeRangeDate } from "@/lib/format";
 import {
   getActiveConversations,
@@ -32,6 +36,7 @@ export default async function OverviewPage({
     tokenUsageBuckets,
     integrationErrorRates,
     integrationHealth,
+    scheduleStates,
   ] = await Promise.all([
     getConversationStatusCounts(),
     getActiveConversations(),
@@ -40,6 +45,7 @@ export default async function OverviewPage({
     getTokenUsageBuckets(since, resolution),
     getIntegrationErrorRates(since),
     fetchToolsHealth(),
+    fetchAllScheduleStates(),
   ]);
 
   // Serialize Date fields for server/client boundary crossing
@@ -63,6 +69,7 @@ export default async function OverviewPage({
         tokenUsageBuckets={tokenUsageBuckets}
         integrationErrorRates={integrationErrorRates}
         integrationHealth={integrationHealth}
+        scheduleStates={scheduleStates}
         defaultTimeRange={timeRange}
         defaultResolution={resolution}
       />

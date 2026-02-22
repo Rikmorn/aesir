@@ -22,6 +22,7 @@ import { IntegrationHealth } from "@/components/overview/integration-health";
 import { RecentErrors } from "@/components/overview/recent-errors";
 import { StatCards } from "@/components/overview/stat-cards";
 import { TokenUsage } from "@/components/overview/token-usage";
+import { UpcomingSchedulesCard } from "@/components/overview/upcoming-schedules-card";
 import { WorkerStatus } from "@/components/overview/worker-status";
 import {
   Select,
@@ -33,6 +34,7 @@ import {
 import { useEventStream } from "@/hooks/use-event-stream";
 import type {
   IntegrationHealth as IntegrationHealthType,
+  ScheduleState,
   WorkerStatus as WorkerStatusType,
 } from "@/lib/agent-service";
 import { getDefaultResolution, getResolutionOptions } from "@/lib/format";
@@ -82,6 +84,7 @@ interface LiveOverviewProps {
   tokenUsageBuckets: TokenUsageBucket[];
   integrationErrorRates: IntegrationErrorRates;
   integrationHealth: IntegrationHealthType[];
+  scheduleStates: ScheduleState[];
   defaultTimeRange: string;
   defaultResolution: string;
 }
@@ -118,6 +121,7 @@ export function LiveOverview({
   tokenUsageBuckets,
   integrationErrorRates,
   integrationHealth,
+  scheduleStates,
   defaultTimeRange,
   defaultResolution,
 }: LiveOverviewProps) {
@@ -259,6 +263,9 @@ export function LiveOverview({
         <ActiveConversations conversations={conversations} />
         <RecentErrors errors={errors} />
       </div>
+
+      {/* Upcoming Schedules */}
+      <UpcomingSchedulesCard scheduleStates={scheduleStates} />
 
       {/* Charts section header with time range + resolution */}
       <div className="flex items-center justify-between">
