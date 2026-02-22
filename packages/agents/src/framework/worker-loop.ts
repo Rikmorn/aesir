@@ -41,7 +41,10 @@ import { createAnswerTaskTool } from "../shared/tools/task/answer-task.js";
 import { createClarifyTaskTool } from "../shared/tools/task/clarify-task.js";
 import { createRespondTaskTool } from "../shared/tools/task/respond-task.js";
 import { hasTextContent } from "./event-content.js";
-import { createHistoryManager } from "./history-manager.js";
+import {
+  createHistoryManager,
+  estimateMessageTokens,
+} from "./history-manager.js";
 import type {
   LifecycleHookContext,
   LifecycleHookRegistry,
@@ -1009,6 +1012,8 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
   ): Promise<void> {
     const childLogger = logger.child({ conversationId: conv.id });
     const instanceId = `inst_${nanoid(12)}`;
+    // Re-entry guard: prevents double-flushing knowledge in a single execution cycle (Phase 87)
+    let flushedBeforeCompaction = false;
 
     try {
       // 1. Load agent definition
@@ -1510,6 +1515,73 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
             { signalType: matchedSignal.type },
             "Consumed queued signal for conversation -- skipping pause",
           );
+        }
+      }
+
+      // 6b. Pre-compaction knowledge flush (Phase 87)
+      // Fire flush BEFORE compaction when threshold is crossed, agent has knowledge tools,
+      // and we haven't already flushed this cycle
+      if (
+        options.lifecycleHooks &&
+        !flushedBeforeCompaction &&
+        currentMessages.length > 0
+      ) {
+        const estimatedTokens = estimateMessageTokens(currentMessages);
+        const needsCompaction =
+          estimatedTokens >= definition.history.pruneThreshold;
+
+        // Check if agent has knowledge:store tool
+        const hasKnowledgeStore = definition.tools.some(
+          (ref) => ref === "knowledge:store",
+        );
+
+        if (needsCompaction && hasKnowledgeStore) {
+          flushedBeforeCompaction = true;
+          try {
+            // Resolve ONLY the store_knowledge tool for the flush turn
+            const storeKnowledgeTool = resolvedTools.find(
+              (t) => t.name === "knowledge_store",
+            );
+            const flushTools = storeKnowledgeTool ? [storeKnowledgeTool] : [];
+
+            if (flushTools.length > 0) {
+              const flushCtx: LifecycleHookContext = {
+                conversationId: conv.id,
+                agentDefinitionId: conv.agent_definition_id,
+                agentDefinitionVersion: conv.agent_definition_version,
+                messages: currentMessages,
+                systemPrompt,
+                tools: flushTools,
+                model: definition.model,
+                logger: childLogger,
+                injectTurn: async (userMessage: string) => {
+                  const hookResult = await runAgentLoop({
+                    systemPrompt,
+                    tools: flushTools, // ONLY store_knowledge
+                    initialMessage: userMessage,
+                    context: JSON.stringify(currentMessages),
+                    model: definition.model,
+                    maxIterations: 3,
+                    onToolCall,
+                    onToolResult,
+                    onResponse,
+                    abortSignal,
+                    logger: childLogger,
+                  });
+                  // Append flush messages to currentMessages BEFORE compaction
+                  currentMessages.push(...hookResult.messages.slice(1));
+                  return hookResult;
+                },
+              };
+              await options.lifecycleHooks.runPreCompaction(flushCtx);
+            }
+          } catch (flushErr) {
+            // Non-fatal: flush failing should not prevent compaction
+            childLogger.error(
+              { err: flushErr },
+              "Pre-compaction flush failed (non-fatal, proceeding with compaction)",
+            );
+          }
         }
       }
 

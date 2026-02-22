@@ -172,6 +172,22 @@ async function bootstrap(): Promise<void> {
     await ctx.injectTurn(reviewPrompt);
   });
 
+  // Register knowledge flush hook: prompts agents to persist important
+  // knowledge before history compaction discards conversation details (Phase 87)
+  lifecycleHooks.registerPreCompaction("knowledge-flush", async (ctx) => {
+    const flushPrompt = `<knowledge_flush>
+Review this conversation for knowledge that would be valuable in future conversations but will be lost when context is compacted. Focus on:
+- Discoveries and decisions that can't be re-derived easily
+- Rationale behind choices (why, not just what)
+- Constraints or gotchas encountered that would save time if known upfront
+- Patterns that worked well or failed
+
+Use store_knowledge for anything worth preserving. Quality over quantity -- if nothing warrants persisting, just say so.
+</knowledge_flush>`;
+
+    await ctx.injectTurn(flushPrompt);
+  });
+
   // 5. EventLog -- buffered append-only event recording
   const eventLog = createEventLog({ db, logger });
 
