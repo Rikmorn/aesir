@@ -66,6 +66,88 @@ export function createScheduleRegistry(
   let eventHandler: ((event: IncomingEvent) => Promise<void>) | null = null;
 
   /**
+   * Build schedule context XML block for injection into initial message.
+   * Extracted as a private function so both handleScheduleFire (cron path)
+   * and the public buildScheduleContext method can use it.
+   */
+  async function buildContext(
+    agentId: string,
+    scheduleName: string,
+    trigger: "scheduled" | "manual",
+  ): Promise<string> {
+    // Query schedule state
+    const stateResult = await pool.query(
+      `SELECT last_run_at, last_run_outcome, last_run_conversation_id,
+              last_run_summary, run_count
+       FROM agents.schedule_state
+       WHERE agent_id = $1 AND schedule_name = $2`,
+      [agentId, scheduleName],
+    );
+
+    const state = stateResult.rows[0] as
+      | {
+          last_run_at: Date | null;
+          last_run_outcome: string | null;
+          last_run_conversation_id: string | null;
+          last_run_summary: string | null;
+          run_count: number;
+        }
+      | undefined;
+
+    const lastRunAt = state?.last_run_at
+      ? state.last_run_at.toISOString()
+      : "Never";
+    const timeSinceLastRun = state?.last_run_at
+      ? formatTimeSince(state.last_run_at, new Date())
+      : "First run";
+    const lastRunOutcome = state?.last_run_outcome ?? "N/A";
+    const runCount = state?.run_count ?? 0;
+
+    // Try to get last run summary from state, or fall back to conversation messages
+    let summary = state?.last_run_summary ?? null;
+    if (!summary && state?.last_run_conversation_id) {
+      try {
+        const convResult = await pool.query(
+          `SELECT messages FROM agents.conversations WHERE id = $1`,
+          [state.last_run_conversation_id],
+        );
+        if (convResult.rows.length > 0) {
+          const messages = (convResult.rows[0] as { messages: unknown[] })
+            .messages;
+          // Find last assistant message
+          for (let i = messages.length - 1; i >= 0; i--) {
+            const msg = messages[i] as { role?: string; content?: unknown };
+            if (msg.role === "assistant" && msg.content) {
+              const text =
+                typeof msg.content === "string"
+                  ? msg.content
+                  : JSON.stringify(msg.content);
+              summary = text.length > 500 ? `${text.slice(0, 497)}...` : text;
+              break;
+            }
+          }
+        }
+      } catch {
+        // Non-fatal: use "No previous run" as fallback
+      }
+    }
+
+    const lines: string[] = [
+      "<schedule_context>",
+      `Schedule: ${scheduleName}`,
+      `Last run: ${lastRunAt}`,
+      `Time since last run: ${timeSinceLastRun}`,
+      `Last run outcome: ${lastRunOutcome}`,
+      `Last run summary: ${summary ?? "No previous run"}`,
+      `Run count: ${runCount}`,
+      `Trigger: ${trigger}`,
+      "</schedule_context>",
+    ];
+
+    return lines.join("\n");
+  }
+
+  /**
    * Handle a cron fire from pg-boss.
    * Checks for overlap (skip policy), builds context, routes synthetic event.
    */
@@ -144,12 +226,15 @@ export function createScheduleRegistry(
       return;
     }
 
+    // Build schedule context so the agent sees its run history
+    const context = await buildContext(agentId, scheduleName, "scheduled");
+
     const syntheticEvent: IncomingEvent = {
       type: "schedule.triggered",
       source: "scheduler",
       correlationKey,
       data: { agentId, scheduleName, cron, trigger: "scheduled" as const },
-      message: `Scheduled run: ${scheduleName}`,
+      message: `${context}\n\nScheduled run: ${scheduleName}`,
     };
 
     try {
@@ -290,76 +375,7 @@ export function createScheduleRegistry(
       scheduleName: string,
       trigger: "scheduled" | "manual",
     ): Promise<string> {
-      // Query schedule state
-      const stateResult = await pool.query(
-        `SELECT last_run_at, last_run_outcome, last_run_conversation_id,
-                last_run_summary, run_count
-         FROM agents.schedule_state
-         WHERE agent_id = $1 AND schedule_name = $2`,
-        [agentId, scheduleName],
-      );
-
-      const state = stateResult.rows[0] as
-        | {
-            last_run_at: Date | null;
-            last_run_outcome: string | null;
-            last_run_conversation_id: string | null;
-            last_run_summary: string | null;
-            run_count: number;
-          }
-        | undefined;
-
-      const lastRunAt = state?.last_run_at
-        ? state.last_run_at.toISOString()
-        : "Never";
-      const timeSinceLastRun = state?.last_run_at
-        ? formatTimeSince(state.last_run_at, new Date())
-        : "First run";
-      const lastRunOutcome = state?.last_run_outcome ?? "N/A";
-      const runCount = state?.run_count ?? 0;
-
-      // Try to get last run summary from state, or fall back to conversation messages
-      let summary = state?.last_run_summary ?? null;
-      if (!summary && state?.last_run_conversation_id) {
-        try {
-          const convResult = await pool.query(
-            `SELECT messages FROM agents.conversations WHERE id = $1`,
-            [state.last_run_conversation_id],
-          );
-          if (convResult.rows.length > 0) {
-            const messages = (convResult.rows[0] as { messages: unknown[] })
-              .messages;
-            // Find last assistant message
-            for (let i = messages.length - 1; i >= 0; i--) {
-              const msg = messages[i] as { role?: string; content?: unknown };
-              if (msg.role === "assistant" && msg.content) {
-                const text =
-                  typeof msg.content === "string"
-                    ? msg.content
-                    : JSON.stringify(msg.content);
-                summary = text.length > 500 ? `${text.slice(0, 497)}...` : text;
-                break;
-              }
-            }
-          }
-        } catch {
-          // Non-fatal: use "No previous run" as fallback
-        }
-      }
-
-      const lines: string[] = [
-        "<schedule_context>",
-        `Schedule: ${scheduleName}`,
-        `Last run: ${lastRunAt}`,
-        `Time since last run: ${timeSinceLastRun}`,
-        `Last run outcome: ${lastRunOutcome}`,
-        `Last run summary: ${summary ?? "No previous run"}`,
-        `Run count: ${runCount}`,
-        `Trigger: ${trigger}`,
-        "</schedule_context>",
-      ];
-
-      return lines.join("\n");
+      return buildContext(agentId, scheduleName, trigger);
     },
   };
 }

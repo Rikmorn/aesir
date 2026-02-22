@@ -339,6 +339,59 @@ describe("createScheduleRegistry", () => {
         trigger: "scheduled",
       });
     });
+
+    it("includes schedule context in synthetic event message (cron path)", async () => {
+      const pool = createMockPool({
+        "FROM agents.schedule_state": {
+          rows: [
+            {
+              last_run_at: new Date("2026-02-21T09:00:00Z"),
+              last_run_outcome: "completed",
+              last_run_conversation_id: "conv-prev",
+              last_run_summary: "Groomed 8 issues.",
+              run_count: 4,
+            },
+          ],
+        },
+      });
+
+      const agentRegistry = createMockAgentRegistry([
+        makeAgentDef({
+          id: "product-agent",
+          schedules: [{ name: "weekly-grooming", cron: "0 9 * * MON" }],
+        }),
+      ]);
+
+      const eventHandler = vi.fn().mockResolvedValue(undefined);
+
+      const registry = createScheduleRegistry({
+        agentRegistry,
+        pool,
+        logger: mockLogger,
+      });
+      registry.setEventHandler(eventHandler);
+
+      let workerHandler: (() => Promise<void>) | undefined;
+      mockBoss.work.mockImplementation(
+        (_name: string, handler: () => Promise<void>) => {
+          workerHandler = handler;
+          return Promise.resolve("worker-id");
+        },
+      );
+
+      await registry.registerAll(mockBoss);
+      await workerHandler?.();
+
+      expect(eventHandler).toHaveBeenCalledTimes(1);
+      const event = eventHandler.mock.calls[0]?.[0] as IncomingEvent;
+      // Message should include schedule context XML block
+      expect(event.message).toContain("<schedule_context>");
+      expect(event.message).toContain("Schedule: weekly-grooming");
+      expect(event.message).toContain("Trigger: scheduled");
+      expect(event.message).toContain("Last run outcome: completed");
+      expect(event.message).toContain("Run count: 4");
+      expect(event.message).toContain("Scheduled run: weekly-grooming");
+    });
   });
 
   describe("buildScheduleContext", () => {
