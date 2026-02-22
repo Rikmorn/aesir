@@ -70,13 +70,13 @@ Requirements for v2.9 Platform Completion. Each maps to roadmap phases.
 
 - [x] **IDN-01**: Identity document table -- structured, versioned documents scoped to an agent role (not a conversation). Schema: agent_id, document_type, content (text), version, updated_at, token_count
 - [x] **IDN-02**: Document types -- extensible set: `product_brief`, `architectural_model`, `stakeholder_map`, `domain_knowledge`, `working_context`, `learned_preferences`. New types addable without schema change
-- [ ] **IDN-03**: Context injection -- relevant identity documents injected into the system prompt at conversation start. The agent begins every conversation with its accumulated understanding
+- [x] **IDN-03**: Context injection -- relevant identity documents injected into the system prompt at conversation start. The agent begins every conversation with its accumulated understanding
 - [x] **IDN-04**: `identity:update` tool -- agents update their identity documents at conversation end (or mid-conversation for important discoveries). Appends a new version; old versions retained
 - [x] **IDN-05**: `identity:read` tool -- agents can explicitly read their identity documents (beyond the auto-injected version at start) for refresh during long conversations
 - [x] **IDN-06**: Document versioning -- every update creates a new version. Full history retained for audit and rollback
 - [x] **IDN-07**: Size management -- identity documents have configurable token limits per type. When approaching the limit, the agent is prompted to summarize/compress before the next update
-- [ ] **IDN-08**: Dashboard visibility -- identity documents viewable and version-comparable in the dashboard. Operators can see how an agent's understanding evolved over time
-- [ ] **IDN-09**: Graceful degradation -- if identity documents fail to load, conversation starts without them (higher context cost, not a hard failure)
+- [x] **IDN-08**: Dashboard visibility -- identity documents viewable and version-comparable in the dashboard. Operators can see how an agent's understanding evolved over time
+- [x] **IDN-09**: Graceful degradation -- if identity documents fail to load, conversation starts without them (higher context cost, not a hard failure)
 
 ### Knowledge Retrieval Enhancement
 
@@ -179,13 +179,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DISC-07 | Phase 85 | Pending |
 | IDN-01 | Phase 86 | Complete |
 | IDN-02 | Phase 86 | Complete |
-| IDN-03 | Phase 86 | Pending |
+| IDN-03 | Phase 86 | Complete |
 | IDN-04 | Phase 86 | Complete |
 | IDN-05 | Phase 86 | Complete |
 | IDN-06 | Phase 86 | Complete |
 | IDN-07 | Phase 86 | Complete |
-| IDN-08 | Phase 86 | Pending |
-| IDN-09 | Phase 86 | Pending |
+| IDN-08 | Phase 86 | Complete |
+| IDN-09 | Phase 86 | Complete |
 | KR-01 | Phase 87 | Pending |
 | KR-02 | Phase 87 | Pending |
 | KR-03 | Phase 87 | Pending |

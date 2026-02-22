@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 86 of 87 (Persistent Agent Identity)
-Plan: 1 of 3 in current phase
+Plan: 3 of 3 in current phase
 Status: In Progress
-Last activity: 2026-02-22 -- Completed 86-01 (identity storage layer)
+Last activity: 2026-02-22 -- Completed 86-03 (dashboard identity visibility)
 
 Progress: [########--] 80%
 
@@ -36,7 +36,7 @@ Progress: [########--] 80%
 **Cumulative:**
 - Total milestones shipped: 10
 - Total phases completed: 80
-- Total plans completed: 357
+- Total plans completed: 358
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -60,6 +60,8 @@ Progress: [########--] 80%
 | 84 | 02 | 7min | 2 | 8 |
 | 84 | 03 | 7min | 2 | 10 |
 | 86 | 01 | 6min | 2 | 11 |
+| 86 | 02 | 7min | 2 | 12 |
+| 86 | 03 | 6min | 2 | 7 |
 
 ## Accumulated Context
 
@@ -133,6 +135,12 @@ See PROJECT.md Key Decisions table for full history.
 - **86-01**: DISTINCT ON (document_type) Postgres query for efficient latest-version-per-type retrieval
 - **86-01**: conversation_id FK with ON DELETE SET NULL preserves document history when conversations are deleted
 - **86-01**: Identity tools follow same factory pattern as knowledge tools: (service, ctx) -> ToolDefinition
+- **86-03**: App-level Set-based dedup for getIdentityDocumentsForAgent instead of SQL DISTINCT ON (Drizzle ORM limitation)
+- **86-03**: Char deltas computed client-side by comparing adjacent versions (simpler than SQL LAG window function)
+- **86-03**: API route limit clamped to 1-100 and offset floored at 0 for input safety
+- **86-03**: /dashboard/ basePath prefix in fetch URLs to match Next.js basePath configuration
+- [Phase 86]: Pre-completion hook runs inside completed branch after cancellation check, uses separate runAgentLoop with maxIterations:3
+- [Phase 86]: Identity review hook skips agents with zero documents; first documents created organically via identity:update tool
 
 ### Pending Todos
 
@@ -155,9 +163,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 86-01-PLAN.md
-Resume file: .planning/phases/86-persistent-agent-identity/86-01-SUMMARY.md
-Next action: Execute 86-02-PLAN.md
+Stopped at: Completed 86-03-PLAN.md
+Resume file: .planning/phases/86-persistent-agent-identity/86-03-SUMMARY.md
+Next action: Execute 86-02-PLAN.md (if not completed by parallel agent)
 
 ---
-*Updated: 2026-02-22 -- Completed 86-01 (identity storage layer).*
+*Updated: 2026-02-22 -- Completed 86-03 (dashboard identity visibility).*
