@@ -189,16 +189,18 @@ Plans:
 - [ ] 84-02-PLAN.md -- EventRouter wiring + service bootstrap + manual trigger API
 - [ ] 84-03-PLAN.md -- Dashboard schedule visibility (agent badges, detail panel, overview card)
 
-### Phase 85: Sub-Agent Discovery
+### Phase 85: Sub-Agent Discovery — DEFERRED
 **Goal**: Orchestrator agents select sub-agents by describing the capability they need, replacing hardcoded agent ID references in spawn calls
 **Depends on**: Nothing (Wave 1)
 **Requirements**: DISC-01, DISC-02, DISC-03, DISC-04, DISC-05, DISC-06, DISC-07
+**Status**: Deferred to v3.0+
+**Reason**: The current requirements assume a separate `sub_agent` tier in the entity directory, but the orchestrator/sub-agent distinction is an implementation artifact — what actually differs is the activation pattern (spawn, delegate, trigger, schedule), not the agent type. Building a separate registry now creates infrastructure that would be merged later. Discovery should query a unified entity directory filtered by supported activation patterns. This is better addressed holistically when rethinking agent capabilities in v3.0.
 **Success Criteria** (what must be TRUE):
   1. Sub-agent definitions include capability descriptions that are embedded and stored in the entity directory with a `sub_agent` tier discriminator
   2. `coordination:spawn_agent` accepts a `capability` parameter that resolves to the best-matching sub-agent via semantic similarity, while hardcoded `agentType` still works as a fallback
   3. Orchestrator prompts describe the capability they need rather than naming specific agents, with prompt guidance teaching capability-based reasoning
   4. If no sub-agent matches the capability query above the similarity threshold, the agent receives an empty result and decides how to proceed
-**Plans**: TBD
+**Plans**: N/A (deferred)
 
 ### Phase 86: Persistent Agent Identity
 **Goal**: Agents accumulate understanding across conversations through structured identity documents, and the framework provides a lifecycle hook mechanism for injecting turns at conversation boundaries
@@ -226,7 +228,8 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Wave 1 (parallel): 80, 82, 84, 85 -> Wave 2: 81, 86 -> Wave 3: 83, 87
+Wave 1 (parallel): 80, 82, 84 -> Wave 2: 81, 86 -> Wave 3: 83, 87
+(Phase 85 deferred to v3.0+)
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -245,7 +248,7 @@ Wave 1 (parallel): 80, 82, 84, 85 -> Wave 2: 81, 86 -> Wave 3: 83, 87
 | 82. Transparent Materialization | 5/5 | Complete    | 2026-02-20 | - |
 | 83. Tree-Level Token Budgets | v2.9 | 0/TBD | Not started | - |
 | 84. Scheduled Execution | 3/3 | Complete    | 2026-02-22 | - |
-| 85. Sub-Agent Discovery | v2.9 | 0/TBD | Not started | - |
+| 85. Sub-Agent Discovery | v2.9 | - | Deferred to v3.0+ | - |
 | 86. Persistent Agent Identity | v2.9 | 0/TBD | Not started | - |
 | 87. Knowledge Retrieval Enhancement | v2.9 | 0/TBD | Not started | - |
 

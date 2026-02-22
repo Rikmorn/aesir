@@ -139,19 +139,20 @@ See PROJECT.md Key Decisions table for full history.
 6. **work:register/query absent from agent definitions** -- add to dev-agent and product-agent YAML (low)
 7. **12 human verification items** -- visual/interactive testing across Phases 77-79
 8. **Add `failed` to taskStatusValues** -- schema has no `failed` task status, but evaluatePolicy and TERMINAL_STATUSES reference it. Add to schema + migration, update getGroupState switch, clean up dead refs. Natural home: Phase 83 or 86 (both touch task lifecycle).
+9. **Phase 85 design decisions for v3.0** -- When revisiting sub-agent discovery: (a) use array of short capability strings in YAML, each embedded individually (not a single description blob); (b) unify all agents in entity directory with activation pattern discriminators (spawnable, delegatable, triggerable, schedulable) instead of separate sub_agent tier; (c) `description` stays human-facing, `capabilities` array is for semantic matching.
 
 ### Blockers/Concerns
 
 - Linear Agent SDK is developer preview -- feature flag (LINEAR_AGENT_SDK_ENABLED) may be needed for fallback
 - Linear OAuth token migration deadline: April 1, 2026
-- worker-loop.ts is modified by Phases 80, 81, 83, 85, 86, 87 -- explicit file ownership needed for parallel execution
+- worker-loop.ts is modified by Phases 80, 81, 83, 86, 87 -- explicit file ownership needed for parallel execution
 
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 84-03-PLAN.md (Phase 84 complete)
-Resume file: .planning/phases/84-scheduled-execution/84-03-SUMMARY.md
-Next action: Execute Phase 85
+Stopped at: Phase 85 deferred to v3.0+ (activation pattern unification)
+Resume file: .planning/ROADMAP.md
+Next action: Execute Phase 83 or 86
 
 ---
-*Updated: 2026-02-22 -- Completed 84-03 (dashboard schedule visibility). Phase 84 complete.*
+*Updated: 2026-02-22 -- Phase 85 (Sub-Agent Discovery) deferred to v3.0+. Reason: orchestrator/sub-agent distinction is an activation pattern, not an agent type — building a separate sub_agent tier now creates infrastructure to merge later. Discovery should query a unified entity directory filtered by activation patterns.*
