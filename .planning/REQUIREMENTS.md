@@ -54,7 +54,7 @@ Requirements for v2.9 Platform Completion. Each maps to roadmap phases.
 - [x] **SCH-05**: Overlap prevention -- configurable per-schedule: `skip` (drop if previous run still active) or `queue` (wait for completion then start). Default: `skip`
 - [x] **SCH-06**: Schedule context injection -- scheduled conversations receive context about why they were triggered: schedule name, last run timestamp, last run outcome summary, time since last run
 - [x] **SCH-07**: Manual trigger -- API endpoint and dashboard button to manually fire a scheduled agent (for testing and ad-hoc execution)
-- [ ] **SCH-08**: Schedule visibility in dashboard -- active schedules, next run time, last run status, run history
+- [x] **SCH-08**: Schedule visibility in dashboard -- active schedules, next run time, last run status, run history
 
 ### Sub-Agent Discovery
 
@@ -169,7 +169,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SCH-05 | Phase 84 | Complete |
 | SCH-06 | Phase 84 | Complete |
 | SCH-07 | Phase 84 | Complete |
-| SCH-08 | Phase 84 | Pending |
+| SCH-08 | Phase 84 | Complete |
 | DISC-01 | Phase 85 | Pending |
 | DISC-02 | Phase 85 | Pending |
 | DISC-03 | Phase 85 | Pending |

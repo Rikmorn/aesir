@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 84 of 87 (Scheduled Execution)
-Plan: 2 of 3 in current phase
-Status: Executing
-Last activity: 2026-02-22 -- Completed 84-02 (event-router integration and main.ts wiring)
+Plan: 3 of 3 in current phase
+Status: Phase Complete
+Last activity: 2026-02-22 -- Completed 84-03 (dashboard schedule visibility)
 
 Progress: [##########] 100%
 
@@ -58,6 +58,7 @@ Progress: [##########] 100%
 | 82 | 05 | 8min | 2 | 11 |
 | 84 | 01 | 9min | 2 | 8 |
 | 84 | 02 | 7min | 2 | 8 |
+| 84 | 03 | 7min | 2 | 10 |
 
 ## Accumulated Context
 
@@ -123,6 +124,10 @@ See PROJECT.md Key Decisions table for full history.
 - **84-02**: Schedule registry created before executor in bootstrap for declaration-order correctness
 - **84-02**: Manual trigger returns 409 with activeConversationId for skip policy feedback
 - **84-02**: API router schedule deps are optional (backward-compatible without scheduleRegistry)
+- **84-03**: GET /api/schedules/states co-located with POST trigger in schedule-trigger.ts (shared dependencies)
+- **84-03**: Schedule state API merges definition data with runtime state, computes nextRunAt server-side via cron-parser
+- **84-03**: Inline trigger feedback (dots + text) instead of toast library (no sonner dependency in dashboard)
+- **84-03**: exactOptionalPropertyTypes on schedules.timezone uses string | undefined to match Zod-inferred type
 
 ### Pending Todos
 
@@ -144,9 +149,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 84-02-PLAN.md
-Resume file: .planning/phases/84-scheduled-execution/84-02-SUMMARY.md
-Next action: Execute 84-03-PLAN.md (dashboard schedules)
+Stopped at: Completed 84-03-PLAN.md (Phase 84 complete)
+Resume file: .planning/phases/84-scheduled-execution/84-03-SUMMARY.md
+Next action: Execute Phase 85
 
 ---
-*Updated: 2026-02-22 -- Completed 84-02 (event-router integration and main.ts wiring). Phase 84 in progress.*
+*Updated: 2026-02-22 -- Completed 84-03 (dashboard schedule visibility). Phase 84 complete.*

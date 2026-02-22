@@ -101,7 +101,7 @@ See `.planning/milestones/v2.8-ROADMAP.md` for full details.
 - [x] **Phase 81: Parallel Delegation** - Fan-out delegation with configurable completion policies (completed 2026-02-20)
 - [x] **Phase 82: Transparent Materialization** - Optional Linear ticket creation for delegated tasks (completed 2026-02-20)
 - [ ] **Phase 83: Tree-Level Token Budgets** - Budget enforcement across entire delegation trees
-- [ ] **Phase 84: Scheduled Execution** - Cron-based agent triggers via pg-boss for periodic work
+- [x] **Phase 84: Scheduled Execution** - Cron-based agent triggers via pg-boss for periodic work (completed 2026-02-22)
 - [ ] **Phase 85: Sub-Agent Discovery** - Capability-based sub-agent selection replacing hardcoded YAML references
 - [ ] **Phase 86: Persistent Agent Identity** - Structured, versioned identity documents per agent role with lifecycle hooks
 - [ ] **Phase 87: Knowledge Retrieval Enhancement** - Pluggable retrieval pipeline and pre-compaction knowledge flush
@@ -183,7 +183,7 @@ Plans:
   3. Overlap prevention works: if configured to `skip`, a new run is dropped when the previous is still active; if `queue`, it waits for completion then starts
   4. An operator can manually trigger a scheduled agent via API endpoint or dashboard button
   5. The dashboard shows active schedules, next run time, last run status, and run history
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [ ] 84-01-PLAN.md -- Schema extension + schedule registry core (YAML schedules field, DB migration, registry module)
 - [ ] 84-02-PLAN.md -- EventRouter wiring + service bootstrap + manual trigger API
@@ -244,7 +244,7 @@ Wave 1 (parallel): 80, 82, 84, 85 -> Wave 2: 81, 86 -> Wave 3: 83, 87
 | 81. Parallel Delegation | 6/6 | Complete    | 2026-02-20 | - |
 | 82. Transparent Materialization | 5/5 | Complete    | 2026-02-20 | - |
 | 83. Tree-Level Token Budgets | v2.9 | 0/TBD | Not started | - |
-| 84. Scheduled Execution | 2/3 | In Progress|  | - |
+| 84. Scheduled Execution | 3/3 | Complete   | 2026-02-22 | - |
 | 85. Sub-Agent Discovery | v2.9 | 0/TBD | Not started | - |
 | 86. Persistent Agent Identity | v2.9 | 0/TBD | Not started | - |
 | 87. Knowledge Retrieval Enhancement | v2.9 | 0/TBD | Not started | - |
