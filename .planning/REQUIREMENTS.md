@@ -47,12 +47,12 @@ Requirements for v2.9 Platform Completion. Each maps to roadmap phases.
 
 ### Scheduled Execution
 
-- [ ] **SCH-01**: Schedule trigger type -- agents declare `schedule` triggers in definition.yaml alongside event triggers
-- [ ] **SCH-02**: Cron expression support -- standard cron syntax (e.g., `"0 9 * * MON"` for Monday 9am). Validated at definition load time
-- [ ] **SCH-03**: Schedule registration -- on startup, worker loop registers pg-boss scheduled jobs for all agents with schedule triggers
-- [ ] **SCH-04**: Synthetic event -- when a schedule fires, pg-boss job creates a synthetic `IncomingEvent` with type `schedule.triggered` and metadata (schedule name, last run time, last run outcome). EventRouter processes it like any other trigger
-- [ ] **SCH-05**: Overlap prevention -- configurable per-schedule: `skip` (drop if previous run still active) or `queue` (wait for completion then start). Default: `skip`
-- [ ] **SCH-06**: Schedule context injection -- scheduled conversations receive context about why they were triggered: schedule name, last run timestamp, last run outcome summary, time since last run
+- [x] **SCH-01**: Schedule trigger type -- agents declare `schedule` triggers in definition.yaml alongside event triggers
+- [x] **SCH-02**: Cron expression support -- standard cron syntax (e.g., `"0 9 * * MON"` for Monday 9am). Validated at definition load time
+- [x] **SCH-03**: Schedule registration -- on startup, worker loop registers pg-boss scheduled jobs for all agents with schedule triggers
+- [x] **SCH-04**: Synthetic event -- when a schedule fires, pg-boss job creates a synthetic `IncomingEvent` with type `schedule.triggered` and metadata (schedule name, last run time, last run outcome). EventRouter processes it like any other trigger
+- [x] **SCH-05**: Overlap prevention -- configurable per-schedule: `skip` (drop if previous run still active) or `queue` (wait for completion then start). Default: `skip`
+- [x] **SCH-06**: Schedule context injection -- scheduled conversations receive context about why they were triggered: schedule name, last run timestamp, last run outcome summary, time since last run
 - [ ] **SCH-07**: Manual trigger -- API endpoint and dashboard button to manually fire a scheduled agent (for testing and ad-hoc execution)
 - [ ] **SCH-08**: Schedule visibility in dashboard -- active schedules, next run time, last run status, run history
 
@@ -162,12 +162,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BUD-04 | Phase 83 | Pending |
 | BUD-05 | Phase 83 | Pending |
 | BUD-06 | Phase 83 | Pending |
-| SCH-01 | Phase 84 | Pending |
-| SCH-02 | Phase 84 | Pending |
-| SCH-03 | Phase 84 | Pending |
-| SCH-04 | Phase 84 | Pending |
-| SCH-05 | Phase 84 | Pending |
-| SCH-06 | Phase 84 | Pending |
+| SCH-01 | Phase 84 | Complete |
+| SCH-02 | Phase 84 | Complete |
+| SCH-03 | Phase 84 | Complete |
+| SCH-04 | Phase 84 | Complete |
+| SCH-05 | Phase 84 | Complete |
+| SCH-06 | Phase 84 | Complete |
 | SCH-07 | Phase 84 | Pending |
 | SCH-08 | Phase 84 | Pending |
 | DISC-01 | Phase 85 | Pending |

@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.9 Platform Completion -- Phase 82 (Transparent Materialization)
+**Current focus:** v2.9 Platform Completion -- Phase 84 (Scheduled Execution)
 
 ## Current Position
 
-Phase: 82 of 87 (Transparent Materialization)
-Plan: 5 of 5 in current phase (PHASE COMPLETE)
-Status: Phase 82 complete
-Last activity: 2026-02-20 -- Completed 82-05 (end-to-end materialization wiring)
+Phase: 84 of 87 (Scheduled Execution)
+Plan: 1 of 3 in current phase
+Status: Executing
+Last activity: 2026-02-22 -- Completed 84-01 (schedule foundation)
 
 Progress: [##########] 100%
 
@@ -56,6 +56,7 @@ Progress: [##########] 100%
 | 82 | 03 | 4min | 2 | 4 |
 | 82 | 04 | 5min | 2 | 3 |
 | 82 | 05 | 8min | 2 | 11 |
+| 84 | 01 | 9min | 2 | 8 |
 
 ## Accumulated Context
 
@@ -110,6 +111,11 @@ See PROJECT.md Key Decisions table for full history.
 - **82-05**: MaterializationAdapter created before executor in bootstrap to pass as constructor option (not late-bound)
 - **82-05**: Forward sync uses fire-and-forget pattern with catch for non-fatal failure tolerance
 - **82-05**: Composite dispatcher lambda wraps both signalDispatcher and forwardSyncListener
+- **84-01**: cron-parser added as direct dependency (pnpm strict isolation prevents transitive resolution from pg-boss)
+- **84-01**: ScheduleRegistry uses late-bound setEventHandler() for main.ts wiring (not constructor dependency)
+- **84-01**: PgBoss type referenced as named export import("pg-boss").PgBoss (not default)
+- **84-01**: Overlap detection queries conversations table directly via pool (not through executor)
+- **84-01**: Composite PK on schedule_state uses drizzle-orm primaryKey() helper (first in schema)
 
 ### Pending Todos
 
@@ -130,10 +136,10 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-02-20
-Stopped at: Completed 82-05-PLAN.md (Phase 82 complete)
-Resume file: .planning/phases/82-transparent-materialization/82-05-SUMMARY.md
-Next action: Execute next phase (83, 84, 85, or 86 per wave ordering)
+Last session: 2026-02-22
+Stopped at: Completed 84-01-PLAN.md
+Resume file: .planning/phases/84-scheduled-execution/84-01-SUMMARY.md
+Next action: Execute 84-02-PLAN.md (event-router integration and main.ts wiring)
 
 ---
-*Updated: 2026-02-20 -- Completed 82-05 (end-to-end materialization wiring). Phase 82 complete.*
+*Updated: 2026-02-22 -- Completed 84-01 (schedule foundation). Phase 84 in progress.*
