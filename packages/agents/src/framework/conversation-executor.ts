@@ -135,6 +135,10 @@ export function createConversationExecutor(
         loopOpts.materializationAdapter = options.materializationAdapter;
       if (options.scheduleRegistry !== undefined)
         loopOpts.scheduleRegistry = options.scheduleRegistry;
+      if (options.identityService !== undefined)
+        loopOpts.identityService = options.identityService;
+      if (options.lifecycleHooks !== undefined)
+        loopOpts.lifecycleHooks = options.lifecycleHooks;
       // Late-bind executor reference so the worker loop can start delegated conversations
       loopOpts.executor = executor;
       workerLoop = createWorkerLoop(loopOpts);

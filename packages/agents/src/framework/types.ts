@@ -829,6 +829,14 @@ export interface ConversationExecutorOptions {
   materializationAdapter?: MaterializationAdapter | undefined;
   /** Schedule registry for updating schedule state on completion (Phase 84) */
   scheduleRegistry?: ScheduleRegistry | undefined;
+  /** IdentityService for system prompt injection of identity documents (Phase 86) */
+  identityService?:
+    | import("../shared/services/identity-service.js").IdentityService
+    | undefined;
+  /** Lifecycle hook registry for pre-completion hooks (Phase 86) */
+  lifecycleHooks?:
+    | import("./lifecycle-hooks.js").LifecycleHookRegistry
+    | undefined;
 }
 
 // ─── Non-Retryable Error Classes ────────────────────────────────────────────

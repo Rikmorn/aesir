@@ -34,6 +34,7 @@ import { conversations } from "../shared/db/schema.js";
 import type { CorrelationService } from "../shared/services/correlation-service.js";
 import type { DirectoryService } from "../shared/services/directory-service.js";
 import { createGroupService } from "../shared/services/group-service.js";
+import type { IdentityService } from "../shared/services/identity-service.js";
 import type { MaterializationAdapter } from "../shared/services/materialization/types.js";
 import type { TaskService } from "../shared/services/task-service.js";
 import { createAnswerTaskTool } from "../shared/tools/task/answer-task.js";
@@ -41,6 +42,10 @@ import { createClarifyTaskTool } from "../shared/tools/task/clarify-task.js";
 import { createRespondTaskTool } from "../shared/tools/task/respond-task.js";
 import { hasTextContent } from "./event-content.js";
 import { createHistoryManager } from "./history-manager.js";
+import type {
+  LifecycleHookContext,
+  LifecycleHookRegistry,
+} from "./lifecycle-hooks.js";
 import { signalMatchesPendingWait } from "./signal-matching.js";
 import type { TimeoutScheduler } from "./timeout-scheduler.js";
 import type {
@@ -114,6 +119,10 @@ export interface WorkerLoopOptions {
   materializationAdapter?: MaterializationAdapter | undefined;
   /** Schedule registry for updating schedule state on completion (Phase 84) */
   scheduleRegistry?: import("./types.js").ScheduleRegistry | undefined;
+  /** IdentityService for system prompt injection of identity documents (Phase 86) */
+  identityService?: IdentityService | undefined;
+  /** Lifecycle hook registry for pre-completion hooks (Phase 86) */
+  lifecycleHooks?: LifecycleHookRegistry | undefined;
 }
 
 /**
@@ -787,6 +796,32 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
     }
   }
 
+  // ─── Identity Documents Block ────────────────────────────────────────
+
+  /**
+   * Format identity documents as an XML block for system prompt injection.
+   * Includes version number and last-updated timestamp per user decision.
+   */
+  function formatIdentityDocumentsBlock(
+    docs: Array<{
+      documentType: string;
+      content: string;
+      version: number;
+      createdAt: string;
+    }>,
+  ): string {
+    const lines: string[] = ["<identity_documents>"];
+    for (const doc of docs) {
+      lines.push(
+        `<document type="${doc.documentType}" version="${doc.version}" updated="${doc.createdAt}">`,
+      );
+      lines.push(doc.content);
+      lines.push("</document>");
+    }
+    lines.push("</identity_documents>");
+    return lines.join("\n");
+  }
+
   // State
   let draining = false;
   let started = false;
@@ -1186,6 +1221,32 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
           childLogger.error(
             { err: recoveryErr },
             "Failed to build recovery context (non-fatal)",
+          );
+        }
+      }
+
+      // 3d. Inject identity documents into system prompt (Phase 86)
+      // Only for top-level agents (not sub-agents). Graceful degradation on failure.
+      let systemPrompt = definition.systemPrompt;
+      if (options.identityService && !conv.parent_conversation_id) {
+        try {
+          const identityDocs =
+            await options.identityService.getCurrentDocuments(
+              conv.agent_definition_id,
+            );
+          if (identityDocs.length > 0) {
+            const identityBlock = formatIdentityDocumentsBlock(identityDocs);
+            systemPrompt = `${systemPrompt}\n\n${identityBlock}`;
+            childLogger.info(
+              { documentCount: identityDocs.length },
+              "Identity documents injected into system prompt",
+            );
+          }
+        } catch (identityErr) {
+          // IDN-09: Graceful degradation -- proceed without identity docs
+          childLogger.warn(
+            { err: identityErr },
+            "Failed to load identity documents (graceful degradation, proceeding without)",
           );
         }
       }
@@ -1600,7 +1661,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
 
       // 11. Run agent loop
       const loopOptions: Parameters<typeof runAgentLoop>[0] = {
-        systemPrompt: definition.systemPrompt,
+        systemPrompt,
         tools: resolvedTools,
         initialMessage,
         model: definition.model,
@@ -1941,6 +2002,49 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
           );
         }
       } else if (result.status === "completed") {
+        // 14a. Run pre-completion lifecycle hooks (Phase 86)
+        // Only for top-level agents on the happy path (not sub-agents, not cancelled)
+        if (options.lifecycleHooks && !conv.parent_conversation_id) {
+          try {
+            const hookCtx: LifecycleHookContext = {
+              conversationId: conv.id,
+              agentDefinitionId: conv.agent_definition_id,
+              agentDefinitionVersion: conv.agent_definition_version,
+              messages: finalMessages,
+              systemPrompt,
+              tools: resolvedTools,
+              model: definition.model,
+              logger: childLogger,
+              injectTurn: async (userMessage: string) => {
+                // Run a mini agent loop with the injected message
+                const hookResult = await runAgentLoop({
+                  systemPrompt,
+                  tools: resolvedTools,
+                  initialMessage: userMessage,
+                  context: JSON.stringify(finalMessages),
+                  model: definition.model,
+                  maxIterations: 3,
+                  onToolCall,
+                  onToolResult,
+                  onResponse,
+                  abortSignal,
+                  logger: childLogger,
+                });
+                // Append hook messages to finalMessages (skip initial user message)
+                finalMessages.push(...hookResult.messages.slice(1));
+                return hookResult;
+              },
+            };
+            await options.lifecycleHooks.runPreCompletion(hookCtx);
+          } catch (hookErr) {
+            // Non-fatal: hooks failing should not prevent conversation completion
+            childLogger.error(
+              { err: hookErr },
+              "Pre-completion hooks failed (non-fatal, completing anyway)",
+            );
+          }
+        }
+
         // Emit completion activity to Linear (best-effort, transitions session to complete)
         await emitCompletionActivity(conv.reply_context, {
           logger: childLogger,

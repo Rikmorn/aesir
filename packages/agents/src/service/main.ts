@@ -35,6 +35,7 @@ import {
   createConversationExecutor,
   createEventLog,
   createEventRouter,
+  createLifecycleHookRegistry,
   createScheduleRegistry,
   createSessionProjection,
   createTimeoutScheduler,
@@ -145,6 +146,32 @@ async function bootstrap(): Promise<void> {
     logger,
   });
 
+  // 4h. Lifecycle hooks -- pre-completion hook registry (Phase 86)
+  const lifecycleHooks = createLifecycleHookRegistry(logger);
+
+  // Register identity review hook: prompts agents to review and update
+  // identity documents before conversation completes (Phase 86)
+  lifecycleHooks.register("identity-review", async (ctx) => {
+    const docs = await identityService.getCurrentDocuments(
+      ctx.agentDefinitionId,
+    );
+    // Skip hook entirely when agent has no identity documents -- no point
+    // prompting an agent to review documents that don't exist yet.
+    // Agents create their first documents organically via identity:update.
+    if (docs.length === 0) return;
+
+    const docList = docs
+      .map(
+        (d) =>
+          `<document type="${d.documentType}" version="${d.version}" updated="${d.createdAt}">\n${d.content}\n</document>`,
+      )
+      .join("\n");
+
+    const reviewPrompt = `<identity_review>\nBefore completing this conversation, review whether your understanding has evolved.\nYour current identity documents:\n${docList}\nIf any documents need updating based on what you learned in this conversation, use identity_update now. If your documents are already current, proceed to end your turn normally.\n</identity_review>`;
+
+    await ctx.injectTurn(reviewPrompt);
+  });
+
   // 5. EventLog -- buffered append-only event recording
   const eventLog = createEventLog({ db, logger });
 
@@ -217,6 +244,8 @@ async function bootstrap(): Promise<void> {
     correlationService,
     materializationAdapter,
     scheduleRegistry,
+    identityService,
+    lifecycleHooks,
   });
 
   // 8b. GroupService -- parallel delegation group management (Phase 81)

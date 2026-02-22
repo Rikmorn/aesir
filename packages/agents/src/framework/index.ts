@@ -20,6 +20,12 @@ export {
   estimateTokens,
   formatArtifacts,
 } from "./history-manager.js";
+export type {
+  LifecycleHook,
+  LifecycleHookContext,
+  LifecycleHookRegistry,
+} from "./lifecycle-hooks.js";
+export { createLifecycleHookRegistry } from "./lifecycle-hooks.js";
 export {
   buildScheduleQueueName,
   createScheduleRegistry,
