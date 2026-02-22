@@ -5,6 +5,7 @@ import { AgentConfigPanel } from "@/components/agents/agent-config-panel";
 import { AgentDetailTabs } from "@/components/agents/agent-detail-tabs";
 import { AgentPromptViewer } from "@/components/agents/agent-prompt-viewer";
 import { AgentRecentConversations } from "@/components/agents/agent-recent-conversations";
+import { AgentSchedulePanel } from "@/components/agents/agent-schedule-panel";
 import { AgentToolsPanel } from "@/components/agents/agent-tools-panel";
 import {
   AgentTypeBadge,
@@ -13,6 +14,7 @@ import {
 import {
   getAgentDetail,
   getRecentConversationsByAgent,
+  getScheduleStatesForAgent,
 } from "@/services/agents";
 
 // Force dynamic rendering -- queries database and agent-service on every request
@@ -29,9 +31,10 @@ export default async function AgentDetailPage({
 }: AgentDetailPageProps) {
   const { id } = await params;
 
-  const [agent, conversations] = await Promise.all([
+  const [agent, conversations, scheduleStates] = await Promise.all([
     getAgentDetail(id),
     getRecentConversationsByAgent(id),
+    getScheduleStatesForAgent(id),
   ]);
 
   if (!agent) {
@@ -86,6 +89,15 @@ export default async function AgentDetailPage({
       <div className="flex min-h-0 flex-1">
         <aside className="w-[280px] shrink-0 overflow-auto border-r pr-6">
           <AgentConfigPanel agent={agent} />
+          {agent.schedules && agent.schedules.length > 0 && (
+            <div className="mt-6 border-t pt-6">
+              <AgentSchedulePanel
+                agentId={agent.id}
+                schedules={agent.schedules}
+                scheduleStates={scheduleStates}
+              />
+            </div>
+          )}
         </aside>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col pl-6">
           <AgentDetailTabs

@@ -1,6 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Clock, Search } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -141,6 +141,15 @@ export function AgentList({ agents }: AgentListProps) {
                       <span className="font-mono tabular-nums">
                         {agent.tools.length} tools
                       </span>
+                      {agent.schedules && agent.schedules.length > 0 && (
+                        <span className="inline-flex items-center gap-1 text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <span className="font-mono tabular-nums">
+                            {agent.schedules.length} schedule
+                            {agent.schedules.length !== 1 ? "s" : ""}
+                          </span>
+                        </span>
+                      )}
                       <span className="font-mono">v{agent.version}</span>
                     </div>
                   </div>

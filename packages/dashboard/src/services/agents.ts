@@ -14,13 +14,15 @@ import {
   type AgentSummary,
   fetchAgentDetail,
   fetchAgentList,
+  fetchScheduleStates,
+  type ScheduleState,
 } from "@/lib/agent-service";
 import { db } from "@/lib/db";
 import { agentEvents, agentSessions, conversations } from "@/lib/schema";
 
 // ─── Re-exports ──────────────────────────────────────────────────────────────
 
-export type { AgentSummary, AgentDetail };
+export type { AgentSummary, AgentDetail, ScheduleState };
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -52,6 +54,19 @@ export async function getAgentList(): Promise<AgentSummary[]> {
  */
 export async function getAgentDetail(id: string): Promise<AgentDetail | null> {
   return fetchAgentDetail(id);
+}
+
+// ─── Schedule States (HTTP API) ──────────────────────────────────────────────
+
+/**
+ * Get schedule states for a specific agent.
+ *
+ * Delegates to fetchScheduleStates(). Returns empty array if agent-service is unreachable.
+ */
+export async function getScheduleStatesForAgent(
+  agentId: string,
+): Promise<ScheduleState[]> {
+  return fetchScheduleStates(agentId);
 }
 
 // ─── Recent Conversations (Database) ─────────────────────────────────────────

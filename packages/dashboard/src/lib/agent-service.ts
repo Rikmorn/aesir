@@ -35,6 +35,7 @@ export interface AgentSummary {
     summaryModel: string;
   };
   triggers?: Array<{ event: string }>;
+  schedules?: Array<{ name: string; cron: string; timezone?: string }>;
 }
 
 /**
@@ -215,6 +216,99 @@ export async function fetchToolsHealth(): Promise<IntegrationHealth[]> {
     // biome-ignore lint/suspicious/noConsole: Server-side HTTP client needs error logging for debugging unreachable agent-service
     console.error("[agent-service] Failed to fetch tools health:", error);
     return [];
+  }
+}
+
+// ─── Schedule State ────────────────────────────────────────────────────────
+
+/** Runtime state of a schedule (from agent-service /api/schedules/states) */
+export interface ScheduleState {
+  agentId: string;
+  agentName: string | null;
+  scheduleName: string;
+  cron: string;
+  timezone: string;
+  nextRunAt: string | null;
+  lastRunAt: string | null;
+  lastRunOutcome: string | null;
+  lastRunConversationId: string | null;
+  runCount: number;
+  health: "healthy" | "failed" | "missed";
+}
+
+/**
+ * Fetch schedule states for a specific agent.
+ * Uses the agent-service /api/schedules/states endpoint with agentId filter.
+ * Returns empty array on error (agent-service unreachable, non-ok response).
+ */
+export async function fetchScheduleStates(
+  agentId: string,
+): Promise<ScheduleState[]> {
+  const url = `${getBaseUrl()}/api/schedules/states?agentId=${encodeURIComponent(agentId)}`;
+  try {
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(5000),
+      headers: { Accept: "application/json" },
+      next: { revalidate: 30 },
+    });
+    if (!response.ok) return [];
+    return (await response.json()) as ScheduleState[];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Fetch all schedule states (for overview upcoming schedules card).
+ * Uses the agent-service /api/schedules/states endpoint without filter.
+ * Returns empty array on error (agent-service unreachable, non-ok response).
+ */
+export async function fetchAllScheduleStates(): Promise<ScheduleState[]> {
+  const url = `${getBaseUrl()}/api/schedules/states`;
+  try {
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(5000),
+      headers: { Accept: "application/json" },
+      next: { revalidate: 30 },
+    });
+    if (!response.ok) return [];
+    return (await response.json()) as ScheduleState[];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Trigger a scheduled agent manually.
+ * Calls POST /api/schedules/:agentId/:scheduleName/trigger.
+ * Returns trigger result with skipped/force info.
+ */
+export async function triggerSchedule(
+  agentId: string,
+  scheduleName: string,
+  force = false,
+): Promise<{
+  triggered: boolean;
+  skipped?: boolean;
+  reason?: string;
+  activeConversationId?: string;
+}> {
+  const url = `${getBaseUrl()}/api/schedules/${encodeURIComponent(agentId)}/${encodeURIComponent(scheduleName)}/trigger`;
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ force }),
+      signal: AbortSignal.timeout(10000),
+    });
+    return (await response.json()) as {
+      triggered: boolean;
+      skipped?: boolean;
+      reason?: string;
+      activeConversationId?: string;
+    };
+  } catch {
+    return { triggered: false, skipped: false, reason: "Request failed" };
   }
 }
 

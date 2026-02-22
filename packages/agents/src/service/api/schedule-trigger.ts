@@ -1,13 +1,16 @@
 /**
- * Schedule Trigger API
+ * Schedule API
  *
- * POST /api/schedules/:agentId/:scheduleName/trigger
+ * GET  /api/schedules/states                              -- all schedule states with computed nextRunAt
+ * GET  /api/schedules/states?agentId=<id>                 -- schedule states for a specific agent
+ * POST /api/schedules/:agentId/:scheduleName/trigger      -- manual trigger
  *
- * Manually triggers a scheduled agent run. Supports a `force` flag to bypass
- * the skip overlap policy (creates a unique correlationKey with a timestamp suffix).
+ * The GET /states endpoint merges definition data (cron, timezone) with runtime
+ * state (last run, run count) and computes nextRunAt via cron-parser.
  *
- * Without `force`, returns 409 if a previous run is still active (skip policy).
- * The synthetic event is routed through the EventRouter -> executor.start() pipeline.
+ * POST trigger manually fires a scheduled agent run. Supports a `force` flag
+ * to bypass the skip overlap policy (creates a unique correlationKey with a
+ * timestamp suffix). Without `force`, returns 409 if a previous run is active.
  */
 
 import type { PinoLogger } from "@aesir/platform";
@@ -20,7 +23,24 @@ import type {
   ScheduleRegistry,
 } from "../../framework/types.js";
 
-// ---- Types ------------------------------------------------------------------
+// ---- Response Types ---------------------------------------------------------
+
+/** Schedule state with computed fields for the dashboard */
+export interface ScheduleStateResponse {
+  agentId: string;
+  agentName: string | null;
+  scheduleName: string;
+  cron: string;
+  timezone: string;
+  nextRunAt: string | null;
+  lastRunAt: string | null;
+  lastRunOutcome: string | null;
+  lastRunConversationId: string | null;
+  runCount: number;
+  health: "healthy" | "failed" | "missed";
+}
+
+// ---- Router Options ---------------------------------------------------------
 
 export interface ScheduleTriggerRouterOptions {
   agentRegistry: AgentRegistry;
@@ -45,6 +65,72 @@ export function createScheduleTriggerRouter(
     logger,
   } = options;
   const router = Router();
+
+  // GET /states -- all schedule states with computed nextRunAt
+  // Accepts optional ?agentId= query param to filter by agent
+  router.get("/states", async (req, res) => {
+    try {
+      const filterAgentId =
+        typeof req.query.agentId === "string" ? req.query.agentId : undefined;
+
+      const definitions = filterAgentId
+        ? await agentRegistry.get(filterAgentId).then((d) => (d ? [d] : []))
+        : await agentRegistry.list();
+
+      const allStates = await scheduleRegistry.getAllScheduleStates();
+
+      const result: ScheduleStateResponse[] = [];
+
+      for (const agent of definitions) {
+        if (!agent.schedules) continue;
+        for (const schedule of agent.schedules) {
+          const state = allStates.find(
+            (s) => s.agentId === agent.id && s.scheduleName === schedule.name,
+          );
+
+          // Compute next run time using cron-parser
+          let nextRunAt: string | null = null;
+          try {
+            const { CronExpressionParser } = await import("cron-parser");
+            const interval = CronExpressionParser.parse(schedule.cron, {
+              tz: schedule.timezone ?? "UTC",
+            });
+            nextRunAt = interval.next().toISOString();
+          } catch {
+            /* invalid cron -- skip */
+          }
+
+          // Derive health from last run outcome
+          let health: "healthy" | "failed" | "missed" = "healthy";
+          if (
+            state?.lastRunOutcome === "failed" ||
+            state?.lastRunOutcome === "cancelled"
+          ) {
+            health = "failed";
+          }
+
+          result.push({
+            agentId: agent.id,
+            agentName: agent.name,
+            scheduleName: schedule.name,
+            cron: schedule.cron,
+            timezone: schedule.timezone ?? "UTC",
+            nextRunAt,
+            lastRunAt: state?.lastRunAt?.toISOString() ?? null,
+            lastRunOutcome: state?.lastRunOutcome ?? null,
+            lastRunConversationId: state?.lastRunConversationId ?? null,
+            runCount: state?.runCount ?? 0,
+            health,
+          });
+        }
+      }
+
+      res.json(result);
+    } catch (error) {
+      logger.error({ err: error }, "GET /api/schedules/states failed");
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
 
   router.post("/:agentId/:scheduleName/trigger", async (req, res) => {
     const { agentId, scheduleName } = req.params;

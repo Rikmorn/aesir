@@ -72,6 +72,9 @@ export interface AgentRegistrySummary {
     summaryModel: string;
   };
   triggers?: Array<{ event: string }> | undefined;
+  schedules?:
+    | Array<{ name: string; cron: string; timezone?: string | undefined }>
+    | undefined;
 }
 
 /**
