@@ -689,6 +689,51 @@ export const scheduleState = agentsSchema.table(
   ],
 );
 
+// ─── Identity Documents ──────────────────────────────────────────────────────
+
+/**
+ * Identity Documents table
+ *
+ * Versioned identity documents for persistent agent identity (Phase 86).
+ * Each update creates a new version row. Agents are capped at 5 distinct
+ * document types, each limited to 12,000 characters.
+ *
+ * Documents persist across all conversations and are injected into the
+ * system prompt at conversation start.
+ */
+export const identityDocuments = agentsSchema.table(
+  "identity_documents",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId.identityDocument()),
+    agent_id: text("agent_id").notNull(),
+    document_type: text("document_type").notNull(),
+    content: text("content").notNull(),
+    version: integer("version").notNull(),
+    conversation_id: text("conversation_id").references(
+      () => conversations.id,
+      { onDelete: "set null" },
+    ),
+    created_at: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("idx_identity_agent_type").on(table.agent_id, table.document_type),
+    index("idx_identity_agent_type_version").on(
+      table.agent_id,
+      table.document_type,
+      table.version,
+    ),
+    unique("uq_identity_agent_type_version").on(
+      table.agent_id,
+      table.document_type,
+      table.version,
+    ),
+  ],
+);
+
 // ─── Type Exports ────────────────────────────────────────────────────────────
 
 export type Conversation = typeof conversations.$inferSelect;
@@ -716,3 +761,5 @@ export type NewMaterializationRecord =
   typeof materializationRecords.$inferInsert;
 export type ScheduleStateRow = typeof scheduleState.$inferSelect;
 export type NewScheduleStateRow = typeof scheduleState.$inferInsert;
+export type IdentityDocument = typeof identityDocuments.$inferSelect;
+export type NewIdentityDocument = typeof identityDocuments.$inferInsert;

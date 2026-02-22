@@ -55,6 +55,9 @@ export const createId = {
   /** Handoff ID (agents.task_handoffs) */
   handoff: () => `ho_${nanoid()}`,
 
+  /** Identity document ID (agents.identity_documents) */
+  identityDocument: () => `idoc_${nanoid()}`,
+
   /** Knowledge entry ID (agents.knowledge_entries) */
   knowledgeEntry: () => `ke_${nanoid()}`,
 

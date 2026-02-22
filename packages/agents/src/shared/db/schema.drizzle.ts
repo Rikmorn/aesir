@@ -490,6 +490,43 @@ export const materializationRecords = agentsSchema.table(
   ],
 );
 
+// ─── Identity Documents ──────────────────────────────────────────────────────
+
+/**
+ * Identity Documents table (drizzle-kit mirror)
+ *
+ * Versioned identity documents for persistent agent identity (Phase 86).
+ * Each update creates a new version row. Agents are capped at 5 distinct
+ * document types, each limited to 12,000 characters.
+ */
+export const identityDocuments = agentsSchema.table(
+  "identity_documents",
+  {
+    id: text("id").primaryKey(),
+    agent_id: text("agent_id").notNull(),
+    document_type: text("document_type").notNull(),
+    content: text("content").notNull(),
+    version: integer("version").notNull(),
+    conversation_id: text("conversation_id"),
+    created_at: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("idx_identity_agent_type").on(table.agent_id, table.document_type),
+    index("idx_identity_agent_type_version").on(
+      table.agent_id,
+      table.document_type,
+      table.version,
+    ),
+    unique("uq_identity_agent_type_version").on(
+      table.agent_id,
+      table.document_type,
+      table.version,
+    ),
+  ],
+);
+
 // ─── Schedule State ──────────────────────────────────────────────────────────
 
 /**
