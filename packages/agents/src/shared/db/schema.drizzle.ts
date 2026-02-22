@@ -326,6 +326,11 @@ const knowledgeEntryScopeValues = ["shared", "private"] as const;
  * The actual column type is `vector` (pgvector) -- defined in the hand-written
  * migration 0007_add_knowledge_entries.sql. This placeholder prevents drizzle-kit
  * from generating destructive migration diffs.
+ *
+ * Additional index (not represented in Drizzle -- expression indexes can't be):
+ * - GIN fulltext index: to_tsvector('english', topic || ' ' || content)
+ *   Created in migration 0021_add_knowledge_fulltext_index.sql for keyword
+ *   retrieval strategy (Phase 87).
  */
 export const knowledgeEntries = agentsSchema.table(
   "knowledge_entries",

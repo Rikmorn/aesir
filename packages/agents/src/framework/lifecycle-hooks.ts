@@ -2,13 +2,16 @@
  * Lifecycle Hook Registry
  *
  * Generic mechanism for registering and executing hooks at conversation
- * lifecycle boundaries. Currently supports pre-completion hooks that run
- * before a conversation is finalized.
+ * lifecycle boundaries. Supports two lifecycle points:
  *
- * Phase 86 uses this for identity document review. Phase 87 will add
- * knowledge flush hooks. The registry is generic: hooks are registered
- * by name, executed sequentially, and individually wrapped in try/catch
- * so one failing hook doesn't block others.
+ * - **preCompletion**: Runs before a conversation is finalized (Phase 86).
+ *   Used for identity document review.
+ * - **preCompaction**: Runs before history compaction discards conversation
+ *   details (Phase 87). Used for knowledge flush.
+ *
+ * The registry is generic: hooks are registered by name, executed
+ * sequentially, and individually wrapped in try/catch so one failing
+ * hook doesn't block others.
  *
  * Key behaviors:
  * - Hooks run sequentially in registration order (order matters for Phase 87)
@@ -69,10 +72,14 @@ export type LifecycleHook = (ctx: LifecycleHookContext) => Promise<void>;
  * sequentially at the appropriate lifecycle point.
  */
 export interface LifecycleHookRegistry {
-  /** Register a named hook. Throws if name is already registered. */
+  /** Register a named pre-completion hook. Throws if name is already registered. */
   register(name: string, hook: LifecycleHook): void;
+  /** Register a named pre-compaction hook. Throws if name is already registered. */
+  registerPreCompaction(name: string, hook: LifecycleHook): void;
   /** Run all registered pre-completion hooks sequentially. */
   runPreCompletion(ctx: LifecycleHookContext): Promise<void>;
+  /** Run all registered pre-compaction hooks sequentially. */
+  runPreCompaction(ctx: LifecycleHookContext): Promise<void>;
 }
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
@@ -80,14 +87,15 @@ export interface LifecycleHookRegistry {
 /**
  * Create a LifecycleHookRegistry instance.
  *
- * Hooks are stored in a Map keyed by name. runPreCompletion iterates
- * hooks in insertion order, wrapping each in try/catch and logging
- * hook name + duration.
+ * Hooks are stored in Maps keyed by name -- one for pre-completion,
+ * one for pre-compaction. Both run hooks in insertion order, wrapping
+ * each in try/catch and logging hook name + duration.
  */
 export function createLifecycleHookRegistry(
   logger: PinoLogger,
 ): LifecycleHookRegistry {
   const hooks = new Map<string, LifecycleHook>();
+  const preCompactionHooks = new Map<string, LifecycleHook>();
   const log = logger.child({ component: "lifecycle-hooks" });
 
   return {
@@ -96,7 +104,23 @@ export function createLifecycleHookRegistry(
         throw new Error(`Lifecycle hook "${name}" is already registered`);
       }
       hooks.set(name, hook);
-      log.info({ hookName: name }, "Lifecycle hook registered");
+      log.info(
+        { hookName: name, lifecyclePoint: "preCompletion" },
+        "Lifecycle hook registered",
+      );
+    },
+
+    registerPreCompaction(name: string, hook: LifecycleHook): void {
+      if (preCompactionHooks.has(name)) {
+        throw new Error(
+          `Pre-compaction lifecycle hook "${name}" is already registered`,
+        );
+      }
+      preCompactionHooks.set(name, hook);
+      log.info(
+        { hookName: name, lifecyclePoint: "preCompaction" },
+        "Lifecycle hook registered",
+      );
     },
 
     async runPreCompletion(ctx: LifecycleHookContext): Promise<void> {
@@ -126,6 +150,41 @@ export function createLifecycleHookRegistry(
               conversationId: ctx.conversationId,
             },
             "Pre-completion hook failed (non-fatal, continuing)",
+          );
+        }
+      }
+    },
+
+    async runPreCompaction(ctx: LifecycleHookContext): Promise<void> {
+      if (preCompactionHooks.size === 0) return;
+
+      log.info(
+        {
+          hookCount: preCompactionHooks.size,
+          conversationId: ctx.conversationId,
+        },
+        "Running pre-compaction hooks",
+      );
+
+      for (const [name, hook] of preCompactionHooks) {
+        const hookStart = Date.now();
+        try {
+          await hook(ctx);
+          const durationMs = Date.now() - hookStart;
+          log.info(
+            { hookName: name, durationMs, conversationId: ctx.conversationId },
+            "Pre-compaction hook completed",
+          );
+        } catch (err) {
+          const durationMs = Date.now() - hookStart;
+          log.error(
+            {
+              err,
+              hookName: name,
+              durationMs,
+              conversationId: ctx.conversationId,
+            },
+            "Pre-compaction hook failed (non-fatal, continuing)",
           );
         }
       }
