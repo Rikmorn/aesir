@@ -183,7 +183,11 @@ Plans:
   3. Overlap prevention works: if configured to `skip`, a new run is dropped when the previous is still active; if `queue`, it waits for completion then starts
   4. An operator can manually trigger a scheduled agent via API endpoint or dashboard button
   5. The dashboard shows active schedules, next run time, last run status, and run history
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 84-01-PLAN.md -- Schema extension + schedule registry core (YAML schedules field, DB migration, registry module)
+- [ ] 84-02-PLAN.md -- EventRouter wiring + service bootstrap + manual trigger API
+- [ ] 84-03-PLAN.md -- Dashboard schedule visibility (agent badges, detail panel, overview card)
 
 ### Phase 85: Sub-Agent Discovery
 **Goal**: Orchestrator agents select sub-agents by describing the capability they need, replacing hardcoded agent ID references in spawn calls
