@@ -244,7 +244,7 @@ Wave 1 (parallel): 80, 82, 84, 85 -> Wave 2: 81, 86 -> Wave 3: 83, 87
 | 81. Parallel Delegation | 6/6 | Complete    | 2026-02-20 | - |
 | 82. Transparent Materialization | 5/5 | Complete    | 2026-02-20 | - |
 | 83. Tree-Level Token Budgets | v2.9 | 0/TBD | Not started | - |
-| 84. Scheduled Execution | 3/3 | Complete   | 2026-02-22 | - |
+| 84. Scheduled Execution | 3/3 | Complete    | 2026-02-22 | - |
 | 85. Sub-Agent Discovery | v2.9 | 0/TBD | Not started | - |
 | 86. Persistent Agent Identity | v2.9 | 0/TBD | Not started | - |
 | 87. Knowledge Retrieval Enhancement | v2.9 | 0/TBD | Not started | - |
