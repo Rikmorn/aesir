@@ -39,6 +39,8 @@ tools:
   - knowledge:store
   - knowledge:query
   - knowledge:update
+  - identity:update
+  - identity:read
   - directory:find
   - directory:get
 

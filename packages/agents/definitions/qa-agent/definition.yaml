@@ -23,6 +23,8 @@ tools:
   - coordination:wait_for_task
   - knowledge:store
   - knowledge:query
+  - identity:update
+  - identity:read
   - directory:find
   - directory:get
   - communication:notify
