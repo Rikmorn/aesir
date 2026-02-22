@@ -290,6 +290,11 @@ async function bootstrap(): Promise<void> {
     eventLog,
     integrations,
     logger,
+    // Phase 84: schedule trigger deps
+    scheduleRegistry,
+    eventRouter,
+    executor,
+    pool,
   });
 
   app.use("/api", apiRouter);

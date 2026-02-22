@@ -11,17 +11,23 @@
  * - GET /api/agents/registry/:id -- agent definition (with prompt)
  * - GET /api/worker/status     -- worker loop status
  * - GET /api/sse/events        -- SSE event stream
+ * - POST /api/schedules/:agentId/:scheduleName/trigger -- manual schedule trigger (Phase 84)
  */
 
 import type { PinoLogger } from "@aesir/platform";
 import { Router } from "express";
+import type { Pool } from "pg";
 import type {
   AgentRegistry,
+  ConversationExecutor,
   EventLog,
+  EventRouter,
+  ScheduleRegistry,
   ToolRegistry,
 } from "../../framework/types.js";
 import type { WorkerLoopStatus } from "../../framework/worker-loop.js";
 import { createAgentsRegistryRouter } from "./agents-registry.js";
+import { createScheduleTriggerRouter } from "./schedule-trigger.js";
 import {
   createSseEventsRouter,
   type SseConnectionManager,
@@ -45,6 +51,14 @@ export interface ApiRouterOptions {
   integrations: Array<{ name: string; healthUrl: string }>;
   /** Logger instance */
   logger: PinoLogger;
+  /** Schedule registry for manual trigger endpoint (Phase 84, optional) */
+  scheduleRegistry?: ScheduleRegistry | undefined;
+  /** EventRouter for manual trigger routing (Phase 84, optional) */
+  eventRouter?: EventRouter | undefined;
+  /** ConversationExecutor for manual trigger dispatch (Phase 84, optional) */
+  executor?: ConversationExecutor | undefined;
+  /** Database pool for overlap detection (Phase 84, optional) */
+  pool?: Pool | undefined;
 }
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
@@ -90,6 +104,26 @@ export function createApiRouter(options: ApiRouterOptions): {
     "/worker/status",
     createWorkerStatusRouter({ getWorkerStatus, logger }),
   );
+
+  // Mount schedule trigger router (Phase 84, optional -- only when scheduleRegistry is available)
+  if (
+    options.scheduleRegistry &&
+    options.eventRouter &&
+    options.executor &&
+    options.pool
+  ) {
+    router.use(
+      "/schedules",
+      createScheduleTriggerRouter({
+        agentRegistry,
+        scheduleRegistry: options.scheduleRegistry,
+        eventRouter: options.eventRouter,
+        executor: options.executor,
+        pool: options.pool,
+        logger,
+      }),
+    );
+  }
 
   // Mount SSE sub-router
   const { router: sseRouter, manager: sseManager } = createSseEventsRouter({
