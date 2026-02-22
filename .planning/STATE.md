@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.9 Platform Completion -- Phase 86 (Persistent Agent Identity)
+**Current focus:** v2.9 Platform Completion -- Phase 87 (Knowledge Retrieval Enhancement)
 
 ## Current Position
 
-Phase: 86 of 87 (Persistent Agent Identity)
-Plan: 3 of 3 in current phase
+Phase: 87 of 87 (Knowledge Retrieval Enhancement)
+Plan: 2 of 3 in current phase
 Status: In Progress
-Last activity: 2026-02-22 -- Completed 86-03 (dashboard identity visibility)
+Last activity: 2026-02-22 -- Completed 87-02 (pre-compaction knowledge flush)
 
-Progress: [########--] 80%
+Progress: [#########-] 90%
 
 ## Milestone History
 
@@ -62,6 +62,7 @@ Progress: [########--] 80%
 | 86 | 01 | 6min | 2 | 11 |
 | 86 | 02 | 7min | 2 | 12 |
 | 86 | 03 | 6min | 2 | 7 |
+| 87 | 02 | 3min | 2 | 3 |
 
 ## Accumulated Context
 
@@ -141,6 +142,11 @@ See PROJECT.md Key Decisions table for full history.
 - **86-03**: /dashboard/ basePath prefix in fetch URLs to match Next.js basePath configuration
 - [Phase 86]: Pre-completion hook runs inside completed branch after cancellation check, uses separate runAgentLoop with maxIterations:3
 - [Phase 86]: Identity review hook skips agents with zero documents; first documents created organically via identity:update tool
+- **87-02**: Pre-compaction flush uses same estimateMessageTokens threshold as compaction (no divergence)
+- **87-02**: Flush turn restricted to only knowledge_store tool (no other tools available during flush)
+- **87-02**: flushedBeforeCompaction guard scoped to executeConversation function (reset per cycle)
+- **87-02**: Flush prompt uses judgment criteria, not checklist -- 0 stores is valid outcome
+- **87-02**: No sentinel detection on flush response per user decision
 
 ### Pending Todos
 
@@ -163,9 +169,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Phase 87 context gathered
-Resume file: .planning/phases/87-knowledge-retrieval-enhancement/87-CONTEXT.md
-Next action: /gsd:plan-phase 87
+Stopped at: Completed 87-02-PLAN.md
+Resume file: .planning/phases/87-knowledge-retrieval-enhancement/87-02-SUMMARY.md
+Next action: Execute 87-03-PLAN.md
 
 ---
-*Updated: 2026-02-22 -- Phase 87 context gathered.*
+*Updated: 2026-02-22 -- Completed 87-02 (pre-compaction knowledge flush).*
