@@ -253,7 +253,7 @@ Wave 1 (parallel): 80, 82, 84 -> Wave 2: 81, 86 -> Wave 3: 83, 87
 | 83. Tree-Level Token Budgets | v2.9 | 0/TBD | Not started | - |
 | 84. Scheduled Execution | 3/3 | Complete    | 2026-02-22 | - |
 | 85. Sub-Agent Discovery | v2.9 | - | Deferred to v3.0+ | - |
-| 86. Persistent Agent Identity | 3/3 | Complete   | 2026-02-22 | - |
+| 86. Persistent Agent Identity | 3/3 | Complete    | 2026-02-22 | - |
 | 87. Knowledge Retrieval Enhancement | v2.9 | 0/TBD | Not started | - |
 
 **Total: 10 milestones shipped (79 phases, 349 plans) + v2.9 in progress (8 phases)**
