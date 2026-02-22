@@ -259,6 +259,20 @@ export const slackMcpPermissions = slackSchema.table("mcp_tool_permissions", {
   allowed: boolean("allowed").notNull(),
 });
 
+// ─── Identity Documents ─────────────────────────────────────────────────────
+
+export const identityDocuments = agentsSchema.table("identity_documents", {
+  id: text("id").primaryKey(),
+  agent_id: text("agent_id").notNull(),
+  document_type: text("document_type").notNull(),
+  content: text("content").notNull(),
+  version: integer("version").notNull(),
+  conversation_id: text("conversation_id"),
+  created_at: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 // ─── Type Exports ────────────────────────────────────────────────────────────
 
 export type Conversation = typeof conversations.$inferSelect;
@@ -268,3 +282,4 @@ export type AgentEventContent = typeof agentEventContent.$inferSelect;
 export type Task = typeof tasks.$inferSelect;
 export type TaskHandoff = typeof taskHandoffs.$inferSelect;
 export type EntityDirectoryEntry = typeof entityDirectory.$inferSelect;
+export type IdentityDocument = typeof identityDocuments.$inferSelect;

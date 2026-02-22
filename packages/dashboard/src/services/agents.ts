@@ -8,7 +8,7 @@
  * server-side only. The service layer abstraction lets us add caching or enrichment later.
  */
 
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import {
   type AgentDetail,
   type AgentSummary,
@@ -18,7 +18,12 @@ import {
   type ScheduleState,
 } from "@/lib/agent-service";
 import { db } from "@/lib/db";
-import { agentEvents, agentSessions, conversations } from "@/lib/schema";
+import {
+  agentEvents,
+  agentSessions,
+  conversations,
+  identityDocuments,
+} from "@/lib/schema";
 
 // ─── Re-exports ──────────────────────────────────────────────────────────────
 
@@ -34,6 +39,23 @@ export interface RecentConversation {
   lastActivity: Date | null;
   tokenInput: number;
   tokenOutput: number;
+}
+
+export interface IdentityDocumentSummary {
+  documentType: string;
+  content: string;
+  version: number;
+  charCount: number;
+  conversationId: string | null;
+  updatedAt: string; // ISO string
+}
+
+export interface IdentityDocumentVersion {
+  version: number;
+  content: string;
+  charCount: number;
+  conversationId: string | null;
+  createdAt: string; // ISO string
 }
 
 // ─── Agent Definitions (HTTP API) ────────────────────────────────────────────
@@ -132,4 +154,99 @@ export async function getRecentConversationsByAgent(
     tokenInput: Number(row.token_input),
     tokenOutput: Number(row.token_output),
   }));
+}
+
+// ─── Identity Documents (Database) ──────────────────────────────────────────
+
+/**
+ * Get the current (latest version) of each identity document for an agent.
+ *
+ * Uses DISTINCT ON (document_type) with ORDER BY version DESC to get the
+ * most recent version of each document type in a single query.
+ *
+ * @param agentId - The agent definition ID
+ */
+export async function getIdentityDocumentsForAgent(
+  agentId: string,
+): Promise<IdentityDocumentSummary[]> {
+  const rows = await db
+    .select({
+      document_type: identityDocuments.document_type,
+      content: identityDocuments.content,
+      version: identityDocuments.version,
+      conversation_id: identityDocuments.conversation_id,
+      created_at: identityDocuments.created_at,
+    })
+    .from(identityDocuments)
+    .where(eq(identityDocuments.agent_id, agentId))
+    .orderBy(identityDocuments.document_type, desc(identityDocuments.version));
+
+  // Deduplicate: keep only the first row (highest version) per document_type
+  const seen = new Set<string>();
+  const current: IdentityDocumentSummary[] = [];
+  for (const row of rows) {
+    if (!seen.has(row.document_type)) {
+      seen.add(row.document_type);
+      current.push({
+        documentType: row.document_type,
+        content: row.content,
+        version: row.version,
+        charCount: row.content.length,
+        conversationId: row.conversation_id,
+        updatedAt: row.created_at.toISOString(),
+      });
+    }
+  }
+
+  return current;
+}
+
+/**
+ * Get version history for a specific identity document type.
+ *
+ * Returns paginated versions (newest first) with a hasMore flag
+ * using the limit+1 trick.
+ *
+ * @param agentId - The agent definition ID
+ * @param documentType - The document type string
+ * @param limit - Maximum versions to return (default 20)
+ * @param offset - Number of versions to skip (default 0)
+ */
+export async function getIdentityDocumentHistory(
+  agentId: string,
+  documentType: string,
+  limit = 20,
+  offset = 0,
+): Promise<{ versions: IdentityDocumentVersion[]; hasMore: boolean }> {
+  const rows = await db
+    .select({
+      version: identityDocuments.version,
+      content: identityDocuments.content,
+      conversation_id: identityDocuments.conversation_id,
+      created_at: identityDocuments.created_at,
+    })
+    .from(identityDocuments)
+    .where(
+      and(
+        eq(identityDocuments.agent_id, agentId),
+        eq(identityDocuments.document_type, documentType),
+      ),
+    )
+    .orderBy(desc(identityDocuments.version))
+    .limit(limit + 1)
+    .offset(offset);
+
+  const hasMore = rows.length > limit;
+  const trimmed = hasMore ? rows.slice(0, limit) : rows;
+
+  return {
+    versions: trimmed.map((row) => ({
+      version: row.version,
+      content: row.content,
+      charCount: row.content.length,
+      conversationId: row.conversation_id,
+      createdAt: row.created_at.toISOString(),
+    })),
+    hasMore,
+  };
 }
