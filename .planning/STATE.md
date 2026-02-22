@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 84 of 87 (Scheduled Execution)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: Executing
-Last activity: 2026-02-22 -- Completed 84-01 (schedule foundation)
+Last activity: 2026-02-22 -- Completed 84-02 (event-router integration and main.ts wiring)
 
 Progress: [##########] 100%
 
@@ -57,6 +57,7 @@ Progress: [##########] 100%
 | 82 | 04 | 5min | 2 | 3 |
 | 82 | 05 | 8min | 2 | 11 |
 | 84 | 01 | 9min | 2 | 8 |
+| 84 | 02 | 7min | 2 | 8 |
 
 ## Accumulated Context
 
@@ -116,6 +117,12 @@ See PROJECT.md Key Decisions table for full history.
 - **84-01**: PgBoss type referenced as named export import("pg-boss").PgBoss (not default)
 - **84-01**: Overlap detection queries conversations table directly via pool (not through executor)
 - **84-01**: Composite PK on schedule_state uses drizzle-orm primaryKey() helper (first in schema)
+- **84-02**: EventRouter handles schedule.triggered at step 1.5 (between ignore and start rules), not in startRules map
+- **84-02**: Schedule event handler uses EventRouter.handle() + executor.start() directly (not routeEvent, which expects NormalizedEvent)
+- **84-02**: CorrelationKey extracted from conversation ID via conv.id.slice(agent_definition_id.length + 1), not correlation_key column
+- **84-02**: Schedule registry created before executor in bootstrap for declaration-order correctness
+- **84-02**: Manual trigger returns 409 with activeConversationId for skip policy feedback
+- **84-02**: API router schedule deps are optional (backward-compatible without scheduleRegistry)
 
 ### Pending Todos
 
@@ -137,9 +144,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 84-01-PLAN.md
-Resume file: .planning/phases/84-scheduled-execution/84-01-SUMMARY.md
-Next action: Execute 84-02-PLAN.md (event-router integration and main.ts wiring)
+Stopped at: Completed 84-02-PLAN.md
+Resume file: .planning/phases/84-scheduled-execution/84-02-SUMMARY.md
+Next action: Execute 84-03-PLAN.md (dashboard schedules)
 
 ---
-*Updated: 2026-02-22 -- Completed 84-01 (schedule foundation). Phase 84 in progress.*
+*Updated: 2026-02-22 -- Completed 84-02 (event-router integration and main.ts wiring). Phase 84 in progress.*

@@ -183,7 +183,7 @@ Plans:
   3. Overlap prevention works: if configured to `skip`, a new run is dropped when the previous is still active; if `queue`, it waits for completion then starts
   4. An operator can manually trigger a scheduled agent via API endpoint or dashboard button
   5. The dashboard shows active schedules, next run time, last run status, and run history
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 Plans:
 - [ ] 84-01-PLAN.md -- Schema extension + schedule registry core (YAML schedules field, DB migration, registry module)
 - [ ] 84-02-PLAN.md -- EventRouter wiring + service bootstrap + manual trigger API
@@ -244,7 +244,7 @@ Wave 1 (parallel): 80, 82, 84, 85 -> Wave 2: 81, 86 -> Wave 3: 83, 87
 | 81. Parallel Delegation | 6/6 | Complete    | 2026-02-20 | - |
 | 82. Transparent Materialization | 5/5 | Complete    | 2026-02-20 | - |
 | 83. Tree-Level Token Budgets | v2.9 | 0/TBD | Not started | - |
-| 84. Scheduled Execution | 1/3 | In Progress|  | - |
+| 84. Scheduled Execution | 2/3 | In Progress|  | - |
 | 85. Sub-Agent Discovery | v2.9 | 0/TBD | Not started | - |
 | 86. Persistent Agent Identity | v2.9 | 0/TBD | Not started | - |
 | 87. Knowledge Retrieval Enhancement | v2.9 | 0/TBD | Not started | - |
