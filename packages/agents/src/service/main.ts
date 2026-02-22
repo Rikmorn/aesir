@@ -51,6 +51,7 @@ import { config } from "../shared/env/config.js";
 import { createCorrelationService } from "../shared/services/correlation-service.js";
 import { createDirectoryService } from "../shared/services/directory-service.js";
 import { createGroupService } from "../shared/services/group-service.js";
+import { createIdentityService } from "../shared/services/identity-service.js";
 import { createKnowledgeService } from "../shared/services/knowledge-service.js";
 import {
   createForwardSyncListener,
@@ -130,6 +131,9 @@ async function bootstrap(): Promise<void> {
   // 4f. CorrelationService -- work correlation tracking (Phase 78)
   const correlationService = createCorrelationService({ db, logger });
 
+  // 4g. IdentityService -- persistent agent identity documents (Phase 86)
+  const identityService = createIdentityService({ db, logger });
+
   registerAllTools({
     registry: toolRegistry,
     agentRegistry,
@@ -137,6 +141,7 @@ async function bootstrap(): Promise<void> {
     knowledgeService,
     correlationService,
     directoryService,
+    identityService,
     logger,
   });
 

@@ -1,7 +1,7 @@
 /**
  * Tool Factory Registration
  *
- * Registers all 55 tool factories in the ToolRegistry, bridging the v2.3
+ * Registers all 57 tool factories in the ToolRegistry, bridging the v2.3
  * ToolContext interface to the existing v2.2 tool factory signatures.
  *
  * Tool categories:
@@ -17,6 +17,7 @@
  * - Work (2): work_register, work_query
  * - Directory (2): directory_find, directory_get
  * - Communication (3): reply, ask, notify
+ * - Identity (2): identity_update, identity_read
  *
  * Adapters bridge ToolContext to the existing factory signatures:
  * - Codebase adapter: extracts containerManager, sandboxId, logger from ToolContext
@@ -30,6 +31,7 @@ import type { ToolDefinition } from "../shared/agent-loop/types.js";
 import type { CommunicationToolDeps } from "../shared/communication/types.js";
 import type { CorrelationService } from "../shared/services/correlation-service.js";
 import type { DirectoryService } from "../shared/services/directory-service.js";
+import type { IdentityService } from "../shared/services/identity-service.js";
 import type { KnowledgeService } from "../shared/services/knowledge-service.js";
 import type { TaskService } from "../shared/services/task-service.js";
 import {
@@ -50,6 +52,10 @@ import {
   createDirectoryFindTool,
   createDirectoryGetTool,
 } from "../shared/tools/directory/index.js";
+import {
+  createIdentityReadTool,
+  createIdentityUpdateTool,
+} from "../shared/tools/identity/index.js";
 import { createGitHubTools } from "../shared/tools/integration/github-tools.js";
 import { createLinearTools } from "../shared/tools/integration/linear-tools.js";
 import type { McpToolDeps } from "../shared/tools/integration/mcp-wrapper.js";
@@ -105,6 +111,8 @@ export interface RegisterAllToolsOptions {
   correlationService: CorrelationService;
   /** DirectoryService for entity discovery with semantic capability matching (Phase 69) */
   directoryService: DirectoryService;
+  /** IdentityService for persistent agent identity documents (Phase 86) */
+  identityService: IdentityService;
   /** Logger for registration diagnostics */
   logger: PinoLogger;
 }
@@ -185,7 +193,7 @@ function communicationAdapter(
 // ─── Registration ────────────────────────────────────────────────────────────
 
 /**
- * Register all 55 tool factories in the ToolRegistry.
+ * Register all 57 tool factories in the ToolRegistry.
  *
  * This bridges the v2.3 registry-based tool resolution to the existing v2.2
  * tool factory functions. After calling this, `registry.resolve(refs, context)`
@@ -421,6 +429,14 @@ export function registerAllTools(options: RegisterAllToolsOptions): void {
     "communication:notify",
     communicationAdapter(createNotifyTool),
   );
+
+  // ── Identity tools (2) ──────────────────────────────────────────────
+
+  const is = options.identityService;
+  registry.register("identity:update", (ctx) =>
+    createIdentityUpdateTool(is, ctx),
+  );
+  registry.register("identity:read", (ctx) => createIdentityReadTool(is, ctx));
 
   // ── Summary ────────────────────────────────────────────────────────────
 

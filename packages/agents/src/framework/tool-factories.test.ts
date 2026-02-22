@@ -10,6 +10,7 @@ import type { DevContainerManager, PinoLogger } from "@aesir/platform";
 import { describe, expect, it, vi } from "vitest";
 import type { CorrelationService } from "../shared/services/correlation-service.js";
 import type { DirectoryService } from "../shared/services/directory-service.js";
+import type { IdentityService } from "../shared/services/identity-service.js";
 import type { KnowledgeService } from "../shared/services/knowledge-service.js";
 import type { TaskService } from "../shared/services/task-service.js";
 import { registerAllTools } from "./tool-factories.js";
@@ -82,6 +83,21 @@ function createMockCorrelationService(): CorrelationService {
   } as unknown as CorrelationService;
 }
 
+function createMockIdentityService(): IdentityService {
+  return {
+    getCurrentDocuments: vi.fn().mockResolvedValue([]),
+    getDocumentHistory: vi.fn().mockResolvedValue([]),
+    updateDocument: vi.fn().mockResolvedValue({
+      version: 1,
+      documentType: "test",
+      allDocuments: ["test"],
+    }),
+    getDocumentCount: vi.fn().mockResolvedValue(0),
+    health: vi.fn().mockResolvedValue({ healthy: true, latencyMs: 1 }),
+    close: vi.fn(),
+  } as unknown as IdentityService;
+}
+
 function createMockDirectoryService(): DirectoryService {
   return {
     find: vi.fn().mockResolvedValue([]),
@@ -116,6 +132,7 @@ function setupRegistry() {
   const knowledgeService = createMockKnowledgeService();
   const correlationService = createMockCorrelationService();
   const directoryService = createMockDirectoryService();
+  const identityService = createMockIdentityService();
   registerAllTools({
     registry,
     agentRegistry,
@@ -123,6 +140,7 @@ function setupRegistry() {
     knowledgeService,
     correlationService,
     directoryService,
+    identityService,
     logger,
   });
   return {
@@ -133,6 +151,7 @@ function setupRegistry() {
     knowledgeService,
     correlationService,
     directoryService,
+    identityService,
   };
 }
 
@@ -150,7 +169,7 @@ describe("registerAllTools", () => {
 
     it("should register exactly 47 tools", () => {
       const { registry } = setupRegistry();
-      expect(registry.listRegistered()).toHaveLength(51);
+      expect(registry.listRegistered()).toHaveLength(57);
     });
 
     it("should register all expected namespaces", () => {
@@ -170,6 +189,7 @@ describe("registerAllTools", () => {
           "work",
           "directory",
           "communication",
+          "identity",
         ]),
       );
     });
@@ -273,6 +293,13 @@ describe("registerAllTools", () => {
       expect(registry.has("communication:reply")).toBe(true);
       expect(registry.has("communication:ask")).toBe(true);
       expect(registry.has("communication:notify")).toBe(true);
+    });
+
+    it("should register all identity tools", () => {
+      const { registry } = setupRegistry();
+
+      expect(registry.has("identity:update")).toBe(true);
+      expect(registry.has("identity:read")).toBe(true);
     });
   });
 
@@ -402,7 +429,7 @@ describe("registerAllTools", () => {
       const { logger } = setupRegistry();
 
       expect(logger.info).toHaveBeenCalledWith(
-        { toolCount: 51 },
+        { toolCount: 57 },
         "All tool factories registered",
       );
     });
