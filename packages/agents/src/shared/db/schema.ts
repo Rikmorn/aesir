@@ -19,6 +19,7 @@ import {
   integer,
   jsonb,
   pgSchema,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -660,6 +661,34 @@ export const materializationRecords = agentsSchema.table(
   ],
 );
 
+// ─── Schedule State ──────────────────────────────────────────────────────────
+
+/**
+ * Schedule State table
+ *
+ * Tracks schedule execution history for cron-based agent triggers.
+ * One row per agent-schedule pair. Updated after each run completes.
+ * Used for context injection (SCH-06) and dashboard display.
+ */
+export const scheduleState = agentsSchema.table(
+  "schedule_state",
+  {
+    agent_id: text("agent_id").notNull(),
+    schedule_name: text("schedule_name").notNull(),
+    last_run_at: timestamp("last_run_at", { withTimezone: true }),
+    last_run_outcome: text("last_run_outcome"),
+    last_run_conversation_id: text("last_run_conversation_id"),
+    last_run_summary: text("last_run_summary"),
+    run_count: integer("run_count").notNull().default(0),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.agent_id, table.schedule_name],
+      name: "schedule_state_pkey",
+    }),
+  ],
+);
+
 // ─── Type Exports ────────────────────────────────────────────────────────────
 
 export type Conversation = typeof conversations.$inferSelect;
@@ -685,3 +714,5 @@ export type NewWorkCorrelation = typeof workCorrelations.$inferInsert;
 export type MaterializationRecord = typeof materializationRecords.$inferSelect;
 export type NewMaterializationRecord =
   typeof materializationRecords.$inferInsert;
+export type ScheduleStateRow = typeof scheduleState.$inferSelect;
+export type NewScheduleStateRow = typeof scheduleState.$inferInsert;

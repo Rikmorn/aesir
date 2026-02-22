@@ -14,6 +14,7 @@ import {
   integer,
   jsonb,
   pgSchema,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -486,5 +487,32 @@ export const materializationRecords = agentsSchema.table(
   (table) => [
     index("idx_materialization_external").on(table.target, table.external_id),
     index("idx_materialization_conversation").on(table.conversation_id),
+  ],
+);
+
+// ─── Schedule State ──────────────────────────────────────────────────────────
+
+/**
+ * Schedule State table (drizzle-kit mirror)
+ *
+ * Tracks schedule execution history for cron-based agent triggers.
+ * One row per agent-schedule pair.
+ */
+export const scheduleState = agentsSchema.table(
+  "schedule_state",
+  {
+    agent_id: text("agent_id").notNull(),
+    schedule_name: text("schedule_name").notNull(),
+    last_run_at: timestamp("last_run_at", { withTimezone: true }),
+    last_run_outcome: text("last_run_outcome"),
+    last_run_conversation_id: text("last_run_conversation_id"),
+    last_run_summary: text("last_run_summary"),
+    run_count: integer("run_count").notNull().default(0),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.agent_id, table.schedule_name],
+      name: "schedule_state_pkey",
+    }),
   ],
 );

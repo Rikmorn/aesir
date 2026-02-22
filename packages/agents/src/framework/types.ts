@@ -300,6 +300,35 @@ export const AgentDefinitionYamlSchema = z.object({
       }),
     )
     .optional(),
+
+  /** Cron schedules that periodically trigger this agent */
+  schedules: z
+    .array(
+      z.object({
+        /** Unique schedule name within this agent (used in correlationKey, dashboard, prompts) */
+        name: z.string().min(1),
+        /** Standard 5-field cron expression (e.g., "0 9 * * MON") */
+        cron: z
+          .string()
+          .min(1)
+          .refine(
+            (val) => {
+              try {
+                const { CronExpressionParser } =
+                  require("cron-parser") as typeof import("cron-parser");
+                CronExpressionParser.parse(val);
+                return true;
+              } catch {
+                return false;
+              }
+            },
+            { message: "Invalid cron expression" },
+          ),
+        /** IANA timezone (e.g., "America/New_York"). Defaults to UTC. */
+        timezone: z.string().optional(),
+      }),
+    )
+    .optional(),
 });
 
 /**
@@ -307,6 +336,11 @@ export const AgentDefinitionYamlSchema = z.object({
  * Represents the shape of a parsed and validated YAML definition file.
  */
 export type AgentDefinitionYaml = z.infer<typeof AgentDefinitionYamlSchema>;
+
+/** Single schedule from an agent definition */
+export type ScheduleDefinition = NonNullable<
+  AgentDefinitionYaml["schedules"]
+>[number];
 
 /**
  * Full agent definition combining YAML config with loaded prompt.
@@ -463,6 +497,52 @@ export interface AgentRegistry {
 
   /** List all available agent definitions. */
   list(): Promise<AgentDefinition[]>;
+}
+
+// ─── Schedule Registry ──────────────────────────────────────────────────────
+
+/** Schedule state row from agents.schedule_state */
+export interface ScheduleState {
+  agentId: string;
+  scheduleName: string;
+  lastRunAt: Date | null;
+  lastRunOutcome: string | null;
+  lastRunConversationId: string | null;
+  lastRunSummary: string | null;
+  runCount: number;
+}
+
+/** Options for creating a ScheduleRegistry */
+export interface ScheduleRegistryOptions {
+  agentRegistry: AgentRegistry;
+  pool: import("pg").Pool;
+  logger: import("@aesir/platform").PinoLogger;
+}
+
+/** Schedule registry manages pg-boss cron jobs for agent schedules */
+export interface ScheduleRegistry {
+  /** Register all schedules and reconcile stale ones. Call after pg-boss starts. */
+  registerAll(boss: import("pg-boss").PgBoss): Promise<void>;
+  /** Get schedule state for an agent */
+  getScheduleStates(agentId: string): Promise<ScheduleState[]>;
+  /** Get all schedule states */
+  getAllScheduleStates(): Promise<ScheduleState[]>;
+  /** Update schedule state after a run completes */
+  updateScheduleState(
+    agentId: string,
+    scheduleName: string,
+    outcome: string,
+    conversationId: string,
+    summary: string | null,
+  ): Promise<void>;
+  /** Build schedule context XML block for injection into initial message */
+  buildScheduleContext(
+    agentId: string,
+    scheduleName: string,
+    trigger: "scheduled" | "manual",
+  ): Promise<string>;
+  /** Set the event handler callback for routing synthetic schedule events */
+  setEventHandler(handler: (event: IncomingEvent) => Promise<void>): void;
 }
 
 // ─── Signal Schema ──────────────────────────────────────────────────────────
