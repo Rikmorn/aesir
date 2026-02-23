@@ -48,6 +48,8 @@ function makeNode(overrides: Partial<TaskTreeNode> = {}): TaskTreeNode {
     groupId: null,
     groupPolicy: null,
     groupStatus: null,
+    subtreeAllocation: null,
+    subtreeConsumed: null,
     ...overrides,
   };
 }

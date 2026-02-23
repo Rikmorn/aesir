@@ -34,6 +34,8 @@ export interface TaskTreeNode {
   groupId: string | null;
   groupPolicy: { type: string; threshold?: number } | null;
   groupStatus: string | null;
+  subtreeAllocation: number | null;
+  subtreeConsumed: number | null;
 }
 
 export interface TimelineEvent {
@@ -113,7 +115,9 @@ export async function getTaskTree(rootTaskId: string): Promise<TaskTreeNode[]> {
       tt.completed_at,
       tt.group_id,
       tg.policy AS group_policy,
-      tg.status AS group_status
+      tg.status AS group_status,
+      c.subtree_allocation,
+      c.subtree_consumed
     FROM task_tree tt
     LEFT JOIN agents.conversations c ON c.task_id = tt.id
     LEFT JOIN agents.entity_directory ed ON ed.id = tt.assignee_id
@@ -143,6 +147,10 @@ export async function getTaskTree(rootTaskId: string): Promise<TaskTreeNode[]> {
     groupPolicy:
       (row.group_policy as { type: string; threshold?: number }) ?? null,
     groupStatus: (row.group_status as string) ?? null,
+    subtreeAllocation:
+      row.subtree_allocation != null ? Number(row.subtree_allocation) : null,
+    subtreeConsumed:
+      row.subtree_consumed != null ? Number(row.subtree_consumed) : null,
   }));
 }
 

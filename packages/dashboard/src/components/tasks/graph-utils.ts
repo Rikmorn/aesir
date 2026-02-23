@@ -45,6 +45,8 @@ export interface GraphNodeData {
   elapsedTime: string;
   healthBadge: HealthBadge;
   isRejected: boolean;
+  subtreeAllocation?: number | null;
+  subtreeConsumed?: number | null;
 }
 
 /** Group node data for graph rendering */
@@ -295,6 +297,8 @@ export function transformTreeToGraph(
         elapsedTime: getElapsedTime(node.createdAt),
         healthBadge: getHealthBadge(node, events),
         isRejected: getNodeStatus(node) === "rejected",
+        subtreeAllocation: node.subtreeAllocation,
+        subtreeConsumed: node.subtreeConsumed,
       },
     });
   }

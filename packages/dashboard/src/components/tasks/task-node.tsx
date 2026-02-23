@@ -14,6 +14,7 @@ import { AlertTriangle, Unlink } from "lucide-react";
 import { memo } from "react";
 
 import { cn } from "@/lib/utils";
+import { BudgetBar } from "./budget-bar";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -30,6 +31,8 @@ export type TaskNodeData = {
   elapsedTime: string;
   healthBadge: "timeout" | "orphan" | null;
   isRejected: boolean;
+  subtreeAllocation?: number | null;
+  subtreeConsumed?: number | null;
 };
 
 export type TaskNode = Node<TaskNodeData, "task">;
@@ -61,7 +64,10 @@ function TaskNodeComponent({ data }: NodeProps<TaskNode>) {
     <div
       className={cn(
         "flex flex-col justify-between rounded-md border-2 bg-card p-2.5",
-        "w-[220px] h-[80px]",
+        "w-[220px]",
+        data.subtreeAllocation != null && data.subtreeAllocation > 0
+          ? "min-h-[80px]"
+          : "h-[80px]",
         style.border,
         data.isRejected && "opacity-60",
       )}
@@ -106,6 +112,15 @@ function TaskNodeComponent({ data }: NodeProps<TaskNode>) {
           {data.elapsedTime}
         </span>
       </div>
+
+      {/* Budget bar (only when tree budget is active) */}
+      {data.subtreeAllocation != null && data.subtreeAllocation > 0 && (
+        <BudgetBar
+          allocated={data.subtreeAllocation}
+          consumed={data.subtreeConsumed ?? 0}
+          className="mt-1"
+        />
+      )}
     </div>
   );
 }
