@@ -77,3 +77,21 @@ export class AgentAbortedError extends AgentLoopError {
     this.name = "AgentAbortedError";
   }
 }
+
+/**
+ * Thrown when the tree-level token budget is exhausted.
+ * Non-retryable: the delegation tree has consumed its entire budget.
+ * The 80% warning gave the agent opportunity to wrap up gracefully.
+ */
+export class TreeBudgetExhaustedError extends AgentLoopError {
+  constructor(
+    public readonly allocation: number,
+    public readonly consumed: number,
+  ) {
+    super(
+      `Tree budget exhausted: ${consumed} tokens consumed of ${allocation} allocated`,
+      "max_tokens", // Reuses max_tokens status -- resource exhaustion, non-retryable
+    );
+    this.name = "TreeBudgetExhaustedError";
+  }
+}

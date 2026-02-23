@@ -302,6 +302,8 @@ export const AgentDefinitionYamlSchema = z.object({
   maxIterations: z.number().int().positive(),
   /** Total token budget for the agent (input + output) */
   tokenBudget: z.number().int().min(0),
+  /** Tree-level token budget for the entire delegation tree. Only applies when this agent starts via event trigger (root). Children inherit parent allocation; their own treeBudget is ignored. */
+  treeBudget: z.number().int().positive().optional(),
 
   /** History management configuration */
   history: z.object({
@@ -690,6 +692,8 @@ export interface StartConversationParams {
   parentConversationId?: string;
   /** Task ID to associate with this conversation on INSERT (v2.5 task routing) */
   taskId?: string;
+  /** Tree budget allocation for this conversation's subtree (Phase 83). NULL means no tree budget. */
+  subtreeAllocation?: number;
   /** Reply context for routing agent responses back to the originating channel */
   replyContext?: ReplyContext;
   /** Entity reference for auto-registration of work correlation (Phase 78) */
