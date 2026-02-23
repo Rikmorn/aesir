@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 83 of 87 (Tree-Level Token Budgets)
-Plan: 3 of 4 in current phase
-Status: In Progress
-Last activity: 2026-02-23 -- Completed 83-03 (dashboard budget visualization)
+Plan: 4 of 4 in current phase
+Status: Phase Complete
+Last activity: 2026-02-23 -- Completed 83-04 (worker loop integration & budget tool)
 
-Progress: [########--] 75%
+Progress: [##########] 100%
 
 ## Milestone History
 
@@ -68,6 +68,7 @@ Progress: [########--] 75%
 | 83 | 01 | 3min | 2 | 7 |
 | Phase 83 P03 | 3min | 2 tasks | 7 files |
 | Phase 83 P02 | 4min | 2 tasks | 4 files |
+| 83 | 04 | 12min | 2 | 11 |
 
 ## Accumulated Context
 
@@ -164,6 +165,10 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 83]: Budget section placed between Description and Handshake in detail panel for at-a-glance priority
 - [Phase 83]: propagateConsumption uses fire-and-forget pattern (void + catch) for non-blocking ancestor updates
 - [Phase 83]: delegate_task default allocation is all remaining tokens (sequential); delegate_group uses Math.floor for per-task split
+- **83-04**: onResponse returns string | undefined for mid-loop [SYSTEM] message injection (biome lint: noConfusingVoidType)
+- **83-04**: Effective token budget always created when tree budget present (even without spawn_agent)
+- **83-04**: TreeBudgetExhaustedError handled in separate catch block for clean non-retryable flow
+- **83-04**: task:tree_budget tool added to dev-agent, product-agent, qa-agent (all with task:delegate)
 
 ### Pending Todos
 
@@ -185,9 +190,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 83-03-PLAN.md
-Resume file: .planning/phases/83-tree-level-token-budgets/83-03-SUMMARY.md
-Next action: Execute 83-04-PLAN.md
+Stopped at: Completed 83-04-PLAN.md (Phase 83 complete)
+Resume file: .planning/phases/83-tree-level-token-budgets/83-04-SUMMARY.md
+Next action: Begin next phase
 
 ---
-*Updated: 2026-02-23 -- Completed 83-03 dashboard budget visualization.*
+*Updated: 2026-02-23 -- Completed Phase 83 (Tree-Level Token Budgets) -- all 4 plans.*
