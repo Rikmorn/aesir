@@ -170,8 +170,10 @@ export interface AgentLoopOptions {
   onToolCall?: (call: ToolCallInfo) => void;
   /** Called after every tool execution with the result (for tracing/observability) */
   onToolResult?: (result: ToolResultInfo) => void;
-  /** Called on every LLM response (for tracing/observability) */
-  onResponse?: (response: LLMResponse) => void;
+  /** Called on every LLM response (for tracing/observability).
+   *  If it returns a string, that string is injected as a [SYSTEM] user message
+   *  before the next LLM call (Phase 83 tree budget warning injection). */
+  onResponse?: (response: LLMResponse) => string | undefined;
   /** Called once when token budget drops below warning threshold (20% remaining) */
   onBudgetWarning?: (info: {
     total: number;

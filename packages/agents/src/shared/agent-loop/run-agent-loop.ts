@@ -486,7 +486,14 @@ export async function runAgentLoop(
     trace.push(llmTraceStep);
 
     // LOOP-07: Fire onResponse callback
-    onResponse?.(response);
+    const injectedMessage = onResponse?.(response);
+    // Phase 83: If onResponse returns a string, inject as [SYSTEM] user message
+    if (typeof injectedMessage === "string") {
+      conversationMessages.push({
+        role: "user",
+        content: injectedMessage,
+      });
+    }
 
     // Fire heartbeat callback after each LLM response (for conversation executor heartbeats)
     onHeartbeat?.();

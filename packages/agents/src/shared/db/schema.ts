@@ -169,6 +169,8 @@ export const agentEventTypeValues = [
   "agent.stale_recovered",
   "agent.retry_scheduled",
   "event.routed",
+  "tree_budget.warning",
+  "tree_budget.exhausted",
 ] as const;
 export type AgentEventType = (typeof agentEventTypeValues)[number];
 

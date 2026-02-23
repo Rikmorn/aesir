@@ -19,8 +19,13 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { nanoid } from "nanoid";
+import { TreeBudgetExhaustedError } from "../shared/agent-loop/errors.js";
 import { runAgentLoop } from "../shared/agent-loop/run-agent-loop.js";
 import { createTokenBudget } from "../shared/agent-loop/token-budget.js";
+import {
+  createTreeBudgetState,
+  type TreeBudgetState,
+} from "../shared/agent-loop/tree-budget.js";
 import type {
   AgentLoopResult,
   LLMResponse,
@@ -1274,9 +1279,72 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
       const hasSpawnAgent = definition.tools.includes(
         "coordination:spawn_agent",
       );
-      const tokenBudget = hasSpawnAgent
-        ? createTokenBudget(definition.tokenBudget)
-        : undefined;
+
+      // 5a-i. Tree budget initialization (Phase 83)
+      let treeBudgetState: TreeBudgetState | undefined;
+
+      if (conv.subtree_allocation != null) {
+        // Child conversation: inherited allocation from delegation
+        treeBudgetState = createTreeBudgetState(
+          conv.subtree_allocation,
+          conv.subtree_consumed,
+          conv.tree_budget_warning_delivered,
+          db,
+          conv.id,
+          childLogger,
+        );
+      } else if (
+        definition.treeBudget != null &&
+        !conv.parent_conversation_id
+      ) {
+        // Root conversation started by event trigger: set allocation from definition.yaml
+        const allocation = definition.treeBudget;
+        await db
+          .update(conversations)
+          .set({
+            subtree_allocation: allocation,
+            subtree_consumed: 0,
+            updated_at: new Date(),
+          })
+          .where(eq(conversations.id, conv.id));
+
+        treeBudgetState = createTreeBudgetState(
+          allocation,
+          0, // fresh start
+          false,
+          db,
+          conv.id,
+          childLogger,
+        );
+
+        childLogger.info(
+          { treeBudget: allocation },
+          "Tree budget activated from definition.yaml",
+        );
+      }
+
+      // 5a-ii. Refresh tree budget on resume (catches sibling consumption)
+      if (treeBudgetState && isResumed) {
+        await treeBudgetState.refreshFromDb();
+        childLogger.debug(
+          {
+            remaining: treeBudgetState.remaining(),
+            consumed: treeBudgetState.consumed,
+          },
+          "Tree budget refreshed on resume",
+        );
+      }
+
+      // Compose effective token budget: min(definition.tokenBudget, subtreeRemaining)
+      const effectiveTotal = treeBudgetState
+        ? Math.min(definition.tokenBudget, treeBudgetState.remaining())
+        : definition.tokenBudget;
+
+      // Create token budget when needed for spawn_agent OR tree budget enforcement
+      const tokenBudget =
+        hasSpawnAgent || treeBudgetState
+          ? createTokenBudget(effectiveTotal)
+          : undefined;
 
       // 5b. Track current tool call ID for MCP event correlation
       // Updated by onToolCall callback before each tool execution.
@@ -1620,6 +1688,19 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         initialMessage = "Continue the conversation from where you left off.";
       }
 
+      // 8b. Inject tree budget context (Phase 83)
+      if (treeBudgetState) {
+        const parentInfo = conv.parent_conversation_id
+          ? " from parent's tree budget"
+          : " (root tree budget)";
+        const treeBudgetContext = `Tree budget: ${treeBudgetState.allocation.toLocaleString()} tokens allocated${parentInfo}. Use task:tree_budget to check remaining.`;
+        if (context) {
+          context = `${treeBudgetContext}\n\n${context}`;
+        } else {
+          context = treeBudgetContext;
+        }
+      }
+
       // 9. Heartbeat callback
       let lastBeatTime = Date.now();
       const onHeartbeat = () => {
@@ -1703,7 +1784,7 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         });
       };
 
-      const onResponse = (response: LLMResponse) => {
+      const onResponse = (response: LLMResponse): string | undefined => {
         childLogger.info(
           {
             inputTokens: response.usage.input_tokens,
@@ -1729,6 +1810,69 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
           // Content is buffered alongside the event and flushed atomically
           ...(textContent && { content: textContent }),
         });
+
+        // Tree budget consumption propagation (Phase 83)
+        if (treeBudgetState && response.usage) {
+          const tokensUsed =
+            (response.usage.input_tokens ?? 0) +
+            (response.usage.output_tokens ?? 0);
+          treeBudgetState.recordConsumption(tokensUsed);
+
+          // Tree budget warning injection (Phase 83)
+          // Check after recording consumption. Inject [SYSTEM] message exactly once.
+          if (
+            treeBudgetState.isWarning() &&
+            !treeBudgetState.warningDelivered
+          ) {
+            treeBudgetState.warningDelivered = true;
+
+            // Persist the flag so it survives crash/restart (fire-and-forget)
+            void db
+              .update(conversations)
+              .set({
+                tree_budget_warning_delivered: true,
+                updated_at: new Date(),
+              })
+              .where(eq(conversations.id, conv.id))
+              .catch((err) =>
+                childLogger.warn(
+                  { err },
+                  "Failed to persist tree budget warning flag",
+                ),
+              );
+
+            // Emit observability event
+            eventLog.append({
+              ...eventBase,
+              type: "tree_budget.warning",
+              payload: {
+                allocation: treeBudgetState.allocation,
+                consumed: treeBudgetState.consumed,
+                remaining: treeBudgetState.remaining(),
+                percentUsed: Math.round(
+                  (treeBudgetState.consumed / treeBudgetState.allocation) * 100,
+                ),
+              },
+            });
+
+            childLogger.warn(
+              {
+                treeAllocation: treeBudgetState.allocation,
+                treeConsumed: treeBudgetState.consumed,
+                treeRemaining: treeBudgetState.remaining(),
+              },
+              "Tree budget warning threshold reached",
+            );
+
+            // Return [SYSTEM] message for injection into conversation
+            const pct = Math.round(
+              (treeBudgetState.consumed / treeBudgetState.allocation) * 100,
+            );
+            return `[SYSTEM] Tree budget warning: ${pct}% consumed (${treeBudgetState.consumed.toLocaleString()} / ${treeBudgetState.allocation.toLocaleString()} tokens). ${treeBudgetState.remaining().toLocaleString()} tokens remaining across this delegation tree. Prioritize completing essential work.`;
+          }
+        }
+
+        return undefined;
       };
 
       // 11. Run agent loop
@@ -1750,6 +1894,24 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         loopOptions.context = context;
       }
       const result: AgentLoopResult = await runAgentLoop(loopOptions);
+
+      // 11b. Tree budget exhaustion check (Phase 83)
+      // Check after agent loop completes -- the current turn finishes, then we throw.
+      if (treeBudgetState?.isExhausted()) {
+        eventLog.append({
+          ...eventBase,
+          type: "tree_budget.exhausted",
+          payload: {
+            allocation: treeBudgetState.allocation,
+            consumed: treeBudgetState.consumed,
+          },
+        });
+        await eventLog.flush();
+        throw new TreeBudgetExhaustedError(
+          treeBudgetState.allocation,
+          treeBudgetState.consumed,
+        );
+      }
 
       // 12. Verify ownership before persisting
       const ownershipCheck = await db
@@ -2388,6 +2550,51 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
         childLogger.info("Conversation aborted, re-enqueued");
       }
     } catch (error) {
+      // Tree budget exhaustion: non-retryable (Phase 83)
+      if (error instanceof TreeBudgetExhaustedError) {
+        childLogger.error(
+          { allocation: error.allocation, consumed: error.consumed },
+          "Tree budget exhausted",
+        );
+        try {
+          await db
+            .update(conversations)
+            .set({
+              status: "failed",
+              error_message: error.message,
+              claimed_by: null,
+              claimed_at: null,
+              last_heartbeat_at: null,
+              updated_at: new Date(),
+            })
+            .where(eq(conversations.id, conv.id));
+
+          await notifyFailure(conv, "Tree budget exhausted", {
+            logger: childLogger,
+            eventLog,
+            instanceId,
+          });
+
+          // Update correlation status to failed (Phase 78)
+          if (correlationService) {
+            void correlationService
+              .updateStatus(conv.id, "failed")
+              .catch((err) => {
+                childLogger.warn(
+                  { err },
+                  "Failed to update correlation status after tree budget exhaustion (non-fatal)",
+                );
+              });
+          }
+        } catch (persistError) {
+          childLogger.error(
+            { err: persistError },
+            "Failed to persist tree budget exhaustion state",
+          );
+        }
+        return;
+      }
+
       // Unexpected error: try to mark conversation appropriately
       childLogger.error(
         { err: error },
