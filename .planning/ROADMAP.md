@@ -171,7 +171,12 @@ Plans:
   3. When the tree budget approaches exhaustion, active conversations receive a warning signal; hard exhaustion stops all conversations in the tree
   4. The dashboard displays token usage per tree level, per conversation, and total within the task tree view
   5. Conversations without a tree budget continue using per-conversation budgets with no behavior change
-**Plans**: TBD
+**Plans:** 4 plans
+Plans:
+- [ ] 83-01-PLAN.md -- Schema foundation: migration, Drizzle schemas, types, error class, task status fix
+- [ ] 83-02-PLAN.md -- TreeBudgetState module and delegation tools budget allocation wiring
+- [ ] 83-03-PLAN.md -- Dashboard budget visualization: budget bar, task node, detail panel
+- [ ] 83-04-PLAN.md -- Agent loop integration: worker loop wiring, tree_budget tool, context injection
 
 ### Phase 84: Scheduled Execution
 **Goal**: Agents can run on a schedule for periodic work like backlog grooming or monitoring, breaking the purely reactive event-driven model
