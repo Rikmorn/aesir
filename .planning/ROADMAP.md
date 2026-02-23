@@ -171,7 +171,7 @@ Plans:
   3. When the tree budget approaches exhaustion, active conversations receive a warning signal; hard exhaustion stops all conversations in the tree
   4. The dashboard displays token usage per tree level, per conversation, and total within the task tree view
   5. Conversations without a tree budget continue using per-conversation budgets with no behavior change
-**Plans:** 4 plans
+**Plans:** 1/4 plans executed
 Plans:
 - [ ] 83-01-PLAN.md -- Schema foundation: migration, Drizzle schemas, types, error class, task status fix
 - [ ] 83-02-PLAN.md -- TreeBudgetState module and delegation tools budget allocation wiring
@@ -259,7 +259,7 @@ Wave 1 (parallel): 80, 82, 84 -> Wave 2: 81, 86 -> Wave 3: 83, 87
 | 80. Richer Negotiation | 5/5 | Complete    | 2026-02-20 | - |
 | 81. Parallel Delegation | 6/6 | Complete    | 2026-02-20 | - |
 | 82. Transparent Materialization | 5/5 | Complete    | 2026-02-20 | - |
-| 83. Tree-Level Token Budgets | v2.9 | 0/TBD | Not started | - |
+| 83. Tree-Level Token Budgets | 1/4 | In Progress|  | - |
 | 84. Scheduled Execution | 3/3 | Complete    | 2026-02-22 | - |
 | 85. Sub-Agent Discovery | v2.9 | - | Deferred to v3.0+ | - |
 | 86. Persistent Agent Identity | 3/3 | Complete    | 2026-02-22 | - |

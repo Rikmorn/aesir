@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
-**Current focus:** v2.9 Platform Completion -- Phase 87 (Knowledge Retrieval Enhancement)
+**Current focus:** v2.9 Platform Completion -- Phase 83 (Tree-Level Token Budgets)
 
 ## Current Position
 
-Phase: 87 of 87 (Knowledge Retrieval Enhancement)
-Plan: 3 of 3 in current phase
-Status: Complete
-Last activity: 2026-02-23 -- Completed 87-03 (agent definition retrieval config)
+Phase: 83 of 87 (Tree-Level Token Budgets)
+Plan: 1 of 4 in current phase
+Status: In Progress
+Last activity: 2026-02-23 -- Completed 83-01 (schema & type foundations)
 
-Progress: [##########] 100%
+Progress: [#---------] 25%
 
 ## Milestone History
 
@@ -65,6 +65,7 @@ Progress: [##########] 100%
 | 87 | 01 | 4min | 2 | 8 |
 | 87 | 02 | 3min | 2 | 3 |
 | Phase 87 P03 | 2min | 2 tasks | 2 files |
+| 83 | 01 | 3min | 2 | 7 |
 
 ## Accumulated Context
 
@@ -155,6 +156,8 @@ See PROJECT.md Key Decisions table for full history.
 - **87-02**: No sentinel detection on flush response per user decision
 - [Phase 87]: RetrievalStrategySchema uses .passthrough() to allow strategy-specific fields without schema errors
 - [Phase 87]: Retrieval field propagation added to agent-registry loadDefinition for exactOptionalPropertyTypes compliance
+- **83-01**: TreeBudgetExhaustedError uses max_tokens AgentLoopStatus (resource exhaustion, same as TokenBudgetExhaustedError)
+- **83-01**: Added counter_proposed to schema.drizzle.ts taskStatusValues (was missing from drizzle-kit tracking since Phase 80)
 
 ### Pending Todos
 
@@ -165,8 +168,7 @@ See PROJECT.md Key Decisions table for full history.
 5. **event.routed sequence=0 collision** -- second routing event per conversation silently dropped (moderate)
 6. **work:register/query absent from agent definitions** -- add to dev-agent and product-agent YAML (low)
 7. **12 human verification items** -- visual/interactive testing across Phases 77-79
-8. **Add `failed` to taskStatusValues** -- schema has no `failed` task status, but evaluatePolicy and TERMINAL_STATUSES reference it. Add to schema + migration, update getGroupState switch, clean up dead refs. Natural home: Phase 83 or 86 (both touch task lifecycle).
-9. **Phase 85 design decisions for v3.0** -- When revisiting sub-agent discovery: (a) use array of short capability strings in YAML, each embedded individually (not a single description blob); (b) unify all agents in entity directory with activation pattern discriminators (spawnable, delegatable, triggerable, schedulable) instead of separate sub_agent tier; (c) `description` stays human-facing, `capabilities` array is for semantic matching.
+8. **Phase 85 design decisions for v3.0** -- When revisiting sub-agent discovery: (a) use array of short capability strings in YAML, each embedded individually (not a single description blob); (b) unify all agents in entity directory with activation pattern discriminators (spawnable, delegatable, triggerable, schedulable) instead of separate sub_agent tier; (c) `description` stays human-facing, `capabilities` array is for semantic matching.
 
 ### Blockers/Concerns
 
@@ -177,9 +179,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Phase 83 context gathered
-Resume file: .planning/phases/83-tree-level-token-budgets/83-CONTEXT.md
-Next action: Plan Phase 83 (/gsd:plan-phase 83)
+Stopped at: Completed 83-01-PLAN.md
+Resume file: .planning/phases/83-tree-level-token-budgets/83-01-SUMMARY.md
+Next action: Execute 83-02-PLAN.md
 
 ---
-*Updated: 2026-02-23 -- Phase 83 context gathered.*
+*Updated: 2026-02-23 -- Completed 83-01 schema & type foundations.*
