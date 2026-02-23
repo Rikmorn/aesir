@@ -1,7 +1,7 @@
 /**
  * Tool Factory Registration
  *
- * Registers all 57 tool factories in the ToolRegistry, bridging the v2.3
+ * Registers all 58 tool factories in the ToolRegistry, bridging the v2.3
  * ToolContext interface to the existing v2.2 tool factory signatures.
  *
  * Tool categories:
@@ -11,8 +11,8 @@
  *                get_pull_request, list_pull_requests, merge_pull_request, get_file_contents, list_files, create_pr_comment
  * - Slack (5): send_message, send_approval_request, get_message, reply_to_thread, list_channels
  * - Coordination (5): spawn_agent, request_human_input, wait_for, wait_for_task, wait_for_group
- * - Task (13): create_task, complete_task, pause_task, handoff_task, list_tasks, get_task_context,
- *              delegate_task, respond_task, clarify_task, answer_task, delegate_group, group_status, cancel_group
+ * - Task (14): create_task, complete_task, pause_task, handoff_task, list_tasks, get_task_context,
+ *              delegate_task, respond_task, clarify_task, answer_task, delegate_group, group_status, cancel_group, tree_budget
  * - Knowledge (3): knowledge_store, knowledge_query, knowledge_update
  * - Work (2): work_register, work_query
  * - Directory (2): directory_find, directory_get
@@ -79,6 +79,7 @@ import {
   createListTasksTool,
   createPauseTaskTool,
   createRespondTaskTool,
+  createTreeBudgetTool,
 } from "../shared/tools/task/index.js";
 import type { CodebaseToolDeps } from "../shared/tools/types.js";
 import {
@@ -193,7 +194,7 @@ function communicationAdapter(
 // ─── Registration ────────────────────────────────────────────────────────────
 
 /**
- * Register all 57 tool factories in the ToolRegistry.
+ * Register all 58 tool factories in the ToolRegistry.
  *
  * This bridges the v2.3 registry-based tool resolution to the existing v2.2
  * tool factory functions. After calling this, `registry.resolve(refs, context)`
@@ -390,6 +391,9 @@ export function registerAllTools(options: RegisterAllToolsOptions): void {
   );
   registry.register("task:group_status", (ctx) => createGroupStatusTool(ctx));
   registry.register("task:cancel_group", (ctx) => createCancelGroupTool(ctx));
+
+  // ── Tree budget tool (1) ── Phase 83
+  registry.register("task:tree_budget", (ctx) => createTreeBudgetTool(ctx));
 
   // ── Knowledge tools (3) ─────────────────────────────────────────────
 

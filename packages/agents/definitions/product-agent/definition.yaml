@@ -18,6 +18,7 @@ tools:
   - task:list_tasks
   - task:get_task_context
   - task:delegate
+  - task:tree_budget
   - task:respond
   - task:clarify
   - task:answer

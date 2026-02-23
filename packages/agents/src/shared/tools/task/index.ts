@@ -1,8 +1,8 @@
 /**
  * Task Tools - Barrel Export
  *
- * Re-exports all thirteen task tool factories for registration in tool-factories.ts.
- * Includes 10 original task tools + 3 group tools (Phase 81 parallel delegation).
+ * Re-exports all fourteen task tool factories for registration in tool-factories.ts.
+ * Includes 10 original task tools + 3 group tools (Phase 81) + tree_budget (Phase 83).
  */
 
 export { createAnswerTaskTool } from "./answer-task.js";
@@ -21,3 +21,4 @@ export { createHandoffTaskTool } from "./handoff-task.js";
 export { createListTasksTool } from "./list-tasks.js";
 export { createPauseTaskTool } from "./pause-task.js";
 export { createRespondTaskTool } from "./respond-task.js";
+export { createTreeBudgetTool } from "./tree-budget-tool.js";

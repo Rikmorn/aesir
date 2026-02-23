@@ -17,6 +17,7 @@ tools:
   - task:answer
   - task:complete_task
   - task:delegate
+  - task:tree_budget
   - task:get_task_context
   - task:list_tasks
   - coordination:wait_for

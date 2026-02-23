@@ -1395,11 +1395,12 @@ export function createWorkerLoop(options: WorkerLoopOptions): WorkerLoop {
               maxSpawnDepth: 3,
             },
           }),
-        // Delegation deps: populated when agent has task:delegate, task:respond, task:clarify, task:answer, or group tools in its tools
+        // Delegation deps: populated when agent has task:delegate, task:respond, task:clarify, task:answer, task:tree_budget, or group tools in its tools
         ...((definition.tools.includes("task:delegate") ||
           definition.tools.includes("task:respond") ||
           definition.tools.includes("task:clarify") ||
           definition.tools.includes("task:answer") ||
+          definition.tools.includes("task:tree_budget") ||
           definition.tools.includes("task:delegate_group") ||
           definition.tools.includes("task:group_status") ||
           definition.tools.includes("task:cancel_group")) &&
