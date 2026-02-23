@@ -62,6 +62,15 @@ const DelegateGroupInputSchema = z.object({
     .string()
     .optional()
     .describe("Group-level timeout (e.g., '2h'). Caps total wall time."),
+  budgetAllocation: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe(
+      "Total tokens to allocate from parent's remaining tree budget for the entire group. " +
+        "Split equally across tasks. Omit for default (all remaining, split equally).",
+    ),
   materialization: MaterializationConfigSchema.optional().describe(
     "Optional materialization config applied to ALL tasks in the group. Creates individual Linear issues per task.",
   ),
@@ -200,6 +209,46 @@ export function createDelegateGroupTool(ctx: ToolContext): ToolDefinition {
           newDepth = parentDepth + 1;
         }
 
+        // 2b. Read parent's tree budget and compute per-task allocation
+        let perTaskAllocation: number | undefined;
+        const [parentConv] = await deps.db
+          .select({
+            subtree_allocation: conversations.subtree_allocation,
+            subtree_consumed: conversations.subtree_consumed,
+          })
+          .from(conversations)
+          .where(eq(conversations.id, ctx.correlationId))
+          .limit(1);
+
+        if (parentConv?.subtree_allocation != null) {
+          const parentRemaining = Math.max(
+            0,
+            parentConv.subtree_allocation - parentConv.subtree_consumed,
+          );
+          const taskCount = taskInputs.length;
+
+          if (parentRemaining <= 0) {
+            return {
+              content:
+                "Tree budget exhausted -- no tokens remaining to allocate to group. Complete or fail current work.",
+              isError: true,
+            };
+          }
+
+          const groupAllocation = parsed.data.budgetAllocation
+            ? Math.min(parsed.data.budgetAllocation, parentRemaining)
+            : parentRemaining;
+
+          perTaskAllocation = Math.floor(groupAllocation / taskCount);
+
+          if (perTaskAllocation <= 0) {
+            return {
+              content: `Tree budget too small to split across ${taskCount} tasks. Remaining: ${parentRemaining} tokens.`,
+              isError: true,
+            };
+          }
+        }
+
         // 3. Create group via GroupService
         const createGroupParams: {
           delegatorConversationId: string;
@@ -322,6 +371,10 @@ export function createDelegateGroupTool(ctx: ToolContext): ToolDefinition {
               correlationKey: task.id,
               initialMessage: delegationBlock,
               taskId: task.id,
+              parentConversationId: ctx.correlationId,
+              ...(perTaskAllocation != null && {
+                subtreeAllocation: perTaskAllocation,
+              }),
             });
 
             createdTasks.push({
@@ -470,6 +523,26 @@ export function createDelegateGroupTool(ctx: ToolContext): ToolDefinition {
           responseLines.push(
             "Warning: materialization requested but adapter not configured. Tasks running as internal.",
           );
+        }
+
+        if (perTaskAllocation != null) {
+          responseLines.push(
+            `Tree budget: ${perTaskAllocation.toLocaleString()} tokens per task`,
+          );
+          if (
+            parsed.data.budgetAllocation &&
+            parentConv?.subtree_allocation != null
+          ) {
+            const parentRemaining = Math.max(
+              0,
+              parentConv.subtree_allocation - parentConv.subtree_consumed,
+            );
+            if (parsed.data.budgetAllocation > parentRemaining) {
+              responseLines.push(
+                `Warning: Requested ${parsed.data.budgetAllocation.toLocaleString()} but only ${parentRemaining.toLocaleString()} remaining -- allocated ${(perTaskAllocation * taskInputs.length).toLocaleString()} total.`,
+              );
+            }
+          }
         }
 
         responseLines.push(

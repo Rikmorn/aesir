@@ -39,6 +39,15 @@ const DelegateTaskInputSchema = z.object({
     .describe(
       "Parent task ID override. Defaults to the current conversation's task.",
     ),
+  budgetAllocation: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe(
+      "Tokens to allocate from parent's remaining tree budget. " +
+        "Omit for default (all remaining for sequential delegation).",
+    ),
   materialization: MaterializationConfigSchema.optional().describe(
     'Optional materialization config. Use { type: "transparent", target: "linear" } to create a corresponding Linear issue for human visibility.',
   ),
@@ -157,6 +166,41 @@ export function createDelegateTaskTool(ctx: ToolContext): ToolDefinition {
           newDepth = parentDepth + 1;
         }
 
+        // 3b. Read parent's tree budget state for allocation
+        let childSubtreeAllocation: number | undefined;
+        const [parentConv] = await deps.db
+          .select({
+            subtree_allocation: conversations.subtree_allocation,
+            subtree_consumed: conversations.subtree_consumed,
+          })
+          .from(conversations)
+          .where(eq(conversations.id, ctx.correlationId))
+          .limit(1);
+
+        if (parentConv?.subtree_allocation != null) {
+          const parentRemaining = Math.max(
+            0,
+            parentConv.subtree_allocation - parentConv.subtree_consumed,
+          );
+
+          if (parentRemaining <= 0) {
+            return {
+              content:
+                "Tree budget exhausted -- no tokens remaining to allocate to child. Complete or fail current work.",
+              isError: true,
+            };
+          }
+
+          const requested = parsed.data.budgetAllocation;
+          if (requested != null) {
+            // Explicit allocation: cap to remaining
+            childSubtreeAllocation = Math.min(requested, parentRemaining);
+          } else {
+            // Default for sequential delegation: all remaining
+            childSubtreeAllocation = parentRemaining;
+          }
+        }
+
         // 4. Create delegation task with depth tracking
         const task = await deps.taskService.create({
           parentId: parentId ?? undefined,
@@ -227,6 +271,10 @@ export function createDelegateTaskTool(ctx: ToolContext): ToolDefinition {
           correlationKey: task.id,
           initialMessage: delegationBlock,
           taskId: task.id,
+          parentConversationId: ctx.correlationId,
+          ...(childSubtreeAllocation != null && {
+            subtreeAllocation: childSubtreeAllocation,
+          }),
         });
 
         // 7. Write active_delegations entry on delegator's conversation row
@@ -282,6 +330,20 @@ export function createDelegateTaskTool(ctx: ToolContext): ToolDefinition {
         }
         if (materializationWarning) {
           responseLines.push(materializationWarning);
+        }
+
+        if (childSubtreeAllocation != null) {
+          responseLines.push(
+            `Tree budget allocated: ${childSubtreeAllocation.toLocaleString()} tokens`,
+          );
+          if (
+            parsed.data.budgetAllocation &&
+            childSubtreeAllocation < parsed.data.budgetAllocation
+          ) {
+            responseLines.push(
+              `Warning: Requested ${parsed.data.budgetAllocation.toLocaleString()} but only ${childSubtreeAllocation.toLocaleString()} remaining -- allocated ${childSubtreeAllocation.toLocaleString()}.`,
+            );
+          }
         }
 
         responseLines.push(
