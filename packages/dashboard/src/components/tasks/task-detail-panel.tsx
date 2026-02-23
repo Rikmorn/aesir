@@ -13,6 +13,7 @@ import Link from "next/link";
 import { StatusBadge } from "@/components/conversations/status-badge";
 import { cn } from "@/lib/utils";
 import type { TaskTreeNode, TimelineEvent } from "@/services/tasks";
+import { BudgetBar } from "./budget-bar";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -162,6 +163,58 @@ export function TaskDetailPanel({
             </p>
           )}
         </div>
+
+        {/* Subtree Budget */}
+        {node.subtreeAllocation != null && node.subtreeAllocation > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Subtree Budget
+            </h4>
+            <BudgetBar
+              allocated={node.subtreeAllocation}
+              consumed={node.subtreeConsumed ?? 0}
+              showLabel
+            />
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <span className="text-muted-foreground">Allocated</span>
+                <p className="font-mono">
+                  {node.subtreeAllocation.toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Remaining</span>
+                <p className="font-mono">
+                  {Math.max(
+                    0,
+                    node.subtreeAllocation - (node.subtreeConsumed ?? 0),
+                  ).toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Used</span>
+                <p className="font-mono">
+                  {(node.subtreeConsumed ?? 0).toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Usage</span>
+                <p className="font-mono">
+                  {node.subtreeAllocation > 0
+                    ? `${Math.min(
+                        100,
+                        Math.round(
+                          ((node.subtreeConsumed ?? 0) /
+                            node.subtreeAllocation) *
+                            100,
+                        ),
+                      )}%`
+                    : "0%"}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 3. Handshake detail */}
         {(handshakeEvent || isRejected || isCounterProposed || estimate) && (
