@@ -39,8 +39,8 @@ Requirements for v2.9 Platform Completion. Each maps to roadmap phases.
 ### Tree-Level Token Budgets
 
 - [x] **BUD-01**: Tree budget allocation -- root task sets a total token budget for the entire delegation tree via `task:delegate` parameter
-- [ ] **BUD-02**: Budget propagation -- delegated tasks inherit a portion of the remaining tree budget, not an independent allocation. The delegating agent can specify allocation or accept default (equal split of remaining)
-- [ ] **BUD-03**: Budget tracking -- real-time token usage aggregated across all conversations in the tree, queryable via `task:tree_budget` tool
+- [x] **BUD-02**: Budget propagation -- delegated tasks inherit a portion of the remaining tree budget, not an independent allocation. The delegating agent can specify allocation or accept default (equal split of remaining)
+- [x] **BUD-03**: Budget tracking -- real-time token usage aggregated across all conversations in the tree, queryable via `task:tree_budget` tool
 - [ ] **BUD-04**: Budget exhaustion signal -- when tree budget is approaching exhaustion, active conversations receive a warning signal. Hard exhaustion stops all conversations in the tree
 - [x] **BUD-05**: Budget visibility in dashboard -- token usage per tree level, per conversation, and total. Visual representation in the task tree view
 - [x] **BUD-06**: Backward compatibility -- conversations without a tree budget continue using per-conversation budgets (existing behavior)
@@ -157,8 +157,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MAT-05 | Phase 82 | Complete |
 | MAT-06 | Phase 82 | Complete |
 | BUD-01 | Phase 83 | Complete |
-| BUD-02 | Phase 83 | Pending |
-| BUD-03 | Phase 83 | Pending |
+| BUD-02 | Phase 83 | Complete |
+| BUD-03 | Phase 83 | Complete |
 | BUD-04 | Phase 83 | Pending |
 | BUD-05 | Phase 83 | Complete |
 | BUD-06 | Phase 83 | Complete |

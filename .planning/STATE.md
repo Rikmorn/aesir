@@ -163,6 +163,7 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 83]: Node height uses min-h-[80px] when budget bar present (instead of fixed h-[80px]) for natural growth
 - [Phase 83]: Budget section placed between Description and Handshake in detail panel for at-a-glance priority
 - [Phase 83]: propagateConsumption uses fire-and-forget pattern (void + catch) for non-blocking ancestor updates
+- [Phase 83]: delegate_task default allocation is all remaining tokens (sequential); delegate_group uses Math.floor for per-task split
 
 ### Pending Todos
 
