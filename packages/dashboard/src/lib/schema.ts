@@ -49,6 +49,12 @@ export const conversations = agentsSchema.table("conversations", {
   reopen_count: integer("reopen_count").notNull().default(0),
   parent_conversation_id: text("parent_conversation_id"),
   task_id: text("task_id"),
+  // Tree-level token budget tracking (Phase 83)
+  subtree_allocation: integer("subtree_allocation"),
+  subtree_consumed: integer("subtree_consumed").notNull().default(0),
+  tree_budget_warning_delivered: boolean("tree_budget_warning_delivered")
+    .notNull()
+    .default(false),
   created_at: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -120,6 +126,7 @@ export const taskStatusValues = [
   "active",
   "paused",
   "completed",
+  "failed",
   "cancelled",
   "counter_proposed",
 ] as const;

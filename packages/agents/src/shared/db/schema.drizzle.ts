@@ -69,9 +69,11 @@ const sessionStatusValues = [
 
 const taskStatusValues = [
   "created",
+  "counter_proposed",
   "active",
   "paused",
   "completed",
+  "failed",
   "cancelled",
 ] as const;
 

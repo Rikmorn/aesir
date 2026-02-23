@@ -119,6 +119,12 @@ export const conversations = agentsSchema.table(
     pending_cancellation: boolean("pending_cancellation")
       .notNull()
       .default(false),
+    // Tree-level token budget tracking (Phase 83)
+    subtree_allocation: integer("subtree_allocation"), // NULL = no tree budget (BUD-06)
+    subtree_consumed: integer("subtree_consumed").notNull().default(0),
+    tree_budget_warning_delivered: boolean("tree_budget_warning_delivered")
+      .notNull()
+      .default(false),
     // Communication context: last-received channel address for reply routing (v2.6)
     reply_context: jsonb("reply_context").$type<Record<
       string,
@@ -327,6 +333,7 @@ export const taskStatusValues = [
   "active",
   "paused",
   "completed",
+  "failed",
   "cancelled",
 ] as const;
 export type TaskStatus = (typeof taskStatusValues)[number];
