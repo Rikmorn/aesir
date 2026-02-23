@@ -242,6 +242,30 @@ const toolRefSchema = z
   );
 
 /**
+ * Zod schema for per-agent retrieval configuration.
+ *
+ * Strategy objects use .passthrough() to allow strategy-specific fields
+ * (e.g., similarity_threshold for vector) without schema errors.
+ * The `type` and `weight` fields are validated here; strategy-specific
+ * config is validated by each strategy factory at definition load time.
+ */
+const RetrievalStrategySchema = z
+  .object({
+    /** Strategy type name (must match a registered strategy) */
+    type: z.string().min(1),
+    /** Relative weight for score fusion (normalized at query time) */
+    weight: z.number().positive(),
+  })
+  .passthrough();
+
+export const RetrievalConfigSchema = z.object({
+  /** Strategy configurations with weights */
+  strategies: z.array(RetrievalStrategySchema).min(1),
+  /** Maximum results to return after fusion (default: 10) */
+  resultLimit: z.number().int().positive().optional(),
+});
+
+/**
  * Zod schema for agent definition YAML files.
  *
  * Validates parsed YAML into a typed object. The `version` field is a string
@@ -290,6 +314,9 @@ export const AgentDefinitionYamlSchema = z.object({
     /** Model to use for summary generation */
     summaryModel: z.string().min(1),
   }),
+
+  /** Per-agent retrieval configuration (optional -- agents without this behave identically to before) */
+  retrieval: RetrievalConfigSchema.optional(),
 
   /** Event triggers that start this agent */
   triggers: z
