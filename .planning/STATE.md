@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 83 of 87 (Tree-Level Token Budgets)
-Plan: 1 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: In Progress
-Last activity: 2026-02-23 -- Completed 83-01 (schema & type foundations)
+Last activity: 2026-02-23 -- Completed 83-03 (dashboard budget visualization)
 
-Progress: [#---------] 25%
+Progress: [########--] 75%
 
 ## Milestone History
 
@@ -66,6 +66,8 @@ Progress: [#---------] 25%
 | 87 | 02 | 3min | 2 | 3 |
 | Phase 87 P03 | 2min | 2 tasks | 2 files |
 | 83 | 01 | 3min | 2 | 7 |
+| Phase 83 P03 | 3min | 2 tasks | 7 files |
+| Phase 83 P02 | 4min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -158,6 +160,9 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 87]: Retrieval field propagation added to agent-registry loadDefinition for exactOptionalPropertyTypes compliance
 - **83-01**: TreeBudgetExhaustedError uses max_tokens AgentLoopStatus (resource exhaustion, same as TokenBudgetExhaustedError)
 - **83-01**: Added counter_proposed to schema.drizzle.ts taskStatusValues (was missing from drizzle-kit tracking since Phase 80)
+- [Phase 83]: Node height uses min-h-[80px] when budget bar present (instead of fixed h-[80px]) for natural growth
+- [Phase 83]: Budget section placed between Description and Handshake in detail panel for at-a-glance priority
+- [Phase 83]: propagateConsumption uses fire-and-forget pattern (void + catch) for non-blocking ancestor updates
 
 ### Pending Todos
 
@@ -179,9 +184,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 83-01-PLAN.md
-Resume file: .planning/phases/83-tree-level-token-budgets/83-01-SUMMARY.md
-Next action: Execute 83-02-PLAN.md
+Stopped at: Completed 83-03-PLAN.md
+Resume file: .planning/phases/83-tree-level-token-budgets/83-03-SUMMARY.md
+Next action: Execute 83-04-PLAN.md
 
 ---
-*Updated: 2026-02-23 -- Completed 83-01 schema & type foundations.*
+*Updated: 2026-02-23 -- Completed 83-03 dashboard budget visualization.*
