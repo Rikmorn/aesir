@@ -177,9 +177,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 87-03-PLAN.md
-Resume file: .planning/phases/87-knowledge-retrieval-enhancement/87-03-SUMMARY.md
-Next action: Phase 87 complete -- all 3 plans shipped
+Stopped at: Phase 83 context gathered
+Resume file: .planning/phases/83-tree-level-token-budgets/83-CONTEXT.md
+Next action: Plan Phase 83 (/gsd:plan-phase 83)
 
 ---
-*Updated: 2026-02-23 -- Completed 87-03 (agent definition retrieval config).*
+*Updated: 2026-02-23 -- Phase 83 context gathered.*
