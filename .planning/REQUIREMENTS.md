@@ -81,13 +81,13 @@ Requirements for v2.9 Platform Completion. Each maps to roadmap phases.
 ### Knowledge Retrieval Enhancement
 
 - [x] **KR-01**: Retrieval strategy abstraction -- pluggable pipeline interface (type contract with zero-overhead default path) that accepts a query and agent config, returns ranked results. Current vector search refactored as the default strategy implementation. Must NOT add runtime dispatch overhead when using the default strategy.
-- [ ] **KR-02**: Per-agent retrieval config in definition.yaml -- agents declare retrieval preferences (strategy selection, weights, feature flags) in their definition. Schema designed against known strategy interfaces: vector, keyword, temporal decay, diversity
+- [x] **KR-02**: Per-agent retrieval config in definition.yaml -- agents declare retrieval preferences (strategy selection, weights, feature flags) in their definition. Schema designed against known strategy interfaces: vector, keyword, temporal decay, diversity
 - [x] **KR-03**: Strategy registry -- strategies registered by name, resolved at query time from agent config. New strategies addable without changing the pipeline code
 - [x] **KR-04**: Score fusion interface -- when multiple strategies are enabled, scores are combined via configurable weights. Designed for hybrid retrieval (e.g., vector + keyword) even though only vector ships initially
 - [x] **KR-05**: Pre-compaction knowledge flush -- before history compaction, inject a turn prompting the agent to persist important knowledge via `store_knowledge`. Uses existing auto-supersede deduplication
 - [x] **KR-06**: Flush safeguards -- flush count tracking prevents double-flushing. Flush is skipped if agent has no knowledge tools. Agent responds with a sentinel if nothing to store
-- [ ] **KR-07**: Backward compatibility -- agents without retrieval config in YAML use the current vector-only pipeline with existing behavior. No changes to existing agent definitions required
-- [ ] **KR-08**: Config validation -- retrieval config validated at definition load time via Zod. Invalid strategy references or weight configurations fail fast at startup
+- [x] **KR-07**: Backward compatibility -- agents without retrieval config in YAML use the current vector-only pipeline with existing behavior. No changes to existing agent definitions required
+- [x] **KR-08**: Config validation -- retrieval config validated at definition load time via Zod. Invalid strategy references or weight configurations fail fast at startup
 
 ## Future Requirements
 
@@ -187,13 +187,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | IDN-08 | Phase 86 | Complete |
 | IDN-09 | Phase 86 | Complete |
 | KR-01 | Phase 87 | Complete |
-| KR-02 | Phase 87 | Pending |
+| KR-02 | Phase 87 | Complete |
 | KR-03 | Phase 87 | Complete |
 | KR-04 | Phase 87 | Complete |
 | KR-05 | Phase 87 | Complete |
 | KR-06 | Phase 87 | Complete |
-| KR-07 | Phase 87 | Pending |
-| KR-08 | Phase 87 | Pending |
+| KR-07 | Phase 87 | Complete |
+| KR-08 | Phase 87 | Complete |
 
 **Coverage:**
 - v2.9 requirements: 58 total

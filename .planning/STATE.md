@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 87 of 87 (Knowledge Retrieval Enhancement)
-Plan: 2 of 3 in current phase
-Status: In Progress
-Last activity: 2026-02-22 -- Completed 87-02 (pre-compaction knowledge flush)
+Plan: 3 of 3 in current phase
+Status: Complete
+Last activity: 2026-02-23 -- Completed 87-03 (agent definition retrieval config)
 
-Progress: [#########-] 90%
+Progress: [##########] 100%
 
 ## Milestone History
 
@@ -36,7 +36,7 @@ Progress: [#########-] 90%
 **Cumulative:**
 - Total milestones shipped: 10
 - Total phases completed: 80
-- Total plans completed: 358
+- Total plans completed: 359
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -64,6 +64,7 @@ Progress: [#########-] 90%
 | 86 | 03 | 6min | 2 | 7 |
 | 87 | 01 | 4min | 2 | 8 |
 | 87 | 02 | 3min | 2 | 3 |
+| Phase 87 P03 | 2min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -152,6 +153,8 @@ See PROJECT.md Key Decisions table for full history.
 - **87-02**: flushedBeforeCompaction guard scoped to executeConversation function (reset per cycle)
 - **87-02**: Flush prompt uses judgment criteria, not checklist -- 0 stores is valid outcome
 - **87-02**: No sentinel detection on flush response per user decision
+- [Phase 87]: RetrievalStrategySchema uses .passthrough() to allow strategy-specific fields without schema errors
+- [Phase 87]: Retrieval field propagation added to agent-registry loadDefinition for exactOptionalPropertyTypes compliance
 
 ### Pending Todos
 
@@ -173,10 +176,10 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-02-22
-Stopped at: Completed 87-02-PLAN.md
-Resume file: .planning/phases/87-knowledge-retrieval-enhancement/87-02-SUMMARY.md
-Next action: Execute 87-03-PLAN.md
+Last session: 2026-02-23
+Stopped at: Completed 87-03-PLAN.md
+Resume file: .planning/phases/87-knowledge-retrieval-enhancement/87-03-SUMMARY.md
+Next action: Phase 87 complete -- all 3 plans shipped
 
 ---
-*Updated: 2026-02-22 -- Completed 87-02 (pre-compaction knowledge flush).*
+*Updated: 2026-02-23 -- Completed 87-03 (agent definition retrieval config).*
