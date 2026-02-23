@@ -17,6 +17,7 @@ import { join } from "node:path";
 import type { PinoLogger } from "@aesir/platform";
 import { parse } from "yaml";
 
+import { getRegisteredStrategyNames } from "../shared/services/retrieval/index.js";
 import type { AgentDefinition, AgentRegistry } from "./types.js";
 import { AgentDefinitionYamlSchema } from "./types.js";
 
@@ -86,6 +87,19 @@ export function createAgentRegistry(
     const parsed: unknown = parse(yamlContent);
     const config = AgentDefinitionYamlSchema.parse(parsed);
 
+    // Validate retrieval strategy names against registered strategies (KR-08)
+    if (config.retrieval) {
+      const registeredStrategies = getRegisteredStrategyNames();
+      for (const strategy of config.retrieval.strategies) {
+        if (!registeredStrategies.includes(strategy.type)) {
+          throw new Error(
+            `Agent "${id}" references unknown retrieval strategy "${strategy.type}". ` +
+              `Registered strategies: ${registeredStrategies.join(", ")}`,
+          );
+        }
+      }
+    }
+
     // Verify directory name matches definition id
     if (config.id !== id) {
       throw new Error(
@@ -120,6 +134,13 @@ export function createAgentRegistry(
     if (config.capabilities !== undefined) {
       (definition as { capabilities: string[] }).capabilities =
         config.capabilities;
+    }
+    if (config.retrieval !== undefined) {
+      (
+        definition as {
+          retrieval: NonNullable<typeof config.retrieval>;
+        }
+      ).retrieval = config.retrieval;
     }
 
     // Cache and log
