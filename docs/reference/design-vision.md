@@ -27,7 +27,7 @@ The framework offers capabilities (`wait_for`, `spawn_agent`, `handoff_task`, hi
 - **`wait_for`**: framework pauses and resumes; agent decides what to wait for and when
 - **`spawn_agent`**: framework manages context isolation and token budgets; agent decides what to delegate
 - **`handoff_task`**: framework stores and delivers; agent authors the content
-- **history compaction**: framework truncates old tool results; agent decides when to summarize
+- **history compaction**: the exception in this list — the framework decides, on token thresholds, and the agent is not consulted. Pruning runs above `pruneThreshold`, summarisation above `summaryThreshold`. It belongs with the infrastructure guarantees; the agent-managed phase was designed and then deferred, never built (ADR-0006).
 
 The framework never interprets agent decisions. It stores them, delivers them, and enforces resource limits.
 

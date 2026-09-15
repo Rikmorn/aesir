@@ -7,7 +7,11 @@ import { join } from "node:path";
 
 const root = process.cwd();
 const archives = join(root, "docs", "history", "milestones");
-const phasesDir = join(root, ".planning", "phases");
+// Phase records live in two roots: .planning/phases/ for most milestones, and
+// .planning/milestones/v2.8-phases/ for v2.8, whose phase directories were archived under the
+// milestone instead of being left in the shared tree. Both use the same "<num>-<slug>/" shape.
+// Forward slashes are literal so the provenance strings below read as "git show v2.9:<path>".
+const phaseRoots = [".planning/phases", ".planning/milestones/v2.8-phases"];
 
 type Phase = { num: string; name: string; goal: string; plans: number; status: string; score: string; human: string[] };
 type Milestone = { title: string; phases: Phase[] };
@@ -50,19 +54,21 @@ for (const f of readdirSync(archives).filter((n) => /-ROADMAP\.md$/.test(n)).sor
   milestones.push(parseRoadmap(v29, "v2.9 Platform Completion (executed 2026-02-20 → 2026-02-23, never archived)"));
 }
 
+type PhaseDir = { root: string; dir: string };
+
 // Resolves a phase's verification report on disk. Directories occasionally zero-pad a phase
 // number's leading digit ("09.2-..." for phase "9.2"), and one (e2e-verification) has no
 // trailing "-suffix" and holds a report whose filename doesn't match the phase number at all.
 // Score every plausible directory by whether it actually contains a report, so an empty
 // zero-padded duplicate (phase 9.1 has one, alongside the real "9.1-..." directory) can never
 // be chosen over a directory with real content, regardless of directory-listing order.
-function findReport(dirs: string[], num: string): { dir: string; file: string } | undefined {
-  const candidates = dirs.filter((d) => d === num || d.startsWith(`${num}-`) || d.startsWith(`0${num}-`));
-  for (const dir of candidates) {
-    const dirPath = join(phasesDir, dir);
+function findReport(dirs: PhaseDir[], num: string): { root: string; dir: string; file: string } | undefined {
+  const candidates = dirs.filter(({ dir: d }) => d === num || d.startsWith(`${num}-`) || d.startsWith(`0${num}-`));
+  for (const c of candidates) {
+    const dirPath = join(root, c.root, c.dir);
     const reports = (existsSync(dirPath) ? readdirSync(dirPath) : []).filter((f) => f.endsWith("-VERIFICATION.md"));
     const file = reports.includes(`${num}-VERIFICATION.md`) ? `${num}-VERIFICATION.md` : reports.length === 1 ? reports[0] : undefined;
-    if (file) return { dir, file };
+    if (file) return { ...c, file };
   }
   return undefined;
 }
@@ -85,8 +91,9 @@ function extractHumanItems(v: string, sourcePath: string): string[] {
   const headings = [...rest.matchAll(new RegExp(`^(#{1,${sectionDepth}}) (.*)$`, "gm"))];
   const boundary = headings.find((m) => !(m[1].length === sectionDepth && /^\d+\.\s/.test(m[2])));
   const body = boundary ? rest.slice(0, boundary.index) : rest;
-  // "Nothing outstanding" is worded either "None ..." or "No human verification needed ...".
-  if (/^\s*(none|no human verification)\b/i.test(body)) return [];
+  // "Nothing outstanding" is worded three ways across the reports: "None ...",
+  // "No human verification needed ...", and "No items require human verification ...".
+  if (/^\s*(none|no human verification|no items require human verification)\b/i.test(body)) return [];
 
   const found = [
     ...[...body.matchAll(/^#{3,4} \d+\.\s*(.+)$/gm)].map((m) => ({ index: m.index ?? 0, text: m[1] })),
@@ -99,14 +106,18 @@ function extractHumanItems(v: string, sourcePath: string): string[] {
 }
 
 // verification reports
-const dirs = existsSync(phasesDir) ? readdirSync(phasesDir) : [];
+const dirs: PhaseDir[] = phaseRoots.flatMap((rel) => {
+  const abs = join(root, rel);
+  return existsSync(abs) ? readdirSync(abs).map((dir) => ({ root: rel, dir })) : [];
+});
 for (const m of milestones) for (const p of m.phases) {
   const report = findReport(dirs, p.num);
   if (!report) continue;
-  const v = readFileSync(join(phasesDir, report.dir, report.file), "utf8");
+  const relPath = `${report.root}/${report.dir}/${report.file}`;
+  const v = readFileSync(join(root, relPath), "utf8");
   p.status = (v.match(/^status:\s*(.+)$/m) ?? [])[1] ?? "";
   p.score = (v.match(/^score:\s*(.+)$/m) ?? [])[1] ?? "";
-  p.human = extractHumanItems(v, `.planning/phases/${report.dir}/${report.file}`);
+  p.human = extractHumanItems(v, relPath);
 }
 
 const total = milestones.reduce((n, m) => n + m.phases.length, 0);

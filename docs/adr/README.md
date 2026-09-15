@@ -1,6 +1,6 @@
 # Architecture decision records
 
-One record per decision that still binds how aesir is built, distilled from the GSD-era decisions log (`docs/history/decisions-log.md`) and the milestone specs. Numbered in the order the decisions were made, not by importance. A record is never rewritten: a change of mind is a new ADR that names what it supersedes.
+One record per decision that still binds how aesir is built, distilled from the GSD-era decisions log (`docs/history/decisions-log.md`) and the milestone specs. A record is never rewritten: a change of mind is a new ADR that names what it supersedes.
 
 | ADR | Title | Made in |
 |---|---|---|

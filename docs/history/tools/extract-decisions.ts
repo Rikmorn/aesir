@@ -2,11 +2,14 @@
 // Generates docs/history/decisions-log.md from the GSD-era planning tree.
 // Run from the repo root while .planning/ still exists:
 //   bun docs/history/tools/extract-decisions.ts > docs/history/decisions-log.md
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 const root = process.cwd();
-const phasesDir = join(root, ".planning", "phases");
+// Plan summaries live in two roots: .planning/phases/ for most milestones, and
+// .planning/milestones/v2.8-phases/ for v2.8, whose phase directories were archived under the
+// milestone instead of being left in the shared tree.
+const phaseRoots = [".planning/phases", ".planning/milestones/v2.8-phases"];
 
 type Entry = { phase: string; plan: string; decisions: string[] };
 
@@ -42,7 +45,10 @@ function keyDecisions(fm: string): string[] {
 }
 
 const files: string[] = [];
-walkSummaries(phasesDir, files);
+for (const rel of phaseRoots) {
+  const abs = join(root, rel);
+  if (existsSync(abs)) walkSummaries(abs, files);
+}
 const entries: Entry[] = [];
 for (const f of files.sort()) {
   const fm = frontmatter(readFileSync(f, "utf8"));

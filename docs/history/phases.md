@@ -214,12 +214,26 @@ Human verification still open:
 
 | Phase | Name | Goal | Plans | Verification |
 |---|---|---|---|---|
-| 74 | Quick Fixes | Known v2.7 E2E bugs are resolved and the test environment is clean for infrastructure work | 3 | — |
-| 75 | Echo Elimination | The platform rejects duplicate webhook deliveries and suppresses agent-caused events before they reach the router or agents | 3 | — |
-| 76 | Runtime Resilience | When a conversation fails, the system notifies all channels, classifies MCP errors for agent decision-making, and injects recovery context on crash resume | 3 | — |
-| 77 | Dashboard Observability | The conversation timeline renders every lifecycle event, groups tool calls into expandable cards, and attributes sub-agent work visually | 5 | — |
-| 78 | Work Correlation | The platform tracks which conversations are working on which external entities, enabling the router and agents to check existing work before starting duplicates | 6 | — |
-| 79 | Dashboard Gap Closure | Close audit gaps -- DASH-08 cost estimate metric and event.routed dashboard visibility | 2 | — |
+| 74 | Quick Fixes | Known v2.7 E2E bugs are resolved and the test environment is clean for infrastructure work | 3 | passed (4/4 must-haves verified) |
+| 75 | Echo Elimination | The platform rejects duplicate webhook deliveries and suppresses agent-caused events before they reach the router or agents | 3 | passed (3/3 success criteria verified) |
+| 76 | Runtime Resilience | When a conversation fails, the system notifies all channels, classifies MCP errors for agent decision-making, and injects recovery context on crash resume | 3 | passed (20/20 must-haves verified) |
+| 77 | Dashboard Observability | The conversation timeline renders every lifecycle event, groups tool calls into expandable cards, and attributes sub-agent work visually | 5 | human_needed (6/6 must-haves verified) |
+| 78 | Work Correlation | The platform tracks which conversations are working on which external entities, enabling the router and agents to check existing work before starting duplicates | 6 | passed (8/8 must-haves verified) |
+| 79 | Dashboard Gap Closure | Close audit gaps -- DASH-08 cost estimate metric and event.routed dashboard visibility | 2 | passed (6/6 must-haves verified) |
+
+Human verification still open:
+- Phase 77: Sub-agent visual attribution
+- Phase 77: Tool call card expand/collapse behavior
+- Phase 77: Failed tool card auto-expansion
+- Phase 77: Failures-only filter workflow
+- Phase 77: Jump-to-end button
+- Phase 78: Correlation fallback signal delivery (end-to-end)
+- Phase 78: Knowledge exact-mode query without embeddings
+- Phase 78: Worker loop status propagation observable
+- Phase 79: Cost estimate display on conversation detail page
+- Phase 79: Per-model cost differentiation
+- Phase 79: event.routed in conversation timeline
+- Phase 79: Live cost accumulation via SSE
 
 ## v2.9 Platform Completion (executed 2026-02-20 → 2026-02-23, never archived)
 
