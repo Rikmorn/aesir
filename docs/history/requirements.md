@@ -2,7 +2,7 @@
 
 <!-- Generated on 2026-09-15 by concatenating the per-milestone REQUIREMENTS records under docs/history/milestones/ and the v2.9 REQUIREMENTS.md. Do not edit by hand; the source files are the record. -->
 
-Each milestone's requirements as written when the milestone was planned, in order. Satisfied/deferred outcomes are in the matching `*-MILESTONE-AUDIT.md` (§Requirements Coverage) for v1–v2.8; the v2.9 traceability table is at the end of its section.
+Each milestone's requirements as written when the milestone was planned, in order. This is a record of intent, not of outcome: where a requirement's text disagrees with what a phase's `*-VERIFICATION.md` report says shipped (for example KR-04's "only vector ships initially" against phase 87's keyword strategy), the verification report is the outcome of record. Satisfied/deferred outcomes are in the matching `*-MILESTONE-AUDIT.md` (§Requirements Coverage) for v1–v2.8; the v2.9 traceability table is at the end of its section.
 
 ## v1
 
