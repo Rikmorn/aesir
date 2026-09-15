@@ -111,10 +111,10 @@ describe("adaptLinearEvent", () => {
     });
   });
 
-  // --- Issue Updated (Ignore Event) ---
+  // --- Issue Updated (Materialization Routing) ---
 
   describe("issue.updated", () => {
-    it("adapts with no correlationKey for IGNORE_EVENT_TYPES matching", () => {
+    it("adapts with correlationKey for materialization routing", () => {
       const event = makeEvent({
         type: "linear.issue.updated",
         payload: { id: "issue_def", status: "In Progress" },
@@ -129,13 +129,13 @@ describe("adaptLinearEvent", () => {
         status: "In Progress",
       });
       expect(result?.source).toBe("linear:webhook");
-      expect(result?.correlationKey).toBeUndefined();
+      expect(result?.correlationKey).toBe("issue_def");
       expect(result?.deduplicationId).toBe("corr_test789");
 
       expect(IncomingEventSchema.safeParse(result).success).toBe(true);
     });
 
-    it("does NOT include replyContext (ignore event)", () => {
+    it("does NOT include replyContext", () => {
       const event = makeEvent({
         type: "linear.issue.updated",
         payload: { id: "issue_def", status: "In Progress" },

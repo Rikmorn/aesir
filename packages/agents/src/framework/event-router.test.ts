@@ -513,7 +513,7 @@ describe("EventRouter", () => {
       });
     });
 
-    it("ignores linear.issue.updated events", async () => {
+    it("does not ignore linear.issue.updated (materialization routing decides upstream)", async () => {
       const { router } = await createRouter();
 
       const result = router.handle(
@@ -524,10 +524,7 @@ describe("EventRouter", () => {
         }),
       );
 
-      expect(result).toEqual({
-        action: "ignore",
-        reason: "Event type explicitly ignored: linear.issue.updated",
-      });
+      expect(result.action).toBe("slow_path");
     });
 
     it("ignore takes priority over start rules (if event type were in both)", async () => {
