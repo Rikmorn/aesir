@@ -17,7 +17,7 @@ For current requirements, see `.planning/REQUIREMENTS.md` (created for next mile
 
 ---
 
-# Requirements: Aesir
+### Requirements: Aesir
 
 **Defined:** 2026-01-16
 **Core Value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
@@ -392,7 +392,7 @@ For current requirements, see `.planning/REQUIREMENTS.md` (created for next mile
 
 ---
 
-# Requirements: Aesir v2.1 Agents That Ship
+### Requirements: Aesir v2.1 Agents That Ship
 
 **Defined:** 2026-01-25
 **Core Value:** End-to-end automated development workflow where agents handle routine tasks while humans focus on reviews
@@ -594,7 +594,7 @@ For current requirements, see `.planning/REQUIREMENTS.md` (created for next mile
 
 ---
 
-# Requirements: Aesir v2.2 Agentic Architecture
+### Requirements: Aesir v2.2 Agentic Architecture
 
 **Defined:** 2026-01-29
 **Core Value:** End-to-end automated development workflow where agents reason about what to do, use tools to act, observe results, and adapt -- instead of following predetermined graphs.
@@ -1296,7 +1296,7 @@ For current requirements, see `.planning/REQUIREMENTS.md`.
 
 ---
 
-# Requirements: Aesir v2.6 Unified Agent Communication
+### Requirements: Aesir v2.6 Unified Agent Communication
 
 **Defined:** 2026-02-08
 **Core Value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
@@ -1474,7 +1474,7 @@ For current requirements, see `.planning/REQUIREMENTS.md`.
 
 ---
 
-# Requirements: Aesir v2.7 Agent Collaboration
+### Requirements: Aesir v2.7 Agent Collaboration
 
 **Defined:** 2026-02-10
 **Core Value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
@@ -1676,7 +1676,7 @@ For current requirements, see `.planning/REQUIREMENTS.md`.
 
 ---
 
-# Requirements: Aesir v2.8 Resilience and Observability
+### Requirements: Aesir v2.8 Resilience and Observability
 
 **Defined:** 2026-02-16
 **Core Value:** End-to-end automated development workflow where agents handle routine development tasks while humans focus on high-value decisions and reviews.
