@@ -95,7 +95,7 @@ The delegating agent doesn't choose the delivery mechanism directly — it creat
 
 Agent conversations are isolated by design (context boundaries), but the knowledge agents accumulate — codebase understanding, architecture decisions, discovered constraints — persists and stays accessible across conversations. Without shared memory, agents in a delegation chain repeatedly rediscover the same things.
 
-Knowledge is classified by type (discovery, architecture decision, constraint, thought, preference, test result), scoped by visibility (private notepad vs. shared), and governed by lifecycle policies (expiry, supersession). Agents interact through a unified tool interface (`knowledge:store`, `knowledge:query`) regardless of what backs it. Private memory is working memory that persists across an agent's own conversation turns but isn't shared; shared knowledge is curated entries accessible by every agent. Agents need scratchpad space for unstructured thinking without polluting the shared pool, and scope defaults are configurable per team.
+Knowledge is classified by type (discovery, architecture decision, constraint, thought, preference, test result), scoped by visibility (private notepad vs. shared), and governed by lifecycle policies (expiry, supersession). Agents interact through a unified tool interface (`knowledge:store`, `knowledge:query`) regardless of what backs it. Private memory is working memory that persists across an agent's own conversation turns but isn't shared; shared knowledge is curated entries accessible by every agent. Scope defaults from the knowledge type (`thought` private, everything else shared), and an agent can override the default per call — there is no team-level or YAML-configurable policy yet.
 
 ### Persistent Agent Identity
 
@@ -199,6 +199,12 @@ If/then branches teach the agent to classify and follow rules. Few-shot examples
 
 The reasoning in examples is the critical part. Without it, examples are just a lookup table. With it, they teach a reasoning pattern the agent applies to situations the examples didn't cover.
 
+## Handoff as Agent-Authored Context
+
+When an agent finishes a conversation within a task, it writes a handoff — its own summary of what matters for whoever picks up next — rather than an auto-generated one. Three reasons: the agent knows what's important (an auto-summary of a fifty-message conversation treats everything equally, where the agent knows the key insight was on message 37 and the rest was exploration); different handoff types need different content (a completion handoff, "here's what I built," is structurally different from a delegation handoff, "here's what I need you to do and why"); and it's agent-first — the framework provides the mechanism, the agent provides the intelligence.
+
+Handoff types are extensible: completion, pause, delegation, and escalation ship today, and the agent picks one by which tool it calls (`complete_task`, `pause_task`, `handoff_task`) rather than through a separate classification step. The framework never pattern-matches on handoff type — it stores what the agent writes and delivers it verbatim, so a new type is addable through prompt guidance alone, with no framework change. ADR-0009 records the decision and the schema (`agents.task_handoffs`) behind this.
+
 ---
 
-Sources: `docs/history/specs/design-vision.md` — the milestone-annotated original this file is distilled from, with its Milestone Specs, Problem Statement, Event Routing Evolution, Bidirectional Task Assignment, Expansion Paths, and Design Decisions Log sections kept there rather than repeated here.
+Sources: `docs/history/specs/design-vision.md` — the milestone-annotated original this file is distilled from, with its Milestone Specs, Problem, Event Routing Evolution, Bidirectional Task Assignment, Expansion Paths, and Design Decisions Log sections kept there rather than repeated here.
