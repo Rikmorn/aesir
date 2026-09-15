@@ -45,3 +45,10 @@ cloudflared.yml
 
 # Social media content (personal, not code)
 socials/
+
+# sidekick — local working state (managed by `sidekick init`)
+.sidekick/cache/
+.sidekick/state/
+
+# superpowers scaffolding — specs/plans/logs are local working context, not project docs
+docs/superpowers/

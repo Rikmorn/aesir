@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "defaultBranch": "master",
+  "gates": {
+    "typecheck": "pnpm typecheck",
+    "lint": "pnpm lint",
+    "test": "pnpm test:fast"
+  },
+  "waveSizeCap": 4,
+  "buildCheckpoints": "deviations-only",
+  "fanout": {
+    "backend": "auto",
+    "budget": "standard"
+  },
+  "verifiers": []
+}
