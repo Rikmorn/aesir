@@ -15,6 +15,7 @@ Agentic development platform that automates software workflows - from feature re
 
 - Node.js 20+
 - pnpm 9.15+
+- bun 1.3+ (runs the TypeScript dev and seed scripts; pnpm remains the package manager)
 - Docker Desktop running (all services run containerized)
 - Slack workspace with admin access to create apps
 - Linear workspace
@@ -433,7 +434,7 @@ pnpm db:migrate
 
 ## AI Tooling
 
-`AGENTS.md` at the repo root is the ground truth for AI coding tools; `.claude/CLAUDE.md` imports it for Claude Code. Rules, hooks and settings live under `.claude/`. The build workflow is [sidekick](https://github.com/Rikmorn/sidekick), which this repo also serves as a test bench for; see the "Sidekick Test Bench" section of `AGENTS.md`.
+`AGENTS.md` at the repo root is the ground truth for AI coding tools; `.claude/CLAUDE.md` imports it for Claude Code. Rules, hooks, and settings live under `.claude/`. The build workflow is [sidekick](https://github.com/Rikmorn/sidekick), which this repo also serves as a test bench for; see the "Sidekick Test Bench" section of `AGENTS.md`.
 
 ## Development
 
