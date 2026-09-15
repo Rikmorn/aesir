@@ -8,7 +8,7 @@ One note per deferred direction or known debt item that has content worth keepin
 - [work-tools-absent-from-agent-yaml](work-tools-absent-from-agent-yaml.md) — #11 · work:register and work:query are registered in the tool registry but no production agent YAML lists them, so no agent can call them directly.
 - [dev-agent-container-runs-as-root](dev-agent-container-runs-as-root.md) — #12 · docker-compose.yml sets user root on the agent container to reach the Docker socket, bypassing the Dockerfile's non-root aesir user.
 - [tests-skipped-pending-infrastructure](tests-skipped-pending-infrastructure.md) — #13 · 11 tests are marked skipped because they need services the fast suite doesn't provide; each needs triage into the integration suite or deletion.
-- [human-verification-items](human-verification-items.md) — #14 · 59 human-verification items across the ten shipped milestones plus v2.9's executed-but-unarchived phases have not been checked off.
+- [human-verification-items](human-verification-items.md) — #14 · 86 human-verification items, per the 2026-09-15 extract-phases.ts run, have not been checked off — see docs/history/phases.md for the live count.
 - [dispatcher-fallback-router-urls](dispatcher-fallback-router-urls.md) — #15 · 22 occurrences of the pre-v2.3 router:3006 fallback URL remain as dead defaults after the router folded into the single agent service.
 - [dashboard-dead-code](dashboard-dead-code.md) — #16 · knip flags 3 unused dashboard files, 41 unused exports and 13 unused types, mostly in services/tools.ts, services/overview.ts and the task-graph components.
 
