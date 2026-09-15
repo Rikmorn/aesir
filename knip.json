@@ -15,17 +15,17 @@
       "ignore": ["**/*.test.ts"]
     },
     "packages/integrations/linear": {
-      "entry": ["src/main.ts", "src/index.ts", "scripts/*.ts"],
+      "entry": ["scripts/*.ts"],
       "project": ["src/**/*.ts", "scripts/**/*.ts"],
       "ignore": ["**/*.test.ts", "**/testing/**"]
     },
     "packages/integrations/github": {
-      "entry": ["src/main.ts", "src/index.ts", "scripts/*.ts"],
+      "entry": ["scripts/*.ts"],
       "project": ["src/**/*.ts", "scripts/**/*.ts"],
       "ignore": ["**/*.test.ts", "**/testing/**"]
     },
     "packages/integrations/slack": {
-      "entry": ["src/main.ts", "src/index.ts", "scripts/*.ts"],
+      "entry": ["scripts/*.ts"],
       "project": ["src/**/*.ts", "scripts/**/*.ts"],
       "ignore": ["**/*.test.ts", "**/testing/**"]
     },
@@ -34,24 +34,17 @@
       "ignore": ["**/*.test.ts", "**/testing/**"]
     },
     "packages/agents": {
-      "entry": [
-        "src/dev-agent/main.ts",
-        "src/dev-agent/worker.ts",
-        "src/product-agent/main.ts",
-        "src/product-agent/worker.ts",
-        "src/index.ts"
-      ],
-      "project": ["src/**/*.ts"],
+      "entry": ["scripts/*.ts"],
+      "project": ["src/**/*.ts", "scripts/**/*.ts"],
       "ignore": ["**/*.test.ts", "**/testing/**"]
     }
   },
   "ignore": [
     "**/*.test.ts",
     "**/testing/**",
-    "**/_legacy/**",
     "**/dist/**",
     "**/node_modules/**",
     "**/db/scripts/**"
   ],
-  "ignoreDependencies": ["@types/*", "pino-pretty"]
+  "ignoreBinaries": ["open"]
 }

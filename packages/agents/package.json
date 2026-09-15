@@ -26,18 +26,14 @@
     "test:agents": "tsx scripts/agent-tests/run.ts"
   },
   "dependencies": {
-    "@aesir/observability": "workspace:*",
     "@aesir/platform": "workspace:*",
     "@aesir/types": "workspace:*",
     "@anthropic-ai/sdk": "^0.72.0",
-    "@slack/bolt": "^4.6.0",
-    "@slack/web-api": "^7.13.0",
     "cron-parser": "^5.5.0",
     "dotenv-flow": "^4.1.0",
     "drizzle-orm": "^0.45.1",
     "express": "^4.21.0",
     "nanoid": "^5.1.6",
-    "neverthrow": "^8.2.0",
     "pg": "^8.17.2",
     "pg-boss": "^12.8.0",
     "postgres": "^3.4.7",
@@ -48,7 +44,6 @@
   },
   "devDependencies": {
     "@aesir/test-utils": "workspace:^",
-    "@slack/types": "^2.19.0",
     "@types/express": "^4.17.21",
     "@types/node": "^22.0.0",
     "@types/pg": "^8.16.0",
