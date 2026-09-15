@@ -624,17 +624,6 @@ describe("createTaskSignalDispatcher", () => {
         pending: 0,
       });
 
-      // Mock task with group_id
-      const ts = createMockTaskService();
-      ts.get.mockResolvedValue(
-        createMockTask({
-          id: "task_triggering",
-          group_id: GROUP_ID,
-          parent_id: "task_p",
-        }),
-      );
-
-      // Use the setupGroupTest helper instead
       const result = setupGroupTest({
         policy,
         state,

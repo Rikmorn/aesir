@@ -19,7 +19,7 @@ old_tables=$(echo "$old_string" | grep -c 'pgTable(' || true)
 new_tables=$(echo "$new_string" | grep -c 'pgTable(' || true)
 
 if [[ "$old_tables" -gt 0 && "$new_tables" -lt "$old_tables" ]]; then
-  echo "BLOCKED: This edit removes table definitions from schema.drizzle.ts. Old definitions must be retained — removing them generates DROP TABLE migrations. See CLAUDE.md > Gotchas > schema.drizzle.ts Retention Rule." >&2
+  echo "BLOCKED: This edit removes table definitions from schema.drizzle.ts. Old definitions must be retained — removing them generates DROP TABLE migrations. See AGENTS.md > Common Commands > Database schemas." >&2
   exit 2
 fi
 
