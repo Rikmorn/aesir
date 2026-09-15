@@ -29,26 +29,26 @@
     "seed:labels": "bun scripts/seed-label.ts"
   },
   "dependencies": {
-    "@aesir/types": "workspace:*",
     "@aesir/platform": "workspace:*",
+    "@aesir/types": "workspace:*",
     "@linear/sdk": "^70.0.0",
-    "@modelcontextprotocol/sdk": "1",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "dotenv-flow": "^4.1.0",
-    "drizzle-orm": "^0.45.1",
-    "express": "^4.21.0",
-    "express-rate-limit": "^8.2.1",
-    "nanoid": "^5.1.6",
+    "drizzle-orm": "^0.45.2",
+    "express": "^4.22.3",
+    "express-rate-limit": "^8.7.0",
+    "nanoid": "^5.1.16",
     "neverthrow": "^8.2.0",
-    "pg": "^8.17.2",
+    "pg": "^8.23.0",
     "zod": "3.25.67"
   },
   "devDependencies": {
     "@aesir/test-utils": "workspace:^",
-    "@types/express": "^4.17.21",
-    "@types/pg": "^8.16.0",
-    "drizzle-kit": "^0.31.8",
-    "postgres": "^3.4.7",
-    "typescript": "^5.7.0",
-    "vitest": "^4.0.0"
+    "@types/express": "^4.17.25",
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "^0.31.10",
+    "postgres": "^3.4.9",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
   }
 }

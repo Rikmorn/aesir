@@ -22,11 +22,11 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "nanoid": "^5.1.6",
+    "nanoid": "^5.1.16",
     "zod": "3.25.67"
   },
   "devDependencies": {
-    "typescript": "^5.7.0",
-    "vitest": "^4.0.0"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
   }
 }
