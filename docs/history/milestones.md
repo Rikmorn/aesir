@@ -162,7 +162,7 @@ Shipped 2026-02-18, tag `v2.8`. Ran as 6 phases (74–79) across 22 plans and 33
 - Dashboard observability: 18 event types with distinct icons/colours, tool-call cards grouped by `toolCallId`, and sub-agent attribution pills
 - Work correlation: an entity correlation registry with auto-registration at `executor.start()` and a disposition vocabulary (new/signal/retry/supersede/duplicate)
 
-**Debt it left:** MILESTONES.md recorded this one explicitly — the `event.routed` sequence=0 collision (moderate: observability only, routing still works); `work:register`/`work:query` tools registered but absent from agent-definition YAML files (low: auto-registration still works); and 12 human verification items pending across Phases 77–79 (visual/interactive/live-stack testing).
+**Debt it left:** MILESTONES.md recorded this one explicitly — the `event.routed` sequence=0 collision (moderate: observability only, routing worked); `work:register`/`work:query` tools registered but absent from agent-definition YAML files (low: auto-registration worked); and 12 human verification items pending across Phases 77–79 (visual/interactive/live-stack testing).
 
 ## v2.9 Platform Completion
 
