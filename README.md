@@ -431,6 +431,10 @@ pnpm db:migrate
 2. Verify `LINEAR_TEAM_ID` exists in your workspace
 3. Check MCP permissions are seeded: `pnpm --filter @aesir/integration-linear seed:permissions`
 
+## AI Tooling
+
+`AGENTS.md` at the repo root is the ground truth for AI coding tools; `.claude/CLAUDE.md` imports it for Claude Code. Rules, hooks and settings live under `.claude/`. The build workflow is [sidekick](https://github.com/Rikmorn/sidekick), which this repo also serves as a test bench for; see the "Sidekick Test Bench" section of `AGENTS.md`.
+
 ## Development
 
 ### Running Tests

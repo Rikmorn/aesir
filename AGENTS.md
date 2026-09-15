@@ -77,6 +77,14 @@ When modifying or creating UI in `packages/dashboard/`, read and follow the desi
 
 When modifying a package's public interface (new tools, changed APIs, updated setup), update its README to match. Package READMEs are referenced by agents as implementation guides -- stale docs cause wrong code.
 
+## Sidekick Test Bench
+
+This repo is built with [sidekick](https://github.com/Rikmorn/sidekick) (`/sk-design`, `/sk-build`, `/sk-review`) **and sidekick is under test here**. Treat it as a tool being evaluated, not an authority: be critical of how it works. Gaps, annoyances, bugs, confusing output, missing capabilities and improvement ideas, whether noticed by Roberto or by an agent, go into `docs/superpowers/sidekick-testbench-log.md` as they happen (date, who, what happened, why it matters, proposed disposition). At the end of a session we review the log together and file the entries that deserve it on `Rikmorn/sidekick`, one `area:*` label each, with a body that says what happened in aesir.
+
+When sidekick blocks the work, or either of us is uncomfortable with how it is handling something, fall back to the superpowers workflow for that task and log it. The fallback is the record, not a failure.
+
+Work tracking follows sidekick's PM conventions (`.claude/rules/sk-pm-conventions.md`): GitHub issues, milestones and the aesir project board are the status surface; files keep content. Aesir adds optional `pkg:*` labels because it is a multi-workspace repo.
+
 ## Architecture
 
 ### Overview

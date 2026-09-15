@@ -9,7 +9,7 @@
  *   pnpm --filter @aesir/integration-slack migrate
  *
  * Or directly:
- *   npx tsx packages/integrations/slack/scripts/migrate-credentials.ts
+ *   bun packages/integrations/slack/scripts/migrate-credentials.ts
  *
  * This script uses direct database connection to avoid full environment validation.
  * Only database env vars are required.

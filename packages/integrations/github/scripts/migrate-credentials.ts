@@ -9,7 +9,7 @@
  *   pnpm --filter @aesir/integration-github migrate
  *
  * Or directly:
- *   npx tsx packages/integrations/github/scripts/migrate-credentials.ts
+ *   bun packages/integrations/github/scripts/migrate-credentials.ts
  *
  * This script uses direct database connection to avoid full environment validation.
  * Only database env vars are required.
