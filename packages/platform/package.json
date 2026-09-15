@@ -29,7 +29,6 @@
   },
   "dependencies": {
     "@aesir/types": "workspace:*",
-    "@langchain/core": "^0.3.0",
     "dockerode": "^4.0.9",
     "dotenv-flow": "^4.1.0",
     "drizzle-orm": "^0.45.1",

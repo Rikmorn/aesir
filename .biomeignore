@@ -1,5 +1,2 @@
-# Ignore legacy code from linting
-**/_legacy/**
-
 # Ignore CLI scripts (console.log is appropriate for scripts)
 **/scripts/**
