@@ -224,3 +224,5 @@ Human verification still open:
 - Phase 86: Identity document injection (live agent)
 - Phase 86: Pre-completion identity review hook (live agent)
 - Phase 86: Dashboard identity panel (live UI)
+- Phase 87: GIN Index Applied at Query Time
+- Phase 87: Pre-Compaction Flush Fires in Practice

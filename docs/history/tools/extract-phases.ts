@@ -58,8 +58,18 @@ for (const m of milestones) for (const p of m.phases) {
   const v = readFileSync(join(phasesDir, dir, `${p.num}-VERIFICATION.md`), "utf8");
   p.status = (v.match(/^status:\s*(.+)$/m) ?? [])[1] ?? "";
   p.score = (v.match(/^score:\s*(.+)$/m) ?? [])[1] ?? "";
-  const hv = v.split("### Human Verification Required")[1];
-  if (hv) p.human = [...hv.matchAll(/^#### \d+\.\s*(.+)$/gm)].map((x) => x[1].trim());
+  // Section depth varies (### in most reports, ## in a couple); items always sit one level
+  // deeper. Bound the section at the next heading of the same or shallower depth rather than
+  // reading to end-of-file, so a later same-depth section can't be mistaken for part of it.
+  const hv = v.match(/^(#{2,3}) Human Verification Required\s*$/m);
+  if (hv) {
+    const rest = v.slice((hv.index ?? 0) + hv[0].length);
+    const sectionDepth = hv[1].length;
+    const next = rest.match(new RegExp(`^#{1,${sectionDepth}} `, "m"));
+    const body = next ? rest.slice(0, next.index) : rest;
+    const itemHeading = new RegExp(`^#{${sectionDepth + 1}} \\d+\\.\\s*(.+)$`, "gm");
+    p.human = [...body.matchAll(itemHeading)].map((x) => x[1].trim());
+  }
 }
 
 const total = milestones.reduce((n, m) => n + m.phases.length, 0);
