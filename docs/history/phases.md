@@ -18,9 +18,24 @@ One line per phase: what it set out to do, how many plans it took, and what the 
 | 8 | Human-in-the-Loop | Workflow pauses for human approval before PR merge | 4 | — |
 | 9 | Product Agent | Product Agent gathers requirements and creates Linear tasks | 4 | — |
 | 9.1 | Infrastructure & Local Dev (INSERTED) | Production-ready local development setup with proper OAuth and containerized services | 3 | passed (5/5 must-haves verified) |
-| 9.2 | Integration Gap Closure (INSERTED) | Close all integration gaps identified by milestone audit to enable E2E workflow execution | 3 | — |
-| 9.3 | Webhook API Exposure (INSERTED) | Expose webhook endpoints for Linear/GitHub external access via Cloudflare tunnel for local development | 1 | — |
-| e2e-verification | E2E Gap Closure | Fix E2E verification gaps by properly containerizing the OAuth flow | 1 | — |
+| 9.2 | Integration Gap Closure (INSERTED) | Close all integration gaps identified by milestone audit to enable E2E workflow execution | 3 | passed (5/5 must-haves verified) |
+| 9.3 | Webhook API Exposure (INSERTED) | Expose webhook endpoints for Linear/GitHub external access via Cloudflare tunnel for local development | 1 | gaps_found (5/6 must-haves verified) |
+| e2e-verification | E2E Gap Closure | Fix E2E verification gaps by properly containerizing the OAuth flow | 1 | passed (6/6 must-haves verified) |
+
+Human verification still open:
+- Phase 9.1: Linear OAuth Browser Flow
+- Phase 9.1: Docker Compose Startup
+- Phase 9.1: Dev Agent Temporal Connection
+- Phase 9.1: Full E2E Flow
+- Phase 9.2: Start Dev Agent with `npm run dev-agent`
+- Phase 9.2: Send test Linear webhook to /webhooks/linear
+- Phase 9.2: E2E: Delegate task in Linear
+- Phase 9.3: Cloudflare Tunnel Connection
+- Phase 9.3: External Webhook Delivery
+- Phase e2e-verification: Run `docker compose --profile oauth run --rm oauth` with valid Cloudflare tunnel
+- Phase e2e-verification: Start dev-agent with .linear-tokens.json present
+- Phase e2e-verification: Start dev-agent without .linear-tokens.json
+- Phase e2e-verification: Create Linear task via dev-agent with OAuth tokens
 
 ## v2.0 Foundation
 
@@ -43,6 +58,9 @@ One line per phase: what it set out to do, how many plans it took, and what the 
 | 22.2 | Agent MCP Migration (INSERTED) | Migrate agents from direct SDK client usage to MCP HTTP calls, completing the circuit from Phase 19 | 6 | — |
 
 Human verification still open:
+- Phase 13: Run `pnpm --filter @aesir/platform db:migrate`
+- Phase 13: Run OAuth flow (`npm run linear-oauth`)
+- Phase 13: Start agent with database credentials
 - Phase 19: End-to-End MCP Tool Call
 - Phase 19: Permission Enforcement
 - Phase 19: Tool Discovery
@@ -58,6 +76,15 @@ Human verification still open:
 | 25 | Product Agent Workflow | Product-agent receives Slack messages, asks clarifying questions, and creates well-structured Linear issues | 9 | — |
 | 26 | Dev Agent Workflow | Dev-agent receives Linear issues, works in dev container, and produces mergeable PRs | 13 | — |
 | 27 | Human-in-the-Loop (HITL) | Humans can approve plans and provide feedback through Linear and Slack, with either channel resuming workflows | 13 | — |
+
+Human verification still open:
+- Phase 23: Linear Webhook E2E Test
+- Phase 23: GitHub Webhook E2E Test
+- Phase 23: Slack Event E2E Test
+- Phase 23: Cloudflare Tunnel Integration
+- Phase 24: Build aesir-dev-env image
+- Phase 24: Run full workflow with real repo
+- Phase 24: Test 24h cleanup trigger
 
 ## v2.2 Agentic Architecture
 
@@ -99,6 +126,8 @@ Human verification still open:
 - Phase 45: Manual E2E: Dev Agent Linear→PR Flow
 - Phase 45: Manual E2E: Product Agent Slack→Linear Flow
 - Phase 45: Manual E2E: Docker Compose Full Stack
+- Phase 46: Docker Compose Full Lifecycle Test
+- Phase 46: Manual QA Validation Steps 1-8
 
 ## v2.4 Operations Dashboard
 
@@ -134,6 +163,10 @@ Human verification still open:
 | 58.3 | Integration Correlation | External artifacts (issues, PRs, threads) are automatically correlated to tasks via outgoing MCP recording and incoming webhook lookup | 4 | passed (5/5 must-haves verified) |
 | 58.4 | Task-Aware Event Routing | Incoming events with a task reference route to the correct task's conversation with serialization guarantees | 2 | passed (4/4 must-haves verified) |
 | 59 | Prompt Evolution and Hierarchy Enforcement | Agents naturally think in terms of tasks, write high-quality handoffs, delegate via subtasks with guardrails, enabling multi-conversation continuity without framework-imposed structure | 2 | passed (4/4 must-haves verified) |
+
+Human verification still open:
+- Phase 58.1: Database Migration Execution
+- Phase 58.1: TaskService Runtime Behavior
 
 ## v2.6 Unified Agent Communication
 

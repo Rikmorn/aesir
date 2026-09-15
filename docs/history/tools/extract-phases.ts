@@ -50,26 +50,63 @@ for (const f of readdirSync(archives).filter((n) => /-ROADMAP\.md$/.test(n)).sor
   milestones.push(parseRoadmap(v29, "v2.9 Platform Completion (executed 2026-02-20 → 2026-02-23, never archived)"));
 }
 
+// Resolves a phase's verification report on disk. Directories occasionally zero-pad a phase
+// number's leading digit ("09.2-..." for phase "9.2"), and one (e2e-verification) has no
+// trailing "-suffix" and holds a report whose filename doesn't match the phase number at all.
+// Score every plausible directory by whether it actually contains a report, so an empty
+// zero-padded duplicate (phase 9.1 has one, alongside the real "9.1-..." directory) can never
+// be chosen over a directory with real content, regardless of directory-listing order.
+function findReport(dirs: string[], num: string): { dir: string; file: string } | undefined {
+  const candidates = dirs.filter((d) => d === num || d.startsWith(`${num}-`) || d.startsWith(`0${num}-`));
+  for (const dir of candidates) {
+    const dirPath = join(phasesDir, dir);
+    const reports = (existsSync(dirPath) ? readdirSync(dirPath) : []).filter((f) => f.endsWith("-VERIFICATION.md"));
+    const file = reports.includes(`${num}-VERIFICATION.md`) ? `${num}-VERIFICATION.md` : reports.length === 1 ? reports[0] : undefined;
+    if (file) return { dir, file };
+  }
+  return undefined;
+}
+
+// Human-verification items appear as a numbered heading one level deeper than the section
+// ("#### N." under "###", or "### N." under "##"), a numbered heading at the SAME depth as the
+// section ("### N." under "### Human Verification Required"), bold-numbered text
+// ("**N. Title**"), or a markdown table row ("| N | Test | Expected | Why Human |"). The
+// section itself is "###" in most reports and "##" in a couple. Bound its body at the next
+// heading of the same or shallower depth, skipping same-depth numbered-item headings so they
+// don't end the section early. A body that says "None" (the reports' universal wording for
+// "nothing outstanding") yields no lines; a non-empty body with no recognised item format
+// yields one pointer line rather than silently vanishing, so a future format this extractor
+// doesn't know about still surfaces instead of disappearing.
+function extractHumanItems(v: string, sourcePath: string): string[] {
+  const hv = v.match(/^(#{2,3}) Human Verification Required\s*$/m);
+  if (!hv) return [];
+  const rest = v.slice((hv.index ?? 0) + hv[0].length);
+  const sectionDepth = hv[1].length;
+  const headings = [...rest.matchAll(new RegExp(`^(#{1,${sectionDepth}}) (.*)$`, "gm"))];
+  const boundary = headings.find((m) => !(m[1].length === sectionDepth && /^\d+\.\s/.test(m[2])));
+  const body = boundary ? rest.slice(0, boundary.index) : rest;
+  // "Nothing outstanding" is worded either "None ..." or "No human verification needed ...".
+  if (/^\s*(none|no human verification)\b/i.test(body)) return [];
+
+  const found = [
+    ...[...body.matchAll(/^#{3,4} \d+\.\s*(.+)$/gm)].map((m) => ({ index: m.index ?? 0, text: m[1] })),
+    ...[...body.matchAll(/^\*\*\d+\.\s*(.+?)\*\*\s*$/gm)].map((m) => ({ index: m.index ?? 0, text: m[1] })),
+    ...[...body.matchAll(/^\|\s*\d+\s*\|\s*([^|]+?)\s*\|/gm)].map((m) => ({ index: m.index ?? 0, text: m[1] })),
+  ].sort((a, b) => a.index - b.index);
+  if (found.length) return found.map((m) => m.text.trim());
+
+  return body.trim() ? [`items recorded in a format this index does not enumerate — see git show v2.9:${sourcePath}`] : [];
+}
+
 // verification reports
 const dirs = existsSync(phasesDir) ? readdirSync(phasesDir) : [];
 for (const m of milestones) for (const p of m.phases) {
-  const dir = dirs.find((d) => d.startsWith(`${p.num}-`) && existsSync(join(phasesDir, d, `${p.num}-VERIFICATION.md`)));
-  if (!dir) continue;
-  const v = readFileSync(join(phasesDir, dir, `${p.num}-VERIFICATION.md`), "utf8");
+  const report = findReport(dirs, p.num);
+  if (!report) continue;
+  const v = readFileSync(join(phasesDir, report.dir, report.file), "utf8");
   p.status = (v.match(/^status:\s*(.+)$/m) ?? [])[1] ?? "";
   p.score = (v.match(/^score:\s*(.+)$/m) ?? [])[1] ?? "";
-  // Section depth varies (### in most reports, ## in a couple); items always sit one level
-  // deeper. Bound the section at the next heading of the same or shallower depth rather than
-  // reading to end-of-file, so a later same-depth section can't be mistaken for part of it.
-  const hv = v.match(/^(#{2,3}) Human Verification Required\s*$/m);
-  if (hv) {
-    const rest = v.slice((hv.index ?? 0) + hv[0].length);
-    const sectionDepth = hv[1].length;
-    const next = rest.match(new RegExp(`^#{1,${sectionDepth}} `, "m"));
-    const body = next ? rest.slice(0, next.index) : rest;
-    const itemHeading = new RegExp(`^#{${sectionDepth + 1}} \\d+\\.\\s*(.+)$`, "gm");
-    p.human = [...body.matchAll(itemHeading)].map((x) => x[1].trim());
-  }
+  p.human = extractHumanItems(v, `.planning/phases/${report.dir}/${report.file}`);
 }
 
 const total = milestones.reduce((n, m) => n + m.phases.length, 0);
