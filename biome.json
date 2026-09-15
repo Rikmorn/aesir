@@ -29,9 +29,6 @@
         "preset": "recommended",
         "useOptionalChain": "off"
       },
-      "correctness": {
-        "noUnsafeOptionalChaining": "off"
-      },
       "style": {
         "useNamingConvention": {
           "level": "error",
@@ -119,6 +116,9 @@
         "rules": {
           "suspicious": {
             "noConsole": "off"
+          },
+          "correctness": {
+            "noUnsafeOptionalChaining": "off"
           }
         }
       }
