@@ -14,8 +14,8 @@ Master document capturing Aesir's architectural thinking, design philosophy, and
 | v2.7 | [`2.7-agent-collaboration.md`](2.7-agent-collaboration.md) | Multi-agent collaboration — shared memory, entity directory, task delegation, completion signaling, Linear Agent SDK |
 | v2.8 | [`2.8-agent-resilience.md`](2.8-agent-resilience.md) | Runtime resilience, dashboard observability, task tree unification — stabilize the platform |
 | v2.9 | [`2.9-platform-completion.md`](2.9-platform-completion.md) | Complete collaboration capabilities — negotiation, parallel delegation, scheduling, persistent identity |
-| v3.0 | [`3.0-domain-modeling.md`](3.0-domain-modeling.md) | Role-by-role domain analysis, agent architecture, specialized tools and sub-agents |
-| v3.1 | [`3.1-human-collaboration.md`](3.1-human-collaboration.md) | Formal human-agent collaboration protocols, bidirectional delegation with humans |
+| v3.0 | [`3.0-domain-modeling.md`](../../research/3.0-domain-modeling.md) | Role-by-role domain analysis, agent architecture, specialized tools and sub-agents |
+| v3.1 | [`3.1-human-collaboration.md`](../../research/3.1-human-collaboration.md) | Formal human-agent collaboration protocols, bidirectional delegation with humans |
 
 ## Foundational Principles
 
@@ -383,19 +383,19 @@ Agents store classified knowledge (`knowledge:store`) and query it (`knowledge:q
 
 **Promoted from expansion path to active milestone.** Transform agents from generic task processors into domain-expert professionals. Deep role analysis drives agent architecture: what does a world-class Product Owner actually do? What sub-agents, tools, and domain knowledge does a senior developer need? Each agent role gets a full workflow analysis, specialized sub-agents, domain-specific tools, and prompt engineering driven by real-world understanding of the profession.
 
-This is the shift from building infrastructure to building intelligence. *See [`3.0-domain-modeling.md`](3.0-domain-modeling.md).*
+This is the shift from building infrastructure to building intelligence. *See [`3.0-domain-modeling.md`](../../research/3.0-domain-modeling.md).*
 
 ### Human Collaboration → v3.1 Planned
 
 **Promoted from expansion path to active milestone.** Formal protocols for agent-to-human delegation, human response parsing, async handshake handling, escalation strategies, and mid-work signal handling. Deliberately sequenced after domain modeling — humans should interact with competent agents, not half-baked ones. The current semi-automatic workflow (human tweaks ticket, assigns to agent) works well as a bridge.
 
-The hard problems are protocol design, not infrastructure: unstructured response parsing, no-response escalation, context staleness during long human waits, and channel interaction semantics (Slack threading, reactions, edits). *See [`3.1-human-collaboration.md`](3.1-human-collaboration.md).*
+The hard problems are protocol design, not infrastructure: unstructured response parsing, no-response escalation, context staleness during long human waits, and channel interaction semantics (Slack threading, reactions, edits). *See [`3.1-human-collaboration.md`](../../research/3.1-human-collaboration.md).*
 
 ### Cross-Session Learning
 
 Aggregating patterns across completed tasks to improve agent performance. "Dev-agent tasks in this area of the codebase tend to need more research." Requires: task analytics + feedback loop into prompt context.
 
-Persistent agent identity (v2.9) provides the storage foundation — identity documents can accumulate learned preferences and strategies. The feedback loop itself (recording outcomes, surfacing patterns, updating identity) is a v3.0 concern that emerges naturally as agents handle real tasks. *See [`2.9-platform-completion.md`](2.9-platform-completion.md) Phase 7 and [`3.0-domain-modeling.md`](3.0-domain-modeling.md).*
+Persistent agent identity (v2.9) provides the storage foundation — identity documents can accumulate learned preferences and strategies. The feedback loop itself (recording outcomes, surfacing patterns, updating identity) is a v3.0 concern that emerges naturally as agents handle real tasks. *See [`2.9-platform-completion.md`](2.9-platform-completion.md) Phase 7 and [`3.0-domain-modeling.md`](../../research/3.0-domain-modeling.md).*
 
 ### Event Log as Multi-Consumer Stream
 
@@ -445,7 +445,7 @@ Today, agents use integration-specific action tools directly: `linear:create_iss
 
 The denormalizer pattern (dispatch by context) could generalize: `work:create_item` dispatches to Linear or Jira based on workspace configuration, `code:create_pr` dispatches to GitHub or GitLab based on repository context. The question is which action interfaces are genuinely isomorphic across integrations versus which have semantic differences that make abstraction lossy. Communication worked because the interface is simple (text + address). Action tools may have richer interfaces where forced unification loses important capabilities.
 
-This is deliberately deferred to v3.0 — let role analysis and real usage reveal which actions genuinely unify before building abstractions. *See [`3.0-domain-modeling.md`](3.0-domain-modeling.md).* Requires: analysis of integration-specific action tool interfaces, workspace-level integration configuration, and a dispatch mechanism analogous to the communication denormalizer.
+This is deliberately deferred to v3.0 — let role analysis and real usage reveal which actions genuinely unify before building abstractions. *See [`3.0-domain-modeling.md`](../../research/3.0-domain-modeling.md).* Requires: analysis of integration-specific action tool interfaces, workspace-level integration configuration, and a dispatch mechanism analogous to the communication denormalizer.
 
 ## Design Decisions Log
 
