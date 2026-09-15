@@ -393,8 +393,13 @@ Services use factory functions (not classes) with explicit dependencies:
 
 ## Historical Context
 
-**Design vision:** `.planning/specs/design-vision.md` -- master document capturing foundational principles, architectural philosophy, anti-patterns, and expansion paths across all milestones.
+The project was built in eleven milestones between 2026-01-15 and 2026-02-23 and reset in 2026-09. The record lives under `docs/`:
 
-**Milestone specs:** `.planning/specs/` -- individual milestone specs (v2.2 through v2.6) with implementation details.
+- `docs/reference/design-vision.md` -- the principles and anti-patterns as they stand now
+- `docs/adr/` -- the decisions that still bind, one file each
+- `docs/history/` -- milestones, phases, every recorded decision, requirements, the milestone specs and per-milestone archives, frozen
+- `docs/learnings/` -- post-mortems and lessons
+- `docs/research/` -- the v3.x direction documents written before the retarget conversation
+- `docs/backlog/` -- deferred directions and known debt, each naming its GitHub issue
 
-Historical project context (phase plans, research documents, summaries, decision log) is maintained in the `.planning/` directory.
+`docs/README.md` explains the taxonomy. Work in flight is on the GitHub board, not in files.
