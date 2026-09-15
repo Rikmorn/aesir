@@ -3,48 +3,32 @@
   "exclude": ["duplicates"],
   "workspaces": {
     "packages/types": {
-      "project": ["src/**/*.ts"],
-      "ignore": ["**/*.test.ts", "**/testing/**"]
+      "project": ["src/**/*.ts"]
     },
     "packages/platform": {
-      "project": ["src/**/*.ts"],
-      "ignore": ["**/*.test.ts", "**/testing/**"]
+      "project": ["src/**/*.ts"]
     },
     "packages/test-utils": {
-      "project": ["src/**/*.ts"],
-      "ignore": ["**/*.test.ts"]
+      "project": ["src/**/*.ts"]
     },
     "packages/integrations/linear": {
       "entry": ["scripts/*.ts"],
-      "project": ["src/**/*.ts", "scripts/**/*.ts"],
-      "ignore": ["**/*.test.ts", "**/testing/**"]
+      "project": ["src/**/*.ts", "scripts/**/*.ts"]
     },
     "packages/integrations/github": {
       "entry": ["scripts/*.ts"],
-      "project": ["src/**/*.ts", "scripts/**/*.ts"],
-      "ignore": ["**/*.test.ts", "**/testing/**"]
+      "project": ["src/**/*.ts", "scripts/**/*.ts"]
     },
     "packages/integrations/slack": {
       "entry": ["scripts/*.ts"],
-      "project": ["src/**/*.ts", "scripts/**/*.ts"],
-      "ignore": ["**/*.test.ts", "**/testing/**"]
+      "project": ["src/**/*.ts", "scripts/**/*.ts"]
     },
     "packages/observability": {
-      "project": ["src/**/*.ts"],
-      "ignore": ["**/*.test.ts", "**/testing/**"]
+      "project": ["src/**/*.ts"]
     },
     "packages/agents": {
       "entry": ["scripts/*.ts"],
-      "project": ["src/**/*.ts", "scripts/**/*.ts"],
-      "ignore": ["**/*.test.ts", "**/testing/**"]
+      "project": ["src/**/*.ts", "scripts/**/*.ts"]
     }
-  },
-  "ignore": [
-    "**/*.test.ts",
-    "**/testing/**",
-    "**/dist/**",
-    "**/node_modules/**",
-    "**/db/scripts/**"
-  ],
-  "ignoreBinaries": ["open"]
+  }
 }
