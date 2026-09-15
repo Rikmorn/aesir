@@ -470,7 +470,7 @@ For the fastest development loop, use Docker Compose watch mode:
 docker compose watch
 ```
 
-This rebuilds containers on source file changes. For even faster iteration, run individual services locally with `tsx watch`.
+This rebuilds containers on source file changes. For even faster iteration, run a service locally under bun, for example `bun --watch packages/agents/src/service/main.ts` (bun executes TypeScript directly; pnpm remains the package manager and Docker images stay on Node).
 
 ## License
 

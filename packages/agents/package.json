@@ -21,9 +21,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:migrate": "drizzle-kit migrate",
-    "seed:directory": "tsx scripts/seed-directory.ts",
-    "validate:workflow": "tsx scripts/validate-workflow.ts",
-    "test:agents": "tsx scripts/agent-tests/run.ts"
+    "seed:directory": "bun scripts/seed-directory.ts",
+    "validate:workflow": "bun scripts/validate-workflow.ts",
+    "test:agents": "bun scripts/agent-tests/run.ts"
   },
   "dependencies": {
     "@aesir/platform": "workspace:*",
@@ -50,7 +50,6 @@
     "@types/supertest": "^6.0.3",
     "drizzle-kit": "^0.31.8",
     "supertest": "^7.2.2",
-    "tsx": "^4.0.0",
     "typescript": "^5.7.0",
     "vitest": "^4.0.0"
   }

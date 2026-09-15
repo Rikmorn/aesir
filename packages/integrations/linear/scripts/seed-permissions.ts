@@ -1,4 +1,4 @@
-#!/usr/bin/env tsx
+#!/usr/bin/env bun
 /**
  * Seed MCP Tool Permissions for Linear Integration
  *

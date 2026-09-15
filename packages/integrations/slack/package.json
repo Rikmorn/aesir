@@ -23,9 +23,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "migrate": "tsx -r dotenv-flow/config scripts/migrate-credentials.ts",
-    "seed:permissions": "tsx scripts/seed-permissions.ts",
-    "seed:credential": "tsx scripts/seed-credential.ts"
+    "migrate": "bun scripts/migrate-credentials.ts",
+    "seed:permissions": "bun scripts/seed-permissions.ts",
+    "seed:credential": "bun scripts/seed-credential.ts"
   },
   "dependencies": {
     "@aesir/types": "workspace:*",
@@ -49,7 +49,6 @@
     "@types/pg": "^8.16.0",
     "drizzle-kit": "^0.31.8",
     "postgres": "^3.4.7",
-    "tsx": "^4.19.3",
     "typescript": "^5.7.0",
     "vitest": "^4.0.0"
   }

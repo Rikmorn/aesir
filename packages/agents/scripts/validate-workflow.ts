@@ -1,4 +1,4 @@
-#!/usr/bin/env tsx
+#!/usr/bin/env bun
 /**
  * Aesir v2.7 Triangular Workflow Validation
  *
