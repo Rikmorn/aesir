@@ -624,42 +624,6 @@ describe("createTaskSignalDispatcher", () => {
         pending: 0,
       });
 
-      const { executor, groupService } = setupGroupTest({
-        policy,
-        state,
-        subsequentStates: [settledState],
-      });
-
-      await executor.signal.mockResolvedValue({ action: "resumed" });
-
-      const dispatcher = createTaskSignalDispatcher({
-        executor: executor as never,
-        taskService: createMockTaskService() as never,
-        eventLog: createMockEventLog() as never,
-        db: (() => {
-          const db = createMockDb();
-          db.execute.mockResolvedValue({
-            rows: [
-              {
-                id: GROUP_ID,
-                delegator_conversation_id: DELEGATOR_CONV_ID,
-                policy,
-                status: "active",
-              },
-            ],
-          });
-          return db;
-        })() as never,
-        logger: createMockLogger() as never,
-        groupService: (() => {
-          const gs = createMockGroupService();
-          (gs.getGroupState as ReturnType<typeof vi.fn>)
-            .mockResolvedValueOnce(state)
-            .mockResolvedValue(settledState);
-          return gs;
-        })(),
-      });
-
       // Mock task with group_id
       const ts = createMockTaskService();
       ts.get.mockResolvedValue(
@@ -1217,7 +1181,9 @@ describe("createTaskSignalDispatcher", () => {
       const signalCalls = executor.signal.mock.calls as Array<
         [string, { type: string; data: Record<string, unknown> }]
       >;
-      const signalCall = signalCalls[0]!;
+      const signalCall = signalCalls[0];
+      if (!signalCall)
+        throw new Error("expected executor.signal to have been called");
       const signalData = signalCall[1].data;
 
       expect(signalData.taskSummaries).toBeDefined();

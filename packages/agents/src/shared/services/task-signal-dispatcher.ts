@@ -24,7 +24,7 @@ import type {
   Signal,
 } from "../../framework/types.js";
 import type * as agentsSchemaModule from "../db/schema.js";
-import { taskGroups, tasks } from "../db/schema.js";
+import { tasks } from "../db/schema.js";
 import type { GroupService, GroupState } from "./group-service.js";
 import { evaluatePolicy } from "./group-service.js";
 import type { TaskService } from "./task-service.js";
@@ -201,7 +201,7 @@ export function createTaskSignalDispatcher(
    */
   async function handleGroupTaskUpdate(
     task: { id: string; group_id: string; assignee_id: string },
-    newStatus: string,
+    _newStatus: string,
   ): Promise<void> {
     if (!groupService) return;
 
@@ -347,10 +347,6 @@ export function createTaskSignalDispatcher(
 
     // 4. Settled check: if all tasks are terminal and group is already in a non-active state,
     // transition to settled and send group_settled signal
-    const currentGroupStatus = GROUP_TERMINAL_STATUSES.has(groupStatus)
-      ? groupStatus
-      : (await groupService.getGroupState(task.group_id)).status;
-
     // Re-read state to get latest counts after possible status change
     const latestState = await groupService.getGroupState(task.group_id);
     const allTerminal = latestState.running === 0 && latestState.pending === 0;
