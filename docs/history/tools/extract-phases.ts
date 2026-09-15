@@ -14,12 +14,13 @@ type Milestone = { title: string; phases: Phase[] };
 
 function parseRoadmap(text: string, milestoneTitle: string): Milestone {
   const phases: Phase[] = [];
-  const blocks = text.split(/\n(?=### Phase )/);
+  const blocks = text.split(/\n(?=#{3,4} Phase )/);
   for (const b of blocks) {
     // Phase ids are numeric ("84", "22.1") except v1's "e2e-verification"; goals are written
     // "**Goal**:" in most roadmaps and "**Goal:**" in v2.0's; plan counts are checkbox lines in
-    // v2.9's roadmap and a "**Plans:** N plans" line in the archived ones.
-    const h = b.match(/^### Phase ([\w.-]+): (.+?)(?: — DEFERRED| -- DEFERRED)?\s*$/m);
+    // v2.9's roadmap and a "**Plans:** N plans" line in the archived ones. Heading depth is H3
+    // except v2.7, which nests its phases as H4 under an H3 "### Phase Details" container.
+    const h = b.match(/^#{3,4} Phase ([\w.-]+): (.+?)(?: — DEFERRED| -- DEFERRED)?\s*$/m);
     if (!h) continue;
     const goal = (b.match(/\*\*Goal:?\*\*:?\s*(.+)/) ?? [])[1]?.trim() ?? "";
     const checked = (b.match(/^- \[[ x]\] .*PLAN\.md/gm) ?? []).length;
@@ -35,7 +36,12 @@ function parseRoadmap(text: string, milestoneTitle: string): Milestone {
 const milestones: Milestone[] = [];
 for (const f of readdirSync(archives).filter((n) => /-ROADMAP\.md$/.test(n)).sort((a, b) => parseFloat(a.replace(/^v/, "")) - parseFloat(b.replace(/^v/, "")))) {
   const text = readFileSync(join(archives, f), "utf8");
-  const title = (text.match(/^## (v[\d.]+ .+?)(?: \(Shipped.*)?$/m) ?? [])[1] ?? f.replace("-ROADMAP.md", "");
+  // Title is an H2 ("## v2.7 Agent Collaboration (Shipped ...)") in most archives. v1 and
+  // v2.0-v2.6 instead carry it as an H1 ("# Milestone v2.3: Unified Agent Framework") with
+  // "## Overview" as their first H2, so fall back to that before the bare filename.
+  const h2Title = (text.match(/^## (v[\d.]+ .+?)(?: \(Shipped.*)?$/m) ?? [])[1];
+  const h1 = text.match(/^# Milestone (v[\d.]+): (.+)$/m);
+  const title = h2Title ?? (h1 ? `${h1[1]} ${h1[2]}` : f.replace("-ROADMAP.md", ""));
   milestones.push(parseRoadmap(text, title));
 }
 {
