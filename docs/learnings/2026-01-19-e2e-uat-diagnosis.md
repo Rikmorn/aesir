@@ -1,3 +1,5 @@
+> Post-mortem of the v1 end-to-end UAT on 2026-01-19, moved unchanged from `.planning/debug/`. Temporal, LangGraph and the router service it mentions were removed in v2.2–v2.3.
+
 ---
 status: diagnosed
 trigger: "Diagnose root causes for 4 issues found in E2E UAT testing"
