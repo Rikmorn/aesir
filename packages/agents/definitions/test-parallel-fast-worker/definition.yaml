@@ -1,0 +1,26 @@
+id: test-parallel-fast-worker
+name: Test Parallel Fast Worker
+description: >
+  Test agent that accepts delegated work and completes immediately.
+  Used in parallel delegation tests as the fast responder.
+version: "1"
+
+model: claude-haiku-4-5-20251001
+temperature: 0
+
+tools:
+  - task:respond
+  - task:complete_task
+  - task:get_task_context
+
+maxIterations: 5
+tokenBudget: 8000
+
+history:
+  pruneThreshold: 5000
+  protectedMessages: 5
+  summaryThreshold: 8000
+  summaryModel: claude-haiku-4-5-20251001
+
+capabilities:
+  - "fast parallel test worker"

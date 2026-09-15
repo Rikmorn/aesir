@@ -1,0 +1,32 @@
+id: test-counterpropose-delegator
+name: Test Counter-Propose Delegator
+description: >
+  Test agent that delegates a task and handles counter-proposals. Exercises the
+  counter-propose handshake path where the responder modifies scope before accepting.
+version: "1"
+
+model: claude-haiku-4-5-20251001
+temperature: 0
+
+tools:
+  - task:create_task
+  - task:complete_task
+  - task:delegate
+  - coordination:wait_for
+  - coordination:wait_for_task
+  - directory:find
+
+maxIterations: 15
+tokenBudget: 15000
+
+history:
+  pruneThreshold: 10000
+  protectedMessages: 10
+  summaryThreshold: 15000
+  summaryModel: claude-haiku-4-5-20251001
+
+capabilities:
+  - "initiate counter-propose test workflows"
+
+triggers:
+  - event: testing.counterpropose.start

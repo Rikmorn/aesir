@@ -1,0 +1,34 @@
+id: test-parallel-allfail-delegator
+name: Test Parallel All-Required Failure Delegator
+description: >
+  Test agent that delegates a group with all_required policy where one worker
+  rejects. Exercises group failure handling when policy becomes unsatisfiable.
+version: "1"
+
+model: claude-haiku-4-5-20251001
+temperature: 0
+
+tools:
+  - task:create_task
+  - task:complete_task
+  - task:delegate_group
+  - task:group_status
+  - task:cancel_group
+  - coordination:wait_for
+  - coordination:wait_for_group
+  - directory:find
+
+maxIterations: 15
+tokenBudget: 15000
+
+history:
+  pruneThreshold: 10000
+  protectedMessages: 10
+  summaryThreshold: 15000
+  summaryModel: claude-haiku-4-5-20251001
+
+capabilities:
+  - "initiate parallel all-required failure test workflows"
+
+triggers:
+  - event: testing.parallel.allfail.start
