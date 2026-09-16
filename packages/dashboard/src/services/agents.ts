@@ -27,7 +27,7 @@ import {
 
 // ─── Re-exports ──────────────────────────────────────────────────────────────
 
-export type { AgentSummary, AgentDetail, ScheduleState };
+export type { AgentDetail, AgentSummary, ScheduleState };
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

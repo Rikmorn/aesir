@@ -15,6 +15,7 @@ Agentic development platform that automates software workflows - from feature re
 
 - Node.js 20+
 - pnpm 9.15+
+- bun 1.3+ (runs the TypeScript dev and seed scripts; pnpm remains the package manager)
 - Docker Desktop running (all services run containerized)
 - Slack workspace with admin access to create apps
 - Linear workspace
@@ -431,6 +432,10 @@ pnpm db:migrate
 2. Verify `LINEAR_TEAM_ID` exists in your workspace
 3. Check MCP permissions are seeded: `pnpm --filter @aesir/integration-linear seed:permissions`
 
+## AI Tooling
+
+`AGENTS.md` at the repo root is the ground truth for AI coding tools; `CLAUDE.md` is a symlink to it, so Claude Code reads the same file (`docs/reference/dev-harness.md` covers how guidance is layered and reaches each kind of worker). Rules, hooks, and settings live under `.claude/`. The build workflow is [sidekick](https://github.com/Rikmorn/sidekick), which this repo also serves as a test bench for; see the "Sidekick Test Bench" section of `AGENTS.md`.
+
 ## Development
 
 ### Running Tests
@@ -470,7 +475,7 @@ For the fastest development loop, use Docker Compose watch mode:
 docker compose watch
 ```
 
-This rebuilds containers on source file changes. For even faster iteration, run individual services locally with `tsx watch`.
+This rebuilds containers on source file changes. For even faster iteration, run a service locally under bun, for example `bun --watch packages/agents/src/service/main.ts` (bun executes TypeScript directly; pnpm remains the package manager and Docker images stay on Node).
 
 ## License
 

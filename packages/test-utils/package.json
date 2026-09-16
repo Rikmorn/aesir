@@ -22,15 +22,14 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@aesir/types": "workspace:*",
     "neverthrow": "^8.2.0"
   },
   "devDependencies": {
-    "@testcontainers/postgresql": "^11.11.0",
-    "@types/node": "^22.0.0",
-    "msw": "^2.12.7",
-    "postgres": "^3.4.7",
-    "typescript": "^5.7.0",
-    "vitest": "^4.0.0"
+    "@testcontainers/postgresql": "^11.14.0",
+    "@types/node": "^22.19.7",
+    "msw": "^2.15.0",
+    "postgres": "^3.4.9",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.1"
   }
 }

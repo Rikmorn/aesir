@@ -1,0 +1,27 @@
+id: test-clarify-worker
+name: Test Clarification Worker
+description: >
+  Test agent that accepts delegated work and asks one clarification question
+  before completing. Exercises the clarification round-trip protocol.
+version: "1"
+
+model: claude-haiku-4-5-20251001
+temperature: 0
+
+tools:
+  - task:respond
+  - task:complete_task
+  - task:get_task_context
+  - task:clarify
+
+maxIterations: 10
+tokenBudget: 10000
+
+history:
+  pruneThreshold: 8000
+  protectedMessages: 8
+  summaryThreshold: 10000
+  summaryModel: claude-haiku-4-5-20251001
+
+capabilities:
+  - "clarification test worker"

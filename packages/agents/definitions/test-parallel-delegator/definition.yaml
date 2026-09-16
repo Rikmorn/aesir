@@ -1,0 +1,33 @@
+id: test-parallel-delegator
+name: Test Parallel Delegator
+description: >
+  Test agent that delegates a group of tasks with any_sufficient policy.
+  Exercises the parallel delegation and group wait pattern.
+version: "1"
+
+model: claude-haiku-4-5-20251001
+temperature: 0
+
+tools:
+  - task:create_task
+  - task:complete_task
+  - task:delegate_group
+  - task:group_status
+  - coordination:wait_for
+  - coordination:wait_for_group
+  - directory:find
+
+maxIterations: 15
+tokenBudget: 15000
+
+history:
+  pruneThreshold: 10000
+  protectedMessages: 10
+  summaryThreshold: 15000
+  summaryModel: claude-haiku-4-5-20251001
+
+capabilities:
+  - "initiate parallel delegation test workflows"
+
+triggers:
+  - event: testing.parallel.any.start

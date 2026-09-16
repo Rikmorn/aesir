@@ -23,29 +23,28 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "tsx src/db/seeds/default-workspace.ts",
-    "cleanup": "tsx src/scripts/run-cleanup.ts",
-    "cleanup:dry-run": "tsx src/scripts/run-cleanup.ts --dry-run"
+    "db:seed": "bun src/db/seeds/default-workspace.ts",
+    "cleanup": "bun src/scripts/run-cleanup.ts",
+    "cleanup:dry-run": "bun src/scripts/run-cleanup.ts --dry-run"
   },
   "dependencies": {
     "@aesir/types": "workspace:*",
-    "@langchain/core": "^0.3.0",
-    "dockerode": "^4.0.9",
+    "dockerode": "^4.0.12",
     "dotenv-flow": "^4.1.0",
-    "drizzle-orm": "^0.45.1",
-    "nanoid": "^5.1.6",
+    "drizzle-orm": "^0.45.2",
+    "nanoid": "^5.1.16",
     "neverthrow": "^8.2.0",
-    "pg": "^8.17.2",
-    "pino": "^10.2.1",
+    "pg": "^8.23.0",
+    "pino": "^10.3.1",
     "pino-http": "^11.0.0",
     "tar-stream": "^3.1.7"
   },
   "devDependencies": {
-    "@types/dockerode": "^4.0.0",
-    "@types/pg": "^8.16.0",
+    "@types/dockerode": "^4.0.1",
+    "@types/pg": "^8.23.1",
     "@types/tar-stream": "^3.1.4",
-    "drizzle-kit": "^0.31.8",
-    "typescript": "^5.7.0",
-    "vitest": "^4.0.0"
+    "drizzle-kit": "^0.31.10",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.1"
   }
 }

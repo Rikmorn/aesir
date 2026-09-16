@@ -23,33 +23,32 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "migrate": "tsx -r dotenv-flow/config scripts/migrate-credentials.ts",
-    "seed:credential": "tsx scripts/seed-credential.ts",
-    "seed:permissions": "tsx scripts/seed-permissions.ts"
+    "migrate": "bun scripts/migrate-credentials.ts",
+    "seed:credential": "bun scripts/seed-credential.ts",
+    "seed:permissions": "bun scripts/seed-permissions.ts"
   },
   "dependencies": {
-    "@aesir/types": "workspace:*",
     "@aesir/platform": "workspace:*",
-    "@modelcontextprotocol/sdk": "1",
+    "@aesir/types": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@octokit/rest": "^22.0.1",
-    "@octokit/webhooks-methods": "^5.1.0",
+    "@octokit/webhooks-methods": "^5.1.1",
     "dotenv-flow": "^4.1.0",
-    "drizzle-orm": "^0.45.1",
-    "express": "^4.21.0",
-    "express-rate-limit": "^8.2.1",
-    "nanoid": "^5.1.6",
+    "drizzle-orm": "^0.45.2",
+    "express": "^4.22.3",
+    "express-rate-limit": "^8.7.0",
+    "nanoid": "^5.1.16",
     "neverthrow": "^8.2.0",
-    "pg": "^8.17.2",
+    "pg": "^8.23.0",
     "zod": "3.25.67"
   },
   "devDependencies": {
     "@aesir/test-utils": "workspace:^",
-    "@types/express": "^4.17.21",
-    "@types/pg": "^8.16.0",
-    "drizzle-kit": "^0.31.8",
-    "postgres": "^3.4.7",
-    "tsx": "^4.19.3",
-    "typescript": "^5.7.0",
-    "vitest": "^4.0.0"
+    "@types/express": "^4.17.25",
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "^0.31.10",
+    "postgres": "^3.4.9",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.1"
   }
 }

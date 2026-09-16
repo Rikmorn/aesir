@@ -1,0 +1,27 @@
+id: test-budget-worker
+name: Test Budget Worker
+description: >
+  Test agent that accepts delegated work within a tree budget constraint.
+  Checks its tree budget allocation and completes the task.
+version: "1"
+
+model: claude-haiku-4-5-20251001
+temperature: 0
+
+tools:
+  - task:respond
+  - task:complete_task
+  - task:get_task_context
+  - task:tree_budget
+
+maxIterations: 5
+tokenBudget: 10000
+
+history:
+  pruneThreshold: 5000
+  protectedMessages: 5
+  summaryThreshold: 8000
+  summaryModel: claude-haiku-4-5-20251001
+
+capabilities:
+  - "budget test worker"

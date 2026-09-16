@@ -1,0 +1,26 @@
+id: test-counterpropose-responder
+name: Test Counter-Propose Responder
+description: >
+  Test agent that always counter-proposes delegated work instead of flat-accepting.
+  Exercises the counter-propose path of the handshake protocol.
+version: "1"
+
+model: claude-haiku-4-5-20251001
+temperature: 0
+
+tools:
+  - task:respond
+  - task:complete_task
+  - task:get_task_context
+
+maxIterations: 10
+tokenBudget: 10000
+
+history:
+  pruneThreshold: 8000
+  protectedMessages: 8
+  summaryThreshold: 10000
+  summaryModel: claude-haiku-4-5-20251001
+
+capabilities:
+  - "counter-propose delegated test tasks"

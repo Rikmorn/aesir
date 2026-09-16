@@ -1,11 +1,11 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env bun
 /**
  * Cleanup Script
  *
  * Manual trigger for data cleanup.
  *
  * Usage:
- *   npx tsx src/scripts/run-cleanup.ts [--dry-run]
+ *   bun src/scripts/run-cleanup.ts [--dry-run]
  *   npm run cleanup
  *   npm run cleanup -- --dry-run
  */

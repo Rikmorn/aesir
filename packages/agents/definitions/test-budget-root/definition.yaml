@@ -1,0 +1,34 @@
+id: test-budget-root
+name: Test Budget Root
+description: >
+  Test agent with a tight treeBudget that delegates to a child agent.
+  Exercises tree budget tracking, allocation, and exhaustion behavior.
+version: "1"
+
+model: claude-haiku-4-5-20251001
+temperature: 0
+
+tools:
+  - task:create_task
+  - task:complete_task
+  - task:delegate
+  - task:tree_budget
+  - coordination:wait_for
+  - coordination:wait_for_task
+  - directory:find
+
+maxIterations: 10
+tokenBudget: 10000
+treeBudget: 12000
+
+history:
+  pruneThreshold: 8000
+  protectedMessages: 8
+  summaryThreshold: 10000
+  summaryModel: claude-haiku-4-5-20251001
+
+capabilities:
+  - "initiate tree budget test workflows"
+
+triggers:
+  - event: testing.treebudget.start

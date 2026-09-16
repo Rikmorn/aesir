@@ -80,7 +80,7 @@ export function createKnowledgeUpdateTool(
         await knowledgeService.invalidate(id, reason);
 
         return {
-          content: `Invalidated: ${id}${reason ? " \u2014 " + reason : ""}`,
+          content: `Invalidated: ${id}${reason ? ` — ${reason}` : ""}`,
         };
       } catch (error) {
         const message =

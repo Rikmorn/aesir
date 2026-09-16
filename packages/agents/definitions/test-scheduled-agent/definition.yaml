@@ -1,0 +1,32 @@
+id: test-scheduled-agent
+name: Test Scheduled Agent
+description: >
+  Test agent with a schedule trigger. Exercises the scheduling system
+  with a cron expression that never fires naturally.
+version: "1"
+
+model: claude-haiku-4-5-20251001
+temperature: 0
+
+tools:
+  - task:create_task
+  - task:complete_task
+
+maxIterations: 5
+tokenBudget: 8000
+
+history:
+  pruneThreshold: 5000
+  protectedMessages: 5
+  summaryThreshold: 8000
+  summaryModel: claude-haiku-4-5-20251001
+
+capabilities:
+  - "exercise scheduled agent execution"
+
+triggers:
+  - event: testing.scheduled.start
+
+schedules:
+  - name: test-schedule
+    cron: "0 0 1 1 *"
