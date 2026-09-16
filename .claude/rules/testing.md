@@ -8,6 +8,18 @@ paths:
 
 # Unit Test Patterns
 
+## Make it fail once
+
+A passing check is evidence only when you know what would make it fail. Before trusting green, make a new test or guard fail on purpose: revert the fix and watch it go red, or feed the guard the thing it exists to catch.
+
+Three failures this repo has already had, all of which looked green:
+
+- `guard-schema-drizzle` counted `pgTable(`, which appears nowhere here, so the hook could never fire on any edit (#46).
+- The test-utils schema copy carried a constraint production did not have, so the test that would have caught the real bug passed instead (#42).
+- A Slack uniqueness test left `enterprise_id` NULL, and PostgreSQL treats NULLs as distinct, so the constraint under test was never reached (#62).
+
+Each cost more to find later than one deliberate red run would have cost to do.
+
 ## Structure
 
 Tests are co-located: `myModule.ts` → `myModule.test.ts` in the same directory.

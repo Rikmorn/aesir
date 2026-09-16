@@ -42,3 +42,32 @@ jobs:
 
       - name: Fast tests (no Docker)
         run: pnpm test:fast
+
+  integration:
+    name: integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        # version comes from "packageManager" in package.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace libraries (types resolve through dist/)
+        run: pnpm --filter @aesir/types --filter @aesir/platform --filter @aesir/observability --filter @aesir/test-utils build
+
+      # No service container: each suite starts its own PostgreSQL through
+      # testcontainers and applies the package's real migrations, so all it
+      # needs is the Docker daemon the runner already provides.
+      - name: Integration tests
+        run: pnpm test:integration
