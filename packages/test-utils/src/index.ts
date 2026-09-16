@@ -2,18 +2,16 @@
  * @aesir/test-utils
  *
  * Shared test infrastructure for the Aesir monorepo.
- * Provides factories, mocks, containers, and utilities for consistent testing.
+ *
+ * Deliberately small: it holds the helpers that more than one package needs and
+ * nothing speculative. Factories, MSW handlers, a credential-store double and
+ * transaction helpers all lived here with no importer, and a rule file pointing
+ * at them sent readers to code nothing ran (#44).
  */
 
-// Containers (testcontainers setup)
+// Testcontainers setup for suites that need a real PostgreSQL
 export * from "./containers/index.js";
-// Database utilities
-export * from "./db/index.js";
-// Factories
-export * from "./factories/index.js";
-// Migrations (SQL for test schemas)
+// Reads a package's real migrations, in journal order
 export * from "./migrations/index.js";
-// Mocks
+// Test doubles
 export * from "./mocks/index.js";
-// MSW (Mock Service Worker)
-export * from "./msw/index.js";
