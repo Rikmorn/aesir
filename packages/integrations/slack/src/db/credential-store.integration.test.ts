@@ -160,6 +160,41 @@ describe("SlackCredentialStore Integration", () => {
       }
     });
 
+    it("should soft-delete and re-store an enterprise installation", async () => {
+      // The test above passes whether or not uniqueness ignores soft-deleted
+      // rows, because it leaves enterprise_id NULL and PostgreSQL treats NULLs
+      // as distinct. Only a non-null enterprise_id reaches the constraint, so
+      // this is the case that fails against a plain UNIQUE (#62).
+      const store = createStore();
+      const teamId = trackTeam("T_STORE_ENT");
+
+      const first = await store.storeInstallation({
+        teamId,
+        enterpriseId: "E_STORE_ENT",
+        botToken: "xoxb-enterprise-1",
+      });
+      expect(first.isOk()).toBe(true);
+
+      const second = await store.storeInstallation({
+        teamId,
+        enterpriseId: "E_STORE_ENT",
+        botToken: "xoxb-enterprise-2",
+      });
+      expect(second.isOk()).toBe(true);
+
+      if (!first.isOk() || !second.isOk()) return;
+      expect(first.value).not.toBe(second.value);
+
+      const current = await store.fetchInstallation({
+        teamId,
+        enterpriseId: "E_STORE_ENT",
+      });
+      expect(current.isOk()).toBe(true);
+      if (current.isOk() && current.value) {
+        expect(current.value.id).toBe(second.value);
+      }
+    });
+
     it("should soft-delete existing installation when storing new one", async () => {
       const store = createStore();
       const teamId = trackTeam("T_STORE_2");

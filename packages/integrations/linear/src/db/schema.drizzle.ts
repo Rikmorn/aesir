@@ -7,6 +7,7 @@
  * DO NOT import this file in application code - use schema.ts instead.
  */
 
+import { sql } from "drizzle-orm";
 import {
   boolean,
   pgSchema,
@@ -52,8 +53,11 @@ export const credentials = linearSchema.table(
     deleted_at: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    // One active credential per workspace (Linear-specific, no provider field)
-    unique("credentials_workspace_unique").on(table.workspace_id),
+    // One ACTIVE credential per workspace. Partial, so a soft-deleted row does
+    // not block re-authorising the workspace (#62).
+    uniqueIndex("credentials_workspace_active_unique")
+      .on(table.workspace_id)
+      .where(sql`${table.deleted_at} IS NULL`),
   ],
 );
 

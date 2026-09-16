@@ -6,6 +6,7 @@
  */
 
 import { createId } from "@aesir/types";
+import { sql } from "drizzle-orm";
 import {
   boolean,
   pgSchema,
@@ -53,8 +54,11 @@ export const credentials = githubSchema.table(
     deleted_at: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    // One active credential per owner
-    unique("credentials_owner_unique").on(table.owner),
+    // One ACTIVE credential per owner. Partial, so a soft-deleted row does not
+    // block re-authorising the owner (#62).
+    uniqueIndex("credentials_owner_active_unique")
+      .on(table.owner)
+      .where(sql`${table.deleted_at} IS NULL`),
   ],
 );
 
