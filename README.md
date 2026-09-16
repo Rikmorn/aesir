@@ -13,7 +13,7 @@ Agentic development platform that automates software workflows - from feature re
 
 ## Prerequisites
 
-- Node.js 20+
+- Node 22 (pinned in `.nvmrc`)
 - pnpm 9.15+
 - bun 1.3+ (runs the TypeScript dev and seed scripts; pnpm remains the package manager)
 - Docker Desktop running (all services run containerized)
@@ -189,9 +189,11 @@ packages/
 |--------|-------------|
 | `pnpm build` | Compile TypeScript across all packages |
 | `pnpm typecheck` | Type check without emit |
-| `pnpm test` | Run all tests |
+| `pnpm test` | Run the unit tests in every package (the same files as `test:fast`) |
 | `pnpm test:fast` | Run unit tests only (skip integration/e2e) |
-| `pnpm test:integration` | Run integration tests (requires Docker) |
+| `pnpm test:integration` | Run integration tests (requires Docker; `pnpm test` does not run these) |
+| `pnpm test:sandbox` | Run sandbox tests (requires Docker; `pnpm test` does not run these) |
+| `pnpm --filter @aesir/agents test:agents` | Run the LLM-judged agent scenarios (requires `docker compose up`) |
 | `pnpm test:coverage` | Run with coverage report |
 | `pnpm lint` | Run Biome linting |
 | `pnpm lint:fix` | Auto-fix lint issues |
@@ -441,11 +443,18 @@ pnpm db:migrate
 ### Running Tests
 
 ```bash
-# Run all tests
+# Unit tests in every package (the same files test:fast runs)
 pnpm test
 
-# Run unit tests only (fast, no Docker needed)
+# Unit tests only (fast, no Docker needed)
 pnpm test:fast
+
+# Integration and sandbox suites (Docker) -- pnpm test does not run these
+pnpm test:integration
+pnpm test:sandbox
+
+# LLM-judged agent scenarios (docker compose up)
+pnpm --filter @aesir/agents test:agents
 
 # Run specific test file
 pnpm vitest run path/to/file.test.ts

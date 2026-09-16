@@ -3,7 +3,9 @@
   "references": [
     { "path": "packages/types" },
     { "path": "packages/platform" },
-    { "path": "packages/integrations" },
+    { "path": "packages/integrations/linear" },
+    { "path": "packages/integrations/github" },
+    { "path": "packages/integrations/slack" },
     { "path": "packages/observability" },
     { "path": "packages/agents" },
     { "path": "packages/dashboard" },

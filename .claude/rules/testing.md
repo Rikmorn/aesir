@@ -203,8 +203,9 @@ Haiku receives the scenario's `expect` criteria + formatted evidence and returns
 ## Running
 
 ```bash
-pnpm --filter @aesir/agents test:agents          # All scenarios
-pnpm --filter @aesir/agents test:agents -- --scenario my-scenario  # Single
+pnpm --filter @aesir/agents test:agents                    # All scenarios
+pnpm --filter @aesir/agents test:agents -- my-scenario     # One or more scenario IDs (positional)
+pnpm --filter @aesir/agents test:agents -- --tag handoff   # Every scenario carrying a tag
 ```
 
 Requires `docker compose up` (full stack running).

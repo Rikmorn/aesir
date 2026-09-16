@@ -43,9 +43,3 @@ Use `??` (nullish coalescing), not `||`, when defaulting a potentially nullish v
 Use `satisfies` for config-like const objects. It validates structure against a type *without* widening the inferred literal types. `const config = { ... } satisfies ConfigShape` keeps narrow inference (useful for lookups and discriminant checks) while catching shape errors; `const config: ConfigShape = { ... }` widens and loses that precision.
 
 Let inference handle internals; annotate at public API surfaces. Return types on every arrow function, variable types for locals, and generic parameters the call site would infer are noise — annotations can drift, inference can't. Do annotate exports, module-level types, and public function signatures where the shape is part of the contract.
-
-## Aesir specifics
-
-This repo's linter is Biome, so the suppression comment to avoid is `// biome-ignore`.
-
-Aesir has domain error classes such as `TokenBudgetExhaustedError`. When narrowing a caught error, chain `instanceof TokenBudgetExhaustedError` before `instanceof Error`.

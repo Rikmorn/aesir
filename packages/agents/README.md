@@ -170,15 +170,7 @@ pnpm --filter @aesir/agents test:agents -- --tag handoff  # Run scenarios by tag
 
 ### Scenarios
 
-| ID | Name | What it tests |
-|----|------|---------------|
-| `delegation` | Basic Delegation | Full delegate → handshake → wait → complete cycle |
-| `handoff` | Hand-off (Fire and Forget) | Delegate + handshake only, no wait for completion |
-| `chain` | Chain Delegation (A→B→C) | Multi-hop delegation with result propagation |
-| `rejection` | Rejection Handling | Delegatee rejects, assigner handles gracefully |
-| `timeout` | Timeout Handling | Delegatee stalls, assigner's timeout fires via pg-boss |
-| `subagent` | Sub-Agent Spawning | Parent spawns child via spawn_agent |
-| `tools` | Tool Integration | Exercises knowledge, directory, and communication tools |
+The registry is `allScenarios` in `scripts/agent-tests/scenarios/index.ts`; each scenario file beside it carries the `id`, `name`, `description`, `tags`, and `expect` criteria. Run with an unknown ID and the runner prints the IDs it knows.
 
 ### How It Works
 
@@ -214,12 +206,4 @@ pnpm --filter @aesir/agents test:agents -- --tag handoff  # Run scenarios by tag
 
 ### Test Agents
 
-Test agents live alongside production agents in `definitions/test-*/`. They use Haiku with low token budgets, are triggered by `testing.*` events, and exist solely for the integration test suite. Current test agents:
-
-- `test-delegate-assigner`, `test-delegate-acceptor` -- basic delegation pair
-- `test-handoff-assigner`, `test-handoff-acceptor` -- fire-and-forget pair
-- `test-chain-initiator`, `test-chain-relay` -- chain delegation (reuses `test-delegate-acceptor`)
-- `test-reject-assigner`, `test-delegate-rejector` -- rejection handling pair
-- `test-timeout-assigner`, `test-delegate-staller` -- timeout handling pair
-- `test-subagent-parent`, `test-subagent-child` -- sub-agent spawning pair
-- `test-tool-exerciser` -- standalone tool integration exerciser
+Test agents live alongside production agents in `definitions/test-*/`. They use Haiku with low token budgets, are triggered by `testing.*` events, and exist solely for the integration test suite. `ls definitions/test-*` lists the current set; each scenario's `expect` block in `scripts/agent-tests/scenarios/` names the agents it exercises.

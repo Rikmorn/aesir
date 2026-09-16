@@ -7,10 +7,10 @@ How guidance reaches whoever is building this repo, and why it is laid out this 
 | Layer | Path | Loaded by | Holds |
 |---|---|---|---|
 | Project | `CLAUDE.md` → `AGENTS.md` | every session, every subagent, sidekick's executor (explicit read) | what applies everywhere: architecture, commands, code patterns, the package pointer block |
-| Rules | `.claude/rules/*.md` | the main session (path-scoped by `paths:`); sidekick's executor (all files, explicit read); a Task subagent too — its four unscoped rule files are already in context at dispatch, and a path-scoped one arrives once it reads a matching file (touch-triggered) | domain rules: TypeScript, PostgreSQL, testing, sidekick's working standards, clean code, language, PM conventions, guidance authoring |
+| Rules | `.claude/rules/*.md` | the main session (path-scoped by `paths:`); sidekick's executor (all files, explicit read); a Task subagent too — every rule file without a `paths:` frontmatter (`grep -L '^paths:' .claude/rules/*.md` lists them; today all are `sk-*` files) is in context at dispatch, and a path-scoped one arrives once it reads a matching file (touch-triggered) | domain rules: TypeScript, PostgreSQL, testing, sidekick's working standards, clean code, language, PM conventions, guidance authoring |
 | Package | `packages/<pkg>/CLAUDE.md` | sessions started in that directory; the main session when it works on files there; a Task subagent too, once it reads a file inside that package (touch-triggered, not at dispatch) | what applies only to that package |
-| Package skills | `packages/dashboard/.claude/skills/*` | sessions started in `packages/dashboard` | impeccable, shadcn, vercel-react-best-practices |
-| Hooks | `.claude/settings.json` | each hook only on its own declared matcher: `guard-schema-drizzle` on `Edit`, `guard-env-commit` on `Bash`, Biome on `Edit\|Write\|MultiEdit`, `session-context` on `SessionStart` (not a tool call at all) | schema retention guard, `.env` staging guard, Biome on edit, context re-injection after compaction |
+| Package skills | `packages/dashboard/.claude/skills/*` | sessions started in `packages/dashboard`; a session started at the repo root too, once it reads a file inside the package (touch-triggered, measured 2026-09-16, Claude Code 2.1.273) | impeccable, shadcn, vercel-react-best-practices |
+| Hooks | `.claude/settings.json` | each hook only on its own declared matcher: `guard-schema-drizzle` on `Edit`, `guard-env-commit` on `Bash`, Biome on `Edit\|Write\|MultiEdit`, `session-context` on `SessionStart` (not a tool call at all). The guard hooks (`.claude/hooks/guard-*.sh`) need `python3` on `PATH` and the Biome hook needs `jq`; each script swallows the failure and exits 0, so a missing binary turns the hook into a silent no-op | schema retention guard, `.env` staging guard, Biome on edit, context re-injection after compaction |
 | Personal | `.claude/settings.local.json` (gitignored) | this machine | sidekick's config guard, personal permissions |
 
 ## Why the root file is a symlink
@@ -33,7 +33,7 @@ The symlink fails differently from the alternatives, and silently: on a checkout
 | headless, cwd = `packages/agents` | seen | not seen | seen (agents); not seen (dashboard) | seen (no dashboard skills) |
 | Task subagent from root, before file access (A) | seen — stale, see note | not seen | not seen | seen |
 | Task subagent from root, after reading a dashboard file (B) | seen — stale, unchanged from A | seen | seen (dashboard); not seen (agents) | seen — unchanged from A |
-| Main session, cwd = repo root, after reading one `packages/agents/` file | not tested | not tested | seen (agents); not tested (dashboard) | not tested |
+| Main session, cwd = repo root, after reading one file inside a package (measured 2026-09-16, Claude Code 2.1.273) | not tested | not tested | seen (the package whose file was read) | seen (the dashboard skills, once a `packages/dashboard/` file is read) |
 
 `not seen` means a row's method asked the question and the layer was absent; `not tested` means that row's method never asked, so no claim is made either way. The two Task-subagent rows' `AGENTS.md` content is also a stale pre-restructure snapshot, captured at dispatch rather than read fresh from disk, not the file as it currently exists. Full per-cell quotes are reproducible via §Re-running the experiment.
 

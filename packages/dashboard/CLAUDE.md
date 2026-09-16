@@ -4,11 +4,11 @@ Next.js 15 operations dashboard (App Router, `basePath=/dashboard`, port 3005, s
 
 ## Design system
 
-Every visual decision traces back to `.interface-design/system.md` at the repo root: colour tokens, typography, spacing, depth, status indicators, component patterns. Read it before creating or changing UI.
+The design tokens (colour, typography, spacing, radii) are the `@theme inline` block in `src/app/globals.css`, and the component primitives are the shadcn `new-york` set under `src/components/ui/`. Read both before creating or changing UI, and extend the tokens rather than hard-coding values in a component.
 
 ## Skills in this package
 
-`impeccable` (UI critique and polish), `shadcn` (component library conventions) and `vercel-react-best-practices` (Vercel's React guidance) are installed under `.claude/skills/` here and load when a session starts in this directory. They are third-party and overwritten on update: never edit them in place; scoping notes go in this file.
+`impeccable` (UI critique and polish), `shadcn` (component library conventions) and `vercel-react-best-practices` (Vercel's React guidance) are installed under `.claude/skills/` here. They load for a session started in this directory, and for a session started at the repo root once it reads a file in this package (measured 2026-09-16, Claude Code 2.1.273). The `shadcn` skill injects `npx shadcn@latest info --json` inline as it loads; that command succeeds only with `packages/dashboard` as the working directory and exits 1 from the repo root. They are third-party and overwritten on update: never edit them in place; scoping notes go in this file.
 
 ## Patterns that bite
 

@@ -226,7 +226,7 @@ The `seed:permissions` and `migrate` scripts run under [bun](https://bun.sh), wh
 
 **Build/check:** `pnpm run build` | `pnpm run typecheck`
 
-**Test:** `pnpm test` (all) | `pnpm test:fast` (no Docker) | `pnpm --filter @aesir/agents test:agents` (agent integration tests, requires `docker compose up`)
+**Test:** `pnpm test` (unit tests in every package; the same files as `test:fast`) | `pnpm test:fast` (no Docker) | `pnpm test:integration` / `pnpm test:sandbox` (Docker suites; `pnpm test` does not run them) | `pnpm --filter @aesir/agents test:agents` (LLM-judged agent scenarios, requires `docker compose up`)
 
 **Lint:** `pnpm run lint` | `pnpm run lint:fix` | `pnpm run format`
 
