@@ -69,5 +69,17 @@ jobs:
       # No service container: each suite starts its own PostgreSQL through
       # testcontainers and applies the package's real migrations, so all it
       # needs is the Docker daemon the runner already provides.
+      # shared/env/config.ts validates at import time and calls process.exit(1)
+      # when these four are unset, which kills the whole test file before a
+      # single test runs. A developer's gitignored .env supplies them locally,
+      # and a runner has none. Placeholders are enough: the suite mocks the LLM
+      # and MCP boundaries, so nothing here reaches a real API. The same four
+      # fallbacks in __integration__/setup.ts cannot cover this -- that module
+      # is imported after router.js, which reaches config.ts first (#69).
       - name: Integration tests
         run: pnpm test:integration
+        env:
+          ANTHROPIC_API_KEY: test-key-not-real
+          LINEAR_TEAM_ID: test-team
+          GITHUB_REPO: test-org/test-repo
+          SLACK_CHANNEL_ID: C000TEST
