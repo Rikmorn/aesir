@@ -17,10 +17,10 @@ How guidance reaches whoever is building this repo, and why it is laid out this 
 
 `CLAUDE.md` at the repo root is a symlink to `AGENTS.md`, not an `@`-import line. Two measured facts, from `docs/superpowers/harness-audit/import-experiment.md`, favour the symlink:
 
-- An `@` import is not expanded for a session started inside a package. A nested `CLAUDE.md`'s upward `@../AGENTS.md` reaches a Task subagent's context as the literal string, never as the file it names (experiments E1, E2a, E2b).
+- An `@` import is not expanded for a session started inside a package (experiments E1, E2a). A nested `CLAUDE.md`'s upward `@../../AGENTS.md` reaches a Task subagent's context as the literal string, never as the file it names (experiment E2b).
 - A symlink is read as content, from both the root and a package directory. Heading count comes back `1` from both cwds, which no import-based layout achieved from a package directory (experiment E3).
 
-`sk-executor` reads `./CLAUDE.md` by a fixed path (`~/.claude/agents/sk-executor.md:40`), and `Read` does not expand `@`. A plain `@AGENTS.md` line at that path hands the executor eleven characters, not the guidance; through the symlink, the same read returns `AGENTS.md`'s full content.
+`sk-executor` reads `./CLAUDE.md` by a fixed path (`~/.claude/agents/sk-executor.md:40`), and `Read` does not expand `@`. A plain `@AGENTS.md` line at that path hands the executor ten characters, not the guidance; through the symlink, the same read returns `AGENTS.md`'s full content.
 
 ## What each kind of worker sees (measured 2026-09-16, Claude Code 2.1.273)
 
@@ -48,10 +48,13 @@ All three clauses pass, each against its own row in `after.md`:
 ## Consequences
 
 - A task that sends a worker into a package names that package's `CLAUDE.md`; the pointer block in `AGENTS.md` is the backstop.
-- Sidekick's executor reads `./CLAUDE.md` and `./.claude/rules/*.md`; anything it must know lives in one of those or is cited by the task.
+- Sidekick's executor reads `./CLAUDE.md`, `./.claude/rules/*.md`, and `./.sidekick/decisions/*.md`; anything it must know lives in one of those or is cited by the task.
 - Rules are the expensive layer (every main-session turn). Add one only when reasoning alone can't get there (`.claude/rules/sk-guidance-authoring.md` §Admission).
 - Third-party skills are never edited; scoping goes in the package `CLAUDE.md`.
 - Hooks in `.claude/settings.json` take effect mid-session, not only at session start: a `PostToolUse` Biome hook added earlier in a session fired on a later `Edit` in that same session, without a restart (measured, Claude Code 2.1.273).
+- A Task subagent's `AGENTS.md` is the parent session's copy from session start, not the file on disk. Measured: after the file was restructured, a subagent dispatched from a session predating the change still reported the old headings.
+- A session that edits `AGENTS.md` or a package `CLAUDE.md` restarts before dispatching workers.
+- `/sk-build` dispatching from a long-running session hands its executors stale guidance.
 
 ## Re-running the experiment
 
