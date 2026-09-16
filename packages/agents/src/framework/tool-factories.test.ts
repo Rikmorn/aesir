@@ -8,6 +8,7 @@
 
 import type { DevContainerManager, PinoLogger } from "@aesir/platform";
 import { describe, expect, it, vi } from "vitest";
+import { toAnthropicTool } from "../shared/agent-loop/run-agent-loop.js";
 import type { CorrelationService } from "../shared/services/correlation-service.js";
 import type { DirectoryService } from "../shared/services/directory-service.js";
 import type { IdentityService } from "../shared/services/identity-service.js";
@@ -433,5 +434,28 @@ describe("registerAllTools", () => {
         "All tool factories registered",
       );
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Anthropic Input Schema (#72)
+// ---------------------------------------------------------------------------
+
+describe("Anthropic input schema conversion", () => {
+  it("should convert every registered tool to a top-level object schema", () => {
+    const { registry } = setupRegistry();
+    const ctx = createMockContext();
+
+    const tools = registry.resolve(registry.listRegistered(), ctx);
+
+    for (const tool of tools) {
+      const converted = toAnthropicTool(tool);
+
+      expect(
+        converted.input_schema.type,
+        `Tool "${tool.name}" converts to a schema with no top-level "object" type. ` +
+          `The Anthropic API rejects it with 400 input_schema.type: Field required.`,
+      ).toBe("object");
+    }
   });
 });

@@ -75,7 +75,7 @@ vi.mock("@anthropic-ai/sdk/helpers/beta/zod", () => ({
 }));
 
 // Import AFTER mocks are set up
-const { runAgentLoop } = await import("./run-agent-loop.js");
+const { runAgentLoop, toAnthropicTool } = await import("./run-agent-loop.js");
 
 // ---------------------------------------------------------------------------
 // Test Helpers
@@ -1268,5 +1268,32 @@ describe("runAgentLoop", () => {
     expect(result.status).toBe("completed");
     expect(result.output).toBe("Final answer");
     expect(result.toolCallCount).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// toAnthropicTool
+// ---------------------------------------------------------------------------
+
+describe("toAnthropicTool", () => {
+  it("converts an object schema to an input_schema the API accepts", () => {
+    const tool = createTestTool("object_tool");
+
+    expect(toAnthropicTool(tool).input_schema.type).toBe("object");
+  });
+
+  it("rejects a schema that converts to a union instead of an object", () => {
+    const unionTool: ToolDefinition = {
+      name: "union_tool",
+      description: "Test tool with a discriminated union input schema",
+      inputSchema: z.discriminatedUnion("kind", [
+        z.object({ kind: z.literal("a"), a: z.string() }),
+        z.object({ kind: z.literal("b"), b: z.string() }),
+      ]),
+      execute: async () => ({ content: "unreachable" }),
+    };
+
+    expect(() => toAnthropicTool(unionTool)).toThrow(/union_tool/);
+    expect(() => toAnthropicTool(unionTool)).toThrow(/anyOf/);
   });
 });
