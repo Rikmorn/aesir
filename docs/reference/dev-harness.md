@@ -7,7 +7,7 @@ How guidance reaches whoever is building this repo, and why it is laid out this 
 | Layer | Path | Loaded by | Holds |
 |---|---|---|---|
 | Project | `CLAUDE.md` → `AGENTS.md` | every session, every subagent, sidekick's executor (explicit read) | what applies everywhere: architecture, commands, code patterns, the package pointer block |
-| Rules | `.claude/rules/*.md` | the main session (path-scoped by `paths:`); sidekick's executor (all files, explicit read); a Task subagent too — its four unscoped rule files are already in context at dispatch, and a path-scoped one arrives once it reads a matching file (touch-triggered), overturning the earlier assumption that subagents never see `.claude/rules/` | domain rules: TypeScript, PostgreSQL, testing, sidekick's working standards, clean code, language, PM conventions, guidance authoring |
+| Rules | `.claude/rules/*.md` | the main session (path-scoped by `paths:`); sidekick's executor (all files, explicit read); a Task subagent too — its four unscoped rule files are already in context at dispatch, and a path-scoped one arrives once it reads a matching file (touch-triggered) | domain rules: TypeScript, PostgreSQL, testing, sidekick's working standards, clean code, language, PM conventions, guidance authoring |
 | Package | `packages/<pkg>/CLAUDE.md` | sessions started in that directory; the main session when it works on files there; a Task subagent too, once it reads a file inside that package (touch-triggered, not at dispatch) | what applies only to that package |
 | Package skills | `packages/dashboard/.claude/skills/*` | sessions started in `packages/dashboard` | impeccable, shadcn, vercel-react-best-practices |
 | Hooks | `.claude/settings.json` | each hook only on its own declared matcher: `guard-schema-drizzle` on `Edit`, `guard-env-commit` on `Bash`, Biome on `Edit\|Write\|MultiEdit`, `session-context` on `SessionStart` (not a tool call at all) | schema retention guard, `.env` staging guard, Biome on edit, context re-injection after compaction |
@@ -54,7 +54,7 @@ All three clauses pass, measured 2026-09-16 and reproducible via §Re-running th
 - Rules are the expensive layer (every main-session turn). Add one only when reasoning alone can't get there (`.claude/rules/sk-guidance-authoring.md` §Admission).
 - Third-party skills are never edited; scoping goes in the package `CLAUDE.md`.
 - Hooks in `.claude/settings.json` take effect mid-session, not only at session start: a `PostToolUse` Biome hook added earlier in a session fired on a later `Edit` in that same session, without a restart (measured, Claude Code 2.1.273).
-- The Biome hook matches `Edit\|Write\|MultiEdit` only; a file written through the shell — which this repo's own bypass-permissions instructions direct agents to prefer — is not formatted by it.
+- The Biome hook matches `Edit|Write|MultiEdit` only; a file written through the shell — which this repo's own bypass-permissions instructions direct agents to prefer — is not formatted by it.
 - A Task subagent's `AGENTS.md` is the parent session's copy from session start, not the file on disk. Measured: after the file was restructured, a subagent dispatched from a session predating the change still reported the old headings.
 - A session that edits `AGENTS.md` or a package `CLAUDE.md` restarts before dispatching workers.
 - `/sk-build` dispatching from a long-running session hands its executors stale guidance.
