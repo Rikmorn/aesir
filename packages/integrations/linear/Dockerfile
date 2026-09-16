@@ -12,7 +12,7 @@ COPY packages/test-utils/package.json ./packages/test-utils/
 COPY packages/integrations/linear/package.json ./packages/integrations/linear/
 
 # Install pnpm and dependencies
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+RUN corepack enable && corepack prepare pnpm@12.4.2 --activate
 RUN pnpm install --frozen-lockfile
 
 # Copy source

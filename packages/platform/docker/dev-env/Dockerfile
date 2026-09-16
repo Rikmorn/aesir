@@ -8,7 +8,7 @@
 FROM node:20-slim
 
 # Enable corepack and prepare pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@12.4.2 --activate
 
 # Install system packages for development
 # - git: version control

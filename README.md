@@ -14,7 +14,7 @@ Agentic development platform that automates software workflows - from feature re
 ## Prerequisites
 
 - Node 22 (pinned in `.nvmrc`)
-- pnpm 9.15+
+- pnpm 12.4+
 - bun 1.3+ (runs the TypeScript dev and seed scripts; pnpm remains the package manager)
 - Docker Desktop running (all services run containerized)
 - Slack workspace with admin access to create apps

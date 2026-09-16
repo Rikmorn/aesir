@@ -8,7 +8,7 @@ FROM node:22-slim AS builder
 WORKDIR /app
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+RUN corepack enable && corepack prepare pnpm@12.4.2 --activate
 
 # Copy workspace config files first (better caching)
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./

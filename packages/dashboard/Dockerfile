@@ -6,7 +6,7 @@
 
 # Stage 1: Base image with pnpm
 FROM node:22-slim AS base
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+RUN corepack enable && corepack prepare pnpm@12.4.2 --activate
 
 # Stage 2: Install dependencies
 FROM base AS deps
