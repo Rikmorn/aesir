@@ -65,6 +65,12 @@ COPY --from=builder /app/packages/dashboard/.next/static ./packages/dashboard/.n
 # Public assets (fonts, images, etc.)
 COPY --from=builder /app/packages/dashboard/public ./packages/dashboard/public
 
+# Next writes the incremental cache here at runtime, and the copies above land
+# root-owned, so aesir cannot create the directory itself. Only the cache is
+# handed over: the application files stay read-only to the runtime user.
+RUN mkdir -p ./packages/dashboard/.next/cache \
+    && chown -R aesir:aesir ./packages/dashboard/.next/cache
+
 USER aesir
 
 EXPOSE 3005
