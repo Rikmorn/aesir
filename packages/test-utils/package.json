@@ -25,7 +25,7 @@
     "@testcontainers/postgresql": "^11.14.0",
     "@types/node": "^22.19.7",
     "postgres": "^3.4.9",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "vitest": "^5.0.1"
   }
 }
