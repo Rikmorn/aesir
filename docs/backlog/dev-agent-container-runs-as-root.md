@@ -14,4 +14,4 @@ Pick this up before deploying anywhere the container boundary needs to hold agai
 
 ## Reference
 - Rikmorn/aesir#12 (status lives there)
-- `git show v2.9:.planning/todos/pending/2026-01-19-dev-agent-container-root-user.md`
+- `git show 39c7015c:.planning/todos/pending/2026-01-19-dev-agent-container-root-user.md`

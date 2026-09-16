@@ -1825,7 +1825,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ## v2.9
 
-_Source: `.planning/REQUIREMENTS.md` at the time of the reset (retrievable with `git show v2.9:.planning/REQUIREMENTS.md`)_
+_Source: `.planning/REQUIREMENTS.md` at the time of the reset (retrievable with `git show 39c7015c:.planning/REQUIREMENTS.md`)_
 
 
 **Defined:** 2026-02-20

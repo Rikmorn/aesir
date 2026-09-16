@@ -10,7 +10,7 @@ const archives = join(root, "docs", "history", "milestones");
 // Phase records live in two roots: .planning/phases/ for most milestones, and
 // .planning/milestones/v2.8-phases/ for v2.8, whose phase directories were archived under the
 // milestone instead of being left in the shared tree. Both use the same "<num>-<slug>/" shape.
-// Forward slashes are literal so the provenance strings below read as "git show v2.9:<path>".
+// Forward slashes are literal so the provenance strings below read as "git show 39c7015c:<path>".
 const phaseRoots = [".planning/phases", ".planning/milestones/v2.8-phases"];
 
 type Phase = { num: string; name: string; goal: string; plans: number; status: string; score: string; human: string[] };
@@ -102,7 +102,7 @@ function extractHumanItems(v: string, sourcePath: string): string[] {
   ].sort((a, b) => a.index - b.index);
   if (found.length) return found.map((m) => m.text.trim());
 
-  return body.trim() ? [`items recorded in a format this index does not enumerate — see git show v2.9:${sourcePath}`] : [];
+  return body.trim() ? [`items recorded in a format this index does not enumerate — see git show 39c7015c:${sourcePath}`] : [];
 }
 
 // verification reports

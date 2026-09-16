@@ -18,4 +18,4 @@ These are the working principles the GSD-era build wrote down for itself, one ro
 | E2E testing catches what static verification misses | v2.7 live validation found 5 critical/major issues (orphan signals, depth tracking, timeout metadata) that code review and unit tests did not catch. Budget time for live validation of multi-agent workflows. |
 | Hard constraints for critical agent behaviors | QA agent ended without completing tasks until a hard MUST constraint was added. For safety-critical tool calls (task:complete_task before end), strong directives earn their place. |
 
-Sources: `.planning/PROJECT.md` §Principles (retrievable with `git show v2.9:.planning/PROJECT.md`).
+Sources: `.planning/PROJECT.md` §Principles (retrievable with `git show 39c7015c:.planning/PROJECT.md`).

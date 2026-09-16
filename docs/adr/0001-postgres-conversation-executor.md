@@ -22,7 +22,7 @@ Aesir runs a Postgres-backed `ConversationExecutor` as the sole durability and o
 
 ## Sources
 
-- `git show v2.9:.planning/PROJECT.md`, `## Key Decisions`: rows "Postgres-backed ConversationExecutor" and "pg-boss for timeout scheduling only" (the same table is preserved verbatim in `docs/history/decisions-log.md`, Part B).
-- `git show v2.9:.planning/MILESTONES.md`, `## v2.3 Unified Agent Framework (Shipped: 2026-02-04)` — "cutting Docker services from 12 to 6".
+- `git show 39c7015c:.planning/PROJECT.md`, `## Key Decisions`: rows "Postgres-backed ConversationExecutor" and "pg-boss for timeout scheduling only" (the same table is preserved verbatim in `docs/history/decisions-log.md`, Part B).
+- `git show 39c7015c:.planning/MILESTONES.md`, `## v2.3 Unified Agent Framework (Shipped: 2026-02-04)` — "cutting Docker services from 12 to 6".
 - `docs/history/specs/2.3-spec-raw.md`, `### 3. Execution Model`; `#### Signal Queueing`; Appendix `### A.1 Why Temporal Is Being Replaced`.
 - `docs/history/specs/design-vision.md`, `## Design Decisions Log`: row "Signal queueing, not retry backoff".

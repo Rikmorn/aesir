@@ -21,6 +21,6 @@ Agents call integrations exclusively through MCP HTTP calls — `callMcpTool()` 
 
 ## Sources
 
-- `git show v2.9:.planning/PROJECT.md`, `## Key Decisions`: rows "MCP for agent-integration", "3-layer architecture", "X-Task-ID header for MCP correlation", "Custom MCP retry loop over fetch-retry-ts".
+- `git show 39c7015c:.planning/PROJECT.md`, `## Key Decisions`: rows "MCP for agent-integration", "3-layer architecture", "X-Task-ID header for MCP correlation", "Custom MCP retry loop over fetch-retry-ts".
 - `docs/history/specs/design-vision.md`, `## Design Decisions Log`: row "Integration layer owns correlation, not router".
 - `AGENTS.md`, `### Agent MCP Communication` — current MCP client location, endpoints, and agent configuration.

@@ -22,8 +22,8 @@ This is a live contradiction with design-vision's "Orchestrators Collaborate, Su
 
 ## Sources
 
-- `git show v2.9:.planning/ROADMAP.md`, `### Phase 85: Sub-Agent Discovery — DEFERRED` (Status, Reason, original Success Criteria).
+- `git show 39c7015c:.planning/ROADMAP.md`, `### Phase 85: Sub-Agent Discovery — DEFERRED` (Status, Reason, original Success Criteria).
 - `docs/history/specs/2.9-platform-completion.md`, `## ~~Phase 6: Sub-Agent Discovery~~ (Deferred to v3.0)` (Status, Rationale, the unresolved questions named within it); `## Deferred Work`: row DISC-01.
-- `git show v2.9:.planning/STATE.md`, Pending Todos, item 8: "Phase 85 design decisions for v3.0."
+- `git show 39c7015c:.planning/STATE.md`, Pending Todos, item 8: "Phase 85 design decisions for v3.0."
 - `docs/history/specs/design-vision.md`, `### Orchestrators Collaborate, Sub-Agents Execute` — the principle this ADR contradicts.
 - `docs/history/phases.md`, row 85 (0 plans, no verification status — consistent with deferral, not execution).

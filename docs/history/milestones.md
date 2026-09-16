@@ -183,4 +183,4 @@ v2.9 ran from 2026-02-20 to 2026-02-23 and was never shipped. Seven of its eight
 
 ---
 
-Sources: `git show v2.9:.planning/MILESTONES.md`, `git show v2.9:.planning/STATE.md`, `git show v2.9:.planning/ROADMAP.md`, `git show v2.9:.planning/PROJECT.md`, `git tag -n3` (against the tag set once v2.9 exists).
+Sources: `git show 39c7015c:.planning/MILESTONES.md`, `git show 39c7015c:.planning/STATE.md`, `git show 39c7015c:.planning/ROADMAP.md`, `git show 39c7015c:.planning/PROJECT.md`, `git tag -n3` (against the tag set once v2.9 exists).

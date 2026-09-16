@@ -20,6 +20,6 @@ Aesir runs one agent service — a single HTTP server, one port, one process —
 
 ## Sources
 
-- `git show v2.9:.planning/PROJECT.md`, `## Key Decisions`: row "Single agent service".
-- `git show v2.9:.planning/MILESTONES.md`, `## v2.3 Unified Agent Framework (Shipped: 2026-02-04)` — "replacing 6 Docker services (Temporal, Temporal UI, router, dev-agent, dev-agent-worker, product-agent)".
+- `git show 39c7015c:.planning/PROJECT.md`, `## Key Decisions`: row "Single agent service".
+- `git show 39c7015c:.planning/MILESTONES.md`, `## v2.3 Unified Agent Framework (Shipped: 2026-02-04)` — "replacing 6 Docker services (Temporal, Temporal UI, router, dev-agent, dev-agent-worker, product-agent)".
 - `docs/history/specs/2.3-spec-raw.md`, `### 5. Agent Registry + Single Service`, `#### Single Service`; Appendix `### A.2 Industry Research: How Agent Frameworks Handle Spawning & Deployment`.
