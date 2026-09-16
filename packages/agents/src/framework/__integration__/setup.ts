@@ -23,15 +23,6 @@
  * ```
  */
 
-// Set required env vars BEFORE any framework module imports
-// to prevent process.exit(1) from shared/env/config.ts Zod validation.
-process.env.ANTHROPIC_API_KEY =
-  process.env.ANTHROPIC_API_KEY || "test-key-not-real";
-process.env.LINEAR_TEAM_ID = process.env.LINEAR_TEAM_ID || "test-team";
-process.env.GITHUB_REPO = process.env.GITHUB_REPO || "test-org/test-repo";
-process.env.SLACK_CHANNEL_ID = process.env.SLACK_CHANNEL_ID || "C000TEST";
-process.env.NODE_ENV = "test";
-
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
