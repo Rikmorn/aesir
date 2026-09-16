@@ -6,7 +6,7 @@ export const parallelAllFailScenario: AgentTestScenario = {
   description:
     "Tests parallel delegation with all_required policy where one worker rejects. The group becomes unsatisfiable and the delegator handles the partial failure gracefully.",
   trigger: {
-    eventType: "testing.parallel.allfail.start",
+    eventType: "testing.parallel_allfail.start",
   },
   timeoutMs: 90_000,
   expect: `

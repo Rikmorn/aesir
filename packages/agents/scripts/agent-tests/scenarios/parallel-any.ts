@@ -6,7 +6,7 @@ export const parallelAnyScenario: AgentTestScenario = {
   description:
     "Tests parallel delegation with any_sufficient policy: delegator sends a group of 2 tasks, wakes on first completion, checks group status, and completes.",
   trigger: {
-    eventType: "testing.parallel.any.start",
+    eventType: "testing.parallel_any.start",
   },
   timeoutMs: 90_000,
   expect: `
