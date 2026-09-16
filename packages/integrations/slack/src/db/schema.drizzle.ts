@@ -7,6 +7,7 @@
  * DO NOT import this file in application code - use schema.ts instead.
  */
 
+import { sql } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -14,7 +15,6 @@ import {
   primaryKey,
   text,
   timestamp,
-  unique,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { customAlphabet } from "nanoid";
@@ -70,10 +70,12 @@ export const installations = slackSchema.table(
     deleted_at: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    unique("installations_team_enterprise_unique").on(
-      table.team_id,
-      table.enterprise_id,
-    ),
+    // One ACTIVE installation per team+enterprise. Partial, so a soft-deleted
+    // row does not block re-installing (#62). NULLs stay distinct, as before,
+    // so this still does not constrain ordinary (non-enterprise) installs.
+    uniqueIndex("installations_team_enterprise_active_unique")
+      .on(table.team_id, table.enterprise_id)
+      .where(sql`${table.deleted_at} IS NULL`),
   ],
 );
 
