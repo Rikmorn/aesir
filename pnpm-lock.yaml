@@ -397,6 +397,9 @@ importers:
       '@types/express':
         specifier: ^4.17.25
         version: 4.17.25
+      '@types/node':
+        specifier: ^22.19.7
+        version: 22.20.3
       '@types/pg':
         specifier: ^8.23.1
         version: 8.23.1
@@ -458,6 +461,9 @@ importers:
       '@types/express':
         specifier: ^4.17.25
         version: 4.17.25
+      '@types/node':
+        specifier: ^22.19.7
+        version: 22.20.3
       '@types/pg':
         specifier: ^8.23.1
         version: 8.23.1
@@ -525,6 +531,9 @@ importers:
       '@types/express':
         specifier: ^4.17.25
         version: 4.17.25
+      '@types/node':
+        specifier: ^22.19.7
+        version: 22.20.3
       '@types/pg':
         specifier: ^8.23.1
         version: 8.23.1
@@ -608,6 +617,9 @@ importers:
       '@types/dockerode':
         specifier: ^4.0.1
         version: 4.0.1
+      '@types/node':
+        specifier: ^22.19.7
+        version: 22.20.3
       '@types/pg':
         specifier: ^8.23.1
         version: 8.23.1
