@@ -11,10 +11,6 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(currentDir, "../../"),
   // Sub-path routing for Nginx reverse proxy
   basePath: "/dashboard",
-  // Biome handles linting, not ESLint
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   // Keep type safety -- typecheck runs separately
   typescript: {
     ignoreBuildErrors: false,
