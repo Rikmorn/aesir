@@ -434,7 +434,7 @@ pnpm db:migrate
 
 ## AI Tooling
 
-`AGENTS.md` at the repo root is the ground truth for AI coding tools; `.claude/CLAUDE.md` imports it for Claude Code. Rules, hooks, and settings live under `.claude/`. The build workflow is [sidekick](https://github.com/Rikmorn/sidekick), which this repo also serves as a test bench for; see the "Sidekick Test Bench" section of `AGENTS.md`.
+`AGENTS.md` at the repo root is the ground truth for AI coding tools; `CLAUDE.md` is a symlink to it, so Claude Code reads the same file (`docs/reference/dev-harness.md` covers how guidance is layered and reaches each kind of worker). Rules, hooks, and settings live under `.claude/`. The build workflow is [sidekick](https://github.com/Rikmorn/sidekick), which this repo also serves as a test bench for; see the "Sidekick Test Bench" section of `AGENTS.md`.
 
 ## Development
 

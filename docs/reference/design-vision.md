@@ -18,7 +18,7 @@ There is a clear responsibility boundary between what agents decide and what the
 
 **Infrastructure guarantees:** timeouts, retries, heartbeats, conversation durability, signal delivery, sandbox isolation, token budget enforcement, history compaction.
 
-If framework code inspects agent output with `if/else` logic to decide what happens next, that crosses the boundary — the agent makes that decision through its own tools and reasoning, not through code wrapped around it. AGENTS.md's Agent-First Decision Checklist exists to catch exactly this before it lands.
+If framework code inspects agent output with `if/else` logic to decide what happens next, that crosses the boundary — the agent makes that decision through its own tools and reasoning, not through code wrapped around it. `packages/agents/CLAUDE.md`'s Agent-First Decision Checklist exists to catch exactly this before it lands.
 
 ### Framework Provides Mechanism, Agent Provides Intelligence
 

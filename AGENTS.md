@@ -4,7 +4,7 @@ Agentic development platform that automates software workflows -- from feature r
 
 ## Working inside a package
 
-Each package that has its own concerns carries a `CLAUDE.md` you read first when working there. A Task subagent picks one up on its own, on its first read of a file in that package -- not at dispatch. Sidekick's `sk-executor` does not: it reads a fixed list of paths (`./CLAUDE.md`, `./.claude/rules/*.md`, `./.sidekick/decisions/*.md`) and never opens a nested file on its own. The root `CLAUDE.md` is a symlink to this file, so a session started inside a package sees this pointer block too. Even so, the task that sends a worker into a package should name that package's `CLAUDE.md`; if it didn't, read it anyway:
+Each package that has its own concerns carries a `CLAUDE.md` you read first when working there. A Task subagent picks one up on its own, on its first read of a file in that package -- not at dispatch. Sidekick's `sk-executor` does not: it reads a fixed list of paths (`./CLAUDE.md`, `./.claude/rules/*.md`, any `./.sidekick/decisions/*.md` whose name matches the task's surface area) and never opens a nested `CLAUDE.md` on its own. The root `CLAUDE.md` is a symlink to this file, so a session started inside a package sees this pointer block too. Even so, the task that sends a worker into a package should name that package's `CLAUDE.md`; if it didn't, read it anyway:
 
 - `packages/agents/CLAUDE.md` -- the agent-first checklist, prompt rules, runtime gotchas
 - `packages/dashboard/CLAUDE.md` -- the design system, UI skills, server/client boundary rules
