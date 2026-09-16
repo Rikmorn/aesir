@@ -75,8 +75,11 @@ export default defineConfig({
           statements: 50,
         },
       },
-      // vitest 5's coverageConfigDefaults.exclude is [] (measured), so every
-      // entry here must be spelled out -- none of these are inherited.
+      // coverageConfigDefaults.exclude is [] in 5.0.1, yet removing the first
+      // three below changes the report in no way (measured: same totals, same
+      // 178 lines), so v8 drops them by an implicit rule the defaults array
+      // does not describe. They are kept so the exclusion is stated rather
+      // than resting on undocumented behaviour.
       exclude: [
         "**/node_modules/**",
         "**/dist/**",
