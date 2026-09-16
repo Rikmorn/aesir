@@ -8,12 +8,14 @@
  * Run with: pnpm test:integration
  */
 
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   cleanupPostgresContainer,
   createMockLogger,
   type PostgresContainerContext,
+  readJournalMigrations,
   setupPostgresContainer,
-  slackMigrationSql,
 } from "@aesir/test-utils";
 import type { MCPLogger } from "@aesir/types";
 import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -93,7 +95,14 @@ describe("SlackCredentialStore Integration", () => {
     db = drizzle(sql);
 
     // Run migrations
-    await containerCtx.sql.unsafe(slackMigrationSql);
+    await containerCtx.sql.unsafe(
+      await readJournalMigrations(
+        path.resolve(
+          path.dirname(fileURLToPath(import.meta.url)),
+          "migrations",
+        ),
+      ),
+    );
   }, 60000);
 
   afterAll(async () => {
@@ -148,6 +157,41 @@ describe("SlackCredentialStore Integration", () => {
       expect(result.isOk()).toBe(true);
       if (result.isOk()) {
         expect(result.value).toMatch(/^cred_/);
+      }
+    });
+
+    it("should soft-delete and re-store an enterprise installation", async () => {
+      // The test above passes whether or not uniqueness ignores soft-deleted
+      // rows, because it leaves enterprise_id NULL and PostgreSQL treats NULLs
+      // as distinct. Only a non-null enterprise_id reaches the constraint, so
+      // this is the case that fails against a plain UNIQUE (#62).
+      const store = createStore();
+      const teamId = trackTeam("T_STORE_ENT");
+
+      const first = await store.storeInstallation({
+        teamId,
+        enterpriseId: "E_STORE_ENT",
+        botToken: "xoxb-enterprise-1",
+      });
+      expect(first.isOk()).toBe(true);
+
+      const second = await store.storeInstallation({
+        teamId,
+        enterpriseId: "E_STORE_ENT",
+        botToken: "xoxb-enterprise-2",
+      });
+      expect(second.isOk()).toBe(true);
+
+      if (!first.isOk() || !second.isOk()) return;
+      expect(first.value).not.toBe(second.value);
+
+      const current = await store.fetchInstallation({
+        teamId,
+        enterpriseId: "E_STORE_ENT",
+      });
+      expect(current.isOk()).toBe(true);
+      if (current.isOk() && current.value) {
+        expect(current.value.id).toBe(second.value);
       }
     });
 

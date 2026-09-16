@@ -1,12 +1,11 @@
-import { defineConfig } from "vitest/config";
+import { defaultExclude, defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    // Default test timeout (10s for unit tests, packages can override for integration)
-    testTimeout: 10000,
-
-    // Projects mode for monorepo - each package has its own vitest.config.ts
-    // Note: packages/integrations/{linear,github,slack} are nested packages
+    // Each package carries its own config, referenced here by directory. A root
+    // `testTimeout` would not reach those projects (measured: a 6s test still
+    // fails at the 5s default), so per-suite timeouts are set inside the two
+    // inline projects below and in the package configs that need them.
     projects: [
       "packages/types",
       "packages/platform",
@@ -17,21 +16,34 @@ export default defineConfig({
       "packages/integrations/slack",
       "packages/test-utils",
       "packages/dashboard",
+
+      {
+        test: {
+          name: "integration",
+          include: ["packages/**/*.integration.test.ts"],
+          // Spelling `exclude` replaces vitest's defaults rather than adding to
+          // them, and @aesir/platform is symlinked into each package's
+          // node_modules, so dropping defaultExclude matches the same file
+          // several times over. The sandbox suite owns that directory,
+          // including dev-container.integration.test.ts.
+          exclude: [...defaultExclude, "packages/platform/src/sandbox/**"],
+          testTimeout: 60_000,
+        },
+      },
+      {
+        test: {
+          name: "sandbox",
+          include: ["packages/platform/src/sandbox/**/*.test.ts"],
+          // Docker container operations are slow.
+          testTimeout: 120_000,
+        },
+      },
     ],
-    // Coverage configuration at workspace level
-    // Note: Vitest ignores project-level coverage settings when running from root
+
+    // Vitest ignores project-level coverage settings when running from the root.
     coverage: {
-      // Enabled via CLI flag --coverage (off by default for faster tests)
-      enabled: false,
-      // V8 provider for fast, native coverage collection
-      provider: "v8",
-      // Output formats: text for console, html for browser, lcov for CI tools
       reporter: ["text", "html", "lcov"],
-      // Coverage reports directory
-      reportsDirectory: "./coverage",
-      // Per-package thresholds using glob patterns
       thresholds: {
-        // Core packages: higher thresholds (shared, foundational code)
         "packages/types/**/*.ts": {
           lines: 70,
           functions: 70,
@@ -50,14 +62,12 @@ export default defineConfig({
           branches: 70,
           statements: 70,
         },
-        // Integration packages: moderate thresholds (external service wrappers)
         "packages/integrations/**/*.ts": {
           lines: 50,
           functions: 50,
           branches: 50,
           statements: 50,
         },
-        // Agent packages: moderate thresholds (orchestration logic)
         "packages/agents/**/*.ts": {
           lines: 50,
           functions: 50,
@@ -65,32 +75,27 @@ export default defineConfig({
           statements: 50,
         },
       },
-      // Files to exclude from coverage
+      // coverageConfigDefaults.exclude is [] in 5.0.1, yet removing the first
+      // three below changes the report in no way (measured: same totals, same
+      // 178 lines), so v8 drops them by an implicit rule the defaults array
+      // does not describe. They are kept so the exclusion is stated rather
+      // than resting on undocumented behaviour.
       exclude: [
-        // Dependencies and build output
         "**/node_modules/**",
         "**/dist/**",
-        // Test files (all test patterns)
+        "**/vitest.config.ts",
         "**/*.test.ts",
         "**/*.integration.test.ts",
         "**/*.e2e.test.ts",
-        "**/__tests__/**",
-        "**/__mocks__/**",
-        // Database migrations and scripts
         "**/db/migrations/**",
-        "**/db/scripts/**",
         // Entry points (minimal logic)
         "**/main.ts",
         // Type-only files (no runtime code)
         "**/types.ts",
         "**/schemas.ts",
-        // Legacy code (pending cleanup)
-        "**/_legacy/**",
-        // Vitest config files
-        "**/vitest.config.ts",
-        // Drizzle schema files (for migration generation)
+        // Generated for drizzle-kit migration generation
         "**/*.drizzle.ts",
-        // Test utilities (helpers shouldn't count toward coverage)
+        // Helpers shouldn't count toward coverage
         "**/test-utils/**",
       ],
     },

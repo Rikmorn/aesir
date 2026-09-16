@@ -1,30 +1,33 @@
 # @aesir/test-utils
 
-Shared test infrastructure for the Aesir monorepo. Provides containers, mocks, factories, and utilities for consistent, isolated testing across packages.
+Shared test infrastructure for the Aesir monorepo.
 
 ## What belongs here
 
 - **Testcontainers** - PostgreSQL container setup for integration tests
-- **Mocks** - Test doubles for common services (logger, credential stores)
-- **Factories** - Deterministic test data generators with counters
-- **Migrations** - SQL schemas for test databases (linear, github, slack)
-- **MSW handlers** - HTTP API mocks for external services
+- **Migrations** - reads a package's real migration files for a test database
+- **Mocks** - `createMockLogger`, the one test double more than one package uses
+
+Something earns a place here once a second package needs it. Factories, MSW handlers, a credential-store double and transaction helpers all lived here with no importer at all, while `.claude/rules/testing.md` presented them as the house pattern, so anyone following the rule was sent to code nothing ran (#44). A helper with one consumer belongs in that package.
 
 ## What does NOT belong here
 
 - Package-specific test helpers (keep those in the package)
 - Production code
 - Business logic
+- Helpers added before a second package needs them
 
 ## Usage
 
 ### Integration Tests with Testcontainers
 
 ```typescript
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   setupPostgresContainer,
   cleanupPostgresContainer,
-  githubMigrationSql,
+  readJournalMigrations,
   createMockLogger,
 } from "@aesir/test-utils";
 
@@ -33,7 +36,11 @@ describe("MyService Integration", () => {
 
   beforeAll(async () => {
     containerCtx = await setupPostgresContainer();
-    await containerCtx.sql.unsafe(githubMigrationSql);
+    await containerCtx.sql.unsafe(
+      await readJournalMigrations(
+        path.resolve(path.dirname(fileURLToPath(import.meta.url)), "migrations"),
+      ),
+    );
   }, 60000);
 
   afterAll(async () => {
@@ -71,48 +78,13 @@ logger.clear();
 
 Child loggers share the same `calls` array with parents, so you can assert on logs from nested loggers.
 
-### Factories
+### Migrations
 
-```typescript
-import {
-  createTestCredential,
-  createTestIssue,
-  resetAllCounters,
-} from "@aesir/test-utils";
+`readJournalMigrations(migrationsDir)` returns a package's migrations concatenated in the order `meta/_journal.json` lists, which is the order drizzle itself applies. Point it at the package's own `migrations` directory.
 
-beforeEach(() => {
-  resetAllCounters(); // Ensures deterministic IDs
-});
+There are no per-schema SQL exports. test-utils used to carry a hand-written copy of each schema, and the agents copy stopped at migration 0002 while the package reached 0022, so suites ran against tables that no longer matched production (#42). Reading the real files removes that drift rather than re-syncing a copy.
 
-it("should process credential", () => {
-  const cred = createTestCredential({ owner: "my-org" });
-  // cred.id is "cred_0", next would be "cred_1", etc.
-});
-```
-
-### Database Transaction Isolation
-
-For tests that need rollback isolation without full container setup:
-
-```typescript
-import { withTestTransaction } from "@aesir/test-utils";
-
-it("should rollback changes", async () => {
-  await withTestTransaction(db, async (tx) => {
-    await tx.insert(myTable).values({ ... });
-    // assertions here
-  }); // automatically rolled back
-});
-```
-
-### Available Migrations
-
-| Export | Schema | Tables |
-|--------|--------|--------|
-| `agentsMigrationSql` | `agents.*` | conversations, tasks, handoffs, events, etc. |
-| `linearMigrationSql` | `linear.*` | credentials, webhook_deliveries, mcp_tool_permissions, task_correlations |
-| `githubMigrationSql` | `github.*` | credentials, webhook_deliveries, mcp_tool_permissions, task_correlations |
-| `slackMigrationSql` | `slack.*` | installations, event_deliveries, mcp_tool_permissions, task_correlations |
+Because the agents migrations open with `CREATE EXTENSION vector`, `setupPostgresContainer` defaults to `pgvector/pgvector:pg16`. Override with the `image` option if a suite needs something else.
 
 ## File Naming Convention
 
@@ -126,8 +98,7 @@ pnpm test:integration  # Only runs *.integration.test.ts
 ## Dependencies
 
 This package depends on:
-- `testcontainers` - Docker container management
-- `msw` - HTTP request mocking
+- `@testcontainers/postgresql` - Docker container management
 - `postgres` - PostgreSQL client for migrations
 
 Packages using test-utils should add it as a devDependency:

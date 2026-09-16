@@ -32,4 +32,7 @@ CREATE INDEX idx_directory_name ON agents.entity_directory(name);
 --> statement-breakpoint
 
 -- HNSW cosine similarity index for semantic capability matching
-CREATE INDEX idx_directory_embedding_cosine ON agents.entity_directory USING hnsw (capabilities_embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
+-- An hnsw index needs a fixed dimension, and capabilities_embedding is
+-- deliberately dimensionless, so pgvector rejects this with "column does not
+-- have dimensions". The live schema has no such index.
+-- CREATE INDEX idx_directory_embedding_cosine ON agents.entity_directory USING hnsw (capabilities_embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);

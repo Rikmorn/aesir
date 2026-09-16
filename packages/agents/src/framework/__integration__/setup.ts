@@ -32,10 +32,12 @@ process.env.GITHUB_REPO = process.env.GITHUB_REPO || "test-org/test-repo";
 process.env.SLACK_CHANNEL_ID = process.env.SLACK_CHANNEL_ID || "C000TEST";
 process.env.NODE_ENV = "test";
 
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
-  agentsMigrationSql,
   cleanupPostgresContainer,
   type PostgresContainerContext,
+  readJournalMigrations,
   runTestMigrations,
   setupPostgresContainer,
 } from "@aesir/test-utils";
@@ -71,8 +73,16 @@ export interface IntegrationTestContext {
 export async function setupTestContext(): Promise<IntegrationTestContext> {
   const container = await setupPostgresContainer();
 
-  // Run agents schema migrations
-  await runTestMigrations(container.sql, agentsMigrationSql);
+  // The migrations the service itself applies, in journal order.
+  await runTestMigrations(
+    container.sql,
+    await readJournalMigrations(
+      path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        "../../shared/db/migrations",
+      ),
+    ),
+  );
 
   // Create pg Pool from connection URI
   const pool = new Pool({ connectionString: container.connectionUri });

@@ -487,10 +487,10 @@ importers:
         version: 1.30.0(@cfworker/json-schema@4.1.1)(zod@3.25.67)
       '@slack/bolt':
         specifier: ^4.7.3
-        version: 4.7.3(@types/express@4.17.25)
+        version: 4.7.3(@types/express@4.17.25)(debug@4.4.3)
       '@slack/web-api':
         specifier: ^7.19.0
-        version: 7.19.0
+        version: 7.19.0(debug@4.4.3)
       dotenv-flow:
         specifier: ^4.1.0
         version: 4.1.0
@@ -625,10 +625,6 @@ importers:
         version: 5.0.1(@types/node@22.20.3)(@vitest/coverage-v8@5.0.1)(msw@2.15.0(@types/node@22.20.3)(typescript@5.9.3))(vite@7.3.1(@types/node@22.20.3)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.23.13)(yaml@2.9.1))
 
   packages/test-utils:
-    dependencies:
-      neverthrow:
-        specifier: ^8.2.0
-        version: 8.2.0
     devDependencies:
       '@testcontainers/postgresql':
         specifier: ^11.14.0
@@ -636,9 +632,6 @@ importers:
       '@types/node':
         specifier: ^22.19.7
         version: 22.20.3
-      msw:
-        specifier: ^2.15.0
-        version: 2.15.0(@types/node@22.20.3)(typescript@5.9.3)
       postgres:
         specifier: ^3.4.9
         version: 3.4.9
@@ -5973,7 +5966,8 @@ snapshots:
   '@img/sharp-win32-x64@0.35.4':
     optional: true
 
-  '@inquirer/ansi@2.0.8': {}
+  '@inquirer/ansi@2.0.8':
+    optional: true
 
   '@inquirer/confirm@6.3.2(@types/node@22.20.3)':
     dependencies:
@@ -5981,6 +5975,7 @@ snapshots:
       '@inquirer/type': 4.1.1(@types/node@22.20.3)
     optionalDependencies:
       '@types/node': 22.20.3
+    optional: true
 
   '@inquirer/core@12.0.3(@types/node@22.20.3)':
     dependencies:
@@ -5993,12 +5988,15 @@ snapshots:
       signal-exit: 4.1.0
     optionalDependencies:
       '@types/node': 22.20.3
+    optional: true
 
-  '@inquirer/figures@2.0.9': {}
+  '@inquirer/figures@2.0.9':
+    optional: true
 
   '@inquirer/type@4.1.1(@types/node@22.20.3)':
     optionalDependencies:
       '@types/node': 22.20.3
+    optional: true
 
   '@isaacs/cliui@8.0.2':
     dependencies:
@@ -6080,6 +6078,7 @@ snapshots:
       is-node-process: 1.2.0
       outvariant: 1.4.3
       strict-event-emitter: 0.5.1
+    optional: true
 
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true
@@ -6190,16 +6189,20 @@ snapshots:
 
   '@octokit/webhooks-methods@5.1.1': {}
 
-  '@open-draft/deferred-promise@2.2.0': {}
+  '@open-draft/deferred-promise@2.2.0':
+    optional: true
 
-  '@open-draft/deferred-promise@3.0.0': {}
+  '@open-draft/deferred-promise@3.0.0':
+    optional: true
 
   '@open-draft/logger@0.3.0':
     dependencies:
       is-node-process: 1.2.0
       outvariant: 1.4.3
+    optional: true
 
-  '@open-draft/until@2.1.0': {}
+  '@open-draft/until@2.1.0':
+    optional: true
 
   '@oxc-parser/binding-android-arm-eabi@0.148.0':
     optional: true
@@ -7172,15 +7175,15 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.63.3':
     optional: true
 
-  '@slack/bolt@4.7.3(@types/express@4.17.25)':
+  '@slack/bolt@4.7.3(@types/express@4.17.25)(debug@4.4.3)':
     dependencies:
       '@slack/logger': 4.0.1
-      '@slack/oauth': 3.0.5
-      '@slack/socket-mode': 2.0.7
+      '@slack/oauth': 3.0.5(debug@4.4.3)
+      '@slack/socket-mode': 2.0.7(debug@4.4.3)
       '@slack/types': 2.22.0
-      '@slack/web-api': 7.19.0
+      '@slack/web-api': 7.19.0(debug@4.4.3)
       '@types/express': 4.17.25
-      axios: 1.20.0
+      axios: 1.20.0(debug@4.4.3)
       express: 5.2.1
       path-to-regexp: 8.4.2
       raw-body: 3.0.2
@@ -7195,10 +7198,10 @@ snapshots:
     dependencies:
       '@types/node': 22.20.3
 
-  '@slack/oauth@3.0.5':
+  '@slack/oauth@3.0.5(debug@4.4.3)':
     dependencies:
       '@slack/logger': 4.0.1
-      '@slack/web-api': 7.19.0
+      '@slack/web-api': 7.19.0(debug@4.4.3)
       '@types/jsonwebtoken': 9.0.10
       '@types/node': 22.20.3
       jsonwebtoken: 9.0.3
@@ -7206,10 +7209,10 @@ snapshots:
       - debug
       - supports-color
 
-  '@slack/socket-mode@2.0.7':
+  '@slack/socket-mode@2.0.7(debug@4.4.3)':
     dependencies:
       '@slack/logger': 4.0.1
-      '@slack/web-api': 7.19.0
+      '@slack/web-api': 7.19.0(debug@4.4.3)
       '@types/node': 22.20.3
       '@types/ws': 8.18.1
       eventemitter3: 5.0.4
@@ -7222,13 +7225,13 @@ snapshots:
 
   '@slack/types@2.22.0': {}
 
-  '@slack/web-api@7.19.0':
+  '@slack/web-api@7.19.0(debug@4.4.3)':
     dependencies:
       '@slack/logger': 4.0.1
       '@slack/types': 2.22.0
       '@types/node': 22.20.3
       '@types/retry': 0.12.0
-      axios: 1.20.0
+      axios: 1.20.0(debug@4.4.3)
       eventemitter3: 5.0.4
       form-data: 4.0.6
       is-electron: 2.2.2
@@ -7480,6 +7483,7 @@ snapshots:
   '@types/set-cookie-parser@2.4.10':
     dependencies:
       '@types/node': 22.20.3
+    optional: true
 
   '@types/ssh2-streams@0.1.13':
     dependencies:
@@ -7494,7 +7498,8 @@ snapshots:
     dependencies:
       '@types/node': 18.19.130
 
-  '@types/statuses@2.0.6': {}
+  '@types/statuses@2.0.6':
+    optional: true
 
   '@types/superagent@8.1.11':
     dependencies:
@@ -7667,9 +7672,9 @@ snapshots:
 
   atomic-sleep@1.0.0: {}
 
-  axios@1.20.0:
+  axios@1.20.0(debug@4.4.3):
     dependencies:
-      follow-redirects: 1.16.0
+      follow-redirects: 1.16.0(debug@4.4.3)
       form-data: 4.0.6
       https-proxy-agent: 5.0.1
       proxy-from-env: 2.1.0
@@ -7806,7 +7811,8 @@ snapshots:
 
   classcat@5.0.5: {}
 
-  cli-width@4.1.0: {}
+  cli-width@4.1.0:
+    optional: true
 
   client-only@0.0.1: {}
 
@@ -7871,7 +7877,8 @@ snapshots:
 
   cookie@0.7.2: {}
 
-  cookie@1.1.1: {}
+  cookie@1.1.1:
+    optional: true
 
   cookiejar@2.1.4: {}
 
@@ -8328,17 +8335,20 @@ snapshots:
 
   fast-safe-stringify@2.1.1: {}
 
-  fast-string-truncated-width@3.0.3: {}
+  fast-string-truncated-width@3.0.3:
+    optional: true
 
   fast-string-width@3.0.2:
     dependencies:
       fast-string-truncated-width: 3.0.3
+    optional: true
 
   fast-uri@3.1.8: {}
 
   fast-wrap-ansi@0.2.2:
     dependencies:
       fast-string-width: 3.0.2
+    optional: true
 
   fd-package-json@2.0.0:
     dependencies:
@@ -8371,7 +8381,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  follow-redirects@1.16.0: {}
+  follow-redirects@1.16.0(debug@4.4.3):
+    optionalDependencies:
+      debug: 4.4.3
 
   foreground-child@3.3.1:
     dependencies:
@@ -8469,6 +8481,7 @@ snapshots:
     dependencies:
       '@types/set-cookie-parser': 2.4.10
       set-cookie-parser: 3.1.2
+    optional: true
 
   hono@4.13.8: {}
 
@@ -8511,7 +8524,8 @@ snapshots:
 
   is-fullwidth-code-point@3.0.0: {}
 
-  is-node-process@1.2.0: {}
+  is-node-process@1.2.0:
+    optional: true
 
   is-promise@4.0.0: {}
 
@@ -8757,8 +8771,10 @@ snapshots:
       typescript: 5.9.3
     transitivePeerDependencies:
       - '@types/node'
+    optional: true
 
-  mute-stream@3.0.0: {}
+  mute-stream@3.0.0:
+    optional: true
 
   nan@2.29.0:
     optional: true
@@ -8838,7 +8854,8 @@ snapshots:
     dependencies:
       wrappy: 1.0.2
 
-  outvariant@1.4.3: {}
+  outvariant@1.4.3:
+    optional: true
 
   oxc-parser@0.148.0:
     dependencies:
@@ -8917,7 +8934,8 @@ snapshots:
 
   path-to-regexp@0.1.13: {}
 
-  path-to-regexp@6.3.0: {}
+  path-to-regexp@6.3.0:
+    optional: true
 
   path-to-regexp@8.4.2: {}
 
@@ -9279,7 +9297,8 @@ snapshots:
 
   retry@0.13.1: {}
 
-  rettime@0.11.11: {}
+  rettime@0.11.11:
+    optional: true
 
   rollup@4.63.3:
     dependencies:
@@ -9396,7 +9415,8 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  set-cookie-parser@3.1.2: {}
+  set-cookie-parser@3.1.2:
+    optional: true
 
   setprototypeof@1.2.0: {}
 
@@ -9521,7 +9541,8 @@ snapshots:
       - bare-abort-controller
       - react-native-b4a
 
-  strict-event-emitter@0.5.1: {}
+  strict-event-emitter@0.5.1:
+    optional: true
 
   string-width@4.2.3:
     dependencies:
@@ -9698,11 +9719,13 @@ snapshots:
 
   tinyrainbow@3.1.1: {}
 
-  tldts-core@7.4.13: {}
+  tldts-core@7.4.13:
+    optional: true
 
   tldts@7.4.13:
     dependencies:
       tldts-core: 7.4.13
+    optional: true
 
   tmp@0.2.7: {}
 
@@ -9711,6 +9734,7 @@ snapshots:
   tough-cookie@6.0.2:
     dependencies:
       tldts: 7.4.13
+    optional: true
 
   tr46@0.0.3: {}
 
@@ -9759,7 +9783,8 @@ snapshots:
 
   unpipe@1.0.0: {}
 
-  until-async@3.0.2: {}
+  until-async@3.0.2:
+    optional: true
 
   url-join@4.0.1: {}
 

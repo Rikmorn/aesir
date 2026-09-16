@@ -25,7 +25,7 @@ export interface PostgresContainerContext {
 }
 
 export interface SetupPostgresContainerOptions {
-  /** PostgreSQL image to use. Default: postgres:16-alpine */
+  /** PostgreSQL image to use. Default: pgvector/pgvector:pg15 */
   image?: string;
   /** Database name. Default: test_db */
   database?: string;
@@ -57,7 +57,11 @@ export interface SetupPostgresContainerOptions {
 export async function setupPostgresContainer(
   options: SetupPostgresContainerOptions = {},
 ): Promise<PostgresContainerContext> {
-  const { image = "postgres:16-alpine", database = "test_db" } = options;
+  // pgvector, not plain postgres: the agents migrations open with
+  // CREATE EXTENSION vector, which the official image does not carry. pg15
+  // matches the server docker-compose.yml runs, so tests and the dev stack
+  // agree on the major version.
+  const { image = "pgvector/pgvector:pg15", database = "test_db" } = options;
 
   const container = await new PostgreSqlContainer(image)
     .withDatabase(database)
