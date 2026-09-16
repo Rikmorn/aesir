@@ -50,5 +50,8 @@ socials/
 .sidekick/cache/
 .sidekick/state/
 
+# impeccable skill working state (live sessions, critique snapshots)
+.impeccable/
+
 # superpowers scaffolding — specs/plans/logs are local working context, not project docs
 docs/superpowers/
