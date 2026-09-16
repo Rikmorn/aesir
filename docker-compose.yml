@@ -18,6 +18,14 @@
 #   docker compose --profile tunnel up      # Start with webhook tunnel
 #   Point tunnel to nginx:80 for unified routing
 #
+# Embedding (Ollama):
+#   ollama and ollama-init carry no profile, so the documented command above
+#   starts them. agent-service defaults to EMBEDDING_PROVIDER=ollama, so
+#   directory_find fails without them; a command that only works with an
+#   undocumented flag is worse than the cost this imposes, which is the model
+#   pull and its memory on every developer machine. Set EMBEDDING_PROVIDER=voyage
+#   to use the hosted provider and stop these two instead.
+#
 # Access (via nginx proxy on port 80):
 #   - http://localhost/linear/*   → Linear integration (webhooks, OAuth, MCP)
 #   - http://localhost/github/*   → GitHub integration (webhooks, OAuth, MCP)
@@ -269,6 +277,10 @@ services:
         condition: service_healthy
       slack-integration:
         condition: service_healthy
+      # The embedding model must exist before the first directory_find, not
+      # merely be on its way: on a cold machine the pull is a real download.
+      ollama-init:
+        condition: service_completed_successfully
     environment:
       # Database
       - DB_HOST=postgresql
@@ -381,7 +393,6 @@ services:
           path: ./packages/dashboard/package.json
 
   # Ollama - local embedding model for shared memory (Phase 68)
-  # Only starts with embedding profile: docker compose --profile embedding up
   ollama:
     image: ollama/ollama:latest
     container_name: aesir-ollama
@@ -396,8 +407,6 @@ services:
       retries: 5
     networks:
       - aesir-network
-    profiles:
-      - embedding
 
   # Ollama model init - pulls the embedding model on first start
   # Runs once and exits. Uses the same volume so the model persists across restarts.
@@ -412,8 +421,6 @@ services:
     entrypoint: ["sh", "-c", "ollama pull ${OLLAMA_MODEL:-nomic-embed-text}"]
     networks:
       - aesir-network
-    profiles:
-      - embedding
     restart: "no"
 
   # Cloudflare Tunnel - exposes services to external webhooks (Linear, GitHub, Slack)
