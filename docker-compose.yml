@@ -277,6 +277,10 @@ services:
         condition: service_healthy
       slack-integration:
         condition: service_healthy
+      # The embedding model must exist before the first directory_find, not
+      # merely be on its way: on a cold machine the pull is a real download.
+      ollama-init:
+        condition: service_completed_successfully
     environment:
       # Database
       - DB_HOST=postgresql
