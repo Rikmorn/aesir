@@ -1,10 +1,8 @@
 /**
  * Test Database Migrations
  *
- * Schema SQL for creating test database structures.
+ * Reads each package's real migration files. The hand-copied schema snapshots
+ * that used to live here drifted from the migrations they mirrored (#42).
  */
 
-export { agentsMigrationSql } from "./agents.js";
-export { githubMigrationSql } from "./github.js";
-export { linearMigrationSql } from "./linear.js";
-export { slackMigrationSql } from "./slack.js";
+export { readJournalMigrations } from "./from-journal.js";
