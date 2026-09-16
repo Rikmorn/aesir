@@ -1,0 +1,46 @@
+name: Sandbox
+
+# The sandbox suite drives real Docker containers: 33 tests in 237s, measured
+# locally on 2026-09-16. That is too slow to sit on every push, so it runs
+# nightly and on demand rather than not running anywhere.
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sandbox:
+    name: sandbox tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        # version comes from "packageManager" in package.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace libraries (types resolve through dist/)
+        run: pnpm --filter @aesir/types --filter @aesir/platform --filter @aesir/observability --filter @aesir/test-utils build
+
+      # DockerSandbox defaults to this image and does not pull it, so without
+      # this step every container creation fails with "No such image".
+      - name: Pull the image DockerSandbox runs
+        run: docker pull node:20-slim
+
+      - name: Sandbox tests
+        run: pnpm test:sandbox
