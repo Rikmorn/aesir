@@ -21,10 +21,12 @@ Shared test infrastructure for the Aesir monorepo. Provides containers, mocks, f
 ### Integration Tests with Testcontainers
 
 ```typescript
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   setupPostgresContainer,
   cleanupPostgresContainer,
-  githubMigrationSql,
+  readJournalMigrations,
   createMockLogger,
 } from "@aesir/test-utils";
 
@@ -33,7 +35,11 @@ describe("MyService Integration", () => {
 
   beforeAll(async () => {
     containerCtx = await setupPostgresContainer();
-    await containerCtx.sql.unsafe(githubMigrationSql);
+    await containerCtx.sql.unsafe(
+      await readJournalMigrations(
+        path.resolve(path.dirname(fileURLToPath(import.meta.url)), "migrations"),
+      ),
+    );
   }, 60000);
 
   afterAll(async () => {
@@ -105,14 +111,13 @@ it("should rollback changes", async () => {
 });
 ```
 
-### Available Migrations
+### Migrations
 
-| Export | Schema | Tables |
-|--------|--------|--------|
-| `agentsMigrationSql` | `agents.*` | conversations, tasks, handoffs, events, etc. |
-| `linearMigrationSql` | `linear.*` | credentials, webhook_deliveries, mcp_tool_permissions, task_correlations |
-| `githubMigrationSql` | `github.*` | credentials, webhook_deliveries, mcp_tool_permissions, task_correlations |
-| `slackMigrationSql` | `slack.*` | installations, event_deliveries, mcp_tool_permissions, task_correlations |
+`readJournalMigrations(migrationsDir)` returns a package's migrations concatenated in the order `meta/_journal.json` lists, which is the order drizzle itself applies. Point it at the package's own `migrations` directory.
+
+There are no per-schema SQL exports. test-utils used to carry a hand-written copy of each schema, and the agents copy stopped at migration 0002 while the package reached 0022, so suites ran against tables that no longer matched production (#42). Reading the real files removes that drift rather than re-syncing a copy.
+
+Because the agents migrations open with `CREATE EXTENSION vector`, `setupPostgresContainer` defaults to `pgvector/pgvector:pg16`. Override with the `image` option if a suite needs something else.
 
 ## File Naming Convention
 

@@ -523,6 +523,13 @@ describe("Flow 8: History Compaction", () => {
         toolCallCount: 0,
         tokenCount: { input: 100, output: 50 },
         trace: [],
+        // Required by AgentLoopResult. The worker loop persists
+        // result.messages.slice(1), so the loop's own initial user message has
+        // to be present for the assistant reply to survive.
+        messages: [
+          { role: "user", content: "Start compaction test" },
+          { role: "assistant", content: "Done with history" },
+        ],
       };
     });
 

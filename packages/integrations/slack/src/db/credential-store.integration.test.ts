@@ -8,12 +8,14 @@
  * Run with: pnpm test:integration
  */
 
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   cleanupPostgresContainer,
   createMockLogger,
   type PostgresContainerContext,
+  readJournalMigrations,
   setupPostgresContainer,
-  slackMigrationSql,
 } from "@aesir/test-utils";
 import type { MCPLogger } from "@aesir/types";
 import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -93,7 +95,14 @@ describe("SlackCredentialStore Integration", () => {
     db = drizzle(sql);
 
     // Run migrations
-    await containerCtx.sql.unsafe(slackMigrationSql);
+    await containerCtx.sql.unsafe(
+      await readJournalMigrations(
+        path.resolve(
+          path.dirname(fileURLToPath(import.meta.url)),
+          "migrations",
+        ),
+      ),
+    );
   }, 60000);
 
   afterAll(async () => {

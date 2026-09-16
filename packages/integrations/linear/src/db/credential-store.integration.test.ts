@@ -8,12 +8,14 @@
  * Run with: pnpm test:integration
  */
 
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { PinoLogger } from "@aesir/platform";
 import {
   cleanupPostgresContainer,
   createMockLogger,
-  linearMigrationSql,
   type PostgresContainerContext,
+  readJournalMigrations,
   setupPostgresContainer,
 } from "@aesir/test-utils";
 import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -93,7 +95,14 @@ describe("LinearCredentialStore Integration", () => {
     db = drizzle(sql);
 
     // Run migrations
-    await containerCtx.sql.unsafe(linearMigrationSql);
+    await containerCtx.sql.unsafe(
+      await readJournalMigrations(
+        path.resolve(
+          path.dirname(fileURLToPath(import.meta.url)),
+          "migrations",
+        ),
+      ),
+    );
   }, 60000);
 
   afterAll(async () => {
