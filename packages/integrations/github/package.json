@@ -45,6 +45,7 @@
   "devDependencies": {
     "@aesir/test-utils": "workspace:^",
     "@types/express": "^4.17.25",
+    "@types/node": "^22.19.7",
     "@types/pg": "^8.23.1",
     "drizzle-kit": "^0.31.10",
     "postgres": "^3.4.9",
