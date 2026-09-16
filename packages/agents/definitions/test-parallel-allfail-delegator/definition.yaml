@@ -31,4 +31,4 @@ capabilities:
   - "initiate parallel all-required failure test workflows"
 
 triggers:
-  - event: testing.parallel.allfail.start
+  - event: testing.parallel_allfail.start

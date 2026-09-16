@@ -30,4 +30,4 @@ capabilities:
   - "initiate parallel delegation test workflows"
 
 triggers:
-  - event: testing.parallel.any.start
+  - event: testing.parallel_any.start
