@@ -24,25 +24,6 @@ describe("myFunction", () => {
 });
 ```
 
-## Factories (Deterministic Test Data)
-
-Use `@aesir/test-utils` factories. Always reset counters:
-
-```typescript
-import { createTestAgent, resetAllCounters } from "@aesir/test-utils";
-
-beforeEach(() => {
-  resetAllCounters();
-});
-
-it("creates predictable data", () => {
-  const agent1 = createTestAgent(); // "Test task 0"
-  const agent2 = createTestAgent(); // "Test task 1"
-});
-```
-
-Available: `createTestAgent()`, `createTestCredential()`, `createTestIssue()`, `createTestPR()`, `createTestDevWorkflowState()`.
-
 ## Mock Logger
 
 ```typescript
@@ -122,33 +103,30 @@ afterAll(async () => {
 
 ## Testcontainers
 
-```typescript
-import { setupPostgresContainer } from "@aesir/test-utils";
+Build the schema from the package's real migrations. A hand-copied snapshot drifts: the previous one stopped at migration 0002 while the package had reached 0022, and the suites ran against tables that no longer matched production.
 
-const container = await setupPostgresContainer(); // postgres:16-alpine
+```typescript
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+  readJournalMigrations,
+  runTestMigrations,
+  setupPostgresContainer,
+} from "@aesir/test-utils";
+
+const container = await setupPostgresContainer(); // pgvector/pgvector:pg16
 const pool = new Pool({ connectionString: container.connectionUri });
 const db = drizzle(pool, { schema });
-await runTestMigrations(container.sql, migrationSql);
+
+await runTestMigrations(
+  container.sql,
+  await readJournalMigrations(
+    path.resolve(path.dirname(fileURLToPath(import.meta.url)), "migrations"),
+  ),
+);
 ```
 
-## Transaction Isolation (~300ms vs 1500ms container restart)
-
-```typescript
-import { startTestTransaction } from "@aesir/test-utils";
-
-let txCtx: TransactionContext;
-beforeEach(async () => { txCtx = await startTestTransaction(sql); });
-afterEach(async () => { await txCtx.rollback(); });
-```
-
-## MSW (HTTP boundary mocking)
-
-```typescript
-import { setupMSW } from "@aesir/test-utils";
-setupMSW({ beforeAll, afterEach, afterAll }, { onUnhandledRequest: "error" });
-```
-
-Pre-built handlers for Linear (GraphQL), GitHub (REST), Slack (REST).
+`readJournalMigrations` applies the order in `meta/_journal.json`, which is what drizzle applies -- not the directory listing. The default image carries pgvector because the agents migrations open with `CREATE EXTENSION vector`.
 
 # Agent Integration Test Patterns
 

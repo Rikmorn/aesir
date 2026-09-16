@@ -1,20 +1,21 @@
 # @aesir/test-utils
 
-Shared test infrastructure for the Aesir monorepo. Provides containers, mocks, factories, and utilities for consistent, isolated testing across packages.
+Shared test infrastructure for the Aesir monorepo.
 
 ## What belongs here
 
 - **Testcontainers** - PostgreSQL container setup for integration tests
-- **Mocks** - Test doubles for common services (logger, credential stores)
-- **Factories** - Deterministic test data generators with counters
-- **Migrations** - SQL schemas for test databases (linear, github, slack)
-- **MSW handlers** - HTTP API mocks for external services
+- **Migrations** - reads a package's real migration files for a test database
+- **Mocks** - `createMockLogger`, the one test double more than one package uses
+
+Something earns a place here once a second package needs it. Factories, MSW handlers, a credential-store double and transaction helpers all lived here with no importer at all, while `.claude/rules/testing.md` presented them as the house pattern, so anyone following the rule was sent to code nothing ran (#44). A helper with one consumer belongs in that package.
 
 ## What does NOT belong here
 
 - Package-specific test helpers (keep those in the package)
 - Production code
 - Business logic
+- Helpers added before a second package needs them
 
 ## Usage
 
@@ -77,40 +78,6 @@ logger.clear();
 
 Child loggers share the same `calls` array with parents, so you can assert on logs from nested loggers.
 
-### Factories
-
-```typescript
-import {
-  createTestCredential,
-  createTestIssue,
-  resetAllCounters,
-} from "@aesir/test-utils";
-
-beforeEach(() => {
-  resetAllCounters(); // Ensures deterministic IDs
-});
-
-it("should process credential", () => {
-  const cred = createTestCredential({ owner: "my-org" });
-  // cred.id is "cred_0", next would be "cred_1", etc.
-});
-```
-
-### Database Transaction Isolation
-
-For tests that need rollback isolation without full container setup:
-
-```typescript
-import { withTestTransaction } from "@aesir/test-utils";
-
-it("should rollback changes", async () => {
-  await withTestTransaction(db, async (tx) => {
-    await tx.insert(myTable).values({ ... });
-    // assertions here
-  }); // automatically rolled back
-});
-```
-
 ### Migrations
 
 `readJournalMigrations(migrationsDir)` returns a package's migrations concatenated in the order `meta/_journal.json` lists, which is the order drizzle itself applies. Point it at the package's own `migrations` directory.
@@ -131,8 +98,7 @@ pnpm test:integration  # Only runs *.integration.test.ts
 ## Dependencies
 
 This package depends on:
-- `testcontainers` - Docker container management
-- `msw` - HTTP request mocking
+- `@testcontainers/postgresql` - Docker container management
 - `postgres` - PostgreSQL client for migrations
 
 Packages using test-utils should add it as a devDependency:
