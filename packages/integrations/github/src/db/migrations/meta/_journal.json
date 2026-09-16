@@ -8,6 +8,20 @@
       "when": 1769187048094,
       "tag": "0000_mute_thing",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1769187049094,
+      "tag": "0000_create_github_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1770470010000,
+      "tag": "0001_task_correlations",
+      "breakpoints": true
     }
   ]
 }

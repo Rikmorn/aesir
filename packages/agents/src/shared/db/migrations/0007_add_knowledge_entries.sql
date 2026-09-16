@@ -37,8 +37,10 @@ CREATE INDEX idx_knowledge_scope_author ON agents.knowledge_entries(scope, autho
 
 --> statement-breakpoint
 
--- Expiry filter: partial index for non-expired entries
-CREATE INDEX idx_knowledge_expires ON agents.knowledge_entries(expires_at) WHERE expires_at > NOW();
+-- Expiry filter. NOW() is STABLE, not IMMUTABLE, so PostgreSQL rejects it in a
+-- partial index predicate and this statement could never run. The live schema
+-- has the unfiltered index, so that is what this creates.
+CREATE INDEX idx_knowledge_expires ON agents.knowledge_entries(expires_at);
 
 --> statement-breakpoint
 
@@ -48,4 +50,8 @@ CREATE INDEX idx_knowledge_not_superseded ON agents.knowledge_entries(id) WHERE 
 --> statement-breakpoint
 
 -- HNSW cosine similarity index for semantic search
-CREATE INDEX idx_knowledge_embedding_cosine ON agents.knowledge_entries USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
+-- An hnsw index needs a fixed dimension, and embedding is deliberately
+-- dimensionless so different models can share the table, so pgvector rejects
+-- this with "column does not have dimensions". The live schema has no such
+-- index; cosine search falls back to a sequential scan.
+-- CREATE INDEX idx_knowledge_embedding_cosine ON agents.knowledge_entries USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
