@@ -113,6 +113,48 @@
       "when": 1739923200000,
       "tag": "0016_add_event_routed_type",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1771621008000,
+      "tag": "0017_add_task_groups",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1771628123000,
+      "tag": "0018_add_materialization_records",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1771792889000,
+      "tag": "0019_add_schedule_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1771799688000,
+      "tag": "0020_add_identity_documents",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1771804418000,
+      "tag": "0021_add_knowledge_fulltext_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1771809622000,
+      "tag": "0022_add_tree_budget",
+      "breakpoints": true
     }
   ]
 }
