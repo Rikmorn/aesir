@@ -27,6 +27,12 @@ export default defineConfig({
           // several times over. The sandbox suite owns that directory,
           // including dev-container.integration.test.ts.
           exclude: [...defaultExclude, "packages/platform/src/sandbox/**"],
+          // Applies to every integration test, not only the agents package:
+          // the suites share one project. The four values are agents' required
+          // env, which `shared/env/config.ts` exits on when absent.
+          setupFiles: [
+            "packages/agents/src/framework/__integration__/env.setup.ts",
+          ],
           testTimeout: 60_000,
         },
       },
