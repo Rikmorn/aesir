@@ -1,3 +1,36 @@
 packages:
   - 'packages/*'
   - 'packages/integrations/*'
+
+# pnpm 12 no longer reads these from .npmrc; they only take effect here.
+# linkWorkspacePackages is load-bearing: its default flipped to false in pnpm 10,
+# and the @aesir/* packages are unpublished, so a false value breaks installs.
+autoInstallPeers: true
+resolvePeersFromWorkspaceRoot: true
+linkWorkspacePackages: true
+preferWorkspacePackages: true
+disallowWorkspaceCycles: true
+
+# Disabled for the setup wave. pnpm 12 verifies every lockfile entry against
+# this on each install and each workspace command, so one dependency younger
+# than the window blocks the whole repo until it ages out.
+# Set a real value before anything is deployed or launched; #52 is the reminder,
+# and the recommendation on file is pnpm's 24 h default, stated explicitly.
+# allowBuilds below is unaffected, so dependency build scripts stay blocked.
+minimumReleaseAge: 0
+
+# pnpm 10+ does not run dependency lifecycle scripts unless they are allowed here,
+# and pnpm 12 fails the install on any build it has no ruling for.
+allowBuilds:
+  # Optional native accelerator for ssh2; ssh2 falls back to pure JS without it.
+  cpu-features: false
+  # drizzle-kit and vite execute the esbuild binary that this postinstall installs.
+  esbuild: true
+  # Sets up the browser service worker. Tests use msw/node, which does not need it.
+  msw: false
+  # Pure-JS library at runtime; the postinstall only prepares its bundled CLI.
+  protobufjs: false
+  # Only needed for next/image optimisation, which the dashboard does not use.
+  sharp: false
+  # install.js only attempts the optional cpu-features native build.
+  ssh2: false

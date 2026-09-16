@@ -25,7 +25,7 @@
     "infra:up": "docker compose up -d postgresql",
     "infra:logs": "docker compose logs -f postgresql",
     "db:generate": "pnpm -r db:generate",
-    "db:migrate": "pnpm -r --sequential db:migrate",
+    "db:migrate": "pnpm -r run --sequential db:migrate",
     "prepare": "husky"
   },
   "keywords": [
@@ -48,5 +48,5 @@
     "typescript": "^5.9.3",
     "vitest": "^5.0.1"
   },
-  "packageManager": "pnpm@9.15.0"
+  "packageManager": "pnpm@12.4.2"
 }
