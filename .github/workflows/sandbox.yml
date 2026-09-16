@@ -1,9 +1,8 @@
 name: Sandbox
 
-# The sandbox suite drives real Docker containers and takes about four minutes
-# (measured 2026-09-16: 33 tests, 237s), against roughly fourteen seconds for
-# the integration suite. That is too slow to sit on every push, so it runs
-# nightly and on demand instead of not running anywhere.
+# The sandbox suite drives real Docker containers: 33 tests in 237s, measured
+# locally on 2026-09-16. That is too slow to sit on every push, so it runs
+# nightly and on demand rather than not running anywhere.
 on:
   schedule:
     - cron: "0 3 * * *"
