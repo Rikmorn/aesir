@@ -39,7 +39,7 @@ The symlink fails differently from the alternatives, and silently: on a checkout
 
 ## The Part 4 gate
 
-The spec's gate (`docs/superpowers/specs/2026-09-15-project-reset-design.md`, Part 4 → Gates): "a worker spawned in `packages/dashboard` reports the UI skills and the design system; one in `packages/agents` reports the agent-first rules; a root worker reports neither package layer."
+The project reset's Part 4 spec, under "Gates": "a worker spawned in `packages/dashboard` reports the UI skills and the design system; one in `packages/agents` reports the agent-first rules; a root worker reports neither package layer."
 
 All three clauses pass, measured 2026-09-16 and reproducible via §Re-running the experiment:
 
