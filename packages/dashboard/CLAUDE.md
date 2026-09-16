@@ -8,7 +8,7 @@ Every visual decision traces back to `.interface-design/system.md` at the repo r
 
 ## Skills in this package
 
-`impeccable` (UI critique and polish), `shadcn` (component library conventions) and `react-best-practices` (Vercel's React guidance) are installed under `.claude/skills/` here and load when a session starts in this directory. They are third-party and overwritten on update: never edit them in place; scoping notes go in this file.
+`impeccable` (UI critique and polish), `shadcn` (component library conventions) and `vercel-react-best-practices` (Vercel's React guidance) are installed under `.claude/skills/` here and load when a session starts in this directory. They are third-party and overwritten on update: never edit them in place; scoping notes go in this file.
 
 ## Patterns that bite
 
