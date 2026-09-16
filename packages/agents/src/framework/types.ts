@@ -7,6 +7,7 @@
  */
 
 import type { DevContainerManager, PinoLogger } from "@aesir/platform";
+import { CronExpressionParser } from "cron-parser";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { z } from "zod";
 import type { IncomingEvent } from "../adapters/types.js";
@@ -342,9 +343,11 @@ export const AgentDefinitionYamlSchema = z.object({
           .min(1)
           .refine(
             (val) => {
+              // Only the parse call is guarded. Loading the parser used to sit
+              // inside this try as a require(), which throws ReferenceError in
+              // this ESM build and was swallowed here, so every expression came
+              // back invalid. A module-scope import fails at load instead.
               try {
-                const { CronExpressionParser } =
-                  require("cron-parser") as typeof import("cron-parser");
                 CronExpressionParser.parse(val);
                 return true;
               } catch {
