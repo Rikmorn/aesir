@@ -56,6 +56,38 @@ const RespondTaskInputSchema = z.discriminatedUnion("type", [
   CounterProposeResponseSchema,
 ]);
 
+// The Anthropic API requires input_schema.type === "object"; a discriminated
+// union converts to a typeless "anyOf" and the tool is rejected with a 400.
+// The variants are flattened here for the API and narrowed again by
+// RespondTaskInputSchema inside execute().
+const RespondTaskApiSchema = z.object({
+  taskId: z.string().min(1).describe("The delegated task ID to respond to"),
+  type: z
+    .enum(["accept", "reject", "counter_propose"])
+    .describe(
+      "accept: take the delegation as scoped. " +
+        "reject: decline it, for genuine capability mismatches. " +
+        "counter_propose: offer a modified scope or approach.",
+    ),
+  estimate: z
+    .string()
+    .optional()
+    .describe('accept only: free-text estimate (e.g., "~15 minutes")'),
+  reason: z
+    .string()
+    .optional()
+    .describe(
+      "reject: why you are declining. counter_propose: why the original scope needs modification.",
+    ),
+  proposal: z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      "counter_propose only, and required for it: free-text description of your proposed modification",
+    ),
+});
+
 /**
  * Create the task:respond tool.
  *
@@ -80,7 +112,7 @@ export function createRespondTaskTool(
       "automatically pauses this conversation to wait for accept/reject. " +
       "Use counter-propose when you can do the work with a different scope, " +
       "reject only for genuine capability mismatches.",
-    inputSchema: RespondTaskInputSchema,
+    inputSchema: RespondTaskApiSchema,
     async execute(input: unknown): Promise<ToolResult> {
       // a. Check delegationDeps exists
       const deps = ctx.delegationDeps;
@@ -96,7 +128,13 @@ export function createRespondTaskTool(
       const parsed = RespondTaskInputSchema.safeParse(input);
       if (!parsed.success) {
         return {
-          content: `Invalid input: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
+          content: `Invalid input: ${parsed.error.issues
+            .map((i) =>
+              i.path.length > 0
+                ? `${i.path.join(".")}: ${i.message}`
+                : i.message,
+            )
+            .join(", ")}`,
           isError: true,
         };
       }

@@ -30,22 +30,49 @@ import type {
 // ---------------------------------------------------------------------------
 
 /**
+ * Narrow a converted JSON Schema to the object schema the Anthropic API accepts.
+ *
+ * The API requires a top-level `"type": "object"`. Only a Zod object converts
+ * to one: a union or discriminated union becomes a typeless `anyOf`.
+ */
+function isObjectInputSchema(
+  schema: ReturnType<typeof zodToJsonSchema>,
+): schema is Anthropic.Tool.InputSchema {
+  return "type" in schema && schema.type === "object";
+}
+
+/**
  * Convert a ToolDefinition (Zod-based) to an Anthropic API Tool object.
  *
  * Uses zod-to-json-schema to convert Zod 3 schemas to JSON Schema.
  * The Anthropic SDK's betaZodTool() requires z.toJSONSchema() which only
  * exists in Zod 4, not in the Zod 3 API exported by zod@3.25.x.
+ *
+ * Throws when a tool's schema does not convert to an object, naming the tool.
+ * `tool-factories.test.ts` runs this over every registered tool, so a schema
+ * that cannot be sent fails there rather than as an API 400 mid-conversation.
  */
-function toAnthropicTool(tool: ToolDefinition): Anthropic.Tool {
+export function toAnthropicTool(tool: ToolDefinition): Anthropic.Tool {
   const jsonSchema = zodToJsonSchema(tool.inputSchema, {
     // biome-ignore lint/style/useNamingConvention: library API parameter
     $refStrategy: "none",
   });
 
+  if (!isObjectInputSchema(jsonSchema)) {
+    const topLevelKeys = Object.keys(jsonSchema).join(", ");
+    throw new Error(
+      `Tool "${tool.name}" has an input schema that does not convert to a JSON Schema object ` +
+        `(top-level keys: ${topLevelKeys}). The Anthropic API requires input_schema.type "object" ` +
+        `and rejects anything else with 400 input_schema.type: Field required. ` +
+        `A z.union or z.discriminatedUnion converts to "anyOf": flatten it to a single object ` +
+        `with a discriminator field and narrow the variant inside execute().`,
+    );
+  }
+
   return {
     name: tool.name,
     description: tool.description,
-    input_schema: jsonSchema as Anthropic.Tool.InputSchema,
+    input_schema: jsonSchema,
   };
 }
 
