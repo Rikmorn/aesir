@@ -35,13 +35,19 @@
       {
         "matcher": "Edit|Write|MultiEdit",
         "hooks": [
-          { "type": "command", "command": ".claude/hooks/guard-schema-drizzle.sh" }
+          {
+            "type": "command",
+            "command": ".claude/hooks/guard-schema-drizzle.sh"
+          }
         ]
       },
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": ".claude/hooks/guard-env-commit.sh" }
+          {
+            "type": "command",
+            "command": ".claude/hooks/guard-env-commit.sh"
+          }
         ]
       }
     ],
@@ -61,9 +67,25 @@
       {
         "matcher": "compact",
         "hooks": [
-          { "type": "command", "command": ".claude/hooks/session-context.sh" }
+          {
+            "type": "command",
+            "command": ".claude/hooks/session-context.sh"
+          }
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "sidekick@rikmorn": true,
+    "superpowers@claude-plugins-official": true,
+    "code-review@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "rikmorn": {
+      "source": {
+        "source": "github",
+        "repo": "Rikmorn/sidekick"
+      }
+    }
   }
 }
