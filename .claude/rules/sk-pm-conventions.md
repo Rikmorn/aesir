@@ -10,6 +10,8 @@ How work is tracked across the home projects (sidekick, furnace, aesir).
 ## Placement test (tense)
 True now → reference doc · happened → ADR / learning record · to do or doing → GitHub issue.
 
+Some history is frozen: sidekick's `docs/work/` holds per-item records from before work moved to GitHub. A frozen directory is never rewritten, and a broken link is the only edit it takes. If something inside it is still true now, promote that content out into a reference doc rather than editing the record. A record keeps the identifiers it was written with, even once the thing it names is renamed.
+
 ## Naming
 Issue titles are **content names** — say what the work is, never a position code (`3.4 — …`, `bench-6 — …`, `wave 2 of…` as identity are all out). Ordering lives on the board and in milestones; legacy or external IDs live in the issue body as source pointers.
 
@@ -22,6 +24,7 @@ Issue titles are **content names** — say what the work is, never a position co
 ## Breakdown and labels
 - Inside a work item, use a **task list** in the body for steps that need no independent tracking. Promote a chunk to a **sub-issue** only when it needs its own status, assignee, or milestone presence — a sub-issue is a real work item, not a checklist line.
 - Every open issue carries exactly one `area:*` label (the what); `backlog` and `change-request` are the only process labels (the how).
+- A repo may declare one further content axis and name it for what it distinguishes; aesir uses `pkg:*` for the package an issue touches. An issue carries any number of labels on that axis, or none. Keep it to one axis per repo, because a second turns label choice into guesswork.
 
 ## Change control
 Objective or scope changes enter as issues labelled `change-request` and are prioritised explicitly before any work absorbs them. This applies to the releases' own gates.
