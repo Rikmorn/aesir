@@ -316,7 +316,7 @@ Two facts decide where an orchestrator can live, and both moved recently, so che
 - **Subagents can spawn subagents, three layers deep by default** (Claude Code 2.1.219 and later; `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` changes the limit). At the depth limit a subagent loses the `Agent` tool and does its delegated work itself. An orchestrator may therefore be a subagent, but every layer below the main session pays the handoff fidelity cost again, so prefer the main session for anything that needs the user or has to hold the whole picture.
 - **Plugin subagents lose `hooks`, `mcpServers`, and `permissionMode` frontmatter.** Those fields are honoured for project and user subagents only.
 
-Subagent `tools:` is enforced by the runtime; a skill's `allowed-tools:` is permission pre-approval, not restriction. When a step must not modify state, dispatch a tool-restricted subagent for it rather than asking a skill to refrain.
+Subagent `tools:` is enforced by the runtime; a skill's `allowed-tools:` is permission pre-approval, not restriction. Prompt-level guidance is enough for most single-user workflows. Reach for a tool-restricted subagent instead when a step must not modify state under adversarial conditions, a long autonomous run, or a compliance property.
 
 ## Frontmatter is enforcement
 
