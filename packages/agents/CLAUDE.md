@@ -1,6 +1,6 @@
 # packages/agents
 
-The agent runtime: executor, worker loop, event log, registries, router, tools, and the declarative definitions under `definitions/`. The checklist below governs every change here; `definitions/PROMPT_GUIDE.md` governs prompts. Project-wide rules are in the root `AGENTS.md`.
+The agent runtime: executor, worker loop, event log, registries, router, tools, and the declarative definitions under `definitions/`. The checklist below governs every change here; `definitions/PROMPT_GUIDE.md` governs prompts. Project-wide conventions are in `.claude/rules/aesir-conventions.md`, and the root `AGENTS.md` describes the project.
 
 ## MANDATORY: Agent-First Decision Checklist
 

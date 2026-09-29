@@ -1,6 +1,6 @@
 # packages/integrations
 
-Three independent services, one per business tool: `linear/` (port 3001, schema `linear.*`), `github/` (3002, `github.*`), `slack/` (3003, `slack.*`). Each has `api/`, `client/`, `db/`, `mcp/`, `oauth/`, `webhooks/` and its own README, which is the implementation guide for that service. Project-wide rules are in the root `AGENTS.md`.
+Three independent services, one per business tool: `linear/` (port 3001, schema `linear.*`), `github/` (3002, `github.*`), `slack/` (3003, `slack.*`). Each has `api/`, `client/`, `db/`, `mcp/`, `oauth/`, `webhooks/` and its own README, which is the implementation guide for that service. Project-wide conventions are in `.claude/rules/aesir-conventions.md`, and the root `AGENTS.md` describes the project.
 
 - Integrations use their own SDK clients (`@linear/sdk`, `@octokit/rest`, `@slack/bolt`); agents never import them. Agents reach these services over MCP (`POST /mcp/tools/:name`, headers `X-Agent-ID`, `X-Correlation-ID`, `X-Task-ID`).
 - Integrations import from `@aesir/platform` only, never from `@aesir/agents`.

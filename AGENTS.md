@@ -12,17 +12,9 @@ Each package that has its own concerns carries a `CLAUDE.md` you read first when
 
 Package READMEs are the implementation guides; `docs/reference/dev-harness.md` explains how guidance is layered and why.
 
-## README Freshness
+## Conventions
 
-When modifying a package's public interface (new tools, changed APIs, updated setup), update its README to match. Package READMEs are referenced by agents as implementation guides -- stale docs cause wrong code.
-
-## Sidekick Test Bench
-
-This repo is built with [sidekick](https://github.com/Rikmorn/sidekick) (`/sk-design`, `/sk-build`, `/sk-review`) **and sidekick is under test here**. Treat it as a tool being evaluated, not an authority: be critical of how it works. Gaps, annoyances, bugs, confusing output, missing capabilities, and improvement ideas, whether noticed by Roberto or by an agent, go into `docs/superpowers/sidekick-testbench-log.md` (local-only, not committed) as they happen (date, who, what happened, why it matters, proposed disposition). At the end of a session we review the log together and file the entries that deserve it on `Rikmorn/sidekick`, one `area:*` label each, with a body that says what happened in aesir.
-
-When sidekick blocks the work, or either of us is uncomfortable with how it is handling something, fall back to the superpowers workflow for that task and log it. The fallback is the record, not a failure.
-
-Work tracking follows sidekick's PM conventions (`.claude/rules/sk-pm-conventions.md`): GitHub issues, milestones, and the aesir project board are the status surface; files keep content. Aesir adds optional `pkg:*` labels because it is a multi-workspace repo.
+Aesir's cross-cutting conventions, including the sidekick test bench, are in `.claude/rules/aesir-conventions.md`, which loads in every session.
 
 ## Architecture
 
@@ -232,44 +224,6 @@ The `seed:permissions` and `migrate` scripts run under [bun](https://bun.sh), wh
 
 **Database schemas:** `platform.*`, `agents.*`, `observability.*`, `linear.*`, `github.*`, `slack.*` -- each package owns its schema. Migrations are NOT auto-run; "relation does not exist" errors mean you need `pnpm db:migrate`. `schema.drizzle.ts` retains old table definitions to prevent destructive DROP TABLE migrations -- do not clean it up.
 
-## Code Patterns
-
-### Environment Configuration
-
-- **Env files:** Only `.env` (gitignored, real credentials) and `.env.example` (tracked, template). No per-environment files.
-- Each service validates env at startup via Zod schema. Missing vars = immediate exit.
-- **Scripts** (seed, migrate): `.env` is at monorepo root. Use `loadEnvFromRoot()` from `@aesir/platform` before accessing `process.env`.
-
-### Integration Architecture
-
-- **Agent code** calls integrations via `callMcpTool()` (HTTP/MCP) -- never import integration SDKs directly
-- **Integration code** uses its own SDK clients (`@linear/sdk`, `@octokit/rest`, `@slack/bolt`)
-- For MCP tool lists, endpoints, and `callMcpTool` usage, see `packages/agents/README.md`
-- For integration-specific APIs, env vars, and code examples, see each integration's README
-
-### Code Conventions
-
-- **Logging:** Use `createPinoLogger` from `@aesir/platform` -- no `console.log` in production code
-- **Validation:** Use Zod schemas at all external data boundaries (webhooks, API inputs, env vars)
-- **Error handling:** Wrap external API calls in try/catch with logged context (`logger.error({ err, issueId }, "message")`)
-- **Types:** Prefer explicit types for public signatures. Use `unknown` over `any`. Export types alongside implementations.
-
-### Dependency Injection
-
-Services use factory functions (not classes) with explicit dependencies:
-
-1. Create services at application startup, pass to handlers
-2. Dependencies via options object (db, logger, config)
-3. Fail fast on missing required dependencies
-4. Include `health()` and `close()` methods for lifecycle management
-5. Export interface and factory function
-
-## Testing
-
-- **Unit tests:** `*.test.ts` next to source files. Run: `npx vitest run path/to/file.test.ts`
-- **Agent integration tests:** LLM-evaluated scenarios at `packages/agents/scripts/agent-tests/`. See `packages/agents/README.md` for full details on scenarios, adding tests, and test agents.
-- **Testing workflow:** Automated suite (`test:agents`) is the regression safety net. Manual exploratory testing with Claude is for investigating edge cases. When manual testing discovers an issue, codify it as a new scenario in the automated suite.
-
 ## Gotchas
 
 ### Docker Networking
@@ -282,7 +236,6 @@ Services use factory functions (not classes) with explicit dependencies:
 
 - Import integration code from `@aesir/integration-{linear,github,slack}` (never from SDKs directly)
 - Platform utilities from `@aesir/platform`, shared types from `@aesir/types`, test utils from `@aesir/test-utils`
-- Agent tools call integrations via `callMcpTool` (HTTP/MCP) -- agent package has NO integration SDK dependencies
 - OAuth tokens stored encrypted in each integration's `*.credentials` table. Requires `CREDENTIAL_ENCRYPTION_KEY` env var.
 
 ## Historical Context

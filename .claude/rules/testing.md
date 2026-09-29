@@ -20,22 +20,6 @@ Three failures this repo has already had, all of which looked green:
 
 Each cost more to find later than one deliberate red run would have cost to do.
 
-## Structure
-
-Tests are co-located: `myModule.ts` → `myModule.test.ts` in the same directory.
-
-```typescript
-import { describe, expect, it } from "vitest";
-import { myFunction } from "./myModule.js";
-
-describe("myFunction", () => {
-  it("should do the expected thing", () => {
-    const result = myFunction(input);
-    expect(result).toBe(expected);
-  });
-});
-```
-
 ## Mock Logger
 
 ```typescript
@@ -176,7 +160,6 @@ Register in `packages/agents/scripts/agent-tests/scenarios/index.ts`.
 - Trigger: `testing.*` events only
 - Model: Haiku (cheap, fast)
 - Token budget: 15k-25k (low, focused)
-- The `id` field in definition.yaml MUST match the directory name
 
 ## Evidence Collection
 
