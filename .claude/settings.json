@@ -37,7 +37,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/guard-schema-drizzle.sh"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard-schema-drizzle.sh"
           }
         ]
       },
@@ -46,7 +46,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/guard-env-commit.sh"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard-env-commit.sh"
           }
         ]
       }
@@ -69,7 +69,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/session-context.sh"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-context.sh"
           }
         ]
       }
