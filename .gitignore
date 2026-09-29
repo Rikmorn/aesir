@@ -46,10 +46,6 @@ cloudflared.yml
 # Social media content (personal, not code)
 socials/
 
-# sidekick — local working state (managed by `sidekick init`)
-.sidekick/cache/
-.sidekick/state/
-
 # impeccable skill working state (live sessions, critique snapshots)
 .impeccable/
 
