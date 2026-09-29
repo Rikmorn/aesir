@@ -11,7 +11,7 @@ What was built between 2026-01-15 and 2026-02-23, as it was recorded at the time
 | `qa-plan-v2.8-v2.9.md` | The end-to-end QA plan written 2026-02-23, never run (Rikmorn/aesir#2) | Moved verbatim |
 | `specs/` | The milestone specs v2.1–v2.9 and the design-vision master document, as written | Moved verbatim |
 | `milestones/` | Per-milestone ROADMAP, REQUIREMENTS and MILESTONE-AUDIT records, v1–v2.8 | Moved verbatim |
-| `tools/` | The two extractors (`extract-phases.ts`, `extract-decisions.ts`) | Kept for provenance -- they read `.planning/` and `docs/history/milestones/` together, which no single commit holds: restore the first with `git checkout v2.9 -- .planning` on this branch, run them from the repo root, then remove it again. A bare `v2.9` checkout has no `docs/history/`, and `509a9f4f^` (the commit before `.planning/` was deleted) predates the extractors' v2.8 fix |
+| `tools/` | The two extractors (`extract-phases.ts`, `extract-decisions.ts`) | Kept for provenance -- they read `.planning/` and `docs/history/milestones/` together, which no single commit holds: restore the first with `git checkout 39c7015c -- .planning` on this branch, run them from the repo root, then remove it again. A bare `39c7015c` checkout has no `docs/history/`, and `509a9f4f^` (the commit before `.planning/` was deleted) predates the extractors' v2.8 fix |
 
 ## Retrieving what was not kept
 
@@ -20,8 +20,8 @@ The GSD planning tree (`.planning/`, ~1,090 files: per-plan PLAN/SUMMARY/VERIFIC
 ```bash
 git show 39c7015c:.planning/ROADMAP.md                       # any file at the last v2.9 commit
 git show 39c7015c:.planning/phases/84-scheduled-execution/84-01-SUMMARY.md
-git ls-tree -r --name-only v2.9 -- .planning | head      # list what existed
-git log --all --oneline -- .planning/phases/86-*         # history of a phase
+git ls-tree -r --name-only 39c7015c -- .planning | head  # list what existed
+git log --all --oneline -- '.planning/phases/86-*'       # history of a phase
 ```
 
 `39c7015c` is the last v2.9 commit (2026-02-23, tip of `master` before the reset). The GSD-era tags that marked each milestone existed only locally and were deleted on 2026-09-16 — nothing was ever released; whether the project tags releases is decided once the setup work is done. The commits they marked:
