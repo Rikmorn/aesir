@@ -180,7 +180,7 @@ Agents are often introduced to replace deterministic workflows, but end up with 
 
 ### The Alternative
 
-The user-level sidekick rule `sk-agent-prompts.md` codifies the approach:
+The user-level sidekick rule `sk-agent-prompts.md` holds the current authoring rules. The approach, in brief:
 
 1. **Goal-oriented identity** — what the agent exists to achieve, not how to work
 2. **Constitutional constraints** — what NOT to do (boundaries), not what TO do (procedures)

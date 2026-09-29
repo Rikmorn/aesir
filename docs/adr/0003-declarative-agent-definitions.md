@@ -2,7 +2,7 @@
 
 **Status:** accepted (v2.3, 2026-02-04)
 **Supersedes / superseded by:** —
-**Amended 2026-09-29:** `PROMPT_GUIDE.md` was retired in favour of the user-level sidekick rule `sk-agent-prompts.md` (#93). The references to the guide below stand as the record was written.
+**Amended 2026-09-29:** `PROMPT_GUIDE.md` was retired in favour of the user-level sidekick rule `sk-agent-prompts.md` (#93). The guide's references in §Decision, §Consequences and §Sources stand as the record was written.
 
 ## Context
 
