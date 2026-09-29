@@ -42,21 +42,21 @@ def main():
     ap.add_argument("--profile", help="a profile named in site.json")
     args = ap.parse_args()
 
-    site = json.loads((args.source / "site.json").read_text())
+    site = json.loads((args.source / "site.json").read_text(encoding="utf-8"))
     profile = {}
     if args.profile:
         profile = site.get("profiles", {}).get(args.profile)
         if profile is None:
             sys.exit(f"no profile {args.profile!r} in {args.source / 'site.json'}")
-    style = (args.source / "_style.html").read_text().rstrip("\n")
+    style = (args.source / "_style.html").read_text(encoding="utf-8").rstrip("\n")
 
     args.target.mkdir(parents=True, exist_ok=True)
     for slug, _, title in site["pages"]:
-        body = (args.source / f"{slug}.html").read_text().rstrip("\n")
+        body = (args.source / f"{slug}.html").read_text(encoding="utf-8").rstrip("\n")
         html = page(site, slug, title, body, style, full=slug not in profile.get("fragment", []))
         for old, new in profile.get("rewrite", []):
             html = html.replace(old, new)
-        (args.target / f"{slug}.html").write_text(html)
+        (args.target / f"{slug}.html").write_text(html, encoding="utf-8")
         print("wrote", args.target / f"{slug}.html", len(html))
 
 if __name__ == "__main__":
