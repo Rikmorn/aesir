@@ -240,5 +240,5 @@ Fetched 2026-09-27 unless marked. Dates are as shown on the page.
 57. Anemoi: A Semi-Centralized Multi-agent System, arXiv 2508.17068v3, 2025-10-10. https://arxiv.org/abs/2508.17068
 58. Decentralized Multi-Agent Systems with Shared Context, arXiv 2606.10662v1, 2026-06-09. https://arxiv.org/abs/2606.10662
 59. Multi-Agent Systems Should be Treated as Principal-Agent Problems, arXiv 2601.23211v1, 2026-01-30. https://arxiv.org/abs/2601.23211
-60. This repo, `docs/research/retarget/research/2026-09-21-human-entry-point.md`, §1, §2, §4, §5, §6.
-61. This repo, `docs/research/retarget/research/2026-09-16-multi-agent-coordination-prior-art.md`, §2, §4.
+60. This repo, `docs/designs/retarget/research/2026-09-21-human-entry-point.md`, §1, §2, §4, §5, §6.
+61. This repo, `docs/designs/retarget/research/2026-09-16-multi-agent-coordination-prior-art.md`, §2, §4.

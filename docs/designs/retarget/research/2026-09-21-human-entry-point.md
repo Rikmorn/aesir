@@ -189,4 +189,4 @@ Fetched 2026-09-21 unless marked. Dates are as shown on the page.
 43. Xu et al., MasDrift, arXiv 2608.07556v2, 2026-08-11. HTML for the text, PDF for Tables 3 and 14. https://arxiv.org/html/2608.07556 and https://arxiv.org/pdf/2608.07556
 44. Multi-Agent Routing as Set-Valued Prediction: A WildChat Benchmark and Cost-Aware Evaluation, arXiv 2606.28925v2, 2026-07-12. https://arxiv.org/html/2606.28925
 45. The Routing Plateau: Understanding and Breaking the Accuracy Limits of LLM Routers, arXiv 2606.07587v1, 2026-05-27. https://arxiv.org/abs/2606.07587
-46. This repo, `docs/research/retarget/research/2026-09-16-multi-agent-coordination-prior-art.md`, §1, §3, §4.
+46. This repo, `docs/designs/retarget/research/2026-09-16-multi-agent-coordination-prior-art.md`, §1, §3, §4.

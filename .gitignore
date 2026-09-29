@@ -4,6 +4,7 @@ node_modules/
 # Build output
 dist/
 *.tsbuildinfo
+docs/designs/*/site/
 
 # Environment files (only .env.example is tracked)
 .env

@@ -1,6 +1,6 @@
 # Topic 5: coordination between agents, and the human entry point
 
-Status: opened 2026-09-21 on Roberto's brief. Evaluation-mode note (`.claude/skills/design-pass/SKILL.md`). Gate one material: scope, map, forces, and the sub-problems framed with draft options. Three research files were dispatched the same day and are integrated below where they have landed; sections that wait on them say so. Nothing here is decided.
+Status: opened 2026-09-21 on Roberto's brief. Evaluation-mode note (`design-pass`, a skill retired in #94). Gate one material: scope, map, forces, and the sub-problems framed with draft options. Three research files were dispatched the same day and are integrated below where they have landed; sections that wait on them say so. Nothing here is decided.
 
 ## Reframing (2026-09-21, after Roberto read the summary)
 

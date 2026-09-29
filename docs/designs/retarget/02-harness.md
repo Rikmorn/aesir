@@ -47,7 +47,7 @@ Verified as-is: the loop imports the Messages client directly and calls `message
 - **Where it already appears in aesir:** the embedding service. `packages/agents/src/shared/embedding/factory.ts` switches on `config.provider` and returns an Ollama or Voyage adapter behind the `EmbeddingService` interface in `types.ts`. Same shape, one level up.
 - **What it costs and when not:** the intersection problem. Prompt caching, adaptive thinking, compaction blocks, server tools and mid-conversation system messages are Anthropic-shaped; OpenAI's reasoning items and Responses state are theirs. A port that exposes only the intersection loses the cost and context levers. A port where each adapter declares capabilities and the harness degrades or fails at build (the manifest asks for compaction; the adapter lacks it) keeps them. Do not use it when only one provider will ever exist; that is not this case.
 
-A second reason to build the port even before a second provider: a fake adapter makes the loop deterministically testable without LLM-judged scenarios (testability lens, `.claude/skills/design-pass/SKILL.md`).
+A second reason to build the port even before a second provider: a fake adapter makes the loop deterministically testable without LLM-judged scenarios (testability lens, `design-pass`, a skill retired in #94).
 
 ### Options for the adapters
 

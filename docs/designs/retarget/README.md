@@ -10,11 +10,11 @@ The direction under exploration, in his words: aesir remains an agent platform, 
 
 ## Method
 
-Each topic is one note in the design-pass evaluation shape (`.claude/skills/design-pass/SKILL.md`): scope and what was read, the map as-is, forces, findings with evidence, proposals with pattern cards, and a disposition per proposal. A disposition is a proposal until topic 7 integrates them and the result is registered as ADRs and issues. Every claim is labelled verified (read in code, ran a command) or believed. The existing design vision and ADRs are inputs to be re-read under the new lens, not constraints on it.
+Each topic is one note in the design-pass evaluation shape (`design-pass`, a skill retired in #94): scope and what was read, the map as-is, forces, findings with evidence, proposals with pattern cards, and a disposition per proposal. A disposition is a proposal until topic 7 integrates them and the result is registered as ADRs and issues. Every claim is labelled verified (read in code, ran a command) or believed. The existing design vision and ADRs are inputs to be re-read under the new lens, not constraints on it.
 
 ## The spec site
 
-`spec/index.html` (nine linked pages: overview diagram, what the 2026-09-27 research changed, systems, job record, addressing, harness and container, flows, protocols, decisions and reading map) is the visual specification of the proposal. Regenerated 2026-09-28 from the notes as they stood after the 2026-09-27 session; `spec/build.py` assembles the pages from `spec/src/*.html` bodies and the shared chrome (`python3 spec/build.py` for the local set, `--dist` for the publishable set with note links rewritten to `notes/`). Three diagrams were added: the two deployment shapes side by side (`changes.html`), a human working with a team (`flows.html#team`), and the three-object manifest (`harness.html#manifest`). Open it locally; the pages link back to every note and research file. A private published copy is at https://claude.ai/artifact/FkL97rZc9PdP9zp1iCcGiw with the notes alongside.
+`site/index.html`, built from `spec/` (nine linked pages: overview diagram, what the 2026-09-27 research changed, systems, job record, addressing, harness and container, flows, protocols, decisions and reading map) is the visual specification of the proposal. Regenerated 2026-09-28 from the notes as they stood after the 2026-09-27 session; `scripts/docs-builder/build.py` assembles the pages from the `spec/*.html` bodies and the shared chrome. `design.md` gives the commands for the local set and for the publishable set, whose note links are rewritten to `notes/`. Three diagrams were added: the two deployment shapes side by side (`changes.html`), a human working with a team (`flows.html#team`), and the three-object manifest (`harness.html#manifest`). Open it locally; the pages link back to every note and research file. A private published copy is at https://claude.ai/artifact/FkL97rZc9PdP9zp1iCcGiw with the notes alongside.
 
 ## Topics
 
@@ -65,7 +65,7 @@ Dispatched 2026-09-27, session 3, ten in parallel, after Roberto's three questio
 - `2026-09-27-human-to-agent-team-patterns.md`: lead-mediated, artefact-mediated, handoff and no-team-object patterns; the project-manager model tested; where questions meet; what is measured; accountability. Feeds topic 5. Landed.
 - `2026-09-27-connector-tiers-and-oauth-brokering.md`: what makes an integration free; managed-auth brokers; how agent platforms and mature ecosystems tier connectors; the MCP authorization spec; bring-your-own; a tier model. Feeds topic 4. Landed.
 
-Internal inputs: `docs/reference/design-vision.md`, `docs/adr/`, `docs/backlog/`, the three v3.x direction documents beside this directory, and the scenario-suite state recorded on issue #2.
+Internal inputs: `docs/reference/design-vision.md`, `docs/adr/`, `docs/backlog/`, the three v3.x direction documents in `docs/research/`, and the scenario-suite state recorded on issue #2.
 
 ## Positions so far
 

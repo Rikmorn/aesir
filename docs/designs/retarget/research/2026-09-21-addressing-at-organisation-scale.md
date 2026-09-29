@@ -209,4 +209,4 @@ Fetched 2026-09-21 unless marked. Dates are as shown on the page.
 53. Gravitee, State of AI Agent Security Report 2026, April 2026, 750 leaders. https://www.gravitee.io/state-of-ai-agent-security
 54. Salesforce, 2026 Connectivity Report announcement, 2026-02-05, 1,050 IT leaders. https://www.salesforce.com/news/stories/connectivity-report-announcement-2026/
 55. IBM newsroom, CIOs and CTOs face growing AI control gap, 2026-06-08, 2,000 executives. https://newsroom.ibm.com/2026-06-08-new-ibm-study-finds-cios-and-ctos-face-growing-ai-control-gap-as-enterprise-deployment-scales
-56. This repo, `docs/research/retarget/research/2026-09-16-multi-agent-coordination-prior-art.md` §3, and `2026-09-21-human-entry-point.md` §1, §2, §4, §5.
+56. This repo, `docs/designs/retarget/research/2026-09-16-multi-agent-coordination-prior-art.md` §3, and `2026-09-21-human-entry-point.md` §1, §2, §4, §5.
