@@ -7,7 +7,7 @@ How guidance reaches whoever is building this repo, and why it is laid out this 
 | Layer | Path | Loaded by | Holds |
 |---|---|---|---|
 | Project | `CLAUDE.md` → `AGENTS.md` | every session, whether started at the root or in a package, and every subagent | what the project is: architecture, commands, gotchas, the package pointer block |
-| User rules | `~/.claude/rules/sk-*.md`, which sidekick installs | every session. A rule without `paths:` loads at start. `sk-typescript.md` and `sk-clean-code.md` load once a `.ts` or `.tsx` file is read, and `sk-agent-prompts.md` once any file in `packages/agents/` is, because its `agents/**` pattern matches at any depth (sidekick#156) | sidekick's working standards, language, PM conventions and guidance authoring, plus its TypeScript, clean-code and prompt rules |
+| User rules | `~/.claude/rules/sk-*.md`, which sidekick installs | every session. A rule without `paths:` loads at start. `sk-typescript.md` and `sk-clean-code.md` load once a `.ts` or `.tsx` file is read, and `sk-agent-prompts.md` once a file under any `agents/` directory is, such as anything in `packages/agents/`, because its `agents/**` pattern matches at any depth (sidekick#156) | sidekick's working standards, language, PM conventions and guidance authoring, plus its TypeScript, clean-code and prompt rules |
 | Project rules | `.claude/rules/*.md` | every session, whether started at the root or in a package, and every subagent. `aesir-conventions.md` has no `paths:` and loads at start. `typescript.md`, `testing.md` and `postgresql.md` load once a file matching their `paths:` is read | aesir's cross-cutting conventions, and its rules for TypeScript, testing and PostgreSQL |
 | Package | `packages/<pkg>/CLAUDE.md` | a session started in that directory; any session or subagent once it reads a file inside the package | what applies only to that package |
 | Package skills | `packages/dashboard/.claude/skills/*` | a session started in `packages/dashboard`; any session or subagent once it reads a file inside the package | `impeccable`, `shadcn`, `vercel-react-best-practices` |
@@ -40,9 +40,9 @@ Measured 2026-09-29 on Claude Code 2.1.285 with `scripts/harness-probe.sh`. Each
 
 After that read, the subagent also reported the user rules `sk-typescript.md` and `sk-clean-code.md`, which are scoped to `.ts` and `.tsx`. A session started at the root picks up a package's `CLAUDE.md` and skills once it reads a file there. That was measured 2026-09-16 on 2.1.273, and the probe does not re-measure it. A sidekick worker is a session the operator starts, so the session rows describe it too.
 
-## Guidance is a start-of-session snapshot
+## Guidance loaded at start is a snapshot
 
-A session's guidance is fixed when it starts, and a subagent inherits that copy rather than reading the files. Measured 2026-09-29 on Claude Code 2.1.285, in a scratch repo. After the session started, it edited `CLAUDE.md`, edited a rule without `paths:`, and created a new rule. A subagent it then dispatched reported the original `CLAUDE.md`, the original rule and no new rule. The session itself reported the same.
+The guidance a session loads at start is fixed then, and a subagent inherits that copy rather than reading the files. Measured 2026-09-29 on Claude Code 2.1.285, in a scratch repo. After the session started, it edited `CLAUDE.md`, edited a rule without `paths:`, and created a new rule. A subagent it then dispatched reported the original `CLAUDE.md`, the original rule and no new rule. The session itself reported the same. Whether a layer that loads on a file read, such as a package `CLAUDE.md` or a path-scoped rule, comes from disk at that read is not measured.
 
 ## Consequences
 
@@ -51,7 +51,7 @@ A session's guidance is fixed when it starts, and a subagent inherits that copy 
 - Rules are the expensive layer: a rule without `paths:` is in every turn of every session. Add one only when reasoning alone can't get there (`sk-guidance-authoring.md` §Admission).
 - Third-party skills are never edited; scoping goes in the package `CLAUDE.md`.
 - Hook configuration reloads mid-session: an edited hook command applies from the next tool call (#89, on 2.1.285).
-- The Biome hook matches `Edit|Write|MultiEdit` only, so a file written through the shell is not formatted.
+- The Biome hook and `guard-schema-drizzle` match `Edit|Write|MultiEdit` only, so a file written through the shell is neither formatted nor guarded.
 - A git worktree session lists the main checkout's skills, while its rules come from the worktree. Run a skill-list check in the main checkout (measured 2026-09-29 on 2.1.285).
 
 ## Re-running the experiment

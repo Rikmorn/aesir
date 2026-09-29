@@ -24,7 +24,7 @@ packages/agents/
 │       └── tools/   # Agent tool factories by namespace
 │           ├── codebase/      # read_file, search_codebase, list_directory, write_file, run_command
 │           ├── communication/ # reply, ask, notify (agent-to-human)
-│           ├── coordination/  # request_human_input, spawn_agent, wait_for, wait_for_task, wait_for_group
+│           ├── coordination/  # request_human_input, spawn_agent; the namespace's wait_for tools are in src/framework/
 │           ├── directory/     # find, get (agent profiles in the directory)
 │           ├── identity/      # read, update (the agent's identity documents)
 │           ├── integration/   # linear, github, slack MCP wrappers
@@ -77,7 +77,7 @@ Each integration exposes an MCP server. Agents call tools via `callMcpTool` from
 
 **Endpoint pattern:** `POST /mcp/tools/:name`
 
-**Required headers:**
+**Headers:**
 - `X-Agent-ID` -- identifies the calling agent (used for permission checks)
 - `X-Correlation-ID` -- optional, propagated to logs
 - `X-Task-ID` -- optional, propagated to logs

@@ -86,5 +86,5 @@ Prompts follow `sk-agent-prompts.md`, the user-level sidekick rule that loads wh
 ### Tool Separation
 
 - **Router tools** (`router/tools/`): Used by the event routing LLM -- `query_conversations`, `reopen_conversation`, `send_message`, `signal_conversation`, `start_conversation`
-- **Agent tools** (`shared/tools/`): Used by agents, one directory per namespace, registered in `src/framework/tool-factories.ts`. The `integration/` directory registers `linear:*`, `github:*` and `slack:*`
+- **Agent tools** (`shared/tools/`): Used by agents, one directory per namespace, registered in `src/framework/tool-factories.ts`. The `integration/` directory registers `linear:*`, `github:*` and `slack:*`, and the `coordination:wait_for*` tools live in `src/framework/`
 - These are separate sets registered in different contexts
