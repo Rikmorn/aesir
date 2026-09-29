@@ -4,7 +4,7 @@ Agentic development platform that automates software workflows -- from feature r
 
 ## Working inside a package
 
-Each package that has its own concerns carries a `CLAUDE.md` you read first when working there. A Task subagent picks one up on its own, on its first read of a file in that package -- not at dispatch. Sidekick's `sk-executor` does not: it reads a fixed list of paths (`./CLAUDE.md`, `./.claude/rules/*.md`, any `./.sidekick/decisions/*.md` whose name matches the task's surface area) and never opens a nested `CLAUDE.md` on its own. The root `CLAUDE.md` is a symlink to this file, so a session started inside a package sees this pointer block too. Even so, the task that sends a worker into a package should name that package's `CLAUDE.md`; if it didn't, read it anyway:
+Each package that has its own concerns carries a `CLAUDE.md` you read first when working there. A Task subagent picks one up on its own, on its first read of a file in that package -- not at dispatch. The root `CLAUDE.md` is a symlink to this file, so a session started inside a package sees this pointer block too. Even so, the task that sends a worker into a package should name that package's `CLAUDE.md`; if it didn't, read it anyway:
 
 - `packages/agents/CLAUDE.md` -- the agent-first checklist, the pointer to the prompt rules, runtime gotchas
 - `packages/dashboard/CLAUDE.md` -- the design system, UI skills, server/client boundary rules
@@ -128,7 +128,7 @@ Agents communicate with integrations via MCP HTTP protocol, not direct SDK clien
 **MCP Client:**
 - Located: `packages/agents/src/shared/mcp/`
 - Function: `callMcpTool(options)` - makes HTTP POST to /mcp/tools/:name
-- Headers: X-Agent-ID (required), X-Correlation-ID (for tracing)
+- Headers: X-Agent-ID (required), X-Correlation-ID (for tracing), X-Task-ID (optional, for tracing)
 - Retry: Exponential backoff on 5xx/429, fail immediately on network errors
 
 **MCP Endpoints:**
@@ -153,7 +153,7 @@ Events flow through adapters and the EventRouter:
    - `ignore` -- known events to skip (e.g., agent's own issue updates)
    - `slow_path` -- ambiguous events routed to LLM for classification
 
-Signal types use domain language: `approval`, `pr_review`, `pr_merged`, `pr_closed`, `user_reply`, `cancel`.
+Signal types use domain language, such as `approval`, `pr_review` and `user_reply`. `KNOWN_SIGNAL_TYPES` in `packages/agents/src/framework/types.ts` is the full list.
 
 ## Directory Structure
 
@@ -179,16 +179,18 @@ packages/
 |           +-- tools/       # Agent tool factories by namespace
 |               |-- codebase/      # read_file, search_codebase, list_directory, write_file, run_command
 |               |-- communication/ # reply, ask, notify (agent-to-human)
-|               |-- coordination/  # request_human_input, spawn_agent, wait_for
-|               |-- directory/     # search_directory, get_agent_profile
+|               |-- coordination/  # request_human_input, spawn_agent, wait_for, wait_for_task, wait_for_group
+|               |-- directory/     # find, get (agent profiles in the directory)
+|               |-- identity/      # read, update (the agent's identity documents)
 |               |-- integration/   # linear, github, slack MCP wrappers
-|               |-- knowledge/     # store_knowledge, search_knowledge
-|               +-- task/          # create_task, complete_task, delegate_task, handoff_task, list_tasks
+|               |-- knowledge/     # store, query, update
+|               |-- task/          # create_task, delegate, handoff_task, complete_task, list_tasks, and more (src/framework/tool-factories.ts)
+|               +-- work/          # register, query (the external entities a conversation works on)
 |-- integrations/            # Independent services, each with: api/, client/, db/, mcp/, oauth/, webhooks/
 |   |-- linear/              # @aesir/integration-linear (port 3001, schema: linear.*)
 |   |-- github/              # @aesir/integration-github (port 3002, schema: github.*)
 |   +-- slack/               # @aesir/integration-slack (port 3003, schema: slack.*)
-|-- dashboard/               # Next.js 15 operations dashboard (port 3005, basePath=/dashboard)
+|-- dashboard/               # Next.js operations dashboard (port 3005, basePath=/dashboard)
 |   +-- src/
 |       |-- app/             # App router pages (overview, conversations, tasks, agents, tools)
 |       |-- components/      # React components grouped by domain (overview/, conversations/, tasks/, agents/, tools/, layout/, ui/)
@@ -234,19 +236,9 @@ The `seed:permissions` and `migrate` scripts run under [bun](https://bun.sh), wh
 
 ### Package Imports
 
-- Import integration code from `@aesir/integration-{linear,github,slack}` (never from SDKs directly)
 - Platform utilities from `@aesir/platform`, shared types from `@aesir/types`, test utils from `@aesir/test-utils`
 - OAuth tokens stored encrypted in each integration's `*.credentials` table. Requires `CREDENTIAL_ENCRYPTION_KEY` env var.
 
 ## Historical Context
 
-The project was built in eleven milestones between 2026-01-15 and 2026-02-23 and reset in 2026-09. The record lives under `docs/`:
-
-- `docs/reference/design-vision.md` -- the principles and anti-patterns as they stand now
-- `docs/adr/` -- the decisions that still bind, one file each
-- `docs/history/` -- milestones, phases, every recorded decision, requirements, the milestone specs and per-milestone archives, frozen
-- `docs/learnings/` -- post-mortems and lessons
-- `docs/research/` -- the v3.x direction documents written before the retarget conversation
-- `docs/backlog/` -- deferred directions and known debt, each naming its GitHub issue
-
-`docs/README.md` explains the taxonomy. Work in flight is on the GitHub board, not in files.
+The project was built in eleven milestones between 2026-01-15 and 2026-02-23 and reset in 2026-09. `docs/reference/design-vision.md` holds the principles and anti-patterns as they stand now, and `docs/README.md` says what else lives under `docs/`. Work in flight is on the GitHub board, not in files.

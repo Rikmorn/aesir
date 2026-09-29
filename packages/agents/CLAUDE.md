@@ -57,7 +57,7 @@ Prompts follow `sk-agent-prompts.md`, the user-level sidekick rule that loads wh
 - `start()` is idempotent: same correlationKey deterministically produces the same conversation ID
 - Conversations are claimed with `FOR UPDATE SKIP LOCKED` -- no two workers process the same conversation
 - Ownership is verified after the agent loop before persisting results -- prevents split-brain writes
-- Non-retryable errors (TokenBudgetExhaustedError, AgentAbortedError) skip the retry loop
+- The worker loop skips the retry loop when a failed result's output contains "Token budget exhausted" or "Agent aborted" (`src/framework/worker-loop.ts`). It matches the text, not an error class: `TokenBudgetExhaustedError` and `AgentAbortedError` are each defined twice and never thrown
 
 ### EventLog
 
@@ -68,7 +68,7 @@ Prompts follow `sk-agent-prompts.md`, the user-level sidekick rule that loads wh
 
 ### History Manager
 
-- Compacts messages when token count exceeds `pruneThreshold` (default 80,000 tokens)
+- Compacts messages when the token count exceeds `pruneThreshold`, which every `definition.yaml` sets; the schema has no default
 - Old tool results beyond `protectedMessages` are truncated to summaries
 - Summarization uses a cheaper model (Haiku) via `summaryModel` config
 - Summaries are wrapped in `<summary></summary>` tags for detection
@@ -79,12 +79,12 @@ Prompts follow `sk-agent-prompts.md`, the user-level sidekick rule that loads wh
 
 - `wait_for` tool creates a pending wait that the executor intercepts
 - Uses mutable flag pattern (not exceptions) so the LLM sees confirmation and generates clean end_turn
-- Signals use domain-language types: `approval`, `pr_review`, `pr_merged`, `pr_closed`
+- Signals use domain-language types, such as `approval` and `pr_review`; `KNOWN_SIGNAL_TYPES` in `src/framework/types.ts` is the full list
 - Signal deduplication via optional `deduplicationId` stored in `delivered_signal_ids` JSONB array
 - Worker loop re-reads queued_signals after wait_for triggers and auto-resumes if a matching signal exists
 
 ### Tool Separation
 
 - **Router tools** (`router/tools/`): Used by the event routing LLM -- `query_conversations`, `reopen_conversation`, `send_message`, `signal_conversation`, `start_conversation`
-- **Agent tools** (`shared/tools/`): Used by agents -- `codebase:*`, `communication:*`, `coordination:*`, `directory:*`, `integration:*`, `knowledge:*`, `task:*`
+- **Agent tools** (`shared/tools/`): Used by agents, one directory per namespace, registered in `src/framework/tool-factories.ts`. The `integration/` directory registers `linear:*`, `github:*` and `slack:*`
 - These are separate sets registered in different contexts

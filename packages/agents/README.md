@@ -24,11 +24,13 @@ packages/agents/
 │       └── tools/   # Agent tool factories by namespace
 │           ├── codebase/      # read_file, search_codebase, list_directory, write_file, run_command
 │           ├── communication/ # reply, ask, notify (agent-to-human)
-│           ├── coordination/  # spawn_agent, wait_for, request_human_input
-│           ├── directory/     # search_directory, get_agent_profile
+│           ├── coordination/  # request_human_input, spawn_agent, wait_for, wait_for_task, wait_for_group
+│           ├── directory/     # find, get (agent profiles in the directory)
+│           ├── identity/      # read, update (the agent's identity documents)
 │           ├── integration/   # linear, github, slack MCP wrappers
-│           ├── knowledge/     # store_knowledge, search_knowledge
-│           └── task/          # create_task, complete_task, delegate_task, handoff_task, list_tasks
+│           ├── knowledge/     # store, query, update
+│           ├── task/          # create_task, delegate, handoff_task, complete_task, list_tasks, and more (src/framework/tool-factories.ts)
+│           └── work/          # register, query (the external entities a conversation works on)
 ```
 
 ### Agent Definitions
@@ -78,6 +80,7 @@ Each integration exposes an MCP server. Agents call tools via `callMcpTool` from
 **Required headers:**
 - `X-Agent-ID` -- identifies the calling agent (used for permission checks)
 - `X-Correlation-ID` -- optional, propagated to logs
+- `X-Task-ID` -- optional, propagated to logs
 
 **Rate limit:** 100 requests/minute per agent (by X-Agent-ID).
 
