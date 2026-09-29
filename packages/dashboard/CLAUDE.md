@@ -1,6 +1,6 @@
 # packages/dashboard
 
-Next.js 15 operations dashboard (App Router, `basePath=/dashboard`, port 3005, standalone output). Read this before touching anything here; the project-wide conventions are in `.claude/rules/aesir-conventions.md`, and the root `AGENTS.md` describes the project.
+Next.js operations dashboard (App Router, `basePath=/dashboard`, port 3005, standalone output). Read this before touching anything here; the project-wide conventions are in `.claude/rules/aesir-conventions.md`, and the root `AGENTS.md` describes the project.
 
 ## Design system
 

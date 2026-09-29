@@ -1,71 +1,65 @@
 # The development harness
 
-How guidance reaches whoever is building this repo, and why it is laid out this way. Present tense; the experiment behind the matrix is re-run when the layout or Claude Code changes.
+How guidance reaches whoever is building this repo, and why it is laid out this way. Present tense. The matrix is re-measured with `scripts/harness-probe.sh` whenever the layout or Claude Code changes.
 
 ## Layers
 
 | Layer | Path | Loaded by | Holds |
 |---|---|---|---|
-| Project | `CLAUDE.md` → `AGENTS.md` | every session, every subagent, sidekick's executor (explicit read) | what the project is: architecture, commands, gotchas, the package pointer block |
-| Rules | `.claude/rules/*.md` | the main session (path-scoped by `paths:`); sidekick's executor (all files, explicit read); a Task subagent too — every rule file without a `paths:` frontmatter (`grep -L '^paths:' .claude/rules/*.md` lists them; today only `aesir-conventions.md`) is in context at dispatch, and a path-scoped one arrives once it reads a matching file (touch-triggered) | aesir's cross-cutting conventions (`aesir-conventions.md`), and domain rules for TypeScript, PostgreSQL and testing |
-| Package | `packages/<pkg>/CLAUDE.md` | sessions started in that directory; the main session when it works on files there; a Task subagent too, once it reads a file inside that package (touch-triggered, not at dispatch) | what applies only to that package |
-| Package skills | `packages/dashboard/.claude/skills/*` | sessions started in `packages/dashboard`; a session started at the repo root too, once it reads a file inside the package (touch-triggered, measured 2026-09-16, Claude Code 2.1.273) | impeccable, shadcn, vercel-react-best-practices |
-| Hooks | `.claude/settings.json` | each hook only on its own declared matcher: `guard-schema-drizzle` on `Edit\|Write\|MultiEdit` (shell writes through `sed` or a heredoc still bypass it), `guard-env-commit` on `Bash`, Biome on `Edit\|Write\|MultiEdit`, `session-context` on `SessionStart` (not a tool call at all). The guard hooks (`.claude/hooks/guard-*.sh`) need `python3` on `PATH` and the Biome hook needs `jq`; each script swallows the failure and exits 0, so a missing binary turns the hook into a silent no-op | schema retention guard, `.env` staging guard, Biome on edit, context re-injection after compaction |
-| Personal | `.claude/settings.local.json` (gitignored) | this machine | sidekick's config guard, personal permissions |
+| Project | `CLAUDE.md` → `AGENTS.md` | every session, whether started at the root or in a package, and every subagent | what the project is: architecture, commands, gotchas, the package pointer block |
+| User rules | `~/.claude/rules/sk-*.md`, which sidekick installs | every session. A rule without `paths:` loads at start. `sk-typescript.md` and `sk-clean-code.md` load once a `.ts` or `.tsx` file is read, and `sk-agent-prompts.md` once a file under any `agents/` directory is, such as anything in `packages/agents/`, because its `agents/**` pattern matches at any depth (sidekick#156) | sidekick's working standards, language, PM conventions and guidance authoring, plus its TypeScript, clean-code and prompt rules |
+| Project rules | `.claude/rules/*.md` | every session, whether started at the root or in a package, and every subagent. `aesir-conventions.md` has no `paths:` and loads at start. `typescript.md`, `testing.md` and `postgresql.md` load once a file matching their `paths:` is read | aesir's cross-cutting conventions, and its rules for TypeScript, testing and PostgreSQL |
+| Package | `packages/<pkg>/CLAUDE.md` | a session started in that directory; any session or subagent once it reads a file inside the package | what applies only to that package |
+| Package skills | `packages/dashboard/.claude/skills/*` | a session started in `packages/dashboard`; any session or subagent once it reads a file inside the package | `impeccable`, `shadcn`, `vercel-react-best-practices` |
+| Plugins | `enabledPlugins` in `.claude/settings.json` | every session | sidekick (its `sidekick:*` skills), superpowers and code-review. `claude plugin list` shows each version |
+| Hooks | `.claude/settings.json` | each hook only on its own matcher: `guard-schema-drizzle` on `Edit\|Write\|MultiEdit`, `guard-env-commit` on `Bash`, Biome on `Edit\|Write\|MultiEdit`, `session-context` on `SessionStart` after a compaction | the schema retention guard, the `.env` staging guard, Biome on edit, and context re-injection after compaction |
+| Personal | `.claude/settings.local.json` (gitignored) | this machine | personal permissions |
+
+Each hook that runs a script names it through `"$CLAUDE_PROJECT_DIR"`, so it resolves from any working directory; the Biome hook is an inline command. A relative path fails once the Bash working directory leaves the root: the shell exits 127, and the call goes through (#89). The guard scripts need `python3` and the Biome hook needs `jq`. Each fails open, so a missing binary disables its hook rather than blocking the call.
 
 ## Why the root file is a symlink
 
-`CLAUDE.md` at the repo root is a symlink to `AGENTS.md`, not an `@`-import line. Two measured facts favour the symlink, reproducible via §Re-running the experiment:
+`CLAUDE.md` at the repo root is a symlink to `AGENTS.md`, not an `@`-import line. Two facts favour the symlink:
 
-- An `@` import is not expanded for a session started inside a package (experiments E1, E2a). A nested `CLAUDE.md`'s upward `@../../AGENTS.md` reaches a Task subagent's context as the literal string, never as the file it names (experiment E2b).
-- A symlink is read as content, from both the root and a package directory. Heading count comes back `1` from both cwds, which no import-based layout achieved from a package directory (experiment E3).
+- An `@` import is not expanded for a session started inside a package. A nested `CLAUDE.md`'s upward `@../../AGENTS.md` reaches a Task subagent's context as the literal string, never as the file it names. Measured 2026-09-16 on Claude Code 2.1.273; the probe does not re-measure it.
+- A symlink is read as content. Every session and subagent in the matrix under §What each kind of session sees reports `AGENTS.md`'s heading.
 
-`sk-executor` reads `./CLAUDE.md` by a fixed path (`~/.claude/agents/sk-executor.md:40`). Measured this session: a scratch file containing an `@`-import line, read with the `Read` tool, comes back as the literal line, not the imported file's content — confirming `Read` does not expand `@`. A plain `@AGENTS.md` line at that path would hand the executor ten characters, not the guidance; through the symlink, the same read returns `AGENTS.md`'s full content.
+The symlink fails silently. On a checkout without symlink support (Windows without developer mode, `core.symlinks=false`), or when the file is fetched raw over HTTP, `CLAUDE.md` becomes a one-line text file reading `AGENTS.md`. Every session there loses all project guidance, and no error or empty file flags it.
 
-The symlink fails differently from the alternatives, and silently: on a checkout without symlink support (Windows without developer mode, `core.symlinks=false`) or when the file is fetched raw over HTTP, `CLAUDE.md` becomes a one-line text file reading `AGENTS.md` — every worker there loses all project guidance, with no error and no empty file to flag it.
+## What each kind of session sees
 
-## What each kind of worker sees (measured 2026-09-16, Claude Code 2.1.273)
+Measured 2026-09-29 on Claude Code 2.1.285 with `scripts/harness-probe.sh`. Each cell is the session's own report of its context, so read it against the two controls. The unscoped user rule `sk-language.md` loaded in every row. The path-scoped `typescript.md` stayed out until a `.tsx` file was read.
 
-| Worker | `AGENTS.md` (via `CLAUDE.md` symlink) | `.claude/rules/sk-typescript.md` (path-scoped) | nested package `CLAUDE.md` | skills listed |
-|---|---|---|---|---|
-| headless, cwd = repo root | seen | not seen | not seen | seen |
-| headless, cwd = `packages/dashboard` | seen | not seen | seen (dashboard) | seen (incl. dashboard skills) |
-| headless, cwd = `packages/agents` | seen | not seen | seen (agents); not seen (dashboard) | seen (no dashboard skills) |
-| Task subagent from root, before file access (A) | seen — stale, see note | not seen | not seen | seen |
-| Task subagent from root, after reading a dashboard file (B) | seen — stale, unchanged from A | seen | seen (dashboard); not seen (agents) | seen — unchanged from A |
-| Main session, cwd = repo root, after reading one file inside a package (measured 2026-09-16, Claude Code 2.1.273) | not tested | not tested | seen (the package whose file was read) | seen (the dashboard skills, once a `packages/dashboard/` file is read) |
+| Session | `AGENTS.md` (through `CLAUDE.md`) | `aesir-conventions.md` (no `paths:`) | `typescript.md` (path-scoped) | package `CLAUDE.md` | dashboard skills |
+|---|---|---|---|---|---|
+| headless, started at the root | seen | seen | not seen | none | not listed |
+| headless, started in `packages/dashboard` | seen | seen | not seen | dashboard | listed |
+| headless, started in `packages/agents` | seen | seen | not seen | agents | not listed |
+| Task subagent dispatched from the root, before any file read | seen | seen | not seen | none | not asked |
+| the same subagent, after reading a `.tsx` file in `packages/dashboard` | seen | seen | seen | dashboard only | reported available |
 
-`not seen` means a row's method asked the question and the layer was absent; `not tested` means that row's method never asked, so no claim is made either way. The two Task-subagent rows' `AGENTS.md` content is also a stale pre-restructure snapshot, captured at dispatch rather than read fresh from disk, not the file as it currently exists. Full per-cell quotes are reproducible via §Re-running the experiment.
+After that read, the subagent also reported the user rules `sk-typescript.md` and `sk-clean-code.md`, which are scoped to `.ts` and `.tsx`. A session started at the root picks up a package's `CLAUDE.md` and skills once it reads a file there. That was measured 2026-09-16 on 2.1.273, and the probe does not re-measure it. A sidekick worker is a session the operator starts, so the session rows describe it too.
 
-## The Part 4 gate
+## Guidance loaded at start is a snapshot
 
-The project reset's Part 4 spec, under "Gates": "a worker spawned in `packages/dashboard` reports the UI skills and the design system; one in `packages/agents` reports the agent-first rules; a root worker reports neither package layer."
-
-All three clauses pass, measured 2026-09-16 and reproducible via §Re-running the experiment:
-
-- **`packages/dashboard` reports the UI skills and the design system — passed.** It lists `impeccable, shadcn, vercel-react-best-practices` among its skills and reports `packages/dashboard/CLAUDE.md`'s `## Design system` heading.
-- **`packages/agents` reports the agent-first rules — passed.** It reports `packages/agents/CLAUDE.md`'s `## MANDATORY: Agent-First Decision Checklist` heading.
-- **a root worker reports neither package layer — passed.** It states `packages/dashboard/CLAUDE.md` is "not visible in my context. The root CLAUDE.md only points at it," lists no package `CLAUDE.md` — including `packages/agents/CLAUDE.md` — anywhere in its instruction-file enumeration, and lists no package-scoped skill (`impeccable`, `shadcn`, `vercel-react-best-practices`) among the skills it reports.
+The guidance a session loads at start is fixed then, and a subagent inherits that copy rather than reading the files. Measured 2026-09-29 on Claude Code 2.1.285, in a scratch repo. After the session started, it edited `CLAUDE.md`, edited a rule without `paths:`, and created a new rule. A subagent it then dispatched reported the original `CLAUDE.md`, the original rule and no new rule. The session itself reported the same. Whether a layer that loads on a file read, such as a package `CLAUDE.md` or a path-scoped rule, comes from disk at that read is not measured.
 
 ## Consequences
 
 - A task that sends a worker into a package names that package's `CLAUDE.md`; the pointer block in `AGENTS.md` is the backstop.
-- Sidekick's executor reads `./CLAUDE.md`, `./.claude/rules/*.md`, and any `./.sidekick/decisions/*.md` whose name matches the task's surface area; anything it must know lives in one of those or is cited by the task.
-- Rules are the expensive layer (every main-session turn). Add one only when reasoning alone can't get there (`.claude/rules/sk-guidance-authoring.md` §Admission).
+- A session that edits `AGENTS.md`, a package `CLAUDE.md` or a rule restarts before it dispatches workers or reviewers who must follow the new text.
+- Rules are the expensive layer: a rule without `paths:` is in every turn of every session. Add one only when reasoning alone can't get there (`sk-guidance-authoring.md` §Admission).
 - Third-party skills are never edited; scoping goes in the package `CLAUDE.md`.
-- Hooks in `.claude/settings.json` take effect mid-session, not only at session start: a `PostToolUse` Biome hook added earlier in a session fired on a later `Edit` in that same session, without a restart (measured, Claude Code 2.1.273).
-- The Biome hook matches `Edit|Write|MultiEdit` only; a file written through the shell — which this repo's own bypass-permissions instructions direct agents to prefer — is not formatted by it.
-- A Task subagent's `AGENTS.md` is the parent session's copy from session start, not the file on disk. Measured: after the file was restructured, a subagent dispatched from a session predating the change still reported the old headings.
-- A session that edits `AGENTS.md` or a package `CLAUDE.md` restarts before dispatching workers.
-- `/sk-build` dispatching from a long-running session hands its executors stale guidance.
+- Hook configuration reloads mid-session: an edited hook command applies from the next tool call (#89, on 2.1.285).
+- The Biome hook and `guard-schema-drizzle` match `Edit|Write|MultiEdit` only, so a file written through the shell is neither formatted nor guarded.
+- A git worktree session lists the main checkout's skills, while its rules come from the worktree. Run a skill-list check in the main checkout (measured 2026-09-29 on 2.1.285).
 
 ## Re-running the experiment
 
-```bash
-P='Do not use any tools. Reply with a bullet list and nothing else: (1) the H1 and H2 headings of every project instruction file currently in your context, (2) the first line of every rule file in your context, (3) the names of every skill listed to you, (4) the H1 of packages/dashboard/CLAUDE.md if you can see it, quoted exactly, (5) the first line of .claude/rules/sk-typescript.md if you can see it, quoted exactly.'
-claude -p "$P" --no-session-persistence
-(cd packages/dashboard && claude -p "$P" --no-session-persistence)
-(cd packages/agents && claude -p "$P" --no-session-persistence)
-```
+Run `scripts/harness-probe.sh` from anywhere in the repo after a layout change or a Claude Code update, and compare its output with the matrix. It needs `claude` and `jq`, and it runs five headless sessions:
 
-Sources: `~/.claude/agents/sk-executor.md` §execution_flow (installed copy of sidekick's executor); the commands above regenerate the visibility evidence directly.
+1. three with tools off, started at the root, in `packages/dashboard` and in `packages/agents`, each reporting its instruction files and, from its init message, its skills;
+2. one at the root that dispatches a Task subagent, which reports before and after it reads a dashboard file;
+3. one in a scratch repo that edits its own guidance mid-session, then dispatches a subagent.
+
+The init message's skill list leaves out a skill marked `user-invocable: false`, such as the dashboard's `shadcn`. The script takes a subagent's reply from the Agent tool's result, so the parent session cannot summarise it.

@@ -1,0 +1,25 @@
+{
+  "brand": "Aesir target architecture",
+  "head": "<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap\">",
+  "footer": "Regenerated 2026-09-28 from the notes under <code>docs/designs/retarget/</code> as they stood after the 2026-09-27 session. A proposal for Roberto to argue with; the two decisions so far are on the <a href=\"decisions.html\">decisions page</a>; what the 2026-09-27 research changed is on <a href=\"changes.html\">one page</a>.",
+  "pages": [
+    ["index", "Overview", "Aesir Target Architecture"],
+    ["changes", "What changed", "What changed · Aesir Target Architecture"],
+    ["systems", "Systems", "Systems · Aesir Target Architecture"],
+    ["record", "Job record", "Job record · Aesir Target Architecture"],
+    ["addressing", "Addressing", "Addressing · Aesir Target Architecture"],
+    ["harness", "Harness & container", "Harness · Aesir Target Architecture"],
+    ["flows", "Flows", "Flows · Aesir Target Architecture"],
+    ["protocols", "Protocols", "Protocols · Aesir Target Architecture"],
+    ["decisions", "Decisions & reading", "Decisions · Aesir Target Architecture"]
+  ],
+  "profiles": {
+    "dist": {
+      "rewrite": [
+        ["href=\"../research/", "href=\"notes/research/"],
+        ["href=\"../", "href=\"notes/"]
+      ],
+      "fragment": ["index"]
+    }
+  }
+}
