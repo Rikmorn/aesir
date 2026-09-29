@@ -17,7 +17,7 @@ Conventions that target particular folders or files live in path-scoped rules ne
 
 ## Code
 
-- Log with `createPinoLogger` from `@aesir/platform`. Biome's `noConsole` rejects `console` calls in production code; the dashboard's exception is in `packages/dashboard/CLAUDE.md`.
+- Log with `createPinoLogger` from `@aesir/platform`. Biome's `noConsole` rejects `console` calls in production code. Where no pino logger exists, as in the dashboard or in startup code that reports an env failure, use `console` under a reasoned suppression (`typescript.md`).
 - Runtime schemas at external boundaries (webhooks, API inputs, env vars) are Zod.
 - Wrap each external API call in `try`/`catch`, and log the failure with its context: `logger.error({ err, issueId }, "message")`.
 - Export a module's types alongside its implementation.
@@ -34,7 +34,7 @@ A service is a factory function with explicit dependencies, not a class.
 ## Tests
 
 - A unit test sits next to its source: `foo.ts` → `foo.test.ts`. Run one with `npx vitest run path/to/foo.test.ts`.
-- The LLM-judged scenario suite (`test:agents`) covers agent behaviour. Plumbing, such as the executor, routing, signals, persistence and tool wiring, needs a deterministic unit test. A design that only a scenario run can check will not be checked.
+- The LLM-judged scenario suite (`test:agents`) covers agent behaviour. Plumbing, such as the executor, routing, signals, persistence and tool wiring, needs a deterministic test. A design that only a scenario run can check will not be checked.
 - When manual testing finds a behaviour problem, codify it as a new scenario; `testing.md` covers how scenarios are written.
 
 ## Package READMEs
