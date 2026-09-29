@@ -1,6 +1,6 @@
 # packages/dashboard
 
-Next.js 15 operations dashboard (App Router, `basePath=/dashboard`, port 3005, standalone output). Read this before touching anything here; the project-wide rules are in the root `AGENTS.md`.
+Next.js 15 operations dashboard (App Router, `basePath=/dashboard`, port 3005, standalone output). Read this before touching anything here; the project-wide conventions are in `.claude/rules/aesir-conventions.md`, and the root `AGENTS.md` describes the project.
 
 ## Design system
 
@@ -14,7 +14,7 @@ The design tokens (colour, typography, spacing, radii) are the `@theme inline` b
 
 - The dashboard has a local schema (`src/lib/schema.ts`) and never imports `@aesir/agents`; keep it that way to keep the Next.js dependency tree small.
 - Server/client boundary: `Date` objects are serialised to ISO strings before crossing into client components; typed serialised interfaces at the boundary.
-- No pino here; `console.error` needs a `biome-ignore` comment with the reason.
+- No pino here: log with `console.error`.
 - SSE arrives through the proxy route at `/dashboard/api/sse/events`; `EventStreamStore` is a plain class, importable from server and client.
 - Verify visually: `pnpm --filter @aesir/dashboard dev`, then the page in a browser. Typecheck is not a rendering check.
 

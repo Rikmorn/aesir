@@ -6,8 +6,12 @@ paths:
 
 # TypeScript in aesir
 
-Aesir-specific additions to `sk-typescript.md`, kept apart from it because `sidekick init` overwrites the `sk-*` files.
+This file holds aesir's additions to the user-level `sk-typescript.md`. It lives apart because `sidekick rules install` rewrites the `sk-*` files from its shipped copies.
 
-This repo's linter is Biome, so the suppression comment to avoid is `// biome-ignore`.
+`sk-typescript.md` bans the linter's suppression comment as a way to bypass the compiler. This repo's linter is Biome, and the ban covers `// biome-ignore` for its type-safety rules: `noExplicitAny`, `noNonNullAssertion`, `noImplicitAnyLet` and `noBannedTypes`. The type-safety suppressions already in the code are debt (#100), not precedent.
 
-Aesir has domain error classes such as `TokenBudgetExhaustedError`. When narrowing a caught error, chain `instanceof TokenBudgetExhaustedError` before `instanceof Error`.
+A suppression of any other Biome rule is allowed when the text after its colon gives the reason. Sanctioned cases that recur:
+
+- `lint/suspicious/noConsole` in `packages/dashboard`, which has no pino logger.
+- `lint/suspicious/noConsole` in startup code that reports an env failure before the logger exists, and in the seed scripts under `packages/platform/src/db/seeds/`.
+- The vendored shadcn components under `packages/dashboard/src/components/ui/`, which stay as shadcn ships them.
