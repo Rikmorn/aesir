@@ -4,7 +4,7 @@ Status: drafted 2026-09-16. Gate-one material for the retarget; the later topics
 
 ## Scope and what was read
 
-Read in the 2026-09-16 session: `packages/agents/src/framework/agent-registry.ts`, `tool-registry.ts`, `event-router.ts`, `packages/agents/src/router/slow-path.ts`, `packages/platform/src/sandbox/` (headers of `docker-sandbox.ts` and `dev-container.ts`), `packages/agents/src/shared/tools/codebase/run-command.ts`, `packages/agents/definitions/dev-agent/definition.yaml`, `docker-compose.yml` (service list), ADRs 0001 to 0005, 0010 and 0013, `docs/reference/design-vision.md`, and every note under `docs/backlog/`. Line counts and grep hits were measured with the commands named in the tables.
+Read in the 2026-09-16 session: `packages/agents/src/framework/agent-registry.ts`, `tool-registry.ts`, `event-router.ts`, `packages/agents/src/router/slow-path.ts`, `packages/platform/src/sandbox/` (headers of `docker-sandbox.ts` and `dev-container.ts`), `packages/agents/src/shared/tools/codebase/run-command.ts`, `packages/agents/definitions/dev-agent/definition.yaml`, `docker-compose.yml` (service list), ADRs 0001 to 0005, 0010 and 0013, `docs/reference/design-vision.md`, and every backlog note (retired in #98; `git show 1b6d6ce9:docs/backlog/`). Line counts and grep hits were measured with the commands named in the tables.
 
 Not read: the bodies of `worker-loop.ts`, `conversation-executor.ts`, `history-manager.ts` and `run-agent-loop.ts`; the integrations' internals; the dashboard; the knowledge, identity, retrieval and schedule services; the test scenarios. Claims about those are labelled believed.
 
@@ -23,7 +23,7 @@ One Node process (`agent-service` in compose) hosts every agent. It loads defini
 | Definition directories, of which `test-*` scenario agents | 32, 26 (`ls packages/agents/definitions`) | verified |
 | Conversations are claimed with `SKIP LOCKED` | `worker-loop.ts:986` | verified |
 | For a dev conversation the worker spawns a Docker container named by conversation id from `aesir-dev-env:latest`, clones the repo into it and pushes git credentials | `worker-loop.ts:237` to `:280`, `:1271`; `dev-container.ts` | verified |
-| The agent service reaches Docker over the host socket and runs as root to do so | `docker-compose.yml:270`, `:324`; `docs/backlog/dev-agent-container-runs-as-root.md` | verified |
+| The agent service reaches Docker over the host socket and runs as root to do so | `docker-compose.yml:270`, `:324`; `git show 1b6d6ce9:docs/backlog/dev-agent-container-runs-as-root.md` | verified |
 | The codebase tools exec into that container; the loop itself runs in the shared service | `run-command.ts` | verified |
 | Start routing is deterministic: YAML `triggers` build an event-type to agent-id map | `event-router.ts`, `loadStartRules` | verified |
 | Signal routing is a constant in framework code mapping signal types to `dev-agent` or `product-agent` | `event-router.ts`, `SIGNAL_AGENT_MAP` | verified |
@@ -31,7 +31,7 @@ One Node process (`agent-service` in compose) hosts every agent. It loads defini
 | GitHub PR review events and pass-through events always take that path | `adapters/github.ts:137`, `adapters/pass-through.ts:28` | verified |
 | Agents call integrations over MCP HTTP, never by SDK import; each integration owns webhooks, OAuth, and outbound calls | ADR-0004; `packages/integrations/*` layout | ADR verified; layout believed from `AGENTS.md` |
 | Tasks, delegation with an accept/reject/counter-propose handshake, task groups, `wait_for_task`, and completion dispatch are the collaboration layer | ADR-0009, ADR-0010; `packages/agents/src/shared/tools/task/` | verified |
-| Human delegation, materialisation policy and operator chat were designed into the schema and deferred | ADR-0010 consequences; `docs/backlog/human-collaboration.md` | verified |
+| Human delegation, materialisation policy and operator chat were designed into the schema and deferred | ADR-0010 consequences; `git show 1b6d6ce9:docs/backlog/human-collaboration.md` | verified |
 | Ollama in compose serves embeddings only; no local model does inference | `packages/agents/src/shared/embedding/ollama.ts`; `.env.example:187` | verified |
 
 Sizes, non-test TypeScript lines, measured 2026-09-16 with `find ... -name '*.ts' | grep -v .test. | xargs cat | wc -l` per package:

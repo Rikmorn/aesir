@@ -23,6 +23,6 @@ Every agent is a directory under `packages/agents/definitions/` containing a `de
 ## Sources
 
 - `git show 39c7015c:.planning/PROJECT.md`, `## Key Decisions`: rows "Declarative YAML + prompt.md agents", "Constitutional + few-shot prompt style".
-- `docs/history/specs/design-vision.md`, `## Design Decisions Log`: rows "Agent definitions as YAML + Markdown data", "Prompt rewrites use constitutional + few-shot approach", "Prompt guide as formal ruleset".
-- `docs/history/specs/2.3-spec-raw.md`, `### 1. Agent Definition`; Appendix `### A.3 Agent Definition: Key Design Debates`.
+- `git show 1b6d6ce9:docs/history/specs/design-vision.md`, `## Design Decisions Log`: rows "Agent definitions as YAML + Markdown data", "Prompt rewrites use constitutional + few-shot approach", "Prompt guide as formal ruleset".
+- `git show 1b6d6ce9:docs/history/specs/2.3-spec-raw.md`, `### 1. Agent Definition`; Appendix `### A.3 Agent Definition: Key Design Debates`.
 - `packages/agents/definitions/PROMPT_GUIDE.md` — current prompt structure and authoring rules.

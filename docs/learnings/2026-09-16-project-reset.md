@@ -6,7 +6,7 @@ Aesir was dormant from 2026-02-23 (v2.9 executed, never closed) to 2026-09-15. T
 
 - **GitHub became the status surface** (Part 1): labels (`area:*`, `pkg:*`, `backlog`, `change-request`), milestone `R1 — Project reset`, project board #3, the first 27 issues. GSD and its `.planning/` tree were retired.
 - **Repo reset** (Part 2): dead config and seven unused dependencies out; bun replaces tsx for running TypeScript; dependencies current within range; 16 stale worker-loop tests skipped against #1; `test:fast`, `lint` and `typecheck` green from a cold start.
-- **Docs consolidation** (Part 3): `.planning/` consolidated into `docs/` — `reference/` (living), `adr/`, `history/` (frozen, with reproducible extractors under `docs/history/tools/`), `learnings/`, `research/`, `backlog/` — then deleted; every file is retrievable with `git show 39c7015c:<path>`.
+- **Docs consolidation** (Part 3): `.planning/` consolidated into `docs/` — `reference/` (living), `adr/`, `history/` (frozen, with reproducible extractors under `git show 1b6d6ce9:docs/history/tools/`), `learnings/`, `research/`, `backlog/` — then deleted; every file is retrievable with `git show 39c7015c:<path>`.
 - **Harness audit** (Part 4): guidance laid out where each kind of worker reads it, verified by experiment. Root `CLAUDE.md` is a symlink to `AGENTS.md`; per-package `CLAUDE.md` files under `packages/{agents,dashboard,integrations}`; the dashboard vendors its UI skills; one path-scoped TypeScript rule; a Biome-on-edit hook and a permissions allowlist. `docs/reference/dev-harness.md` carries the measured visibility matrix and the commands that regenerate it.
 
 ## How it ran
@@ -40,4 +40,4 @@ Aesir: #29–#34 (Parts 2–3 findings) and #35–#39 (Part 4: a `definition.yam
 
 ## Tags
 
-The eleven GSD-era tags (`v1`, `v2.0`–`v2.9`) existed only locally and nothing was ever released. They were deleted on 2026-09-16 and every provenance pointer rewritten to the commit `39c7015c`; the tag-to-commit table is in `docs/history/README.md`. Whether the project tags releases is decided once the setup work is done.
+The eleven GSD-era tags (`v1`, `v2.0`–`v2.9`) existed only locally and nothing was ever released. They were deleted on 2026-09-16 and every provenance pointer rewritten to the commit `39c7015c`; the tag-to-commit table is in `git show 1b6d6ce9:docs/history/README.md`. Whether the project tags releases is decided once the setup work is done.
