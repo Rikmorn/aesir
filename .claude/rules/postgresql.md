@@ -22,6 +22,8 @@ Every package with DB access has TWO schema files that must stay in sync:
 
 When adding a table or column, update BOTH files.
 
+The one deliberate difference: `schema.drizzle.ts` keeps the definitions of old tables, so drizzle-kit never generates a destructive `DROP TABLE`. Never delete a table from it to make the pair match. The `guard-schema-drizzle` hook blocks that for an edit, but not for a shell write.
+
 ## Naming Conventions
 
 - Tables: snake_case plural (`conversations`, `agent_events`, `knowledge_entries`)

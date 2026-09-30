@@ -129,7 +129,7 @@ Agents communicate with integrations via MCP HTTP protocol, not direct SDK clien
 - Located: `packages/agents/src/shared/mcp/`
 - Function: `callMcpTool(options)` - makes HTTP POST to /mcp/tools/:name
 - Headers: X-Agent-ID (required), X-Correlation-ID (for tracing), X-Task-ID (optional, for tracing)
-- Retry: Exponential backoff on 5xx/429, fail immediately on network errors
+- Retry: exponential backoff with jitter on 429, 5xx and network errors, up to `MAX_ATTEMPTS` in `client.ts`; other 4xx fail at once. A caller passing `retryable: false` gets one attempt
 
 **MCP Endpoints:**
 - Linear: http://linear-integration:3001/mcp/tools/:name
@@ -239,6 +239,6 @@ The `seed:permissions` and `migrate` scripts run under [bun](https://bun.sh), wh
 - Platform utilities from `@aesir/platform`, shared types from `@aesir/types`, test utils from `@aesir/test-utils`
 - OAuth tokens stored encrypted in each integration's `*.credentials` table. Requires `CREDENTIAL_ENCRYPTION_KEY` env var.
 
-## Historical Context
+## Where to look next
 
-The project was built in eleven milestones between 2026-01-15 and 2026-02-23 and reset in 2026-09. `docs/reference/design-vision.md` holds the principles and anti-patterns as they stand now, and `docs/README.md` says what else lives under `docs/`. Work in flight is on the GitHub board, not in files.
+`docs/reference/design-vision.md` holds the principles and anti-patterns as they stand now, and `docs/README.md` says what else lives under `docs/`. Work in flight is on the GitHub board, not in files.

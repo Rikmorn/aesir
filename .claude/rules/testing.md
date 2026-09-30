@@ -12,13 +12,11 @@ paths:
 
 A passing check is evidence only when you know what would make it fail. Before trusting green, make a new test or guard fail on purpose: revert the fix and watch it go red, or feed the guard the thing it exists to catch.
 
-Three failures this repo has already had, all of which looked green:
+The false greens to expect here (#46, #42 and #62 are the cases):
 
-- `guard-schema-drizzle` counted `pgTable(`, which appears nowhere here, so the hook could never fire on any edit (#46).
-- The test-utils schema copy carried a constraint production did not have, so the test that would have caught the real bug passed instead (#42).
-- A Slack uniqueness test left `enterprise_id` NULL, and PostgreSQL treats NULLs as distinct, so the constraint under test was never reached (#62).
-
-Each cost more to find later than one deliberate red run would have cost to do.
+- A guard whose pattern never matches the code it protects, so it can never fire.
+- A test schema that differs from production, so a test passes against constraints production lacks.
+- A fixture that leaves a nullable column NULL, so a `UNIQUE` constraint under test is never reached, because PostgreSQL treats NULLs as distinct.
 
 ## Mock Logger
 
@@ -49,38 +47,36 @@ function createMockDb() {
 
 ## Module Mocking
 
-`vi.mock()` must come BEFORE imports that use the mocked module:
+Vitest hoists `vi.mock()` above the file's imports, so the mock applies wherever the call sits. The factory runs before the file's own variables exist; share values with it through `vi.hoisted()`.
 
 ```typescript
 vi.mock("../../shared/mcp/client.js", () => ({
   callMcpTool: vi.fn().mockResolvedValue({ success: true }),
 }));
 
-// NOW import the module that uses callMcpTool
 import { myHandler } from "./handler.js";
 ```
 
 # Integration Test Patterns
 
-## Setup Order (Critical)
+## Setup
 
-1. `vi.mock()` calls — BEFORE any framework imports
-2. Set env vars — BEFORE framework modules trigger Zod validation
-3. Import framework modules — AFTER mocks and env are ready
-4. Start containers — in `beforeAll` with long timeout (60s)
-5. Clean up — `afterEach` (rollback/table cleanup), `afterAll` (stop containers)
+Env that the framework validates at load comes from the integration project's `setupFiles` entry, `packages/agents/src/framework/__integration__/env.setup.ts`. An assignment in the test file runs too late, because the file's imports are evaluated first; add a new required variable to `env.setup.ts` instead.
+
+Start the container in `beforeAll` with a long timeout, clean tables in `afterEach`, and stop the container in `afterAll`:
 
 ```typescript
-// 1. Mocks first
 vi.mock("../../shared/agent-loop/run-agent-loop.js", () => ({
   runAgentLoop: vi.fn(),
 }));
 
-// 2. Env vars
-process.env.ANTHROPIC_API_KEY = "test-key";
-
-// 3. Now import
-import { createConversationExecutor } from "./executor.js";
+import { createConversationExecutor } from "../../framework/index.js";
+import {
+  cleanupTables,
+  type IntegrationTestContext,
+  setupTestContext,
+  teardownTestContext,
+} from "./setup.js";
 
 let ctx: IntegrationTestContext;
 
@@ -89,7 +85,7 @@ beforeAll(async () => {
 }, 60000);
 
 afterEach(async () => {
-  await txCtx.rollback(); // Or cleanupTables(ctx)
+  await cleanupTables(ctx);
 });
 
 afterAll(async () => {
@@ -99,7 +95,7 @@ afterAll(async () => {
 
 ## Testcontainers
 
-Build the schema from the package's real migrations. A hand-copied snapshot drifts: the previous one stopped at migration 0002 while the package had reached 0022, and the suites ran against tables that no longer matched production.
+Build the schema from the package's real migrations: a hand-copied snapshot drifts from production, and nothing fails when it does.
 
 ```typescript
 import path from "node:path";
@@ -110,7 +106,7 @@ import {
   setupPostgresContainer,
 } from "@aesir/test-utils";
 
-const container = await setupPostgresContainer(); // pgvector/pgvector:pg16
+const container = await setupPostgresContainer(); // pgvector image; tag set in packages/test-utils/src/containers/postgres.ts
 const pool = new Pool({ connectionString: container.connectionUri });
 const db = drizzle(pool, { schema });
 
