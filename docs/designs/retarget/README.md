@@ -65,7 +65,7 @@ Dispatched 2026-09-27, session 3, ten in parallel, after Roberto's three questio
 - `2026-09-27-human-to-agent-team-patterns.md`: lead-mediated, artefact-mediated, handoff and no-team-object patterns; the project-manager model tested; where questions meet; what is measured; accountability. Feeds topic 5. Landed.
 - `2026-09-27-connector-tiers-and-oauth-brokering.md`: what makes an integration free; managed-auth brokers; how agent platforms and mature ecosystems tier connectors; the MCP authorization spec; bring-your-own; a tier model. Feeds topic 4. Landed.
 
-Internal inputs: `docs/reference/design-vision.md`, `docs/adr/`, the backlog notes (folded into their issues in #98; `git show 1b6d6ce9:docs/backlog/`), the three v3.x direction documents (now in `research/`, as `3.0-*`, `3.1-*` and `3.2-*`), and the scenario-suite state recorded on issue #2.
+Internal inputs: `docs/reference/design-vision.md`, `docs/adr/`, the backlog notes, the three v3.x direction documents (now in `research/`, as `3.0-*`, `3.1-*` and `3.2-*`), and the scenario-suite state recorded on issue #2. The backlog notes were folded into their issues in #98 (`git show 1b6d6ce9:docs/backlog/`).
 
 ## Positions so far
 

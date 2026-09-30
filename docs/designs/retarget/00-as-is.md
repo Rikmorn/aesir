@@ -4,7 +4,7 @@ Status: drafted 2026-09-16. Gate-one material for the retarget; the later topics
 
 ## Scope and what was read
 
-Read in the 2026-09-16 session: `packages/agents/src/framework/agent-registry.ts`, `tool-registry.ts`, `event-router.ts`, `packages/agents/src/router/slow-path.ts`, `packages/platform/src/sandbox/` (headers of `docker-sandbox.ts` and `dev-container.ts`), `packages/agents/src/shared/tools/codebase/run-command.ts`, `packages/agents/definitions/dev-agent/definition.yaml`, `docker-compose.yml` (service list), ADRs 0001 to 0005, 0010 and 0013, `docs/reference/design-vision.md`, and every note under `git show 1b6d6ce9:docs/backlog/`. Line counts and grep hits were measured with the commands named in the tables.
+Read in the 2026-09-16 session: `packages/agents/src/framework/agent-registry.ts`, `tool-registry.ts`, `event-router.ts`, `packages/agents/src/router/slow-path.ts`, `packages/platform/src/sandbox/` (headers of `docker-sandbox.ts` and `dev-container.ts`), `packages/agents/src/shared/tools/codebase/run-command.ts`, `packages/agents/definitions/dev-agent/definition.yaml`, `docker-compose.yml` (service list), ADRs 0001 to 0005, 0010 and 0013, `docs/reference/design-vision.md`, and every backlog note (retired in #98; `git show 1b6d6ce9:docs/backlog/`). Line counts and grep hits were measured with the commands named in the tables.
 
 Not read: the bodies of `worker-loop.ts`, `conversation-executor.ts`, `history-manager.ts` and `run-agent-loop.ts`; the integrations' internals; the dashboard; the knowledge, identity, retrieval and schedule services; the test scenarios. Claims about those are labelled believed.
 
