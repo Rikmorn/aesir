@@ -23,6 +23,6 @@ Agents run as agentic tool-use loops on `@anthropic-ai/sdk`'s native tool-use AP
 ## Sources
 
 - `git show 39c7015c:.planning/PROJECT.md`, `## Key Decisions`: rows "Agentic loops over fixed graphs", "@anthropic-ai/sdk native tool-use", "Orchestrator + sub-agents pattern", "Hybrid smart router".
-- `docs/history/specs/design-vision.md`, `## Design Decisions Log`: row "Control flow via tool calls, not orchestration graphs".
-- `docs/history/specs/2.2-spec-raw.md`, `## What Changes vs. v2.1`; `### 3. Smart Router`; `### 4. Dev Agent Orchestrator`.
-- `docs/history/milestones.md`, `## v2.2 Agentic Architecture` — "Every `@langchain/*` dependency removed, 51 LangGraph files deleted".
+- `git show 1b6d6ce9:docs/history/specs/design-vision.md`, `## Design Decisions Log`: row "Control flow via tool calls, not orchestration graphs".
+- `git show 1b6d6ce9:docs/history/specs/2.2-spec-raw.md`, `## What Changes vs. v2.1`; `### 3. Smart Router`; `### 4. Dev Agent Orchestrator`.
+- `git show 1b6d6ce9:docs/history/milestones.md`, `## v2.2 Agentic Architecture` — "Every `@langchain/*` dependency removed, 51 LangGraph files deleted".

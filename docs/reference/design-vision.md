@@ -1,6 +1,6 @@
 # Aesir — Design Vision
 
-This is the present-tense statement of how aesir is designed: the principles, taxonomy, and philosophy that govern the codebase today, independent of which milestone built them. The decisions behind these principles live in `docs/adr/`, and the milestone-by-milestone history that produced them lives in `docs/history/`.
+This is the present-tense statement of how aesir is designed: the principles, taxonomy, and philosophy that govern the codebase today, independent of which milestone built them. The decisions behind these principles live in `docs/adr/`, and the milestone-by-milestone history that produced them is in git: `git show 1b6d6ce9:docs/history/README.md` indexes it.
 
 ## Foundational Principles
 
@@ -207,4 +207,4 @@ Handoff types are extensible: completion, pause, delegation, and escalation ship
 
 ---
 
-Sources: `docs/history/specs/design-vision.md` — the milestone-annotated original this file is distilled from, with its Milestone Specs, Problem, Event Routing Evolution, Bidirectional Task Assignment, Expansion Paths, and Design Decisions Log sections kept there rather than repeated here.
+Sources: `git show 1b6d6ce9:docs/history/specs/design-vision.md` — the milestone-annotated original this file is distilled from, with its Milestone Specs, Problem, Event Routing Evolution, Bidirectional Task Assignment, Expansion Paths, and Design Decisions Log sections kept there rather than repeated here.

@@ -20,7 +20,7 @@ Knowledge lives in a single Postgres table (`agents.knowledge_entries`), dual-in
 
 ## Sources
 
-- `docs/history/decisions-log.md`, `## B. Project Key Decisions`: rows "pgvector in PostgreSQL", "Knowledge classification taxonomy (6 types)"; `## A. Per-plan decisions, by phase`: `### Phase 87-knowledge-retrieval-enhancement`.
-- `docs/history/specs/design-vision.md`, `### Knowledge as Shared Infrastructure`; `## Design Decisions Log`: rows "Knowledge classified by type, scoped by visibility", "`knowledge:` namespace, not `memory:`".
-- `docs/history/specs/2.7-agent-collaboration.md`, `## Phase 71: Shared Memory` (Requirements MEM-01 through MEM-10, Open Design Questions 1–6); `## Phase 72: Entity Directory` (DIR-07).
-- `docs/history/specs/2.9-platform-completion.md`, `## Deferred Work`: row KRS-01.
+- `git show 1b6d6ce9:docs/history/decisions-log.md`, `## B. Project Key Decisions`: rows "pgvector in PostgreSQL", "Knowledge classification taxonomy (6 types)"; `## A. Per-plan decisions, by phase`: `### Phase 87-knowledge-retrieval-enhancement`.
+- `git show 1b6d6ce9:docs/history/specs/design-vision.md`, `### Knowledge as Shared Infrastructure`; `## Design Decisions Log`: rows "Knowledge classified by type, scoped by visibility", "`knowledge:` namespace, not `memory:`".
+- `git show 1b6d6ce9:docs/history/specs/2.7-agent-collaboration.md`, `## Phase 71: Shared Memory` (Requirements MEM-01 through MEM-10, Open Design Questions 1–6); `## Phase 72: Entity Directory` (DIR-07).
+- `git show 1b6d6ce9:docs/history/specs/2.9-platform-completion.md`, `## Deferred Work`: row KRS-01.

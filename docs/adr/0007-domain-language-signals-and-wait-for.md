@@ -20,7 +20,7 @@ Under Temporal (pre-v2.3), signals were ceremony-heavy: each of six distinct sig
 
 ## Sources
 
-- `docs/history/decisions-log.md`, `## B. Project Key Decisions`: row "Domain-language signal types"; `## A. Per-plan decisions, by phase`, `### Phase 57-conversation-reopening` (world-state message via `<world_state>` XML tags, FIFO eviction consistent with the existing `signal()` pattern); `## B`: row "Conversation reopening via reopen signal".
-- `docs/history/specs/design-vision.md`, `## Design Decisions Log`: row "Signal queueing, not retry backoff".
+- `git show 1b6d6ce9:docs/history/decisions-log.md`, `## B. Project Key Decisions`: row "Domain-language signal types"; `## A. Per-plan decisions, by phase`, `### Phase 57-conversation-reopening` (world-state message via `<world_state>` XML tags, FIFO eviction consistent with the existing `signal()` pattern); `## B`: row "Conversation reopening via reopen signal".
+- `git show 1b6d6ce9:docs/history/specs/design-vision.md`, `## Design Decisions Log`: row "Signal queueing, not retry backoff".
 - `AGENTS.md`, `### WaitForState and Signals`.
-- `docs/history/specs/2.3-spec-raw.md`, `### 6. Signal Handling` (Unified Event Shape, Signal Matching, Signal Queueing, Deduplication); Appendix `### A.7 Generalized Event System`.
+- `git show 1b6d6ce9:docs/history/specs/2.3-spec-raw.md`, `### 6. Signal Handling` (Unified Event Shape, Signal Matching, Signal Queueing, Deduplication); Appendix `### A.7 Generalized Event System`.
