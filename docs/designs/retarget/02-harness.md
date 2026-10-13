@@ -54,7 +54,7 @@ A second reason to build the port even before a second provider: a fake adapter 
 | Option | What it gives | What it costs | Note |
 |---|---|---|---|
 | A. Own thin port; official SDK per provider inside each adapter | Full access to each provider's features; no lag | You write and maintain each adapter | Anthropic first; OpenAI-compatible second, when a workload needs it |
-| B. A provider-abstraction library (Vercel AI SDK, `ai` 7.0.x, provider spec `LanguageModelV4`) | Adapters for many providers at once; the Anthropic provider exposes nearly the whole surface today: explicit caching, adaptive thinking, compaction, context editing, tool search and `defer_loading`, mid-conversation system and tool changes, task budgets, server tools | A new major every six to eight months (v5 2025-07, v6 2025-12, v7 2026-06) and per-feature documentation lag; `providerOptions` and `providerMetadata` are real, layered escape hatches | Checked 2026-09-27: the lag argument was weaker than written and the churn argument stronger (`research/2026-09-27-tool-exposure-and-model-port.md` §5) |
+| B. A provider-abstraction library (Vercel AI SDK, `ai` 7.0.x, provider spec `LanguageModelV4`) | Adapters for many providers at once; the Anthropic provider exposes nearly the whole surface today: explicit caching, adaptive thinking, compaction, context editing, tool search and `defer_loading`, mid-conversation system and tool changes, task budgets, server tools | A new major every six to eight months (v5 2025-07, v6 2025-12, v7 2026-06) and per-feature documentation lag; `providerOptions` and `providerMetadata` are real, layered escape hatches | Checked 2026-09-27: the lag argument was weaker than written and the churn argument stronger (`docs/research/retarget/2026-09-27-tool-exposure-and-model-port.md` §5) |
 | C. A translation proxy (LiteLLM, Bifrost, or agentgateway's LLM fronting) | Two routes under one name: passthrough keeps every lever and swaps nothing; translation swaps providers and keeps the intersection of two dialects plus hand-mapped fields | Another process; LiteLLM needs Postgres and Redis for its features and shipped a credential stealer on PyPI on 2026-03-24 through a compromised CI action; Claude Code turns off `tool_reference` behind a gateway, a measured instance of a proxy costing a lever | Checked 2026-09-27: an egress concern in passthrough mode, not the port (same file §6) |
 | D. Claude Agent SDK as the harness now, clone later | The most capable harness on day one | Agnosticism becomes a second harness | Conflicts with the principle unless the principle is explicitly deferred |
 
@@ -125,7 +125,7 @@ Summarised in `03-deployment.md`: claimed loop kept, transcript in the store, in
 
 ### Gap register
 
-Each row is a question neither the notes nor the 2026-09-16 research answers. G1 to G6 were sent to research on 2026-09-21 (`research/2026-09-21-harness-container-gaps.md`); the rest wait for a topic session.
+Each row is a question neither the notes nor the 2026-09-16 research answers. G1 to G6 were sent to research on 2026-09-21 (`docs/research/retarget/2026-09-21-harness-container-gaps.md`); the rest wait for a topic session.
 
 | Id | Gap | Why it matters | Topic |
 |---|---|---|---|
@@ -144,7 +144,7 @@ Each row is a question neither the notes nor the 2026-09-16 research answers. G1
 
 ### What the 2026-09-21 research says for G1 to G6
 
-Source: `research/2026-09-21-harness-container-gaps.md` (section numbers below refer to it; every row is verified there unless marked inferred). Positions are proposals.
+Source: `docs/research/retarget/2026-09-21-harness-container-gaps.md` (section numbers below refer to it; every row is verified there unless marked inferred). Positions are proposals.
 
 | Id | Evidence | Position proposed |
 |---|---|---|
@@ -155,11 +155,11 @@ Source: `research/2026-09-21-harness-container-gaps.md` (section numbers below r
 | G5 | Readiness only removes a pod from Service endpoints and says nothing for a poller; liveness must test the loop. Drain has one shape across Temporal (`shutdownGraceTime`), DBOS and `ant beta:worker` ("cancels any in-flight tool call, posts its error result, and releases the work item"). Wake from zero is the KEDA poll interval plus scheduling, pull and start; scale-down waits the 300 s cooldown. AgentCore is the only vendor with a cold-start number: about 2 s P75 on its snapshot-based V2 against 5.4 to 30 s on V1 (§5) | Liveness probes the loop (age of the last heartbeat written by the claim loop), no readiness probe unless a Service call exists. On SIGTERM: stop claiming, cancel the in-flight tool call, write its error, release the claim within the grace period. Measure wake latency before choosing between a long-running replica and a per-session worker that exits after idle |
 | G6 | All three vendors bill compute per active session and stop the meter on idle; Managed Agents exposes `usage.list_cost` and `usage.active_seconds` per session and emits `session.usage` immediately before idle. OpenTelemetry spans carry `gen_ai.agent.id`, `gen_ai.agent.version` and `gen_ai.conversation.id`; the token-usage metric carries none of them; the whole GenAI convention set is still "Development" with no tagged release (secondary) (§6) | Usage is a domain event per turn on the conversation (tokens, cost, active seconds), the `session.usage` shape, so the dashboard reads it from the event log and does not depend on the conventions. Spans carry the agent id, version and conversation id; per-agent token metrics are aggregated from spans or from an own attribute until the conventions settle |
 
-| G7 | From `research/2026-09-21-agent-to-agent-transports.md` §6 (verified): callee authentication is standard (bearer, API key, mTLS, declared on the A2A card); per-agent identity is a product in Entra and AgentCore and SPIFFE is the workload-level equivalent; A2A payloads carry no user identity; human authorisation propagates one hop in shipped systems (Foundry on-behalf-of, AgentCore three-legged OAuth); RFC 8693 makes nested actor claims "informational only"; nothing shipped enforces the originating request at hop two | The egress gateway from G3 identifies the calling agent (its own credential to the gateway; SPIRE later). Human authorisation is carried one hop by the platform and re-anchored in prose beyond that: the originating request text travels in every brief (MasDrift's source re-anchoring). Recorded in `05-coordination.md` finding 7 |
+| G7 | From `docs/research/retarget/2026-09-21-agent-to-agent-transports.md` §6 (verified): callee authentication is standard (bearer, API key, mTLS, declared on the A2A card); per-agent identity is a product in Entra and AgentCore and SPIFFE is the workload-level equivalent; A2A payloads carry no user identity; human authorisation propagates one hop in shipped systems (Foundry on-behalf-of, AgentCore three-legged OAuth); RFC 8693 makes nested actor claims "informational only"; nothing shipped enforces the originating request at hop two | The egress gateway from G3 identifies the calling agent (its own credential to the gateway; SPIRE later). Human authorisation is carried one hop by the platform and re-anchored in prose beyond that: the originating request text travels in every brief (MasDrift's source re-anchoring). Recorded in `05-coordination.md` finding 7 |
 
 ### Further gaps the research raised (G13 to G25)
 
-From `research/2026-09-21-harness-container-gaps.md` §7, one line each, not yet answered or sent for research. Each names the source that raised it.
+From `docs/research/retarget/2026-09-21-harness-container-gaps.md` §7, one line each, not yet answered or sent for research. Each names the source that raised it.
 
 | Id | Gap | Raised by | Topic |
 |---|---|---|---|
@@ -179,7 +179,7 @@ From `research/2026-09-21-harness-container-gaps.md` §7, one line each, not yet
 
 ## What the 2026-09-27 research says (topics 2, 3, 4 and 6)
 
-Six research files landed on 2026-09-27 and bear on this note: `research/2026-09-27-manifest-schema-precedent.md` ("manifest"), `research/2026-09-27-tool-exposure-and-model-port.md` ("tools and port"), `research/2026-09-27-gateway-identity-and-tokens.md` ("gateway"), `research/2026-09-27-support-services-and-security.md` ("support"), `research/2026-09-27-deployment-shape-and-cost.md` ("shape"), `research/2026-09-27-postgres-store-load-and-scale.md` ("store"), and the read-only `research/2026-09-27-claim-model-code-survey.md` ("survey"). Section numbers refer to the named file; `[V]` there means a fetched primary source. Positions below are proposals. Roberto's instruction for the session was to reason from first principles and let no current code bias the design; the survey is cited only as evidence of what one instance of the shape does, and its defects are recorded in `07-path.md`.
+Six research files landed on 2026-09-27 and bear on this note: `docs/research/retarget/2026-09-27-manifest-schema-precedent.md` ("manifest"), `docs/research/retarget/2026-09-27-tool-exposure-and-model-port.md` ("tools and port"), `docs/research/retarget/2026-09-27-gateway-identity-and-tokens.md` ("gateway"), `docs/research/retarget/2026-09-27-support-services-and-security.md` ("support"), `docs/research/retarget/2026-09-27-deployment-shape-and-cost.md` ("shape"), `docs/research/retarget/2026-09-27-postgres-store-load-and-scale.md` ("store"), and the read-only `docs/research/retarget/2026-09-27-claim-model-code-survey.md` ("survey"). Section numbers refer to the named file; `[V]` there means a fetched primary source. Positions below are proposals. Roberto's instruction for the session was to reason from first principles and let no current code bias the design; the survey is cited only as evidence of what one instance of the shape does, and its defects are recorded in `07-path.md`.
 
 ### The manifest (question 3)
 
@@ -237,7 +237,7 @@ So option A is smaller than assumed: the port is built on the primitives both ve
 
 | Id | Gap | Raised by | Topic |
 |---|---|---|---|
-| G26 | The MCP confused-deputy rule: a platform that fronts a provider with one static client id "MUST obtain user consent for each dynamically registered client"; what "client" means when every client is the platform's own harness | MCP security best practices 2026-07-28; `research/2026-09-27-connector-tiers-and-oauth-brokering.md` §5, §8 | 4, 6 |
+| G26 | The MCP confused-deputy rule: a platform that fronts a provider with one static client id "MUST obtain user consent for each dynamically registered client"; what "client" means when every client is the platform's own harness | MCP security best practices 2026-07-28; `docs/research/retarget/2026-09-27-connector-tiers-and-oauth-brokering.md` §5, §8 | 4, 6 |
 | G27 | Pool identity blast radius: a compromised pool pod can request tokens for every agent's ServiceAccount its RBAC allows, where a per-agent pod holds one; a pool per trust tier bounds it | shape §4, §5 | 3, 6 |
 | G28 | How the GitHub App manifest flow's returned private key and secrets reach the vault without transiting the builder, and whether Slack's twelve-hour configuration token can back an operator-run registration | connector tiers §6, §8 | 4 |
 | G29 | Retention declared in the agent manifest (a default TTL for sessions this agent starts) and a legal-hold flag at the tenant; no vendor has the former | support §1 | 2, 6 |

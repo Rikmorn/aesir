@@ -14,7 +14,7 @@ An integration splits into three parts with two owners:
 |---|---|---|
 | Outbound client | the bundle | tool code that calls the provider's API; credentials come from the vault at egress |
 | Inbound adapter | the bundle | turns a delivery into an addressable event: which agent, which session, or a new session |
-| Ingress and credentials | aesir | stable public URL and TLS; delivery persisted and deduplicated on the provider's delivery id (GitHub `X-GitHub-Delivery`, Linear `Linear-Delivery`, Slack `event_id`, per `research/2026-09-16-scaling-containerised-agents.md`); retries; routing by declared subscriptions; OAuth callback and token storage with egress substitution |
+| Ingress and credentials | aesir | stable public URL and TLS; delivery persisted and deduplicated on the provider's delivery id (GitHub `X-GitHub-Delivery`, Linear `Linear-Delivery`, Slack `event_id`, per `docs/research/retarget/2026-09-16-scaling-containerised-agents.md`); retries; routing by declared subscriptions; OAuth callback and token storage with egress substitution |
 
 Two principles follow:
 
@@ -33,7 +33,7 @@ Precedent from the research: Foundry adds an Invocations endpoint specifically f
 
 ## The five questions, answered from the 2026-09-27 research (proposals)
 
-From `research/2026-09-27-events-and-extension-model.md` (93 primary sources; section numbers below refer to it; `[V]` there means a fetched primary source). Each answer is a proposal; the evidence is cited, the choice is mine.
+From `docs/research/retarget/2026-09-27-events-and-extension-model.md` (93 primary sources; section numbers below refer to it; `[V]` there means a fetched primary source). Each answer is a proposal; the evidence is cited, the choice is mine.
 
 **The shape of the field first.** Every platform that receives third-party webhooks on a builder's behalf (Svix Ingest, Hookdeck, Inngest) owns the public URL and records the delivery before any builder code runs. Agent platforms do not: Foundry's Invocations endpoint is Entra-authenticated so a GitHub delivery needs API Management in front; Managed Agents has no inbound trigger surface at all, only outbound webhooks and cron deployments, and its cookbook receiver is "a Flask or FastAPI route" that calls `sessions.create`; Trigger.dev leaves the route to your app; A2A's push receiver is the client's and the spec says push messages "MUST NOT be considered a reliable delivery mechanism" (§1). So business-tool events as a first-class trigger remain the delta named in `01-target.md`, and the precedents to copy are the webhook-infrastructure products, not the agent platforms.
 
@@ -51,7 +51,7 @@ Two consequences for the other notes. The `04-events.md` sketch for case B ("res
 
 Roberto, 2026-09-27: "Another capability that we might formalise is the difference between platform-supported plugins, like we can build a GH integration and that is 'free' to use, as opposed to something new that would need to have a bundled client with the container and potentially off-platform management for things like OAuth."
 
-Written first from the three-part split above, then revised the same day against `research/2026-09-27-connector-tiers-and-oauth-brokering.md` (52 sources; section numbers below refer to it; `[V]` there means fetched primary source). The inbound mechanics (signatures, fan-out, adapter placement) are the sibling brief's, `research/2026-09-27-events-and-extension-model.md`, and are not repeated here.
+Written first from the three-part split above, then revised the same day against `docs/research/retarget/2026-09-27-connector-tiers-and-oauth-brokering.md` (52 sources; section numbers below refer to it; `[V]` there means fetched primary source). The inbound mechanics (signatures, fan-out, adapter placement) are the sibling brief's, `docs/research/retarget/2026-09-27-events-and-extension-model.md`, and are not repeated here.
 
 ### Decompose "free"
 
@@ -87,7 +87,7 @@ The first-principles draft had three tiers with "does builder code see a token" 
 | Promotion | review of tools and scopes, tests, ownership or permission for the API, a maintenance commitment | adoption, and the operator's decision to own the app: the registration is re-homed, nothing is rebuilt | n/a |
 | Precedent | Claude "Custom" connectors and `custom_connection`; Zapier private integrations; Copilot custom connectors; Home Assistant custom integrations with their logged warning; Docker self-provided images | Claude "Verified"; Copilot independent publisher; Terraform Partner; Grafana community signing; Docker-built images | Copilot standard connectors; Claude Anthropic-built connectors; Composio managed toolkits |
 
-The orthogonal axis, **credential handling**, has three values whatever the tier: substituted at egress (the container sends a placeholder; works for static tokens and OAuth access tokens), vended by a platform exchange (the platform performs the GitHub App JWT-to-installation-token exchange or signs the request; brief 4, `research/2026-09-27-gateway-identity-and-tokens.md`, says which exchanges a gateway can do), or held by the builder's code (the credential kind forces it, and the bundle's card and manifest say so). The third value is Roberto's "off-platform management". It is a labelled property of a bundle, never a separate tier and never forbidden: the research's warning from every mature ecosystem is that a forbidden bottom tier makes builders route around the platform with static tokens in images (§4, §7).
+The orthogonal axis, **credential handling**, has three values whatever the tier: substituted at egress (the container sends a placeholder; works for static tokens and OAuth access tokens), vended by a platform exchange (the platform performs the GitHub App JWT-to-installation-token exchange or signs the request; brief 4, `docs/research/retarget/2026-09-27-gateway-identity-and-tokens.md`, says which exchanges a gateway can do), or held by the builder's code (the credential kind forces it, and the bundle's card and manifest say so). The third value is Roberto's "off-platform management". It is a labelled property of a bundle, never a separate tier and never forbidden: the research's warning from every mature ecosystem is that a forbidden bottom tier makes builders route around the platform with static tokens in images (§4, §7).
 
 Three consequences:
 
@@ -115,4 +115,4 @@ Inferred from the decomposition, and now anchored on the shipped forms (§6: eve
 
 ### What this settles and what it does not
 
-It settles the vocabulary: three tiers by who registers the app and who wrote and reviewed the code, one orthogonal credential-handling axis, the operator's provider registration as the fixed cost at every tier, and the principle that Tier 2 is Tier 1 authored by the platform. It settles the MCP placement: the container is not the MCP client. It does not settle the declaration's schema (the manifest brief, `research/2026-09-27-manifest-schema-precedent.md`), the per-provider choice between one app per installation and one per tenant, how the GitHub manifest flow's returned private key reaches the vault without transiting the builder, or what the confused-deputy rule requires of a platform whose only clients are its own harnesses. Those four are the register entries this section adds.
+It settles the vocabulary: three tiers by who registers the app and who wrote and reviewed the code, one orthogonal credential-handling axis, the operator's provider registration as the fixed cost at every tier, and the principle that Tier 2 is Tier 1 authored by the platform. It settles the MCP placement: the container is not the MCP client. It does not settle the declaration's schema (the manifest brief, `docs/research/retarget/2026-09-27-manifest-schema-precedent.md`), the per-provider choice between one app per installation and one per tenant, how the GitHub manifest flow's returned private key reaches the vault without transiting the builder, or what the confused-deputy rule requires of a platform whose only clients are its own harnesses. Those four are the register entries this section adds.
