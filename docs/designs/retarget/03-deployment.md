@@ -4,7 +4,7 @@ Status: seeded 2026-09-21 from the 2026-09-16 scaling and harness research, as t
 
 ## What was read
 
-`research/2026-09-16-scaling-containerised-agents.md` in full; `research/2026-09-16-harness-and-packaging-prior-art.md` §3, §5 and §6. No aesir code was read for this note beyond what `00-as-is.md` records. Every claim below is verified in those files unless labelled believed; the files carry the primary sources.
+`docs/research/retarget/2026-09-16-scaling-containerised-agents.md` in full; `docs/research/retarget/2026-09-16-harness-and-packaging-prior-art.md` §3, §5 and §6. No aesir code was read for this note beyond what `00-as-is.md` records. Every claim below is verified in those files unless labelled believed; the files carry the primary sources.
 
 ## Positions the research supports
 
@@ -31,7 +31,7 @@ Roberto's "agents are services in a cluster" fits A with one Deployment per agen
 
 ## What this topic still has to decide
 
-The 2026-09-21 gaps research (`research/2026-09-21-harness-container-gaps.md`) answered G1 to G6; the positions it supports are in `02-harness.md` under "What the 2026-09-21 research says". What remains for this topic:
+The 2026-09-21 gaps research (`docs/research/retarget/2026-09-21-harness-container-gaps.md`) answered G1 to G6; the positions it supports are in `02-harness.md` under "What the 2026-09-21 research says". What remains for this topic:
 
 1. **One Deployment per agent image, or one harness Deployment that pulls any bundle.** The research favours one image; whether each agent gets its own Deployment (a Service to call, per-agent scaling and identity) or shares one (denser packing, one rollout) is open. The 5a transport question depends on it, and so does G1: a Service per agent implies a push endpoint on the harness; a shared pool needs none.
 2. **Where the adapter runs** (`04-events.md` question 2): in the ingress as a bundle-supplied module, or in the agent's container.
@@ -43,7 +43,7 @@ The 2026-09-21 gaps research (`research/2026-09-21-harness-container-gaps.md`) a
 
 ## Database load: what loads the store, where it saturates, and the ladder (2026-09-27)
 
-Roberto, 2026-09-27: "I'm a bit worried on the load placed on the DB, it might be fine, just not sure how it would truly scale." Written first from the shape alone, then revised the same day against `research/2026-09-27-postgres-store-load-and-scale.md` (74 sources; section numbers below refer to it; `[V]` there means fetched primary source, and every computed number shows its formula). The as-is query profile, as evidence of one instance of the shape and not as the baseline, comes from `research/2026-09-27-claim-model-code-survey.md` when it lands.
+Roberto, 2026-09-27: "I'm a bit worried on the load placed on the DB, it might be fine, just not sure how it would truly scale." Written first from the shape alone, then revised the same day against `docs/research/retarget/2026-09-27-postgres-store-load-and-scale.md` (74 sources; section numbers below refer to it; `[V]` there means fetched primary source, and every computed number shows its formula). The as-is query profile, as evidence of one instance of the shape and not as the baseline, comes from `docs/research/retarget/2026-09-27-claim-model-code-survey.md` when it lands.
 
 **The answer in three sentences.** Query rate is not the problem: the research's capacity model puts an organisation of a hundred agents with five thousand paused conversations at about two hundred statements per second and 2.5 MB/s of transcript reads, two to three orders of magnitude under what Postgres queue libraries and DBOS have measured on one node (§7). What hurts a Postgres-only agent store is churn and growth: dead tuples on the rows that claims and heartbeats rewrite, message and event tables growing at roughly a hundred gigabytes a month at that scale, dashboard scans over the log, and the connection count crossing the default hundred. Every precedent that kept Postgres as its queue took the same ordered steps, and none left it for the hot queue below thousands of tasks per second (§6).
 
@@ -116,7 +116,7 @@ From §6, each step with its symptom and a named precedent. The first four keep 
 
 ### What this means for the decisions on the table
 
-- **The deployment shape's effect on the store is connections, not query rate.** The first-principles draft called the shape the largest lever on idle load; with the numbers, idle polling is ten statements per second at twenty replicas and does not matter. What the shape multiplies is the replica floor times the pool size, which is the connection count in row 2. One Deployment per agent with a floor of one replica each is a hundred pools at organisation scale; a shared pool is as many as the work needs. Brief 2 (`research/2026-09-27-deployment-shape-and-cost.md`) costs the rest.
+- **The deployment shape's effect on the store is connections, not query rate.** The first-principles draft called the shape the largest lever on idle load; with the numbers, idle polling is ten statements per second at twenty replicas and does not matter. What the shape multiplies is the replica floor times the pool size, which is the connection count in row 2. One Deployment per agent with a floor of one replica each is a hundred pools at organisation scale; a shared pool is as many as the work needs. Brief 2 (`docs/research/retarget/2026-09-27-deployment-shape-and-cost.md`) costs the rest.
 - **Transcript placement is settled enough to state:** one row per message, large tool results out of line, compaction bounding the live window. It is a joint harness and store decision (G9 in `02-harness.md`); the store's side is now known.
 - **Partition the event log and inbox from day one.** Cheap before there is data, expensive after, and step 4 of every precedent's ladder.
 - **Keep the lease in its own narrow table** from day one for the same reason (row 3).
@@ -128,7 +128,7 @@ Nine measurements replace the model's assumptions (§7): iterations and events p
 
 ## Deployment shape: one Deployment per agent, or a shared harness pool (2026-09-27)
 
-Item 1 of "What this topic still has to decide" now has its inputs, from `research/2026-09-27-deployment-shape-and-cost.md` (56 sources; section numbers below refer to it; `[V]` there means a fetched primary source, and every computed number shows its formula). The decision is Roberto's; this section lays out what the evidence says and where it points.
+Item 1 of "What this topic still has to decide" now has its inputs, from `docs/research/retarget/2026-09-27-deployment-shape-and-cost.md` (56 sources; section numbers below refer to it; `[V]` there means a fetched primary source, and every computed number shows its formula). The decision is Roberto's; this section lays out what the evidence says and where it points.
 
 ### What ships
 

@@ -8,7 +8,7 @@ No issue yet. A `change-request` issue on `Rikmorn/aesir` is filed once topic 1 
 ## What is here
 
 - `README.md` and the topic notes `00` to `07`, each in the evaluation shape that `README.md` §Method describes.
-- `research/` holds the grounding reports, which the notes cite as `research/<file>`. They sit beside this note while the design is open. When it closes, any that outlive it move to a `retarget/` folder under `docs/research/`.
+- The grounding reports live in `docs/research/retarget/`, whose `README.md` indexes them, and the notes cite them by that path. They are records and outlive this folder: new research for the design lands there too, and none moves back here.
 - `spec/` is the source of the spec site: nine pages that present the proposal, linking back to the notes and the research. Each page body is hand-written HTML, and `spec/site.json` holds the page list, the titles and the footer.
 
 Build the site into the gitignored `site/`, then open `site/index.html`:
@@ -17,7 +17,7 @@ Build the site into the gitignored `site/`, then open `site/index.html`:
 python3 scripts/docs-builder/build.py --source docs/designs/retarget/spec --target docs/designs/retarget/site
 ```
 
-The copy published to claude.ai carries the notes under `notes/`. Build it with `--target docs/designs/retarget/dist --profile dist`, which rewrites the note links to match; `dist/` is gitignored too.
+The copy published to claude.ai carries the notes under `notes/` and the reports under `notes/research/`. Build it with `--target docs/designs/retarget/dist --profile dist`, which rewrites the note and report links to match; `dist/` is gitignored too.
 
 ## Next
 

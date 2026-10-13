@@ -60,7 +60,7 @@ A proposal for the acceptance test, to be fixed once the workload is chosen:
 
 ## Managed Agents, precisely, and the delta
 
-Verified from Anthropic's bundled API reference (cache dated 2026-06-24) and the research thread's live fetch on 2026-09-16 (`research/2026-09-16-harness-and-packaging-prior-art.md` §2):
+Verified from Anthropic's bundled API reference (cache dated 2026-06-24) and the research thread's live fetch on 2026-09-16 (`docs/research/retarget/2026-09-16-harness-and-packaging-prior-art.md` §2):
 
 | Managed Agents | What it is | Aesir's position |
 |---|---|---|

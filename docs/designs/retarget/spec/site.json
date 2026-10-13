@@ -16,7 +16,7 @@
   "profiles": {
     "dist": {
       "rewrite": [
-        ["href=\"../research/", "href=\"notes/research/"],
+        ["href=\"../../../research/retarget/", "href=\"notes/research/"],
         ["href=\"../", "href=\"notes/"]
       ],
       "fragment": ["index"]

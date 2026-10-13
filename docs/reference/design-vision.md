@@ -180,15 +180,7 @@ Agents are often introduced to replace deterministic workflows, but end up with 
 
 ### The Alternative
 
-The user-level sidekick rule `sk-agent-prompts.md` holds the current authoring rules. The approach, in brief:
-
-1. **Goal-oriented identity** — what the agent exists to achieve, not how to work
-2. **Constitutional constraints** — what NOT to do (boundaries), not what TO do (procedures)
-3. **Few-shot examples with reasoning** — teach judgment patterns, not lookup tables
-4. **Selective chain-of-thought** — orchestrators externalize reasoning for observability
-5. **Structured output at boundaries only** — phase tags and handoffs, nothing more
-6. **Minimal directive density** — every MUST earns its place
-7. **Trust the model** — don't encode what the model does natively
+The user-level sidekick rule `sk-agent-prompts.md` holds the current authoring rules, and `dev-harness.md` says when it loads. Where this doc's reasoning about prompts differs from the rule, the rule is current; #106 re-evaluates this doc.
 
 ### Why Few-Shot With Reasoning Works
 

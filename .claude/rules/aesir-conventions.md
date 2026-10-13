@@ -45,6 +45,6 @@ When you change a package's public interface (new tools, changed APIs, updated s
 
 This repo is built with [sidekick](https://github.com/Rikmorn/sidekick), and sidekick is under test here. Its `sk-*` rules bind. Its skills and workflows are what is being evaluated, so be critical of how they work.
 
-- Log gaps, annoyances, bugs, confusing output, missing capabilities and improvement ideas in `docs/superpowers/sidekick-testbench-log.md` as they happen, whoever notices them. Each entry gives the date, who, what happened, why it matters, and a proposed disposition. The log is local and not committed.
-- At the end of a session, review the log with Roberto. File the entries that deserve it on `Rikmorn/sidekick`, one `area:*` label each, with a body that says what happened in aesir.
-- When sidekick blocks the work, or either of you is uncomfortable with how it handles something, fall back to the superpowers workflow for that task and log it. The fallback is the record, not a failure.
+- Note gaps, annoyances, bugs, confusing output, missing capabilities and improvement ideas as they happen, whoever notices them. Each note gives the date, who, what happened, why it matters, and a proposed disposition.
+- At the end of a session, review the notes with Roberto. File the ones that deserve it on `Rikmorn/sidekick`, one `area:*` label each, with a body that says what happened in aesir. The filed issue is the record; the notes are scratch.
+- When sidekick blocks the work, or either of you is uncomfortable with how it handles something, fall back to the superpowers workflow for that task and note it. The fallback is evidence about sidekick, not a failure.

@@ -34,38 +34,9 @@ Order matters: 1 decides the acceptance test everything else is judged by; 2 and
 
 ## Research inputs
 
-External prior art, dispatched 2026-09-16, one file each under `research/`:
+The grounding reports are in `docs/research/retarget/`, whose `README.md` indexes them: one line per report, when each was dispatched and why, and the topic it feeds.
 
-- `2026-09-16-harness-and-packaging-prior-art.md`: terminology, Anthropic's surfaces (Agent SDK, Managed Agents), container-packaged agents in the wild, manifest precedent, image-per-agent versus one image. Feeds topics 2 and 3. Landed 2026-09-16.
-- `2026-09-16-scaling-containerised-agents.md`: execution model for a paused loop, load balancing, memory placement, node packing and sandboxes, observability. Feeds topics 3 and 6. Landed 2026-09-16.
-- `2026-09-16-multi-agent-coordination-prior-art.md`: coordination taxonomy, failure evidence, discovery, humans as a primitive, orchestrator versus process. Feeds topic 5. Landed 2026-09-16.
-- `2026-09-16-graph-engineering-for-agents.md`: "graph engineering" as Roberto means it, centred on arXiv 2604.11378 (a planner-produced, immutable execution DAG inside the harness with scheduled dispatch and layered recovery), related plan-as-DAG work, production harnesses that structure runs, the evidence, and what a manifest would declare; knowledge graphs as a short disambiguation. Feeds topic 2. Re-weighted and dispatched 2026-09-16; landed the same evening.
-
-Dispatched 2026-09-21, one file each under `research/`:
-
-- `2026-09-21-agent-to-agent-transports.md`: A2A and MCP as call contracts for a durable callee; how the cluster-native agent platforms transport calls, jobs and events; Claude Code's evolution past a single orchestrator; identity between agents. Feeds topic 5a. Landed 2026-09-21; integrated in `05-coordination.md` and G7 in `02-harness.md`.
-- `2026-09-21-human-entry-point.md`: one entry point versus named agents in the tool; the human's own harness as orchestrator over MCP; the extra hop's cost; where the front desk's state lives; the two meanings of operator. Feeds topic 5b. Landed 2026-09-21; integrated in `05-coordination.md`.
-- `2026-09-21-harness-container-gaps.md`: the inbound contract, version pinning across a pause, vault at egress, manifest-to-image build, health and drain, cost attribution; plus any further gaps found. Feeds topics 2, 3 and 6. Landed 2026-09-21; positions for G1 to G6 and the new gaps G13 to G25 recorded in `02-harness.md`.
-
-Dispatched 2026-09-21, later the same day, after Roberto's reframing (the job concept is a candidate, not a baseline; "against the grain" meant addressing among a hundred agents; fresh look, no aesir baggage):
-
-- `2026-09-21-coordination-standards-landscape.md`: every live standard or protocol for agent coordination and collaboration (A2A and MCP by pointer; ACP, AGNTCY, ANP, the Agent Protocols, AG-UI, vendor session models, business-tool agent APIs, Kubernetes CRDs, IETF drafts), which define a durable job record, what collaboration model each assumes, what has merged or died, and what Claude Code, Linear, GitHub and Slack speak today. Feeds `05-proposal.md`. Landed 2026-09-21.
-- `2026-09-21-addressing-at-organisation-scale.md`: registries and control planes, gateways, addressing schemes, selection among many agents, humans and agents at scale, and Roberto's "global orchestrator as API gateway" assumption tested. Feeds `05-proposal.md`. Landed 2026-09-21.
-
-Dispatched 2026-09-27, session 3, ten in parallel, after Roberto's three questions (database load, speaking to a team, connector tiers) and the seven briefs he asked for on 2026-09-21. Briefs carry no aesir vocabulary; nine of the ten read no aesir code.
-
-- `2026-09-27-manifest-schema-precedent.md`: field references for ten products; declare versus provide per field; three candidate manifest skeletons. Feeds topic 2. Landed.
-- `2026-09-27-deployment-shape-and-cost.md`: one Deployment per agent versus a shared pool; precedents; cost model at 10 and 100 agents; pinning; identity; hybrids; recommendation criteria. Feeds topic 3. Landed.
-- `2026-09-27-events-and-extension-model.md`: adapter hosting, signatures, fan-out, placement, the Postgres outbox, manifest syntax for correlation. Feeds topic 4. Landed; the five questions answered in `04-events.md`.
-- `2026-09-27-gateway-identity-and-tokens.md`: agentgateway from docs and code; credential kind × mechanism matrix; per-agent identity; fallbacks; allowlists; a spike list. Feeds topics 2, 4, 6. Landed.
-- `2026-09-27-tool-exposure-and-model-port.md`: vendor tool search, measured degradation, manifest shapes; the model port options checked; the intersection measured. Feeds topic 2. Landed.
-- `2026-09-27-support-services-and-security.md`: retention, cost attribution, redaction; description injection, sandbox boundary, approval gates; a fifteen-row threat list. Feeds topic 6. Landed.
-- `2026-09-27-claim-model-code-survey.md`: read-only survey of the runtime bodies; verdicts on G13, G17, G19 and the five kept mechanisms; the query profile. Feeds topic 7. Landed.
-- `2026-09-27-postgres-store-load-and-scale.md`: what the durable-execution platforms store and moved; queue benchmarks and failure modes; transcript storage; the event log; poller arithmetic; the ladder; a capacity model. Feeds topic 3. Landed.
-- `2026-09-27-human-to-agent-team-patterns.md`: lead-mediated, artefact-mediated, handoff and no-team-object patterns; the project-manager model tested; where questions meet; what is measured; accountability. Feeds topic 5. Landed.
-- `2026-09-27-connector-tiers-and-oauth-brokering.md`: what makes an integration free; managed-auth brokers; how agent platforms and mature ecosystems tier connectors; the MCP authorization spec; bring-your-own; a tier model. Feeds topic 4. Landed.
-
-Internal inputs: `docs/reference/design-vision.md`, `docs/adr/`, the backlog notes, the three v3.x direction documents (now in `research/`, as `3.0-*`, `3.1-*` and `3.2-*`), and the scenario-suite state recorded on issue #2. The backlog notes were folded into their issues in #98 (`git show 1b6d6ce9:docs/backlog/`).
+Internal inputs: `docs/reference/design-vision.md`, `docs/adr/`, the backlog notes, the three v3.x direction documents (now in `docs/research/retarget/`, as `3.0-*`, `3.1-*` and `3.2-*`), and the scenario-suite state recorded on issue #2. The backlog notes were folded into their issues in #98 (`git show 1b6d6ce9:docs/backlog/`).
 
 ## Positions so far
 

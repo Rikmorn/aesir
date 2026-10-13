@@ -436,7 +436,7 @@ pnpm db:migrate
 
 ## AI Tooling
 
-`AGENTS.md` at the repo root is the ground truth for AI coding tools; `CLAUDE.md` is a symlink to it, so Claude Code reads the same file (`docs/reference/dev-harness.md` covers how guidance is layered and reaches each kind of worker). Rules, hooks, and settings live under `.claude/`. The build workflow is [sidekick](https://github.com/Rikmorn/sidekick), which this repo also serves as a test bench for; see the "Sidekick is under test here" section of `.claude/rules/aesir-conventions.md`.
+`AGENTS.md` at the repo root is the ground truth for AI coding tools; `CLAUDE.md` is a symlink to it, so Claude Code reads the same file (`docs/reference/dev-harness.md` covers how guidance is layered and reaches each kind of worker). Rules, hooks, and settings live under `.claude/`. Aesir is built with the [sidekick](https://github.com/Rikmorn/sidekick) plugin bundle. Superpowers and code-review do the design, planning, execution and review; sidekick adds the `sk-*` rules, project management on GitHub, and the process around them. This repo also serves as sidekick's test bench; see the "Sidekick is under test here" section of `.claude/rules/aesir-conventions.md`.
 
 ## Development
 

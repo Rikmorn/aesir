@@ -1,3 +1,7 @@
 # Research
 
-Grounding reports, one topic per folder. `docs/README.md` holds the taxonomy, including when research moves here from a design.
+Grounding reports, one topic per folder, each with a `README.md` as its index. Sidekick's docs layout §research/ says what a report and an index hold. Research lands here when it is written, including research done for a design.
+
+## Topics
+
+- `retarget/`: the research for the retarget design in `docs/designs/retarget/`.
