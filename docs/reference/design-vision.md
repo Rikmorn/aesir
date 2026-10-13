@@ -180,7 +180,7 @@ Agents are often introduced to replace deterministic workflows, but end up with 
 
 ### The Alternative
 
-The user-level sidekick rule `sk-agent-prompts.md` holds the current authoring rules. It is their only statement, so this doc does not summarise them; `dev-harness.md` says when the rule loads.
+The user-level sidekick rule `sk-agent-prompts.md` holds the current authoring rules, and `dev-harness.md` says when it loads. Where this doc's reasoning about prompts differs from the rule, the rule is current; #106 re-evaluates this doc.
 
 ### Why Few-Shot With Reasoning Works
 

@@ -6,7 +6,8 @@ Aesir follows sidekick's docs layout, which the plugin ships as `skills/sidekick
 
 - **Rendered design pages.** A design that presents itself as a site keeps the page bodies in `designs/<topic>/spec/`, and `scripts/docs-builder/` builds them into the design's gitignored `site/` and `dist/`. The design's `design.md` gives the commands.
 - **`superpowers/` is gitignored.** The layout leaves that choice to the repo.
-- **Reference beside the code.** A package's `README.md` is its implementation guide, and a package with concerns of its own adds a `CLAUDE.md`. Both are reference docs whose home is the package, not `reference/`. `reference/` holds what spans packages.
+- **ADR shape.** Aesir's ADRs carry Context, Decision, Consequences and Sources. The layout also asks for the assumptions a decision rests on, so a new ADR adds that section. Those written before 2026-10-13 keep the shape they were written in.
+- **Reference beside the code.** A package's `README.md`, where it has one, is its implementation guide, and a package with concerns of its own adds a `CLAUDE.md`. Both are reference docs whose home is the package, not `reference/`. `reference/` holds what spans packages.
 - **Machine artifacts stay out of `docs/`.** Agent definitions, prompts and test scenarios live under `packages/`, and code that generates docs lives under `scripts/`.
 
 ## Retired folders

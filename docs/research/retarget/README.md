@@ -8,7 +8,7 @@ The `retarget` design in `docs/designs/retarget/`, which has no issue yet. When 
 
 ## Reports
 
-Each line ends with the retarget topic the report feeds; `docs/designs/retarget/README.md` §Topics numbers them.
+Each line ends with the retarget topic the report feeds; `docs/designs/retarget/README.md` §Topics numbers them. A report that names a note bare, such as `02-harness.md`, means the note in `docs/designs/retarget/`.
 
 Dispatched 2026-09-16, external prior art:
 
